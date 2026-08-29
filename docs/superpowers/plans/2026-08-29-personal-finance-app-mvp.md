@@ -3249,7 +3249,11 @@ Genera (o chiedi di generare) due PNG quadrati, 192x192 e 512x512, con sfondo `#
 
 - [ ] **Step 3: Collegare il manifest e i meta tag iOS nel layout**
 
-Modify `src/app/layout.tsx` aggiungendo l'export `metadata` con i campi PWA:
+Modify `src/app/layout.tsx`: SOSTITUISCI l'export `metadata` già presente dal Task 19
+(`export const metadata = { title: 'Budget' };`) con la versione estesa sotto — non
+aggiungere una seconda dichiarazione di `metadata`, altrimenti TypeScript segnala
+"Duplicate identifier 'metadata'". Aggiungi anche il nuovo export `viewport`, che invece non
+esiste ancora nel file:
 
 ```tsx
 export const metadata = {
@@ -3321,21 +3325,45 @@ Expected: login funzionante, dati sincronizzati identici su entrambi i dispositi
 **Interfaces:**
 - Consumes: `SUPABASE_SERVICE_ROLE_KEY` (env, bypassa RLS per lo script una tantum), schema di `accounts`, `categories`, `transactions` (Task 3).
 
+**Nota importante:** la colonna `user_id` (Task 3) ha default `auth.uid()`, ma questo default
+si valuta solo quando la scrittura passa per una sessione autenticata (anon key). Lo script di
+migrazione usa la **service role key**, che bypassa la RLS ma non ha nessun utente autenticato
+in sessione: `auth.uid()` risulterebbe `NULL`, violando il vincolo `not null` su `user_id`.
+Per questo lo script imposta `user_id` esplicitamente su ogni riga, leggendolo da una nuova
+variabile d'ambiente `LEGACY_DATA_OWNER_USER_ID`.
+
 - [ ] **Step 1: Esportare i dati storici in CSV**
 
 Da Google Sheets, apri i fogli "Expenses" e "Income" del tracker esistente, `File → Scarica → Valori separati da virgola (.csv)`. Salva come `scripts/legacy-expenses.csv` e `scripts/legacy-income.csv`, mantenendo le intestazioni originali (`Timestamp,Purchase Date,Item,Amount,Category` e `Timestamp,Date,Income Source,Description/Invoice No.,Income Amount`).
 
-- [ ] **Step 2: Installare le dipendenze per lo script**
+- [ ] **Step 2: Installare le dipendenze per lo script e recuperare l'ID utente proprietario**
 
 ```bash
-npm install -D tsx csv-parse
+npm install -D tsx csv-parse dotenv
 ```
+
+Lo script viene eseguito con `npx tsx`, che **non carica automaticamente** `.env.local` (a
+differenza di Next.js): serve caricarlo esplicitamente con il pacchetto `dotenv`, altrimenti
+`process.env.NEXT_PUBLIC_SUPABASE_URL` e le altre variabili risultano `undefined` all'avvio.
+
+Nel Dashboard Supabase, apri **Authentication → Users**, apri l'utente che rappresenta te
+(Fabio, creato nel Task 3 Step 4) e copia il suo `User UID`. Aggiungi a `.env.local`:
+
+```
+LEGACY_DATA_OWNER_USER_ID=<uid-copiato>
+```
+
+I dati storici del vecchio foglio sono tutti tuoi (Fabio), quindi vanno assegnati al tuo
+account, non a quello della tua ragazza.
 
 - [ ] **Step 3: Scrivere lo script di migrazione**
 
 Create `scripts/migrate-legacy-data.ts`:
 
 ```ts
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
 import { readFileSync } from 'fs';
 import { parse } from 'csv-parse/sync';
 import { createClient } from '@supabase/supabase-js';
@@ -3344,6 +3372,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const OWNER_USER_ID = process.env.LEGACY_DATA_OWNER_USER_ID!;
+if (!OWNER_USER_ID) {
+  throw new Error('LEGACY_DATA_OWNER_USER_ID non impostato in .env.local');
+}
 
 interface ExpenseRow {
   'Purchase Date': string;
@@ -3365,13 +3398,14 @@ async function getOrCreateCategory(nome: string, tipo: 'expense' | 'income'): Pr
     .select('id')
     .eq('nome', nome)
     .eq('tipo', tipo)
+    .eq('user_id', OWNER_USER_ID)
     .maybeSingle();
 
   if (existing) return existing.id;
 
   const { data: created, error } = await supabase
     .from('categories')
-    .insert({ nome, tipo, archiviata: false })
+    .insert({ nome, tipo, archiviata: false, user_id: OWNER_USER_ID })
     .select('id')
     .single();
 
@@ -3397,6 +3431,7 @@ async function migrateExpenses() {
     const categoriaId = await getOrCreateCategory(row.Category || 'Other', 'expense');
 
     const { error } = await supabase.from('transactions').insert({
+      user_id: OWNER_USER_ID,
       tipo: 'expense',
       importo: Number(row.Amount),
       data: parseItalianOrIsoDate(row['Purchase Date']),
@@ -3423,6 +3458,7 @@ async function migrateIncome() {
     const categoriaId = await getOrCreateCategory(row['Income Source'] || 'Altro', 'income');
 
     const { error } = await supabase.from('transactions').insert({
+      user_id: OWNER_USER_ID,
       tipo: 'income',
       importo: Number(row['Income Amount']),
       data: parseItalianOrIsoDate(row.Date),
