@@ -1,4 +1,4 @@
-import { addYears, differenceInCalendarMonths } from 'date-fns';
+import { addYears, differenceInCalendarMonths, parseISO } from 'date-fns';
 import type { GoalForCalc } from './types';
 
 export function nextOccurrence(scadenza: Date, frequenzaAnni: number, today: Date): Date {
@@ -18,13 +18,16 @@ export function computeAccantonatoFinora(goal: GoalForCalc, today: Date): number
     throw new Error('Obiettivo dilazionato senza scadenza');
   }
 
-  const scadenzaDate = new Date(goal.scadenza);
-  const createdAtDate = new Date(goal.createdAt);
+  const scadenzaDate = parseISO(goal.scadenza);
+  const createdAtDate = parseISO(goal.createdAt);
 
   let windowStart: Date;
   let windowEnd: Date;
 
-  if (goal.ricorrente && goal.frequenzaAnni) {
+  if (goal.ricorrente) {
+    if (!(goal.frequenzaAnni && goal.frequenzaAnni > 0)) {
+      throw new Error('Obiettivo ricorrente con frequenzaAnni non valida');
+    }
     windowEnd = nextOccurrence(scadenzaDate, goal.frequenzaAnni, today);
     windowStart = addYears(windowEnd, -goal.frequenzaAnni);
   } else {

@@ -75,6 +75,61 @@ describe('computeAccantonatoFinora', () => {
 
     expect(() => computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toThrow();
   });
+
+  it('lancia un errore se un obiettivo ricorrente ha frequenzaAnni pari a 0', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 160,
+      modalita: 'dilazionato',
+      scadenza: '2025-07-01',
+      stato: 'aperto',
+      createdAt: '2024-07-01',
+      ricorrente: true,
+      frequenzaAnni: 0,
+    };
+
+    expect(() => computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toThrow();
+  });
+
+  it('lancia un errore (senza andare in loop infinito) se frequenzaAnni è negativa', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 160,
+      modalita: 'dilazionato',
+      scadenza: '2025-07-01',
+      stato: 'aperto',
+      createdAt: '2024-07-01',
+      ricorrente: true,
+      frequenzaAnni: -1,
+    };
+
+    expect(() => computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toThrow();
+  });
+
+  it('il calcolo per un obiettivo ricorrente è indipendente dal timezone del processo (regressione TZ)', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 160,
+      modalita: 'dilazionato',
+      scadenza: '2025-07-01',
+      stato: 'aperto',
+      createdAt: '2024-07-01',
+      ricorrente: true,
+      frequenzaAnni: 1,
+    };
+
+    const originalTz = process.env.TZ;
+    try {
+      // In un fuso orario dietro UTC (es. America/Los_Angeles, UTC-7/-8),
+      // 'new Date("2025-07-01")' (mezzanotte UTC) renderizzerebbe come
+      // il giorno locale precedente, spostando il mese di calendario.
+      // parseISO deve invece interpretare la stringa come mezzanotte locale.
+      process.env.TZ = 'America/Los_Angeles';
+      expect(computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toBeCloseTo(
+        (160 * 11) / 12,
+        5
+      );
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
 });
 
 describe('nextOccurrence', () => {
