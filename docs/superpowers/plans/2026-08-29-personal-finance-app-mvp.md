@@ -1346,6 +1346,7 @@ Create `tests/data/transactions.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
+import { parseISO } from 'date-fns';
 import {
   getTransactions,
   createTransaction,
@@ -1418,7 +1419,7 @@ describe('getLastIncomeDate', () => {
   it('ritorna la data dell\'ultima entrata come oggetto Date', async () => {
     const supabase = fakeSelectClient([{ data: '2026-02-09' }]);
     const result = await getLastIncomeDate(supabase);
-    expect(result).toEqual(new Date('2026-02-09'));
+    expect(result).toEqual(parseISO('2026-02-09'));
   });
 
   it('ritorna null se non ci sono entrate', async () => {
@@ -1509,6 +1510,7 @@ Create `src/lib/data/transactions.ts`:
 
 ```ts
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { parseISO } from 'date-fns';
 import type { Transaction, TransactionTipo } from '../types';
 
 interface TransactionRow {
@@ -1596,9 +1598,15 @@ export async function getLastIncomeDate(supabase: SupabaseClient): Promise<Date 
   if (error) throw error;
   const rows = data as { data: string }[];
   if (rows.length === 0) return null;
-  return new Date(rows[0].data);
+  return parseISO(rows[0].data);
 }
 ```
+
+Nota: `data` è una colonna `date` (solo giorno, es. `'2026-02-09'`). `new Date(stringaSoloGiorno)`
+la interpreta come mezzanotte UTC, che in fusi orari indietro rispetto a UTC può slittare al
+giorno di calendario locale precedente — esattamente il bug corretto nel Task 6. `parseISO` di
+date-fns interpreta invece la stringa come mezzanotte locale, evitando il problema fin da qui,
+prima che il valore raggiunga `stimaDataTarget` (Task 8) e `computeMargineGiornaliero` (Task 9).
 
 - [ ] **Step 5: Implementare `goals.ts`**
 
