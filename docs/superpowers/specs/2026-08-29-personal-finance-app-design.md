@@ -10,11 +10,17 @@ una web app personale, utilizzabile comodamente da iPhone (PWA) e da desktop, ch
 a una domanda concreta: **"quanto posso spendere adesso senza mettermi nei guai prima della
 prossima entrata?"**.
 
-**Fuori scope per questo progetto:** divisione spese con altre persone (tipo Tricount). Oggi
-per quello si continua a usare l'app Tricount esistente. Può diventare un progetto separato
-in futuro, con la sua spec.
+**Fuori scope per questo progetto:** la logica di divisione spese con altre persone (tipo
+Tricount, saldi/chi-deve-a-chi) non viene costruita qui. Oggi per quello si continua a usare
+l'app Tricount esistente. Diventerà un progetto/spec separato in futuro, che si appoggerà ai
+due account già presenti in questa app (vedi sotto) invece di ripartire da zero.
 
-**Utenti:** singolo utente (Fabio). Nessuna gestione multi-utente/condivisione.
+**Utenti:** due account distinti (Fabio + partner), **con dati completamente separati**: ognuno
+vede e gestisce solo i propri conti, categorie, transazioni e obiettivi — nessuna condivisione
+o visibilità incrociata in questo progetto. Ogni utente ha il proprio "disponibile libero"
+personale. La separazione tra i due esiste già a livello di dati fin da questa fase proprio
+perché la futura funzione di divisione spese ha senso solo se collega due gestioni distinte,
+non un unico pool condiviso.
 
 **Pain point del foglio attuale che questa app deve risolvere:**
 - inserimento spese scomodo/lento da telefono (oggi via Google Form)
@@ -28,7 +34,10 @@ in futuro, con la sua spec.
   (Home Screen) e utilizzabile identica da browser desktop — stesso URL, stessi dati.
 - **Backend/dati:** Supabase (Postgres + Auth), piano gratuito.
 - **Hosting:** Vercel o Netlify, piano gratuito, deploy automatico da git.
-- **Autenticazione:** singolo utente, email+password via Supabase Auth.
+- **Autenticazione:** email+password via Supabase Auth, due account (creati manualmente da
+  dashboard, nessun self-service signup). Ogni riga di dati appartiene a un utente tramite
+  colonna `user_id`; le policy di Row Level Security garantiscono che ciascun account veda e
+  scriva solo le proprie righe — l'isolamento è imposto dal database, non dalla UI.
 - **Saldo conti:** inserimento manuale (nessuna integrazione Open Banking/PSD2 — in Italia
   richiederebbe provider a pagamento sopra soglie base, incompatibile con l'obiettivo
   "100% gratis").
@@ -47,12 +56,18 @@ in futuro, con la sua spec.
 
 ## 3. Modello dati (Postgres)
 
+Ogni tabella ha una colonna `user_id` (riferimento a `auth.users`, valore di default l'utente
+autenticato corrente) e una Row Level Security policy che permette a un account di vedere e
+scrivere solo le righe con il proprio `user_id`. Questo isolamento vale per tutte e quattro le
+tabelle sotto, quindi non viene ripetuto riga per riga.
+
 ### `accounts`
 Conti che l'utente aggiorna manualmente. Non fissi a un numero: tabella generica.
 
 | campo | tipo | note |
 |---|---|---|
 | id | uuid | |
+| user_id | uuid | proprietario della riga, isolamento via RLS |
 | nome | text | es. "Conto corrente", "Fondo emergenza" |
 | saldo_attuale | numeric | aggiornato manualmente dall'utente |
 | conta_in_disponibile | boolean | true = il saldo alimenta il calcolo di "disponibile libero" (es. conto corrente); false = tracciato solo come informazione/progresso (es. fondo emergenza) |
@@ -62,6 +77,7 @@ Conti che l'utente aggiorna manualmente. Non fissi a un numero: tabella generica
 | campo | tipo | note |
 |---|---|---|
 | id | uuid | |
+| user_id | uuid | proprietario della riga, isolamento via RLS |
 | nome | text | libera, modificabile dall'utente |
 | tipo | enum(`expense`,`income`) | |
 | colore/icona | text | per la UI |
@@ -73,6 +89,7 @@ Sostituisce i tab Expenses + Income (uniti in uno).
 | campo | tipo | note |
 |---|---|---|
 | id | uuid | |
+| user_id | uuid | proprietario della riga, isolamento via RLS |
 | tipo | enum(`expense`,`income`) | |
 | importo | numeric | |
 | data | date | |
@@ -90,6 +107,7 @@ obiettivi ad-hoc (viaggio, regalo, Telepass). Una sola tabella, un solo concetto
 | campo | tipo | note |
 |---|---|---|
 | id | uuid | |
+| user_id | uuid | proprietario della riga, isolamento via RLS |
 | nome | text | es. "Viaggio Sile", "Telepass", "Regalo anniversario", "Bollo moto" |
 | importo_target | numeric | |
 | modalita | enum(`bloccato`,`dilazionato`) | vedi logica di calcolo sotto |
@@ -178,7 +196,15 @@ mappando le categorie esistenti su `categories`. Le voci storiche di "Long-term 
 vengono ricreate come `budget_goals` con `ricorrente = true` dove applicabile. Dettagli
 implementativi (script una tantum vs UI di import) da definire in fase di piano.
 
-## 7. Domande aperte da chiarire in fase di piano/implementazione
+## 7. Nota su una futura fase 2 (fuori scope qui)
+
+In futuro è previsto un progetto separato per la gestione delle spese di casa condivise
+(quota affitto, quota bollette, quota spesa) stile Tricount, con saldi/chi-deve-a-chi tra i
+due account già presenti in questa app. Non viene progettato né implementato ora: l'unica
+cosa che questa fase deve garantire è che i due account esistano già con dati isolati, così
+la fase 2 può collegarsi a entrambi senza dover reimpostare l'autenticazione da zero.
+
+## 8. Domande aperte da chiarire in fase di piano/implementazione
 
 - Formato preciso di import dei dati storici (quante righe, range di date da portare).
 - Se la stima automatica della "data target" debba guardare solo l'ultima entrata o una
