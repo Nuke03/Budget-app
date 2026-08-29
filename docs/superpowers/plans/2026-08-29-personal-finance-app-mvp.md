@@ -12,7 +12,9 @@
 
 ## Global Constraints
 
-- Utente singolo: nessuna logica multi-utente o condivisione da nessuna parte.
+- Due account isolati (Fabio + partner): ogni tabella ha `user_id` con RLS che impone
+  `auth.uid() = user_id`. Nessuna riga è mai visibile o scrivibile dall'altro account. Nessuna
+  UI di condivisione: l'isolamento è un vincolo di database, non un filtro applicativo.
 - Costo totale €0/mese: solo piani free (Supabase free, Vercel free), nessuna API a pagamento.
 - Saldo conti aggiornato solo manualmente: nessuna integrazione Open Banking/PSD2.
 - Divisione spese con altre persone (tipo Tricount) è fuori scope: non implementarla.
@@ -265,7 +267,7 @@ git commit -m "feat: wire up Supabase browser/server clients and auth middleware
 - Create: `supabase/migrations/0001_init.sql`
 
 **Interfaces:**
-- Produces: tabelle Postgres `accounts`, `categories`, `budget_goals`, `transactions` con le colonne usate da tutti i task di data-access successivi (Task 10, 11, 21).
+- Produces: tabelle Postgres `accounts`, `categories`, `budget_goals`, `transactions` con le colonne usate da tutti i task di data-access successivi (Task 10, 11, 21), ciascuna con `user_id` e RLS che isola i due account. Il default `auth.uid()` sulla colonna `user_id` significa che nessun task successivo deve impostarla esplicitamente: il database la assegna da solo in base a chi è loggato, e ogni `select` la filtra automaticamente.
 
 - [ ] **Step 1: Scrivere la migrazione SQL**
 
@@ -274,6 +276,7 @@ Create `supabase/migrations/0001_init.sql`:
 ```sql
 create table if not exists public.accounts (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   nome text not null,
   saldo_attuale numeric not null default 0,
   conta_in_disponibile boolean not null default true,
@@ -283,6 +286,7 @@ create table if not exists public.accounts (
 
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   nome text not null,
   tipo text not null check (tipo in ('expense', 'income')),
   colore text,
@@ -292,6 +296,7 @@ create table if not exists public.categories (
 
 create table if not exists public.budget_goals (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   nome text not null,
   importo_target numeric not null,
   modalita text not null check (modalita in ('bloccato', 'dilazionato')),
@@ -308,6 +313,7 @@ create table if not exists public.budget_goals (
 
 create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   tipo text not null check (tipo in ('expense', 'income')),
   importo numeric not null,
   data date not null,
@@ -324,18 +330,22 @@ alter table public.categories enable row level security;
 alter table public.budget_goals enable row level security;
 alter table public.transactions enable row level security;
 
-create policy "authenticated_full_access" on public.accounts
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "owner_full_access" on public.accounts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-create policy "authenticated_full_access" on public.categories
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "owner_full_access" on public.categories
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-create policy "authenticated_full_access" on public.budget_goals
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "owner_full_access" on public.budget_goals
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-create policy "authenticated_full_access" on public.transactions
-  for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "owner_full_access" on public.transactions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
+
+Nota: `categoria_id`/`account_id`/`goal_id` referenziano righe che sono già filtrate dalla RLS
+del proprio account, quindi non serve replicare il controllo `user_id` anche su quelle FK — un
+utente non può comunque selezionare/collegare una riga di un altro account perché non la vede.
 
 - [ ] **Step 2: Eseguire la migrazione su Supabase**
 
@@ -344,13 +354,22 @@ Nel Dashboard Supabase, apri **SQL Editor**, incolla il contenuto del file e pre
 - [ ] **Step 3: Verifica manuale**
 
 Nel Dashboard Supabase, apri **Table Editor**.
-Expected: sono presenti le 4 tabelle `accounts`, `categories`, `budget_goals`, `transactions`, ciascuna con RLS abilitata (icona lucchetto verde).
+Expected: sono presenti le 4 tabelle `accounts`, `categories`, `budget_goals`, `transactions`, ciascuna con RLS abilitata (icona lucchetto verde) e colonna `user_id`.
 
-- [ ] **Step 4: Creare il primo (e unico) utente**
+- [ ] **Step 4: Creare i due account**
 
-Nel Dashboard Supabase, apri **Authentication → Users → Add user**, crea l'utente con la tua email e una password. Questo sarà l'unico account dell'app.
+Nel Dashboard Supabase, apri **Authentication → Users → Add user**, crea due utenti: la tua
+email e quella della tua ragazza, ciascuno con la propria password. Sono i due soli account
+dell'app; non esiste un flusso di registrazione self-service.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Verifica manuale dell'isolamento**
+
+Accedi con il primo account (dopo il Task 12), crea manualmente una riga di test in una
+tabella dal Table Editor con quel `user_id`, poi accedi con il secondo account.
+Expected: il secondo account non vede la riga creata dal primo (conferma visiva che la RLS
+isola correttamente i due account prima di costruire qualsiasi schermata sopra).
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add supabase/migrations/0001_init.sql
@@ -1815,7 +1834,7 @@ Expected: PASS — 3 test passati.
 
 - [ ] **Step 6: Verifica manuale**
 
-Run: `npm run dev`, apri `http://localhost:3000/login`, accedi con le credenziali create nel Task 3 Step 4.
+Run: `npm run dev`, apri `http://localhost:3000/login`, accedi con uno dei due account creati nel Task 3 Step 4.
 Expected: dopo il login vieni reindirizzato a `/` (che darà 404 finché non viene creata nel Task 13 — atteso).
 
 - [ ] **Step 7: Commit**
