@@ -33,6 +33,17 @@ in futuro, con la sua spec.
   richiederebbe provider a pagamento sopra soglie base, incompatibile con l'obiettivo
   "100% gratis").
 - **Costo:** €0/mese nei limiti dei piani free.
+- **Reattività UI:** ogni azione (aggiungere/modificare/cancellare una transazione o un
+  obiettivo) usa **optimistic UI update** — l'interfaccia si aggiorna subito come se
+  l'operazione fosse già confermata, mentre la scrittura reale su Supabase avviene in
+  background senza bloccare l'utente, che può continuare a usare l'app nel frattempo. Se la
+  scrittura fallisce (es. connessione assente), l'azione viene segnalata come non riuscita
+  e va ripetuta — niente coda offline persistente: non serve, dato che l'app richiede
+  comunque una connessione minima per funzionare (vedi decisione sotto).
+- **Offline:** non supportato in questa fase. Scelta deliberata per tenere semplice
+  l'implementazione (niente service worker con coda di sincronizzazione né gestione di
+  conflitti); l'unico requisito è avere una connessione al momento dell'azione, non durante
+  tutta la sessione.
 
 ## 3. Modello dati (Postgres)
 
