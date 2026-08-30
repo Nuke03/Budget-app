@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import { getCategories } from '@/lib/data/categories';
 import { getAccounts } from '@/lib/data/accounts';
@@ -32,7 +33,7 @@ export default function AddTransactionPage() {
     const supabase = createClient();
     await createTransaction(supabase, {
       ...payload,
-      data: new Date().toISOString().slice(0, 10),
+      data: format(new Date(), 'yyyy-MM-dd'),
       goalId: null,
       nota: null,
     });

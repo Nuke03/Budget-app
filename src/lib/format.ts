@@ -1,3 +1,5 @@
+import { parseISO } from 'date-fns';
+
 export function formatEuro(value: number): string {
   const formatted = new Intl.NumberFormat('it-IT', {
     style: 'currency',
@@ -9,7 +11,7 @@ export function formatEuro(value: number): string {
 }
 
 export function formatDateIt(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' ? parseISO(date) : date;
   return new Intl.DateTimeFormat('it-IT', {
     day: '2-digit',
     month: '2-digit',

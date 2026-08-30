@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Account, Category, TransactionTipo } from '@/lib/types';
 
 interface SubmitPayload {
@@ -26,6 +26,29 @@ export function AddTransactionForm({
   const [categoriaId, setCategoriaId] = useState<string | null>(categories[0]?.id ?? null);
   const [accountId, setAccountId] = useState<string | null>(accounts[0]?.id ?? null);
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  const categorieDisponibili = categories.filter((c) => !c.archiviata && c.tipo === tipo);
+
+  // Le liste di categorie/conti arrivano in modo asincrono dopo il mount (vedi page.tsx),
+  // quindi lo stato iniziale (calcolato quando le liste erano ancora vuote) va sincronizzato
+  // non appena i dati reali arrivano. Non tocchiamo una selezione dell'utente ancora valida:
+  // ricalcoliamo il default solo se il valore corrente non esiste (più) tra le opzioni valide
+  // (es. al primo caricamento, oppure quando cambia il tipo spesa/entrata).
+  useEffect(() => {
+    if (categoriaId !== null && categorieDisponibili.some((c) => c.id === categoriaId)) {
+      return;
+    }
+    setCategoriaId(categorieDisponibili[0]?.id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipo, categories]);
+
+  useEffect(() => {
+    if (accountId !== null && accounts.some((a) => a.id === accountId)) {
+      return;
+    }
+    setAccountId(accounts[0]?.id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts]);
 
   const importoNumerico = Number(importo);
   const isValid = importo.trim() !== '' && !Number.isNaN(importoNumerico) && descrizione.trim() !== '';
@@ -94,7 +117,7 @@ export function AddTransactionForm({
           onChange={(e) => setCategoriaId(e.target.value || null)}
           className="rounded border p-2"
         >
-          {categories.map((c) => (
+          {categorieDisponibili.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nome}
             </option>

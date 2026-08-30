@@ -17,6 +17,7 @@ const goals = [
     frequenzaAnni: null,
     stato: 'aperto' as const,
     createdAt: '2026-02-01T00:00:00Z',
+    accantonato: 130,
   },
 ];
 
@@ -53,5 +54,46 @@ describe('HomeDashboard', () => {
 
     expect(screen.getByText('Conto corrente')).toBeInTheDocument();
     expect(screen.getByText(/Telepass/)).toBeInTheDocument();
+  });
+
+  it('nel dettaglio mostra la quota accantonata (non il target) per un obiettivo dilazionato e separa i conti esclusi dal disponibile', () => {
+    const accountsConFondo = [
+      ...accounts,
+      { id: '2', nome: 'Fondo emergenza', saldoAttuale: 500, contaInDisponibile: false, targetSaldo: null },
+    ];
+    const goalsDilazionato = [
+      {
+        id: '2',
+        nome: 'Vacanza',
+        importoTarget: 300,
+        modalita: 'dilazionato' as const,
+        scadenza: '2026-12-01',
+        categoriaId: null,
+        ricorrente: false,
+        frequenzaAnni: null,
+        stato: 'aperto' as const,
+        createdAt: '2026-01-01T00:00:00Z',
+        accantonato: 150,
+      },
+    ];
+
+    render(
+      <HomeDashboard
+        disponibileLibero={720}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accountsConFondo}
+        goals={goalsDilazionato}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Mostra dettaglio'));
+
+    // Mostra la quota maturata (150), non l'intero importoTarget (300).
+    expect(screen.getByText(/150,00/)).toBeInTheDocument();
+    expect(screen.queryByText(/300,00/)).not.toBeInTheDocument();
+
+    // Il conto escluso dal disponibile è mostrato ma etichettato come tale.
+    expect(screen.getByText(/Fondo emergenza \(non conta nel disponibile\)/)).toBeInTheDocument();
   });
 });

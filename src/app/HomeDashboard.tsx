@@ -4,6 +4,15 @@ import { useState } from 'react';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import type { Account, BudgetGoal } from '@/lib/types';
 
+// `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
+// (computeAccantonatoFinora): per gli obiettivi "bloccato" coincide con importoTarget,
+// per quelli "dilazionato" è la quota maturata finora. È lo stesso valore che
+// computeDisponibileLibero sottrae dal saldo, quindi è quello da mostrare nel dettaglio
+// per far tornare i conti con la cifra principale.
+export interface GoalWithAccantonato extends BudgetGoal {
+  accantonato: number;
+}
+
 export function HomeDashboard({
   disponibileLibero,
   margineGiornaliero,
@@ -15,9 +24,15 @@ export function HomeDashboard({
   margineGiornaliero: number;
   dataTarget: string;
   accounts: Account[];
-  goals: BudgetGoal[];
+  goals: GoalWithAccantonato[];
 }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
+
+  // Solo i conti che contano nel disponibile libero fanno parte della riconciliazione
+  // di quella cifra; gli altri (es. un fondo emergenza) vengono mostrati a parte,
+  // etichettati, per non farli sembrare parte dello stesso totale.
+  const accountsDisponibili = accounts.filter((a) => a.contaInDisponibile);
+  const accountsEsclusi = accounts.filter((a) => !a.contaInDisponibile);
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-6">
@@ -40,7 +55,7 @@ export function HomeDashboard({
 
       {showBreakdown && (
         <section className="flex flex-col gap-2 text-sm">
-          {accounts.map((a) => (
+          {accountsDisponibili.map((a) => (
             <div key={a.id} className="flex justify-between">
               <span>{a.nome}</span>
               <span>{formatEuro(a.saldoAttuale)}</span>
@@ -51,9 +66,19 @@ export function HomeDashboard({
               <span>
                 {g.nome} ({g.modalita})
               </span>
-              <span>{formatEuro(g.importoTarget)}</span>
+              <span>{formatEuro(g.accantonato)}</span>
             </div>
           ))}
+          {accountsEsclusi.length > 0 && (
+            <div className="mt-2 flex flex-col gap-2 border-t pt-2">
+              {accountsEsclusi.map((a) => (
+                <div key={a.id} className="flex justify-between text-slate-400">
+                  <span>{a.nome} (non conta nel disponibile)</span>
+                  <span>{formatEuro(a.saldoAttuale)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

@@ -5,6 +5,7 @@ import { getLastIncomeDate } from '@/lib/data/transactions';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
+import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { HomeDashboard } from './HomeDashboard';
 
 export default async function HomePage() {
@@ -20,13 +21,21 @@ export default async function HomePage() {
   const dataTarget = stimaDataTarget(ultimaEntrata, today);
   const margineGiornaliero = computeMargineGiornaliero(disponibileLibero, dataTarget, today);
 
+  // Il breakdown mostrato in HomeDashboard deve riconciliarsi con `disponibileLibero`:
+  // per gli obiettivi dilazionati questo significa mostrare quanto è stato effettivamente
+  // accantonato finora (non l'intero importoTarget), esattamente come fa computeDisponibileLibero.
+  const goalsWithAccantonato = goals.map((g) => ({
+    ...g,
+    accantonato: computeAccantonatoFinora(g, today),
+  }));
+
   return (
     <HomeDashboard
       disponibileLibero={disponibileLibero}
       margineGiornaliero={margineGiornaliero}
       dataTarget={dataTarget.toISOString()}
       accounts={accounts}
-      goals={goals}
+      goals={goalsWithAccantonato}
     />
   );
 }
