@@ -14,7 +14,7 @@ const links = [
 export function NavBar() {
   const pathname = usePathname();
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/reset-password') return null;
 
   return (
     <nav className="sticky bottom-0 flex justify-around border-t bg-white p-2 text-xs">
