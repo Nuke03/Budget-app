@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "arial, helvetica, sans-serif",
+        "createdAt": "2026-08-30T10:27:24.525Z",
+        "reason": "default create-next-app scaffolding from Task 1, untouched by any screen task; typography is intentionally deferred to the dedicated UI-polish tasks (14-19) later in the plan, not decided yet"
+      }
+    ]
+  }
+}
