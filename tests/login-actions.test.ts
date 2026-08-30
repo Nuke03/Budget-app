@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLoginInput } from '@/app/login/actions';
+import { validateLoginInput } from '@/app/login/validation';
 
 describe('validateLoginInput', () => {
   it('accetta email e password non vuote', () => {

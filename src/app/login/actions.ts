@@ -2,15 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-
-export function validateLoginInput(
-  email: string,
-  password: string
-): { valid: true } | { valid: false; error: string } {
-  if (!email) return { valid: false, error: 'Email obbligatoria' };
-  if (!password) return { valid: false, error: 'Password obbligatoria' };
-  return { valid: true };
-}
+import { validateLoginInput } from './validation';
 
 export async function login(formData: FormData) {
   const email = String(formData.get('email') ?? '');
