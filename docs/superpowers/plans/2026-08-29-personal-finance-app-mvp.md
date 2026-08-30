@@ -1699,7 +1699,7 @@ export async function closeGoal(supabase: SupabaseClient, id: string): Promise<v
 - [ ] **Step 6: Eseguire i test e verificare che passino**
 
 Run: `npm test -- tests/data/transactions.test.ts tests/data/goals.test.ts`
-Expected: PASS — 9 test passati.
+Expected: PASS — 8 test passati.
 
 - [ ] **Step 7: Commit**
 
