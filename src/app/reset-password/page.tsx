@@ -95,9 +95,9 @@ export default function ResetPasswordPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-slate-900 p-2 text-white disabled:opacity-40"
+          className="rounded bg-slate-900 p-2 text-white disabled:opacity-60"
         >
-          Salva nuova password
+          {submitting ? 'Salvataggio in corso...' : 'Salva nuova password'}
         </button>
       </form>
     </main>

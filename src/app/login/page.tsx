@@ -1,4 +1,5 @@
 import { login } from './actions';
+import { SubmitButton } from './SubmitButton';
 
 export default async function LoginPage({
   searchParams,
@@ -26,9 +27,7 @@ export default async function LoginPage({
           required
           className="rounded border p-2"
         />
-        <button type="submit" className="rounded bg-slate-900 p-2 text-white">
-          Accedi
-        </button>
+        <SubmitButton />
       </form>
     </main>
   );
