@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getTransactions, deleteTransaction } from '@/lib/data/transactions';
@@ -9,6 +8,7 @@ import { getCategories } from '@/lib/data/categories';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
+import { HistoryChartCard } from './HistoryChartCard';
 import type { Transaction, Category } from '@/lib/types';
 
 export default function HistoryPage() {
@@ -42,30 +42,7 @@ export default function HistoryPage() {
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
       <h1 className="text-2xl font-bold">Storico</h1>
 
-      <div className="h-56 w-full rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <XAxis dataKey="nome" tick={{ fontSize: 10, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: 'var(--muted)' }} axisLine={false} tickLine={false} width={36} />
-            <Tooltip
-              formatter={(value) => formatEuro(Number(value))}
-              contentStyle={{
-                borderRadius: 12,
-                border: 'none',
-                boxShadow: '0 4px 16px -4px rgb(15 23 42 / 0.15)',
-              }}
-            />
-            <Bar dataKey="totale" radius={[6, 6, 0, 0]}>
-              {chartData.map((entry) => (
-                <Cell
-                  key={entry.nome}
-                  fill={colorByCategoryName.get(entry.nome) ?? CATEGORY_COLOR_FALLBACK}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <HistoryChartCard chartData={chartData} colorByCategoryName={colorByCategoryName} />
 
       <ul className="flex flex-col gap-2">
         {transactions.map((t) => {
