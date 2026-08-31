@@ -3,16 +3,20 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
+import { getCategories } from '@/lib/data/categories';
 import { GoalsList } from './GoalsList';
 import { CreateGoalForm } from './CreateGoalForm';
-import type { BudgetGoal, GoalModalita } from '@/lib/types';
+import type { BudgetGoal, Category, GoalModalita } from '@/lib/types';
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<BudgetGoal[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   async function refresh() {
     const supabase = createClient();
-    setGoals(await getOpenGoals(supabase));
+    const [openGoals, cats] = await Promise.all([getOpenGoals(supabase), getCategories(supabase)]);
+    setGoals(openGoals);
+    setCategories(cats);
   }
 
   useEffect(() => {
@@ -24,11 +28,12 @@ export default function GoalsPage() {
     importoTarget: number;
     modalita: GoalModalita;
     scadenza: string | null;
+    categoriaId: string | null;
     ricorrente: boolean;
     frequenzaMesi: number | null;
   }) {
     const supabase = createClient();
-    await createGoal(supabase, { ...payload, categoriaId: null });
+    await createGoal(supabase, payload);
     await refresh();
   }
 
@@ -37,7 +42,7 @@ export default function GoalsPage() {
       <h1 className="text-2xl font-bold">Obiettivi di budget</h1>
       <GoalsList goals={goals} />
       <h2 className="text-lg font-bold">Nuovo obiettivo</h2>
-      <CreateGoalForm onSubmit={handleCreate} />
+      <CreateGoalForm categories={categories} onSubmit={handleCreate} />
     </main>
   );
 }
