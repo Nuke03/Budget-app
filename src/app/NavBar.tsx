@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Target, BarChart3, Wallet, Tag } from 'lucide-react';
+import { Home, Target, BarChart3, Wallet, Tag, Receipt } from 'lucide-react';
 
 const links = [
   { href: '/', label: 'Home', icon: Home },
@@ -10,6 +10,7 @@ const links = [
   { href: '/history', label: 'Storico', icon: BarChart3 },
   { href: '/accounts', label: 'Conti', icon: Wallet },
   { href: '/categories', label: 'Categorie', icon: Tag },
+  { href: '/piva', label: 'P.IVA', icon: Receipt },
 ];
 
 export function NavBar() {
