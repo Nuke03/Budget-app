@@ -44,3 +44,16 @@ export interface Transaction {
   nota: string | null;
   createdAt: string;
 }
+
+export interface PivaSettings {
+  id: string;
+  attivo: boolean;
+  dataApertura: string | null;
+  categoriaFatturatoId: string | null;
+  coefficienteRedditivita: number;
+  aliquotaSostitutivaOverride: number | null;
+  aliquotaContributoSoggettivo: number;
+  aliquotaContributoIntegrativo: number;
+  minimaleContributivoAnnuo: number;
+  contributiVersatiAnnoPrecedente: number;
+}
