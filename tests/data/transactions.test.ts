@@ -95,4 +95,10 @@ describe('getRecentTransactionAmounts', () => {
     const result = await getRecentTransactionAmounts(supabase, 'cat-luce', 3);
     expect(result).toEqual([]);
   });
+
+  it('accetta una parola chiave opzionale per filtrare per descrizione', async () => {
+    const supabase = fakeSelectClient([{ importo: 60 }]);
+    const result = await getRecentTransactionAmounts(supabase, 'cat-luce', 3, 'enel');
+    expect(result).toEqual([60]);
+  });
 });

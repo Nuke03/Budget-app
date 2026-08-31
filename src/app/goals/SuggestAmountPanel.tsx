@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getRecentTransactionAmounts } from '@/lib/data/transactions';
 import { suggestImportoFromHistory } from '@/lib/calculations/suggestImportoFromHistory';
 import { formatEuro } from '@/lib/format';
+import { FieldHint } from '@/app/FieldHint';
 
 export function SuggestAmountPanel({
   categoriaId,
@@ -15,6 +16,7 @@ export function SuggestAmountPanel({
 }) {
   const [limite, setLimite] = useState('3');
   const [margine, setMargine] = useState('10');
+  const [nomeTassa, setNomeTassa] = useState('');
   const [importi, setImporti] = useState<number[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function SuggestAmountPanel({
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    getRecentTransactionAmounts(supabase, categoriaId, limiteNumerico)
+    getRecentTransactionAmounts(supabase, categoriaId, limiteNumerico, nomeTassa.trim() || null)
       .then((result) => {
         if (!cancelled) {
           setImporti(result);
@@ -43,7 +45,7 @@ export function SuggestAmountPanel({
     return () => {
       cancelled = true;
     };
-  }, [categoriaId, limite]);
+  }, [categoriaId, limite, nomeTassa]);
 
   const margineNumerico = Number(margine);
   const suggerito =
@@ -53,8 +55,23 @@ export function SuggestAmountPanel({
 
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] bg-surface-muted p-4 text-sm">
+      <div className="flex flex-col gap-1 text-xs font-medium text-muted">
+        <span className="flex items-center gap-1">
+          <label htmlFor="suggest-nome-tassa">Nome tassa</label>
+          <FieldHint testo="Scrivi il nome che usi di solito per questa spesa (es. ENEL, Telepass): la media verrà calcolata solo sulle spese passate di questa categoria la cui descrizione contiene questa parola. Lascia vuoto per usare tutte le spese della categoria." />
+        </span>
+        <input
+          id="suggest-nome-tassa"
+          type="text"
+          placeholder="Es. ENEL, Telepass..."
+          value={nomeTassa}
+          onChange={(e) => setNomeTassa(e.target.value)}
+          className="rounded-[var(--radius-sm)] border border-black/5 bg-surface px-3 py-2 text-sm outline-none"
+        />
+      </div>
+
       <div className="flex gap-3">
-        <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-muted">
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-muted">
           Quante spese passate
           <input
             aria-label="Quante spese passate"
@@ -64,7 +81,7 @@ export function SuggestAmountPanel({
             className="rounded-[var(--radius-sm)] border border-black/5 bg-surface px-3 py-2 text-sm outline-none"
           />
         </label>
-        <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-muted">
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-muted">
           Margine %
           <input
             aria-label="Margine %"

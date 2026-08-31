@@ -39,4 +39,20 @@ describe('SuggestAmountPanel', () => {
     fireEvent.click(screen.getByText('Usa questo importo'));
     expect(onUseAmount).toHaveBeenCalledWith(99);
   });
+
+  it('passa il nome tassa digitato come parola chiave alla ricerca storica', async () => {
+    vi.mocked(getRecentTransactionAmounts).mockResolvedValue([100]);
+    render(<SuggestAmountPanel categoriaId="cat-1" onUseAmount={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Nome tassa'), { target: { value: 'ENEL' } });
+
+    await waitFor(() => {
+      expect(getRecentTransactionAmounts).toHaveBeenLastCalledWith(
+        expect.anything(),
+        'cat-1',
+        3,
+        'ENEL'
+      );
+    });
+  });
 });

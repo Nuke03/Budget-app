@@ -93,15 +93,20 @@ export async function getLastIncomeDate(supabase: SupabaseClient): Promise<Date 
 export async function getRecentTransactionAmounts(
   supabase: SupabaseClient,
   categoriaId: string,
-  limite: number
+  limite: number,
+  parolaChiave?: string | null
 ): Promise<number[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('transactions')
     .select('importo')
     .eq('categoria_id', categoriaId)
-    .eq('tipo', 'expense')
-    .limit(limite)
-    .order('data', { ascending: false });
+    .eq('tipo', 'expense');
+
+  if (parolaChiave) {
+    query = query.ilike('descrizione', `%${parolaChiave}%`);
+  }
+
+  const { data, error } = await query.limit(limite).order('data', { ascending: false });
 
   if (error) throw error;
   return (data as { importo: number }[]).map((row) => row.importo);

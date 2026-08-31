@@ -3,6 +3,7 @@ export function fakeSelectClient(rows: unknown[]) {
     select: () => builder,
     order: () => Promise.resolve({ data: rows, error: null }),
     eq: () => builder,
+    ilike: () => builder,
     single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
     maybeSingle: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
     limit: () => builder,
