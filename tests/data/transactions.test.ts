@@ -5,6 +5,7 @@ import {
   createTransaction,
   deleteTransaction,
   getLastIncomeDate,
+  getRecentTransactionAmounts,
 } from '@/lib/data/transactions';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
@@ -79,5 +80,19 @@ describe('getLastIncomeDate', () => {
     const supabase = fakeSelectClient([]);
     const result = await getLastIncomeDate(supabase);
     expect(result).toBeNull();
+  });
+});
+
+describe('getRecentTransactionAmounts', () => {
+  it('ritorna gli importi delle transazioni più recenti per categoria', async () => {
+    const supabase = fakeSelectClient([{ importo: 60 }, { importo: 55 }, { importo: 58 }]);
+    const result = await getRecentTransactionAmounts(supabase, 'cat-luce', 3);
+    expect(result).toEqual([60, 55, 58]);
+  });
+
+  it('ritorna un array vuoto se non ci sono transazioni in quella categoria', async () => {
+    const supabase = fakeSelectClient([]);
+    const result = await getRecentTransactionAmounts(supabase, 'cat-luce', 3);
+    expect(result).toEqual([]);
   });
 });

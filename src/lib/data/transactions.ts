@@ -89,3 +89,20 @@ export async function getLastIncomeDate(supabase: SupabaseClient): Promise<Date 
   if (rows.length === 0) return null;
   return parseISO(rows[0].data);
 }
+
+export async function getRecentTransactionAmounts(
+  supabase: SupabaseClient,
+  categoriaId: string,
+  limite: number
+): Promise<number[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('importo')
+    .eq('categoria_id', categoriaId)
+    .eq('tipo', 'expense')
+    .limit(limite)
+    .order('data', { ascending: false });
+
+  if (error) throw error;
+  return (data as { importo: number }[]).map((row) => row.importo);
+}

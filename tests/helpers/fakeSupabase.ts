@@ -4,6 +4,7 @@ export function fakeSelectClient(rows: unknown[]) {
     order: () => Promise.resolve({ data: rows, error: null }),
     eq: () => builder,
     single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
+    limit: () => builder,
   };
   return { from: () => builder } as any;
 }
