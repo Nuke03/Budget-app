@@ -12,22 +12,40 @@ interface SubmitPayload {
   descrizione: string;
 }
 
+export interface AddTransactionFormValues {
+  tipo: TransactionTipo;
+  importo: number;
+  categoriaId: string | null;
+  accountId: string | null;
+  descrizione: string;
+}
+
 const CATEGORY_FALLBACK_COLOR = 'var(--cat-slate)';
 
 export function AddTransactionForm({
   categories,
   accounts,
+  initial,
+  submitLabel = 'Salva',
+  onCancel,
   onSubmit,
 }: {
   categories: Category[];
   accounts: Account[];
+  initial?: AddTransactionFormValues | null;
+  submitLabel?: string;
+  onCancel?: () => void;
   onSubmit: (payload: SubmitPayload) => Promise<void>;
 }) {
-  const [tipo, setTipo] = useState<TransactionTipo>('expense');
-  const [importo, setImporto] = useState('');
-  const [descrizione, setDescrizione] = useState('');
-  const [categoriaId, setCategoriaId] = useState<string | null>(categories[0]?.id ?? null);
-  const [accountId, setAccountId] = useState<string | null>(accounts[0]?.id ?? null);
+  const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? 'expense');
+  const [importo, setImporto] = useState(initial ? String(initial.importo) : '');
+  const [descrizione, setDescrizione] = useState(initial?.descrizione ?? '');
+  const [categoriaId, setCategoriaId] = useState<string | null>(
+    initial?.categoriaId ?? categories[0]?.id ?? null
+  );
+  const [accountId, setAccountId] = useState<string | null>(
+    initial?.accountId ?? accounts[0]?.id ?? null
+  );
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
   const categorieDisponibili = categories.filter((c) => !c.archiviata && c.tipo === tipo);
@@ -168,8 +186,18 @@ export function AddTransactionForm({
         disabled={!isValid}
         className="rounded-[var(--radius-md)] bg-brand py-3.5 text-base font-semibold text-brand-foreground shadow-[var(--shadow-fab)] disabled:opacity-40 disabled:shadow-none"
       >
-        Salva
+        {submitLabel}
       </button>
+
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-[var(--radius-md)] bg-surface-muted py-3 text-sm font-semibold text-foreground"
+        >
+          Annulla
+        </button>
+      )}
 
       {status === 'saved' && (
         <p className="flex items-center justify-center gap-2 text-sm font-medium text-brand-dark">

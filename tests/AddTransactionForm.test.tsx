@@ -42,4 +42,47 @@ describe('AddTransactionForm', () => {
 
     expect(screen.getByText('Salva')).toBeDisabled();
   });
+
+  it('precompila i campi con i valori iniziali e usa l\'etichetta di modifica', () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AddTransactionForm
+        categories={categories}
+        accounts={accounts}
+        initial={{
+          tipo: 'expense',
+          importo: 42,
+          categoriaId: 'cat-1',
+          accountId: 'acc-1',
+          descrizione: 'Vecchia spesa',
+        }}
+        submitLabel="Salva modifiche"
+        onSubmit={onSubmit}
+      />
+    );
+
+    expect(screen.getByLabelText('Importo')).toHaveValue(42);
+    expect(screen.getByLabelText('Descrizione')).toHaveValue('Vecchia spesa');
+    expect(screen.getByText('Salva modifiche')).toBeInTheDocument();
+  });
+
+  it('mostra un pulsante Annulla solo se viene passato onCancel, e lo chiama al click', () => {
+    const onCancel = vi.fn();
+    render(
+      <AddTransactionForm
+        categories={categories}
+        accounts={accounts}
+        onCancel={onCancel}
+        onSubmit={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Annulla'));
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it('non mostra il pulsante Annulla se onCancel non è passato', () => {
+    render(<AddTransactionForm categories={categories} accounts={accounts} onSubmit={vi.fn()} />);
+    expect(screen.queryByText('Annulla')).not.toBeInTheDocument();
+  });
 });

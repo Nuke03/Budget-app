@@ -1,38 +1,86 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { getTransactions, deleteTransaction } from '@/lib/data/transactions';
+import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/data/transactions';
 import { getCategories } from '@/lib/data/categories';
+import { getAccounts, updateAccountBalance } from '@/lib/data/accounts';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
+import { computeAggiornamentiSaldoPerModifica } from '@/lib/calculations/accountBalance';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { HistoryChartCard } from './HistoryChartCard';
 import { PeriodoFilter } from './PeriodoFilter';
-import type { Transaction, Category } from '@/lib/types';
+import { AddTransactionForm } from '../add/AddTransactionForm';
+import type { Transaction, Category, Account, TransactionTipo } from '@/lib/types';
 
 export default function HistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [periodo, setPeriodo] = useState<Periodo>('mese');
   const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   async function refresh() {
     const supabase = createClient();
-    const [tx, cats] = await Promise.all([getTransactions(supabase), getCategories(supabase)]);
+    const [tx, cats, accs] = await Promise.all([
+      getTransactions(supabase),
+      getCategories(supabase),
+      getAccounts(supabase),
+    ]);
     setTransactions(tx);
     setCategories(cats);
+    setAccounts(accs);
   }
 
   useEffect(() => {
     refresh();
   }, []);
 
-  async function handleDelete(id: string) {
+  async function applicaAggiornamentiSaldo(
+    vecchia: { accountId: string | null; tipo: TransactionTipo; importo: number },
+    nuova: { accountId: string | null; tipo: TransactionTipo; importo: number }
+  ) {
     const supabase = createClient();
-    await deleteTransaction(supabase, id);
+    const aggiornamenti = computeAggiornamentiSaldoPerModifica(accounts, vecchia, nuova);
+    for (const a of aggiornamenti) {
+      await updateAccountBalance(supabase, a.accountId, a.nuovoSaldo);
+    }
+  }
+
+  async function handleDelete(t: Transaction) {
+    const supabase = createClient();
+    await deleteTransaction(supabase, t.id);
+    await applicaAggiornamentiSaldo(
+      { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
+      { accountId: null, tipo: t.tipo, importo: 0 }
+    );
+    await refresh();
+  }
+
+  async function handleUpdate(payload: {
+    tipo: TransactionTipo;
+    importo: number;
+    categoriaId: string | null;
+    accountId: string | null;
+    descrizione: string;
+  }) {
+    if (!editingTransaction) return;
+    const supabase = createClient();
+    await updateTransaction(supabase, editingTransaction.id, {
+      ...payload,
+      data: editingTransaction.data,
+      goalId: editingTransaction.goalId,
+      nota: editingTransaction.nota,
+    });
+    await applicaAggiornamentiSaldo(
+      { accountId: editingTransaction.accountId, tipo: editingTransaction.tipo, importo: editingTransaction.importo },
+      { accountId: payload.accountId, tipo: payload.tipo, importo: payload.importo }
+    );
+    setEditingTransaction(null);
     await refresh();
   }
 
@@ -90,7 +138,15 @@ export default function HistoryPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleDelete(t.id)}
+                  onClick={() => setEditingTransaction(t)}
+                  aria-label="Modifica transazione"
+                  className="rounded-full p-1.5 text-muted hover:bg-surface-muted hover:text-foreground"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(t)}
                   aria-label="Elimina transazione"
                   className="rounded-full p-1.5 text-muted hover:bg-surface-muted hover:text-danger"
                 >
@@ -108,6 +164,47 @@ export default function HistoryPage() {
           </p>
         )}
       </ul>
+
+      {editingTransaction && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <button
+            type="button"
+            aria-label="Chiudi"
+            onClick={() => setEditingTransaction(null)}
+            className="animate-backdrop-in absolute inset-0 bg-black/40 backdrop-blur-sm"
+          />
+          <div className="animate-sheet-in relative w-full max-w-md rounded-t-[var(--radius-lg)] bg-surface pt-3 shadow-2xl">
+            <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-black/10" />
+            <div className="flex items-center justify-between px-5 pb-2">
+              <h2 className="text-lg font-bold">Modifica transazione</h2>
+              <button
+                type="button"
+                aria-label="Chiudi"
+                onClick={() => setEditingTransaction(null)}
+                className="rounded-full p-1.5 text-muted hover:bg-surface-muted"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="max-h-[75vh] overflow-y-auto">
+              <AddTransactionForm
+                categories={categories}
+                accounts={accounts}
+                initial={{
+                  tipo: editingTransaction.tipo,
+                  importo: editingTransaction.importo,
+                  categoriaId: editingTransaction.categoriaId,
+                  accountId: editingTransaction.accountId,
+                  descrizione: editingTransaction.descrizione,
+                }}
+                submitLabel="Salva modifiche"
+                onCancel={() => setEditingTransaction(null)}
+                onSubmit={handleUpdate}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

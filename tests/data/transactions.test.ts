@@ -3,6 +3,7 @@ import { parseISO } from 'date-fns';
 import {
   getTransactions,
   createTransaction,
+  updateTransaction,
   deleteTransaction,
   getLastIncomeDate,
   getRecentTransactionAmounts,
@@ -48,6 +49,24 @@ describe('createTransaction', () => {
   it('inserisce e ritorna la transazione mappata', async () => {
     const supabase = fakeMutationClient(row);
     const result = await createTransaction(supabase, {
+      tipo: 'expense',
+      importo: 26,
+      data: '2026-02-14',
+      categoriaId: 'cat-1',
+      accountId: 'acc-1',
+      goalId: null,
+      descrizione: 'Spesa',
+      nota: null,
+    });
+
+    expect(result.id).toBe('1');
+  });
+});
+
+describe('updateTransaction', () => {
+  it('aggiorna e ritorna la transazione mappata', async () => {
+    const supabase = fakeMutationClient(row);
+    const result = await updateTransaction(supabase, '1', {
       tipo: 'expense',
       importo: 26,
       data: '2026-02-14',

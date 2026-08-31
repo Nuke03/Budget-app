@@ -72,6 +72,40 @@ export async function createTransaction(
   return mapRow(data as TransactionRow);
 }
 
+export async function updateTransaction(
+  supabase: SupabaseClient,
+  id: string,
+  input: {
+    tipo: TransactionTipo;
+    importo: number;
+    data: string;
+    categoriaId: string | null;
+    accountId: string | null;
+    goalId: string | null;
+    descrizione: string;
+    nota: string | null;
+  }
+): Promise<Transaction> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      tipo: input.tipo,
+      importo: input.importo,
+      data: input.data,
+      categoria_id: input.categoriaId,
+      account_id: input.accountId,
+      goal_id: input.goalId,
+      descrizione: input.descrizione,
+      nota: input.nota,
+    })
+    .eq('id', id)
+    .select('id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at')
+    .single();
+
+  if (error) throw error;
+  return mapRow(data as TransactionRow);
+}
+
 export async function deleteTransaction(supabase: SupabaseClient, id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id);
   if (error) throw error;
