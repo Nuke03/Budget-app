@@ -7,6 +7,8 @@ import { ChevronDown, Plus, X } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { createClient } from '@/lib/supabase/client';
 import { createTransaction } from '@/lib/data/transactions';
+import { updateAccountBalance } from '@/lib/data/accounts';
+import { computeNuovoSaldoConto } from '@/lib/calculations/accountBalance';
 import { AddTransactionForm } from './add/AddTransactionForm';
 import type { Account, BudgetGoal, Category, TransactionTipo } from '@/lib/types';
 
@@ -60,6 +62,15 @@ export function HomeDashboard({
       goalId: null,
       nota: null,
     });
+
+    const account = payload.accountId
+      ? accounts.find((a) => a.id === payload.accountId)
+      : undefined;
+    if (account) {
+      const nuovoSaldo = computeNuovoSaldoConto(account.saldoAttuale, payload.tipo, payload.importo);
+      await updateAccountBalance(supabase, account.id, nuovoSaldo);
+    }
+
     router.refresh();
     setIsAddOpen(false);
   }

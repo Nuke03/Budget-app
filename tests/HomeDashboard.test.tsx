@@ -1,10 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HomeDashboard } from '@/app/HomeDashboard';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
+
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({}),
+}));
+
+vi.mock('@/lib/data/transactions', () => ({
+  createTransaction: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/lib/data/accounts', () => ({
+  updateAccountBalance: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { updateAccountBalance } from '@/lib/data/accounts';
 
 const accounts = [
   { id: '1', nome: 'Conto corrente', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null },
@@ -102,5 +116,27 @@ describe('HomeDashboard', () => {
 
     // Il conto escluso dal disponibile è mostrato ma etichettato come tale.
     expect(screen.getByText(/Fondo emergenza \(non conta nel disponibile\)/)).toBeInTheDocument();
+  });
+
+  it('scarica una spesa dal saldo del conto selezionato quando si aggiunge una transazione', async () => {
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '26' } });
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Spesa' } });
+    fireEvent.click(screen.getByText('Salva'));
+
+    await waitFor(() => {
+      expect(updateAccountBalance).toHaveBeenCalledWith(expect.anything(), '1', 844);
+    });
   });
 });
