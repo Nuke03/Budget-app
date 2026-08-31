@@ -1,8 +1,17 @@
 import { Lock, Clock } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
-import type { BudgetGoal } from '@/lib/types';
+import type { BudgetGoal, Category } from '@/lib/types';
 
-export function GoalsList({ goals }: { goals: BudgetGoal[] }) {
+function frequenzaLabel(mesi: number | null): string {
+  if (mesi === 1) return 'mensile';
+  if (mesi === 3) return 'trimestrale';
+  if (mesi === 6) return 'semestrale';
+  if (mesi === 12) return 'annuale';
+  if (mesi) return `ogni ${mesi} mesi`;
+  return '';
+}
+
+export function GoalsList({ goals, categories }: { goals: BudgetGoal[]; categories: Category[] }) {
   if (goals.length === 0) {
     return (
       <p className="rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted shadow-[var(--shadow-card)]">
@@ -15,6 +24,9 @@ export function GoalsList({ goals }: { goals: BudgetGoal[] }) {
     <ul className="flex flex-col gap-3">
       {goals.map((g) => {
         const isBloccato = g.modalita === 'bloccato';
+        const categoriaNome = g.categoriaId
+          ? categories.find((c) => c.id === g.categoriaId)?.nome
+          : null;
         return (
           <li
             key={g.id}
@@ -34,7 +46,8 @@ export function GoalsList({ goals }: { goals: BudgetGoal[] }) {
                 {isBloccato ? 'Bloccato' : 'Dilazionato'}
               </span>
               {g.scadenza && <span>entro il {formatDateIt(g.scadenza)}</span>}
-              {g.ricorrente && <span>· ricorrente</span>}
+              {g.ricorrente && g.frequenzaMesi && <span>· {frequenzaLabel(g.frequenzaMesi)}</span>}
+              {categoriaNome && <span>· {categoriaNome}</span>}
             </div>
           </li>
         );

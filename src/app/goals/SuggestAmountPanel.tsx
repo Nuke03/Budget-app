@@ -17,20 +17,29 @@ export function SuggestAmountPanel({
   const [margine, setMargine] = useState('10');
   const [importi, setImporti] = useState<number[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const limiteNumerico = Number(limite);
+    const limiteNumerico = Math.floor(Number(limite));
     if (!limiteNumerico || limiteNumerico <= 0) return;
 
     let cancelled = false;
     setLoading(true);
+    setError(null);
     const supabase = createClient();
-    getRecentTransactionAmounts(supabase, categoriaId, limiteNumerico).then((result) => {
-      if (!cancelled) {
-        setImporti(result);
-        setLoading(false);
-      }
-    });
+    getRecentTransactionAmounts(supabase, categoriaId, limiteNumerico)
+      .then((result) => {
+        if (!cancelled) {
+          setImporti(result);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError('Errore nel recupero delle spese passate. Riprova.');
+          setLoading(false);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -68,6 +77,8 @@ export function SuggestAmountPanel({
       </div>
 
       {loading && <p className="text-muted">Ricerca spese passate...</p>}
+
+      {error && <p className="text-danger">{error}</p>}
 
       {!loading && importi && importi.length === 0 && (
         <p className="text-muted">

@@ -49,7 +49,8 @@ export function CreateGoalForm({
     nome.trim() !== '' &&
     importoTarget.trim() !== '' &&
     !Number.isNaN(Number(importoTarget)) &&
-    (modalita === 'bloccato' || scadenza.trim() !== '');
+    (modalita === 'bloccato' || scadenza.trim() !== '') &&
+    (!ricorrente || (!Number.isNaN(frequenzaMesi) && frequenzaMesi >= 1));
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -186,6 +187,14 @@ export function CreateGoalForm({
               placeholder="Numero di mesi"
               className={fieldClass}
             />
+          )}
+          {modalita === 'dilazionato' && frequenzaPreset === 1 && (
+            <p className="rounded-[var(--radius-sm)] bg-cat-amber/15 p-2 text-xs text-cat-amber">
+              Con cadenza mensile, &quot;Dilazionato&quot; riserva l&apos;intero importo solo
+              negli ultimi giorni del mese, poi torna a zero. Per un abbonamento a importo fisso
+              come questo, valuta &quot;Bloccato&quot; invece: riserva subito l&apos;intero
+              importo ogni mese.
+            </p>
           )}
         </div>
       )}
