@@ -83,6 +83,7 @@ export default function PivaPage() {
           initial={settings}
           submitLabel={settings ? 'Salva modifiche' : 'Attiva gestione P.IVA'}
           onSubmit={handleSave}
+          onCancel={settings && settings.attivo ? () => setEditing(false) : undefined}
         />
       </main>
     );

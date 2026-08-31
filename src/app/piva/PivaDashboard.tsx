@@ -50,6 +50,15 @@ export function PivaDashboard({
         ))}
       </section>
 
+      <p className="text-xs text-muted">
+        Il calcolo applica le impostazioni attuali retroattivamente a tutto l&apos;anno solare
+        in corso e non gestisce variazioni di aliquota a metà anno. I contributi versati
+        l&apos;anno precedente sono un valore inserito a mano, non derivato automaticamente
+        dalle transazioni. Aliquote, coefficiente e minimale restano sotto la tua
+        responsabilità: l&apos;app non conosce le regole della tua cassa specifica, esegue
+        solo i calcoli sui numeri che fornisci.
+      </p>
+
       <div className="flex flex-col gap-2">
         <button
           type="button"

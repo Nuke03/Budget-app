@@ -33,11 +33,13 @@ export function PivaSettingsForm({
   initial,
   submitLabel,
   onSubmit,
+  onCancel,
 }: {
   categories: Category[];
   initial: PivaSettingsFormValues | null;
   submitLabel: string;
   onSubmit: (values: PivaSettingsFormValues) => void;
+  onCancel?: () => void;
 }) {
   const start = initial ?? DEFAULTS;
 
@@ -65,6 +67,16 @@ export function PivaSettingsForm({
   );
 
   const categorieFatturato = categories.filter((c) => !c.archiviata && c.tipo === 'income');
+
+  const categoriaArchiviataSelezionata =
+    categoriaFatturatoId !== null &&
+    !categorieFatturato.some((c) => c.id === categoriaFatturatoId)
+      ? categories.find((c) => c.id === categoriaFatturatoId)
+      : undefined;
+
+  const opzioniCategoriaFatturato = categoriaArchiviataSelezionata
+    ? [...categorieFatturato, categoriaArchiviataSelezionata]
+    : categorieFatturato;
 
   const numeriValidi = [
     coefficienteRedditivita,
@@ -117,9 +129,9 @@ export function PivaSettingsForm({
           className={fieldClass}
         >
           <option value="">Seleziona una categoria</option>
-          {categorieFatturato.map((c) => (
+          {opzioniCategoriaFatturato.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.nome}
+              {c.archiviata ? `${c.nome} (archiviata)` : c.nome}
             </option>
           ))}
         </select>
@@ -206,6 +218,16 @@ export function PivaSettingsForm({
       >
         {submitLabel}
       </button>
+
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-[var(--radius-md)] bg-surface py-3 text-sm font-semibold text-foreground shadow-[var(--shadow-card)]"
+        >
+          Annulla
+        </button>
+      )}
     </form>
   );
 }

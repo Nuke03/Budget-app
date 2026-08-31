@@ -103,4 +103,29 @@ describe('PivaSettingsForm', () => {
     const aliquotaSelect = screen.getByLabelText('Aliquota imposta sostitutiva') as HTMLSelectElement;
     expect(aliquotaSelect.value).toBe('auto');
   });
+
+  it('non mostra il pulsante Annulla quando onCancel non è fornito', () => {
+    render(
+      <PivaSettingsForm categories={categories} initial={null} submitLabel="Attiva gestione P.IVA" onSubmit={vi.fn()} />
+    );
+
+    expect(screen.queryByText('Annulla')).not.toBeInTheDocument();
+  });
+
+  it('mostra Annulla e chiama onCancel al click quando fornito', () => {
+    const onCancel = vi.fn();
+    render(
+      <PivaSettingsForm
+        categories={categories}
+        initial={null}
+        submitLabel="Salva modifiche"
+        onSubmit={vi.fn()}
+        onCancel={onCancel}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Annulla'));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
 });

@@ -164,4 +164,59 @@ describe('PivaPage', () => {
       );
     });
   });
+
+  it('modifica le impostazioni esistenti tramite "Modifica impostazioni" e salva', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue({
+      id: '1',
+      attivo: true,
+      dataApertura: null,
+      categoriaFatturatoId: 'cat-fatt',
+      coefficienteRedditivita: 78,
+      aliquotaSostitutivaOverride: 5,
+      aliquotaContributoSoggettivo: 10,
+      aliquotaContributoIntegrativo: 4,
+      minimaleContributivoAnnuo: 0,
+      contributiVersatiAnnoPrecedente: 0,
+    });
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    vi.mocked(getTransactions).mockResolvedValue(transactions);
+    vi.mocked(updatePivaSettings).mockResolvedValue({
+      id: '1',
+      attivo: true,
+      dataApertura: null,
+      categoriaFatturatoId: 'cat-fatt',
+      coefficienteRedditivita: 78,
+      aliquotaSostitutivaOverride: 5,
+      aliquotaContributoSoggettivo: 10,
+      aliquotaContributoIntegrativo: 4,
+      minimaleContributivoAnnuo: 900,
+      contributiVersatiAnnoPrecedente: 0,
+    });
+
+    render(<PivaPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Modifica impostazioni')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Modifica impostazioni'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Salva modifiche')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Minimale contributivo annuo')).toHaveValue(0);
+    fireEvent.change(screen.getByLabelText('Minimale contributivo annuo'), {
+      target: { value: '900' },
+    });
+    fireEvent.click(screen.getByText('Salva modifiche'));
+
+    await waitFor(() => {
+      expect(updatePivaSettings).toHaveBeenCalledWith(
+        expect.anything(),
+        '1',
+        expect.objectContaining({ minimaleContributivoAnnuo: 900 })
+      );
+    });
+  });
 });
