@@ -9,10 +9,11 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/data/categories', () => ({
   getCategories: vi.fn(),
   createCategory: vi.fn(),
+  updateCategory: vi.fn(),
   archiveCategory: vi.fn(),
 }));
 
-import { getCategories } from '@/lib/data/categories';
+import { getCategories, updateCategory } from '@/lib/data/categories';
 
 const categories = [
   { id: '1', nome: 'Spesa alimentare', tipo: 'expense' as const, colore: null, archiviata: false },
@@ -33,5 +34,50 @@ describe('CategoriesPage', () => {
 
     expect(screen.getByText('Stipendio')).toBeInTheDocument();
     expect(screen.queryByText('Spesa alimentare')).not.toBeInTheDocument();
+  });
+
+  it('precompila nome e colore e salva le modifiche cliccando la matita di una categoria', async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    vi.mocked(updateCategory).mockResolvedValue({
+      id: '1',
+      nome: 'Spesa alimentare modificata',
+      tipo: 'expense',
+      colore: '#3B9AE1',
+      archiviata: false,
+    });
+    render(<CategoriesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
+
+    const nomeInput = screen.getByDisplayValue('Spesa alimentare');
+    fireEvent.change(nomeInput, { target: { value: 'Spesa alimentare modificata' } });
+    fireEvent.click(screen.getByLabelText('Cielo'));
+    fireEvent.click(screen.getByText('Salva modifiche'));
+
+    await waitFor(() => {
+      expect(updateCategory).toHaveBeenCalledWith(expect.anything(), '1', {
+        nome: 'Spesa alimentare modificata',
+        colore: '#3B9AE1',
+      });
+    });
+  });
+
+  it('annulla la modifica e torna al form di creazione', async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    render(<CategoriesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
+    expect(screen.getByText('Modifica categoria')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Annulla'));
+    expect(screen.getByText('Nuova categoria')).toBeInTheDocument();
   });
 });

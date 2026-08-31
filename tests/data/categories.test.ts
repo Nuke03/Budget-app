@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getCategories, createCategory, archiveCategory } from '@/lib/data/categories';
+import { getCategories, createCategory, updateCategory, archiveCategory } from '@/lib/data/categories';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
 describe('getCategories', () => {
@@ -29,6 +29,23 @@ describe('createCategory', () => {
     const result = await createCategory(supabase, { nome: 'Viaggi', tipo: 'expense', colore: null });
 
     expect(result.nome).toBe('Viaggi');
+  });
+});
+
+describe('updateCategory', () => {
+  it('aggiorna e ritorna la categoria mappata', async () => {
+    const supabase = fakeMutationClient({
+      id: '1',
+      nome: 'Bollette',
+      tipo: 'expense',
+      colore: '#3B9AE1',
+      archiviata: false,
+    });
+
+    const result = await updateCategory(supabase, '1', { nome: 'Bollette', colore: '#3B9AE1' });
+
+    expect(result.nome).toBe('Bollette');
+    expect(result.colore).toBe('#3B9AE1');
   });
 });
 

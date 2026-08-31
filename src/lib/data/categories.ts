@@ -43,6 +43,22 @@ export async function createCategory(
   return mapRow(data as CategoryRow);
 }
 
+export async function updateCategory(
+  supabase: SupabaseClient,
+  id: string,
+  input: { nome: string; colore: string | null }
+): Promise<Category> {
+  const { data, error } = await supabase
+    .from('categories')
+    .update({ nome: input.nome, colore: input.colore })
+    .eq('id', id)
+    .select('id, nome, tipo, colore, archiviata')
+    .single();
+
+  if (error) throw error;
+  return mapRow(data as CategoryRow);
+}
+
 export async function archiveCategory(supabase: SupabaseClient, id: string): Promise<void> {
   const { error } = await supabase.from('categories').update({ archiviata: true }).eq('id', id);
   if (error) throw error;
