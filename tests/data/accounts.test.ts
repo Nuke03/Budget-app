@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAccounts, createAccount, updateAccountBalance } from '@/lib/data/accounts';
+import { getAccounts, createAccount, updateAccountBalance, updateAccountDetails } from '@/lib/data/accounts';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
 describe('getAccounts', () => {
@@ -53,5 +53,31 @@ describe('updateAccountBalance', () => {
   it('non lancia errori quando la scrittura va a buon fine', async () => {
     const supabase = fakeMutationClient(null);
     await expect(updateAccountBalance(supabase, '1', 750)).resolves.toBeUndefined();
+  });
+});
+
+describe('updateAccountDetails', () => {
+  it('aggiorna e ritorna il conto mappato', async () => {
+    const supabase = fakeMutationClient({
+      id: '1',
+      nome: 'Fondo sicurezza',
+      saldo_attuale: 500,
+      conta_in_disponibile: true,
+      target_saldo: 5000,
+    });
+
+    const result = await updateAccountDetails(supabase, '1', {
+      nome: 'Fondo sicurezza',
+      contaInDisponibile: true,
+      targetSaldo: 5000,
+    });
+
+    expect(result).toEqual({
+      id: '1',
+      nome: 'Fondo sicurezza',
+      saldoAttuale: 500,
+      contaInDisponibile: true,
+      targetSaldo: 5000,
+    });
   });
 });

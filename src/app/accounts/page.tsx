@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { getAccounts, updateAccountBalance, createAccount } from '@/lib/data/accounts';
+import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount } from '@/lib/data/accounts';
 import { AccountRow } from './AccountRow';
 import type { Account } from '@/lib/types';
 
@@ -26,6 +26,15 @@ export default function AccountsPage() {
     await refresh();
   }
 
+  async function handleUpdateDetails(
+    id: string,
+    details: { nome: string; contaInDisponibile: boolean; targetSaldo: number | null }
+  ) {
+    const supabase = createClient();
+    await updateAccountDetails(supabase, id, details);
+    await refresh();
+  }
+
   async function handleCreate() {
     if (!nome.trim()) return;
     const supabase = createClient();
@@ -45,7 +54,12 @@ export default function AccountsPage() {
 
       <div className="flex flex-col gap-3">
         {accounts.map((a) => (
-          <AccountRow key={a.id} account={a} onUpdateBalance={handleUpdateBalance} />
+          <AccountRow
+            key={a.id}
+            account={a}
+            onUpdateBalance={handleUpdateBalance}
+            onUpdateDetails={handleUpdateDetails}
+          />
         ))}
       </div>
 

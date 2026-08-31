@@ -56,3 +56,23 @@ export async function updateAccountBalance(
   const { error } = await supabase.from('accounts').update({ saldo_attuale: saldoAttuale }).eq('id', id);
   if (error) throw error;
 }
+
+export async function updateAccountDetails(
+  supabase: SupabaseClient,
+  id: string,
+  input: { nome: string; contaInDisponibile: boolean; targetSaldo: number | null }
+): Promise<Account> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .update({
+      nome: input.nome,
+      conta_in_disponibile: input.contaInDisponibile,
+      target_saldo: input.targetSaldo,
+    })
+    .eq('id', id)
+    .select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo')
+    .single();
+
+  if (error) throw error;
+  return mapRow(data as AccountRow);
+}

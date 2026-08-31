@@ -1,18 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { Wallet, PiggyBank } from 'lucide-react';
+import { Wallet, PiggyBank, Pencil } from 'lucide-react';
 import { formatEuro } from '@/lib/format';
 import type { Account } from '@/lib/types';
+
+const fieldClass =
+  'rounded-[var(--radius-sm)] border border-black/5 bg-surface-muted px-3 py-2 text-sm outline-none focus-visible:border-brand';
 
 export function AccountRow({
   account,
   onUpdateBalance,
+  onUpdateDetails,
 }: {
   account: Account;
   onUpdateBalance: (id: string, saldo: number) => void;
+  onUpdateDetails?: (
+    id: string,
+    details: { nome: string; contaInDisponibile: boolean; targetSaldo: number | null }
+  ) => void;
 }) {
   const [saldo, setSaldo] = useState(String(account.saldoAttuale));
+  const [isEditing, setIsEditing] = useState(false);
+  const [editNome, setEditNome] = useState(account.nome);
+  const [editContaInDisponibile, setEditContaInDisponibile] = useState(account.contaInDisponibile);
+  const [editTargetSaldo, setEditTargetSaldo] = useState(
+    account.targetSaldo !== null ? String(account.targetSaldo) : ''
+  );
 
   const saldoNumerico = Number(saldo);
   const isValid = saldo.trim() !== '' && !Number.isNaN(saldoNumerico);
@@ -24,6 +38,80 @@ export function AccountRow({
 
   const Icon = account.contaInDisponibile ? Wallet : PiggyBank;
 
+  function startEdit() {
+    setEditNome(account.nome);
+    setEditContaInDisponibile(account.contaInDisponibile);
+    setEditTargetSaldo(account.targetSaldo !== null ? String(account.targetSaldo) : '');
+    setIsEditing(true);
+  }
+
+  function handleSaveDetails() {
+    if (!onUpdateDetails || !editNome.trim()) return;
+    onUpdateDetails(account.id, {
+      nome: editNome,
+      contaInDisponibile: editContaInDisponibile,
+      targetSaldo: editTargetSaldo.trim() === '' ? null : Number(editTargetSaldo),
+    });
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <div className="flex flex-col gap-3 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+          Nome conto
+          <input
+            aria-label="Nome conto"
+            value={editNome}
+            onChange={(e) => setEditNome(e.target.value)}
+            className={fieldClass}
+          />
+        </label>
+
+        <label className="flex items-center gap-2.5 text-sm font-medium">
+          <input
+            aria-label="Conta nel disponibile libero"
+            type="checkbox"
+            checked={editContaInDisponibile}
+            onChange={(e) => setEditContaInDisponibile(e.target.checked)}
+            className="h-4 w-4 accent-brand"
+          />
+          Conta nel disponibile libero
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+          Obiettivo di saldo (opzionale)
+          <input
+            aria-label="Obiettivo di saldo (opzionale)"
+            type="number"
+            inputMode="decimal"
+            value={editTargetSaldo}
+            onChange={(e) => setEditTargetSaldo(e.target.value)}
+            className={fieldClass}
+          />
+        </label>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={!editNome.trim()}
+            onClick={handleSaveDetails}
+            className="flex-1 rounded-[var(--radius-sm)] bg-brand py-2 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+          >
+            Salva modifiche
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsEditing(false)}
+            className="flex-1 rounded-[var(--radius-sm)] bg-surface-muted py-2 text-sm font-semibold text-foreground"
+          >
+            Annulla
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between">
@@ -32,6 +120,16 @@ export function AccountRow({
             <Icon size={18} />
           </span>
           <span className="font-semibold">{account.nome}</span>
+          {onUpdateDetails && (
+            <button
+              type="button"
+              onClick={startEdit}
+              aria-label="Modifica conto"
+              className="rounded-full p-1 text-muted hover:bg-surface-muted hover:text-foreground"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
         </div>
         <span className="tabular-nums font-semibold">{formatEuro(account.saldoAttuale)}</span>
       </div>
