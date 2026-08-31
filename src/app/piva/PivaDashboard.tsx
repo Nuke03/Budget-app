@@ -1,3 +1,5 @@
+'use client';
+
 import { formatEuro } from '@/lib/format';
 
 export function PivaDashboard({
