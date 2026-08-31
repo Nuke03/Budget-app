@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { HomeDashboard } from '@/app/HomeDashboard';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
 
 const accounts = [
   { id: '1', nome: 'Conto corrente', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null },
@@ -29,6 +33,7 @@ describe('HomeDashboard', () => {
         margineGiornaliero={29}
         dataTarget="2026-07-01T00:00:00Z"
         accounts={accounts}
+        categories={[]}
         goals={goals}
       />
     );
@@ -44,6 +49,7 @@ describe('HomeDashboard', () => {
         margineGiornaliero={29}
         dataTarget="2026-07-01T00:00:00Z"
         accounts={accounts}
+        categories={[]}
         goals={goals}
       />
     );
@@ -83,6 +89,7 @@ describe('HomeDashboard', () => {
         margineGiornaliero={29}
         dataTarget="2026-07-01T00:00:00Z"
         accounts={accountsConFondo}
+        categories={[]}
         goals={goalsDilazionato}
       />
     );

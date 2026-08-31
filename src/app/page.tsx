@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getAccounts } from '@/lib/data/accounts';
+import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals, } from '@/lib/data/goals';
 import { getLastIncomeDate } from '@/lib/data/transactions';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
@@ -10,8 +11,9 @@ import { HomeDashboard } from './HomeDashboard';
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const [accounts, goals, ultimaEntrata] = await Promise.all([
+  const [accounts, categories, goals, ultimaEntrata] = await Promise.all([
     getAccounts(supabase),
+    getCategories(supabase),
     getOpenGoals(supabase),
     getLastIncomeDate(supabase),
   ]);
@@ -35,6 +37,7 @@ export default async function HomePage() {
       margineGiornaliero={margineGiornaliero}
       dataTarget={dataTarget.toISOString()}
       accounts={accounts}
+      categories={categories}
       goals={goalsWithAccantonato}
     />
   );

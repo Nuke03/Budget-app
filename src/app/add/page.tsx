@@ -40,5 +40,10 @@ export default function AddTransactionPage() {
     router.push('/');
   }
 
-  return <AddTransactionForm categories={categories} accounts={accounts} onSubmit={handleSubmit} />;
+  return (
+    <main className="mx-auto flex max-w-md flex-col gap-4 pt-8">
+      <h1 className="px-5 text-2xl font-bold">Nuova transazione</h1>
+      <AddTransactionForm categories={categories} accounts={accounts} onSubmit={handleSubmit} />
+    </main>
+  );
 }

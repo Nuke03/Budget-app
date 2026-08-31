@@ -33,10 +33,10 @@ export default function GoalsPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-6">
-      <h1 className="text-xl font-bold">Obiettivi di budget</h1>
+    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
+      <h1 className="text-2xl font-bold">Obiettivi di budget</h1>
       <GoalsList goals={goals} />
-      <h2 className="text-lg font-semibold">Nuovo obiettivo</h2>
+      <h2 className="text-lg font-bold">Nuovo obiettivo</h2>
       <CreateGoalForm onSubmit={handleCreate} />
     </main>
   );

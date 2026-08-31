@@ -40,30 +40,41 @@ export default function AccountsPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-4 p-6">
-      <h1 className="text-xl font-bold">Conti</h1>
-      {accounts.map((a) => (
-        <AccountRow key={a.id} account={a} onUpdateBalance={handleUpdateBalance} />
-      ))}
+    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
+      <h1 className="text-2xl font-bold">Conti</h1>
 
-      <h2 className="text-lg font-semibold">Nuovo conto</h2>
-      <input
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        placeholder="Nome conto"
-        className="rounded border p-2"
-      />
-      <label className="flex items-center gap-2 text-sm">
+      <div className="flex flex-col gap-3">
+        {accounts.map((a) => (
+          <AccountRow key={a.id} account={a} onUpdateBalance={handleUpdateBalance} />
+        ))}
+      </div>
+
+      <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
+        <h2 className="text-base font-bold">Nuovo conto</h2>
         <input
-          type="checkbox"
-          checked={contaInDisponibile}
-          onChange={(e) => setContaInDisponibile(e.target.checked)}
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Es. Conto corrente"
+          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand"
         />
-        Conta nel disponibile libero
-      </label>
-      <button type="button" onClick={handleCreate} className="rounded bg-slate-900 p-2 text-white">
-        Aggiungi conto
-      </button>
+        <label className="flex items-center gap-2.5 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={contaInDisponibile}
+            onChange={(e) => setContaInDisponibile(e.target.checked)}
+            className="h-4 w-4 accent-brand"
+          />
+          Conta nel disponibile libero
+        </label>
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={!nome.trim()}
+          className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+        >
+          Aggiungi conto
+        </button>
+      </section>
     </main>
   );
 }

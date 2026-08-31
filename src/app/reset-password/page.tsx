@@ -59,21 +59,28 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="text-2xl font-bold">Imposta una nuova password</h1>
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-lg)] bg-brand text-3xl font-bold text-brand-foreground shadow-[var(--shadow-hero)]">
+          €
+        </span>
+        <h1 className="text-2xl font-bold">Nuova password</h1>
+      </div>
 
       {!ready && (
-        <p className="rounded bg-yellow-100 p-2 text-sm text-yellow-800">
-          In attesa del link di recupero. Se sei arrivato qui direttamente (non da un'email di
-          recupero), torna al{' '}
-          <a href="/login" className="underline">
+        <p className="rounded-[var(--radius-md)] bg-cat-amber/15 p-3 text-sm text-cat-amber">
+          In attesa del link di recupero. Se sei arrivato qui direttamente (non da un&apos;email
+          di recupero), torna al{' '}
+          <a href="/login" className="font-semibold underline">
             login
           </a>
           .
         </p>
       )}
 
-      {error && <p className="rounded bg-red-100 p-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-[var(--radius-md)] bg-danger-tint p-3 text-sm text-danger">{error}</p>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
@@ -82,7 +89,7 @@ export default function ResetPasswordPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="rounded border p-2"
+          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand"
         />
         <input
           type="password"
@@ -90,12 +97,12 @@ export default function ResetPasswordPage() {
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
-          className="rounded border p-2"
+          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand"
         />
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-slate-900 p-2 text-white disabled:opacity-60"
+          className="rounded-[var(--radius-md)] bg-brand py-3.5 text-base font-semibold text-brand-foreground shadow-[var(--shadow-fab)] disabled:opacity-60 disabled:shadow-none"
         >
           {submitting ? 'Salvataggio in corso...' : 'Salva nuova password'}
         </button>
