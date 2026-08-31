@@ -27,16 +27,16 @@ describe('SuggestAmountPanel', () => {
   });
 
   it("calcola e mostra l'importo suggerito, e lo passa a onUseAmount al click", async () => {
-    vi.mocked(getRecentTransactionAmounts).mockResolvedValue([100, 110, 90]);
+    vi.mocked(getRecentTransactionAmounts).mockResolvedValue([90, 100, 80]);
     const onUseAmount = vi.fn();
     render(<SuggestAmountPanel categoriaId="cat-1" onUseAmount={onUseAmount} />);
 
-    // media = 100, margine default 10% => 110
+    // media = 90, margine default 10% => 99
     await waitFor(() => {
-      expect(screen.getByText('110,00 €')).toBeInTheDocument();
+      expect(screen.getByText('99,00 €')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByText('Usa questo importo'));
-    expect(onUseAmount).toHaveBeenCalledWith(110);
+    expect(onUseAmount).toHaveBeenCalledWith(99);
   });
 });

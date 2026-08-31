@@ -77,9 +77,14 @@ export function SuggestAmountPanel({
 
       {!loading && importi && importi.length > 0 && (
         <>
-          <p className="text-muted">
-            Calcolato su {importi.length} {importi.length === 1 ? 'spesa passata' : 'spese passate'}.
-          </p>
+          <ul className="flex flex-col gap-1 text-muted">
+            {importi.map((importo, i) => (
+              <li key={i} className="flex justify-between">
+                <span>Spesa passata {i + 1}</span>
+                <span className="tabular-nums">{formatEuro(importo)}</span>
+              </li>
+            ))}
+          </ul>
           {suggerito !== null && (
             <div className="flex items-center justify-between border-t border-black/5 pt-2 font-semibold">
               <span>Importo suggerito</span>
