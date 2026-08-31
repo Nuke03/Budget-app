@@ -11,7 +11,17 @@ function frequenzaLabel(mesi: number | null): string {
   return '';
 }
 
-export function GoalsList({ goals, categories }: { goals: BudgetGoal[]; categories: Category[] }) {
+export interface GoalWithQuotaMensile extends BudgetGoal {
+  quotaMensile: number | null;
+}
+
+export function GoalsList({
+  goals,
+  categories,
+}: {
+  goals: GoalWithQuotaMensile[];
+  categories: Category[];
+}) {
   if (goals.length === 0) {
     return (
       <p className="rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted shadow-[var(--shadow-card)]">
@@ -49,6 +59,12 @@ export function GoalsList({ goals, categories }: { goals: BudgetGoal[]; categori
               {g.ricorrente && g.frequenzaMesi && <span>· {frequenzaLabel(g.frequenzaMesi)}</span>}
               {categoriaNome && <span>· {categoriaNome}</span>}
             </div>
+            {g.quotaMensile !== null && (
+              <div className="mt-2 flex items-center justify-between rounded-[var(--radius-sm)] bg-cat-sky/10 px-2.5 py-1.5 text-xs font-medium text-cat-sky">
+                <span>Sposta questo mese</span>
+                <span className="tabular-nums">{formatEuro(g.quotaMensile)}</span>
+              </div>
+            )}
           </li>
         );
       })}

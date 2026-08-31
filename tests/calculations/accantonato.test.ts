@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAccantonatoFinora, nextOccurrence } from '@/lib/calculations/accantonato';
+import { computeAccantonatoFinora, computeQuotaMensile, nextOccurrence } from '@/lib/calculations/accantonato';
 import type { GoalForCalc } from '@/lib/calculations/types';
 
 describe('computeAccantonatoFinora', () => {
@@ -133,6 +133,79 @@ describe('computeAccantonatoFinora', () => {
         process.env.TZ = originalTz;
       }
     }
+  });
+});
+
+describe('computeQuotaMensile', () => {
+  it('per un obiettivo bloccato non ricorrente non c\'è una quota mensile (è un versamento unico)', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 500,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: null,
+      createdAt: '2026-01-01',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    expect(computeQuotaMensile(goal, new Date(2026, 5, 1))).toBeNull();
+  });
+
+  it('per un obiettivo bloccato ricorrente la quota è l\'intero importo ad ogni ricorrenza', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 9.99,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: '2026-01-01',
+      createdAt: '2026-01-01',
+      ricorrente: true,
+      frequenzaMesi: 1,
+    };
+
+    expect(computeQuotaMensile(goal, new Date(2026, 5, 1))).toBe(9.99);
+  });
+
+  it('per un obiettivo dilazionato non ricorrente la quota è l\'importo diviso i mesi della finestra', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 300,
+      modalita: 'dilazionato',
+      scadenza: '2026-11-27',
+      stato: 'aperto',
+      createdAt: '2026-01-27',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    // 10 mesi totali (gen->nov) => 300/10 = 30
+    expect(computeQuotaMensile(goal, new Date(2026, 5, 27))).toBeCloseTo(30, 5);
+  });
+
+  it('per un obiettivo dilazionato ricorrente la quota usa la finestra del ciclo corrente', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 160,
+      modalita: 'dilazionato',
+      scadenza: '2025-07-01',
+      stato: 'aperto',
+      createdAt: '2024-07-01',
+      ricorrente: true,
+      frequenzaMesi: 12,
+    };
+
+    expect(computeQuotaMensile(goal, new Date(2026, 5, 1))).toBeCloseTo(160 / 12, 5);
+  });
+
+  it('lancia un errore se un obiettivo dilazionato non ha scadenza', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 100,
+      modalita: 'dilazionato',
+      scadenza: null,
+      stato: 'aperto',
+      createdAt: '2026-01-01',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    expect(() => computeQuotaMensile(goal, new Date(2026, 5, 1))).toThrow();
   });
 });
 
