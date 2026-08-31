@@ -49,9 +49,9 @@ export function PivaSettingsForm({
     String(start.coefficienteRedditivita)
   );
   const [aliquotaOverride, setAliquotaOverride] = useState<'auto' | '5' | '15'>(
-    start.aliquotaSostitutivaOverride === null
-      ? 'auto'
-      : (String(start.aliquotaSostitutivaOverride) as '5' | '15')
+    start.aliquotaSostitutivaOverride === 5 || start.aliquotaSostitutivaOverride === 15
+      ? (String(start.aliquotaSostitutivaOverride) as '5' | '15')
+      : 'auto'
   );
   const [aliquotaSoggettivo, setAliquotaSoggettivo] = useState(
     String(start.aliquotaContributoSoggettivo)

@@ -80,4 +80,27 @@ describe('PivaSettingsForm', () => {
       expect.objectContaining({ minimaleContributivoAnnuo: 900, aliquotaSostitutivaOverride: 15 })
     );
   });
+
+  it('fallback su "Automatica" per valori aliquota fuori range', () => {
+    render(
+      <PivaSettingsForm
+        categories={categories}
+        initial={{
+          dataApertura: null,
+          categoriaFatturatoId: 'cat-fatt',
+          coefficienteRedditivita: 78,
+          aliquotaSostitutivaOverride: 20,
+          aliquotaContributoSoggettivo: 10,
+          aliquotaContributoIntegrativo: 4,
+          minimaleContributivoAnnuo: 0,
+          contributiVersatiAnnoPrecedente: 0,
+        }}
+        submitLabel="Salva"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const aliquotaSelect = screen.getByLabelText('Aliquota imposta sostitutiva') as HTMLSelectElement;
+    expect(aliquotaSelect.value).toBe('auto');
+  });
 });
