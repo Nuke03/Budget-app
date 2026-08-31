@@ -12,6 +12,7 @@ export default function CategoriesPage() {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<CategoriaTipo>('expense');
   const [colore, setColore] = useState<string>(CATEGORY_COLORS[0].value);
+  const [filtroTipo, setFiltroTipo] = useState<CategoriaTipo>('expense');
 
   async function refresh() {
     const supabase = createClient();
@@ -36,11 +37,26 @@ export default function CategoriesPage() {
     await refresh();
   }
 
-  const attive = categories.filter((c) => !c.archiviata);
+  const attive = categories.filter((c) => !c.archiviata && c.tipo === filtroTipo);
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
       <h1 className="text-2xl font-bold">Categorie</h1>
+
+      <div className="flex gap-1.5 rounded-full bg-surface-muted p-1">
+        {(['expense', 'income'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setFiltroTipo(t)}
+            className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors duration-150 ${
+              filtroTipo === t ? 'bg-surface text-foreground shadow-[var(--shadow-card)]' : 'text-muted'
+            }`}
+          >
+            {t === 'expense' ? 'Spesa' : 'Entrata'}
+          </button>
+        ))}
+      </div>
 
       <ul className="flex flex-col gap-2">
         {attive.map((c) => (
