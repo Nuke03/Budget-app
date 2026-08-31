@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getOpenGoals, createGoal, closeGoal } from '@/lib/data/goals';
+import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
 const row = {
@@ -43,6 +43,23 @@ describe('createGoal', () => {
     const result = await createGoal(supabase, {
       nome: 'Telepass',
       importoTarget: 130,
+      modalita: 'bloccato',
+      scadenza: null,
+      categoriaId: null,
+      ricorrente: false,
+      frequenzaMesi: null,
+    });
+
+    expect(result.nome).toBe('Telepass');
+  });
+});
+
+describe('updateGoal', () => {
+  it('aggiorna e ritorna l\'obiettivo mappato', async () => {
+    const supabase = fakeMutationClient(row);
+    const result = await updateGoal(supabase, '1', {
+      nome: 'Telepass',
+      importoTarget: 150,
       modalita: 'bloccato',
       scadenza: null,
       categoriaId: null,

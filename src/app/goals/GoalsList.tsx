@@ -1,4 +1,4 @@
-import { Lock, Clock } from 'lucide-react';
+import { Lock, Clock, Pencil } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import type { BudgetGoal, Category } from '@/lib/types';
 
@@ -18,9 +18,11 @@ export interface GoalWithQuotaMensile extends BudgetGoal {
 export function GoalsList({
   goals,
   categories,
+  onEdit,
 }: {
   goals: GoalWithQuotaMensile[];
   categories: Category[];
+  onEdit?: (goal: GoalWithQuotaMensile) => void;
 }) {
   if (goals.length === 0) {
     return (
@@ -44,7 +46,19 @@ export function GoalsList({
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold">{g.nome}</span>
-              <span className="tabular-nums font-semibold">{formatEuro(g.importoTarget)}</span>
+              <div className="flex items-center gap-2">
+                <span className="tabular-nums font-semibold">{formatEuro(g.importoTarget)}</span>
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(g)}
+                    aria-label="Modifica obiettivo"
+                    className="rounded-full p-1 text-muted hover:bg-surface-muted hover:text-foreground"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
               <span

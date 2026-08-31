@@ -64,4 +64,35 @@ describe('CreateGoalForm', () => {
 
     expect(await screen.findByLabelText('Quante spese passate')).toBeInTheDocument();
   });
+
+  it('precompila i campi con i valori iniziali e usa l\'etichetta di modifica', () => {
+    render(
+      <CreateGoalForm
+        categories={[]}
+        initial={{
+          nome: 'Telepass',
+          importoTarget: 130,
+          modalita: 'bloccato',
+          scadenza: null,
+          categoriaId: null,
+          ricorrente: false,
+          frequenzaMesi: null,
+        }}
+        submitLabel="Salva modifiche"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('Nome')).toHaveValue('Telepass');
+    expect(screen.getByLabelText('Importo target')).toHaveValue(130);
+    expect(screen.getByText('Salva modifiche')).toBeInTheDocument();
+  });
+
+  it('mostra un pulsante Annulla solo se viene passato onCancel, e lo chiama al click', () => {
+    const onCancel = vi.fn();
+    render(<CreateGoalForm categories={[]} onCancel={onCancel} onSubmit={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('Annulla'));
+    expect(onCancel).toHaveBeenCalled();
+  });
 });

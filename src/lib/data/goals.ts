@@ -75,6 +75,40 @@ export async function createGoal(
   return mapRow(data as GoalRow);
 }
 
+export async function updateGoal(
+  supabase: SupabaseClient,
+  id: string,
+  input: {
+    nome: string;
+    importoTarget: number;
+    modalita: GoalModalita;
+    scadenza: string | null;
+    categoriaId: string | null;
+    ricorrente: boolean;
+    frequenzaMesi: number | null;
+  }
+): Promise<BudgetGoal> {
+  const { data, error } = await supabase
+    .from('budget_goals')
+    .update({
+      nome: input.nome,
+      importo_target: input.importoTarget,
+      modalita: input.modalita,
+      scadenza: input.scadenza,
+      categoria_id: input.categoriaId,
+      ricorrente: input.ricorrente,
+      frequenza_mesi: input.frequenzaMesi,
+    })
+    .eq('id', id)
+    .select(
+      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at'
+    )
+    .single();
+
+  if (error) throw error;
+  return mapRow(data as GoalRow);
+}
+
 export async function closeGoal(supabase: SupabaseClient, id: string): Promise<void> {
   const { error } = await supabase.from('budget_goals').update({ stato: 'chiuso' }).eq('id', id);
   if (error) throw error;

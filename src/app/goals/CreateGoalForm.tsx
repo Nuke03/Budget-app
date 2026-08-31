@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Category, GoalModalita } from '@/lib/types';
 import { SuggestAmountPanel } from './SuggestAmountPanel';
 
-interface GoalPayload {
+export interface GoalPayload {
   nome: string;
   importoTarget: number;
   modalita: GoalModalita;
@@ -21,24 +21,42 @@ const FREQUENZA_PRESETS = [
   { label: 'Annuale', mesi: 12 },
 ] as const;
 
+const FREQUENZA_VALIDE: number[] = FREQUENZA_PRESETS.map((p) => p.mesi);
+
 const fieldClass =
   'rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand';
 
 export function CreateGoalForm({
   categories,
+  initial,
+  submitLabel = 'Crea obiettivo',
+  onCancel,
   onSubmit,
 }: {
   categories: Category[];
+  initial?: GoalPayload | null;
+  submitLabel?: string;
+  onCancel?: () => void;
   onSubmit: (payload: GoalPayload) => void;
 }) {
-  const [nome, setNome] = useState('');
-  const [importoTarget, setImportoTarget] = useState('');
-  const [modalita, setModalita] = useState<GoalModalita>('bloccato');
-  const [scadenza, setScadenza] = useState('');
-  const [categoriaId, setCategoriaId] = useState<string | null>(null);
-  const [ricorrente, setRicorrente] = useState(false);
-  const [frequenzaPreset, setFrequenzaPreset] = useState<number | 'custom'>(1);
-  const [frequenzaMesiCustom, setFrequenzaMesiCustom] = useState('2');
+  const [nome, setNome] = useState(initial?.nome ?? '');
+  const [importoTarget, setImportoTarget] = useState(initial ? String(initial.importoTarget) : '');
+  const [modalita, setModalita] = useState<GoalModalita>(initial?.modalita ?? 'bloccato');
+  const [scadenza, setScadenza] = useState(initial?.scadenza ?? '');
+  const [categoriaId, setCategoriaId] = useState<string | null>(initial?.categoriaId ?? null);
+  const [ricorrente, setRicorrente] = useState(initial?.ricorrente ?? false);
+  const [frequenzaPreset, setFrequenzaPreset] = useState<number | 'custom'>(
+    initial?.frequenzaMesi && FREQUENZA_VALIDE.includes(initial.frequenzaMesi)
+      ? initial.frequenzaMesi
+      : initial?.frequenzaMesi
+        ? 'custom'
+        : 1
+  );
+  const [frequenzaMesiCustom, setFrequenzaMesiCustom] = useState(
+    initial?.frequenzaMesi && !FREQUENZA_VALIDE.includes(initial.frequenzaMesi)
+      ? String(initial.frequenzaMesi)
+      : '2'
+  );
 
   const categorieDisponibili = categories.filter((c) => !c.archiviata && c.tipo === 'expense');
 
@@ -204,8 +222,18 @@ export function CreateGoalForm({
         disabled={!isValid}
         className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
       >
-        Crea obiettivo
+        {submitLabel}
       </button>
+
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-[var(--radius-md)] bg-surface-muted py-3 text-sm font-semibold text-foreground"
+        >
+          Annulla
+        </button>
+      )}
     </form>
   );
 }

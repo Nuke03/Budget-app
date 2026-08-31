@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { GoalsList } from '@/app/goals/GoalsList';
 
 describe('GoalsList', () => {
@@ -70,5 +70,27 @@ describe('GoalsList', () => {
     expect(screen.getByText(/Sposta questo mese/)).toBeInTheDocument();
     // Compare per un bloccato ricorrente sia nell'intestazione (importoTarget) sia nella riga quota (quotaMensile) — stesso valore, entrambi visibili.
     expect(screen.getAllByText('9,99 €')).toHaveLength(2);
+  });
+
+  it('chiama onEdit con l\'obiettivo al click della matita', () => {
+    const goal = {
+      id: '1',
+      nome: 'Telepass',
+      importoTarget: 130,
+      modalita: 'bloccato' as const,
+      scadenza: null,
+      categoriaId: null,
+      ricorrente: false,
+      frequenzaMesi: null,
+      stato: 'aperto' as const,
+      createdAt: '2026-01-01T00:00:00Z',
+      quotaMensile: null,
+    };
+    const onEdit = vi.fn();
+
+    render(<GoalsList goals={[goal]} categories={[]} onEdit={onEdit} />);
+    fireEvent.click(screen.getByLabelText('Modifica obiettivo'));
+
+    expect(onEdit).toHaveBeenCalledWith(goal);
   });
 });
