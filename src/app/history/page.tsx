@@ -6,14 +6,18 @@ import { createClient } from '@/lib/supabase/client';
 import { getTransactions, deleteTransaction } from '@/lib/data/transactions';
 import { getCategories } from '@/lib/data/categories';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
+import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { HistoryChartCard } from './HistoryChartCard';
+import { PeriodoFilter } from './PeriodoFilter';
 import type { Transaction, Category } from '@/lib/types';
 
 export default function HistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [periodo, setPeriodo] = useState<Periodo>('mese');
+  const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
 
   async function refresh() {
     const supabase = createClient();
@@ -32,7 +36,13 @@ export default function HistoryPage() {
     await refresh();
   }
 
-  const chartData = aggregateByCategory(transactions, categories);
+  const transactionsFiltrate = filterTransactionsByPeriodo(
+    transactions,
+    periodo,
+    new Date(),
+    rangePersonalizzato
+  );
+  const chartData = aggregateByCategory(transactionsFiltrate, categories);
   const colorByCategoryName = new Map(
     categories.map((c) => [c.nome, c.colore ?? CATEGORY_COLOR_FALLBACK])
   );
@@ -42,10 +52,17 @@ export default function HistoryPage() {
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
       <h1 className="text-2xl font-bold">Storico</h1>
 
+      <PeriodoFilter
+        periodo={periodo}
+        onChangePeriodo={setPeriodo}
+        rangePersonalizzato={rangePersonalizzato}
+        onChangeRangePersonalizzato={setRangePersonalizzato}
+      />
+
       <HistoryChartCard chartData={chartData} colorByCategoryName={colorByCategoryName} />
 
       <ul className="flex flex-col gap-2">
-        {transactions.map((t) => {
+        {transactionsFiltrate.map((t) => {
           const color = t.categoriaId ? colorByCategoryId.get(t.categoriaId) : null;
           return (
             <li
@@ -83,9 +100,11 @@ export default function HistoryPage() {
             </li>
           );
         })}
-        {transactions.length === 0 && (
+        {transactionsFiltrate.length === 0 && (
           <p className="rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted shadow-[var(--shadow-card)]">
-            Nessuna transazione ancora.
+            {transactions.length === 0
+              ? 'Nessuna transazione ancora.'
+              : 'Nessuna transazione in questo periodo.'}
           </p>
         )}
       </ul>
