@@ -14,11 +14,6 @@ interface PivaSettingsRow {
   contributi_versati_anno_precedente: number;
 }
 
-const SELECT_COLUMNS =
-  'id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, ' +
-  'aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, ' +
-  'minimale_contributivo_annuo, contributi_versati_anno_precedente';
-
 function mapRow(row: PivaSettingsRow): PivaSettings {
   return {
     id: row.id,
@@ -61,7 +56,7 @@ function toRow(input: PivaSettingsInput) {
 }
 
 export async function getPivaSettings(supabase: SupabaseClient): Promise<PivaSettings | null> {
-  const { data, error } = await supabase.from('piva_settings').select(SELECT_COLUMNS).maybeSingle();
+  const { data, error } = await supabase.from('piva_settings').select('id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente').maybeSingle();
   if (error) throw error;
   return data ? mapRow(data as PivaSettingsRow) : null;
 }
@@ -73,7 +68,7 @@ export async function createPivaSettings(
   const { data, error } = await supabase
     .from('piva_settings')
     .insert(toRow(input))
-    .select(SELECT_COLUMNS)
+    .select('id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente')
     .single();
 
   if (error) throw error;
@@ -89,7 +84,7 @@ export async function updatePivaSettings(
     .from('piva_settings')
     .update(toRow(input))
     .eq('id', id)
-    .select(SELECT_COLUMNS)
+    .select('id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente')
     .single();
 
   if (error) throw error;
