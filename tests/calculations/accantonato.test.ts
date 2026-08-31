@@ -11,7 +11,7 @@ describe('computeAccantonatoFinora', () => {
       scadenza: null,
       createdAt: '2026-01-01',
       ricorrente: false,
-      frequenzaAnni: null,
+      frequenzaMesi: null,
     };
 
     expect(computeAccantonatoFinora(goal, new Date(2026, 0, 2))).toBe(130);
@@ -25,7 +25,7 @@ describe('computeAccantonatoFinora', () => {
       scadenza: '2026-11-27',
       createdAt: '2026-01-27',
       ricorrente: false,
-      frequenzaAnni: null,
+      frequenzaMesi: null,
     };
 
     // 10 mesi totali (gen->nov), 5 mesi trascorsi (gen->giu) => metà dell'importo
@@ -40,7 +40,7 @@ describe('computeAccantonatoFinora', () => {
       stato: 'aperto',
       createdAt: '2026-01-27',
       ricorrente: false,
-      frequenzaAnni: null,
+      frequenzaMesi: null,
     };
 
     expect(computeAccantonatoFinora(goal, new Date(2027, 5, 27))).toBeCloseTo(300, 5);
@@ -54,7 +54,7 @@ describe('computeAccantonatoFinora', () => {
       stato: 'aperto',
       createdAt: '2024-07-01',
       ricorrente: true,
-      frequenzaAnni: 1,
+      frequenzaMesi: 12,
     };
 
     // prossima occorrenza: 2026-07-01, finestra 2025-07-01 -> 2026-07-01 (12 mesi)
@@ -70,13 +70,13 @@ describe('computeAccantonatoFinora', () => {
       stato: 'aperto',
       createdAt: '2026-01-01',
       ricorrente: false,
-      frequenzaAnni: null,
+      frequenzaMesi: null,
     };
 
     expect(() => computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toThrow();
   });
 
-  it('lancia un errore se un obiettivo ricorrente ha frequenzaAnni pari a 0', () => {
+  it('lancia un errore se un obiettivo ricorrente ha frequenzaMesi pari a 0', () => {
     const goal: GoalForCalc = {
       importoTarget: 160,
       modalita: 'dilazionato',
@@ -84,13 +84,13 @@ describe('computeAccantonatoFinora', () => {
       stato: 'aperto',
       createdAt: '2024-07-01',
       ricorrente: true,
-      frequenzaAnni: 0,
+      frequenzaMesi: 0,
     };
 
     expect(() => computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toThrow();
   });
 
-  it('lancia un errore (senza andare in loop infinito) se frequenzaAnni è negativa', () => {
+  it('lancia un errore (senza andare in loop infinito) se frequenzaMesi è negativa', () => {
     const goal: GoalForCalc = {
       importoTarget: 160,
       modalita: 'dilazionato',
@@ -98,7 +98,7 @@ describe('computeAccantonatoFinora', () => {
       stato: 'aperto',
       createdAt: '2024-07-01',
       ricorrente: true,
-      frequenzaAnni: -1,
+      frequenzaMesi: -1,
     };
 
     expect(() => computeAccantonatoFinora(goal, new Date(2026, 5, 1))).toThrow();
@@ -112,7 +112,7 @@ describe('computeAccantonatoFinora', () => {
       stato: 'aperto',
       createdAt: '2024-07-01',
       ricorrente: true,
-      frequenzaAnni: 1,
+      frequenzaMesi: 12,
     };
 
     const originalTz = process.env.TZ;
@@ -142,8 +142,8 @@ describe('nextOccurrence', () => {
     expect(result).toEqual(new Date(2027, 0, 1));
   });
 
-  it('avanza di frequenzaAnni finché la data non è nel futuro', () => {
-    const result = nextOccurrence(new Date(2024, 6, 1), 1, new Date(2026, 5, 1));
+  it('avanza di frequenzaMesi finché la data non è nel futuro', () => {
+    const result = nextOccurrence(new Date(2024, 6, 1), 12, new Date(2026, 5, 1));
     expect(result).toEqual(new Date(2026, 6, 1));
   });
 });

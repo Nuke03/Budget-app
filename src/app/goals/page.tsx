@@ -25,7 +25,7 @@ export default function GoalsPage() {
     modalita: GoalModalita;
     scadenza: string | null;
     ricorrente: boolean;
-    frequenzaAnni: number | null;
+    frequenzaMesi: number | null;
   }) {
     const supabase = createClient();
     await createGoal(supabase, { ...payload, categoriaId: null });

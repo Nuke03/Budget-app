@@ -10,5 +10,5 @@ export interface GoalForCalc {
   scadenza: string | null;
   createdAt: string;
   ricorrente: boolean;
-  frequenzaAnni: number | null;
+  frequenzaMesi: number | null;
 }

@@ -22,7 +22,7 @@ describe('computeDisponibileLibero', () => {
         scadenza: null,
         createdAt: '2026-01-01',
         ricorrente: false,
-        frequenzaAnni: null,
+        frequenzaMesi: null,
       },
     ];
 
@@ -39,7 +39,7 @@ describe('computeDisponibileLibero', () => {
         scadenza: null,
         createdAt: '2026-01-01',
         ricorrente: false,
-        frequenzaAnni: null,
+        frequenzaMesi: null,
       },
     ];
 
@@ -59,7 +59,7 @@ describe('computeDisponibileLibero', () => {
         scadenza: null,
         createdAt: '2026-01-01',
         ricorrente: false,
-        frequenzaAnni: null,
+        frequenzaMesi: null,
       },
       {
         importoTarget: 300,
@@ -68,7 +68,7 @@ describe('computeDisponibileLibero', () => {
         scadenza: '2026-11-27',
         createdAt: '2026-01-27',
         ricorrente: false,
-        frequenzaAnni: null,
+        frequenzaMesi: null,
       },
     ];
 

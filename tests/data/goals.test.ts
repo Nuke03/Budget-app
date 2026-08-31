@@ -10,7 +10,7 @@ const row = {
   scadenza: null,
   categoria_id: null,
   ricorrente: false,
-  frequenza_anni: null,
+  frequenza_mesi: null,
   stato: 'aperto',
   created_at: '2026-02-01T00:00:00Z',
 };
@@ -29,7 +29,7 @@ describe('getOpenGoals', () => {
         scadenza: null,
         categoriaId: null,
         ricorrente: false,
-        frequenzaAnni: null,
+        frequenzaMesi: null,
         stato: 'aperto',
         createdAt: '2026-02-01T00:00:00Z',
       },
@@ -47,7 +47,7 @@ describe('createGoal', () => {
       scadenza: null,
       categoriaId: null,
       ricorrente: false,
-      frequenzaAnni: null,
+      frequenzaMesi: null,
     });
 
     expect(result.nome).toBe('Telepass');

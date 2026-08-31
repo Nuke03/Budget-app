@@ -1,10 +1,10 @@
-import { addYears, differenceInCalendarMonths, parseISO } from 'date-fns';
+import { addMonths, differenceInCalendarMonths, parseISO } from 'date-fns';
 import type { GoalForCalc } from './types';
 
-export function nextOccurrence(scadenza: Date, frequenzaAnni: number, today: Date): Date {
+export function nextOccurrence(scadenza: Date, frequenzaMesi: number, today: Date): Date {
   let occurrence = scadenza;
   while (occurrence < today) {
-    occurrence = addYears(occurrence, frequenzaAnni);
+    occurrence = addMonths(occurrence, frequenzaMesi);
   }
   return occurrence;
 }
@@ -25,11 +25,11 @@ export function computeAccantonatoFinora(goal: GoalForCalc, today: Date): number
   let windowEnd: Date;
 
   if (goal.ricorrente) {
-    if (!(goal.frequenzaAnni && goal.frequenzaAnni > 0)) {
-      throw new Error('Obiettivo ricorrente con frequenzaAnni non valida');
+    if (!(goal.frequenzaMesi && goal.frequenzaMesi > 0)) {
+      throw new Error('Obiettivo ricorrente con frequenzaMesi non valida');
     }
-    windowEnd = nextOccurrence(scadenzaDate, goal.frequenzaAnni, today);
-    windowStart = addYears(windowEnd, -goal.frequenzaAnni);
+    windowEnd = nextOccurrence(scadenzaDate, goal.frequenzaMesi, today);
+    windowStart = addMonths(windowEnd, -goal.frequenzaMesi);
   } else {
     windowStart = createdAtDate;
     windowEnd = scadenzaDate;

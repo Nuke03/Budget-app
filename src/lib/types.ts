@@ -27,7 +27,7 @@ export interface BudgetGoal {
   scadenza: string | null;
   categoriaId: string | null;
   ricorrente: boolean;
-  frequenzaAnni: number | null;
+  frequenzaMesi: number | null;
   stato: GoalStato;
   createdAt: string;
 }

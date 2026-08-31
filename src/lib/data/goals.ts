@@ -9,7 +9,7 @@ interface GoalRow {
   scadenza: string | null;
   categoria_id: string | null;
   ricorrente: boolean;
-  frequenza_anni: number | null;
+  frequenza_mesi: number | null;
   stato: 'aperto' | 'chiuso' | 'scaduto';
   created_at: string;
 }
@@ -23,7 +23,7 @@ function mapRow(row: GoalRow): BudgetGoal {
     scadenza: row.scadenza,
     categoriaId: row.categoria_id,
     ricorrente: row.ricorrente,
-    frequenzaAnni: row.frequenza_anni,
+    frequenzaMesi: row.frequenza_mesi,
     stato: row.stato,
     createdAt: row.created_at,
   };
@@ -33,7 +33,7 @@ export async function getOpenGoals(supabase: SupabaseClient): Promise<BudgetGoal
   const { data, error } = await supabase
     .from('budget_goals')
     .select(
-      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_anni, stato, created_at'
+      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at'
     )
     .eq('stato', 'aperto')
     .order('scadenza', { ascending: true });
@@ -51,7 +51,7 @@ export async function createGoal(
     scadenza: string | null;
     categoriaId: string | null;
     ricorrente: boolean;
-    frequenzaAnni: number | null;
+    frequenzaMesi: number | null;
   }
 ): Promise<BudgetGoal> {
   const { data, error } = await supabase
@@ -63,11 +63,11 @@ export async function createGoal(
       scadenza: input.scadenza,
       categoria_id: input.categoriaId,
       ricorrente: input.ricorrente,
-      frequenza_anni: input.frequenzaAnni,
+      frequenza_mesi: input.frequenzaMesi,
       stato: 'aperto',
     })
     .select(
-      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_anni, stato, created_at'
+      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at'
     )
     .single();
 

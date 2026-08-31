@@ -9,7 +9,7 @@ interface GoalPayload {
   modalita: GoalModalita;
   scadenza: string | null;
   ricorrente: boolean;
-  frequenzaAnni: number | null;
+  frequenzaMesi: number | null;
 }
 
 const fieldClass =
@@ -21,7 +21,7 @@ export function CreateGoalForm({ onSubmit }: { onSubmit: (payload: GoalPayload) 
   const [modalita, setModalita] = useState<GoalModalita>('bloccato');
   const [scadenza, setScadenza] = useState('');
   const [ricorrente, setRicorrente] = useState(false);
-  const [frequenzaAnni, setFrequenzaAnni] = useState('1');
+  const [frequenzaMesi, setFrequenzaMesi] = useState('12');
 
   const isValid =
     nome.trim() !== '' &&
@@ -39,7 +39,7 @@ export function CreateGoalForm({ onSubmit }: { onSubmit: (payload: GoalPayload) 
       modalita,
       scadenza: scadenza.trim() === '' ? null : scadenza,
       ricorrente,
-      frequenzaAnni: ricorrente ? Number(frequenzaAnni) : null,
+      frequenzaMesi: ricorrente ? Number(frequenzaMesi) : null,
     });
 
     setNome('');
@@ -113,11 +113,11 @@ export function CreateGoalForm({ onSubmit }: { onSubmit: (payload: GoalPayload) 
 
       {ricorrente && (
         <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
-          Ogni quanti anni
+          Ogni quanti mesi
           <input
             type="number"
-            value={frequenzaAnni}
-            onChange={(e) => setFrequenzaAnni(e.target.value)}
+            value={frequenzaMesi}
+            onChange={(e) => setFrequenzaMesi(e.target.value)}
             className={fieldClass}
           />
         </label>
