@@ -16,7 +16,9 @@ const links = [
 export function NavBar() {
   const pathname = usePathname();
 
-  if (pathname === '/login' || pathname === '/reset-password') return null;
+  if (pathname === '/login' || pathname === '/reset-password' || pathname === '/forgot-password') {
+    return null;
+  }
 
   return (
     <nav

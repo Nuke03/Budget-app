@@ -39,6 +39,10 @@ export default async function LoginPage({
         />
         <SubmitButton />
       </form>
+
+      <a href="/forgot-password" className="text-center text-sm font-semibold text-muted underline">
+        Password dimenticata?
+      </a>
     </main>
   );
 }
