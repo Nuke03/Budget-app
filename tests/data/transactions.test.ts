@@ -7,6 +7,7 @@ import {
   deleteTransaction,
   getLastIncomeDate,
   getRecentTransactionAmounts,
+  getTransactionAmountsForGoal,
 } from '@/lib/data/transactions';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
@@ -119,5 +120,25 @@ describe('getRecentTransactionAmounts', () => {
     const supabase = fakeSelectClient([{ importo: 60 }]);
     const result = await getRecentTransactionAmounts(supabase, 'cat-luce', 3, 'enel');
     expect(result).toEqual([60]);
+  });
+});
+
+describe('getTransactionAmountsForGoal', () => {
+  it('ritorna gli importi delle spese collegate a un obiettivo nella finestra data', async () => {
+    const supabase = fakeSelectClient([{ importo: 50 }, { importo: 30 }]);
+    const result = await getTransactionAmountsForGoal(supabase, 'goal-1', '2026-01-01', '2026-02-01');
+    expect(result).toEqual([50, 30]);
+  });
+
+  it('funziona anche senza una data di fine (finestra aperta)', async () => {
+    const supabase = fakeSelectClient([{ importo: 50 }]);
+    const result = await getTransactionAmountsForGoal(supabase, 'goal-1', '2026-01-01', null);
+    expect(result).toEqual([50]);
+  });
+
+  it('ritorna un array vuoto se non ci sono spese collegate', async () => {
+    const supabase = fakeSelectClient([]);
+    const result = await getTransactionAmountsForGoal(supabase, 'goal-1', '2026-01-01', null);
+    expect(result).toEqual([]);
   });
 });

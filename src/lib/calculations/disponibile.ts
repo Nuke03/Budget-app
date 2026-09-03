@@ -12,7 +12,7 @@ export function computeDisponibileLibero(
 
   const riservato = goals
     .filter((g) => g.stato === 'aperto')
-    .reduce((sum, g) => sum + computeAccantonatoFinora(g, today), 0);
+    .reduce((sum, g) => sum + computeAccantonatoFinora(g, today, g.specoCollegato ?? 0), 0);
 
   return saldoDisponibile - riservato;
 }

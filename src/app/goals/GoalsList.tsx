@@ -13,6 +13,7 @@ function frequenzaLabel(mesi: number | null): string {
 
 export interface GoalWithQuotaMensile extends BudgetGoal {
   quotaMensile: number | null;
+  accantonato: number;
 }
 
 export function GoalsList({
@@ -77,6 +78,12 @@ export function GoalsList({
               <div className="mt-2 flex items-center justify-between rounded-[var(--radius-sm)] bg-cat-sky/10 px-2.5 py-1.5 text-xs font-medium text-cat-sky">
                 <span>Sposta questo mese</span>
                 <span className="tabular-nums">{formatEuro(g.quotaMensile)}</span>
+              </div>
+            )}
+            {g.accantonato !== g.importoTarget && (
+              <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                <span>Ancora riservato</span>
+                <span className="tabular-nums font-medium">{formatEuro(g.accantonato)}</span>
               </div>
             )}
           </li>

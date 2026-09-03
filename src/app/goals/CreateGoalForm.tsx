@@ -63,11 +63,18 @@ export function CreateGoalForm({
   const frequenzaMesi =
     frequenzaPreset === 'custom' ? Number(frequenzaMesiCustom) : frequenzaPreset;
 
+  // La scadenza serve per calcolare la finestra temporale di un obiettivo: è
+  // sempre obbligatoria per un Dilazionato (l'accumulo lineare non funziona
+  // senza), ed è obbligatoria anche per un Bloccato quando è ricorrente,
+  // perché la scadenza è l'ancora da cui si calcola il ciclo corrente
+  // (es. questo trimestre) su cui contare le spese già collegate.
+  const richiedeScadenza = modalita === 'dilazionato' || ricorrente;
+
   const isValid =
     nome.trim() !== '' &&
     importoTarget.trim() !== '' &&
     !Number.isNaN(Number(importoTarget)) &&
-    (modalita === 'bloccato' || scadenza.trim() !== '') &&
+    (!richiedeScadenza || scadenza.trim() !== '') &&
     (!ricorrente || (!Number.isNaN(frequenzaMesi) && frequenzaMesi >= 1));
 
   function handleSubmit(e: React.FormEvent) {
@@ -158,7 +165,7 @@ export function CreateGoalForm({
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
-        Scadenza {modalita === 'bloccato' && '(opzionale)'}
+        Scadenza {!richiedeScadenza && '(opzionale)'}
         <input
           aria-label="Scadenza"
           type="date"

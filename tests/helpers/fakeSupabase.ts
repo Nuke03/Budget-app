@@ -4,9 +4,16 @@ export function fakeSelectClient(rows: unknown[]) {
     order: () => Promise.resolve({ data: rows, error: null }),
     eq: () => builder,
     ilike: () => builder,
+    gte: () => builder,
+    lte: () => builder,
     single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
     maybeSingle: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
     limit: () => builder,
+    // Come un vero PostgrestFilterBuilder, la query è "thenable" di per sé:
+    // awaitarla direttamente (senza chiamare prima .order()/.single()) la
+    // esegue e risolve con tutte le righe.
+    then: (resolve: (value: { data: unknown[]; error: null }) => void) =>
+      resolve({ data: rows, error: null }),
   };
   return { from: () => builder } as any;
 }

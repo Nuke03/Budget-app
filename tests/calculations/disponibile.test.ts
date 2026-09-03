@@ -78,4 +78,23 @@ describe('computeDisponibileLibero', () => {
       5
     );
   });
+
+  it('libera dal riservato la spesa già collegata a un obiettivo bloccato', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    const goals: GoalForCalc[] = [
+      {
+        importoTarget: 400,
+        modalita: 'bloccato',
+        stato: 'aperto',
+        scadenza: null,
+        createdAt: '2026-01-01',
+        ricorrente: false,
+        frequenzaMesi: null,
+        specoCollegato: 50,
+      },
+    ];
+
+    // saldo 1000, riservato 400-50=350 => 650
+    expect(computeDisponibileLibero(accounts, goals, new Date(2026, 5, 1))).toBe(650);
+  });
 });

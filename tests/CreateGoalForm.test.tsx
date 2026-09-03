@@ -43,6 +43,7 @@ describe('CreateGoalForm', () => {
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Tidal' } });
     fireEvent.change(screen.getByLabelText('Importo target'), { target: { value: '10' } });
     fireEvent.click(screen.getByLabelText('Ricorrente'));
+    fireEvent.change(screen.getByLabelText('Scadenza'), { target: { value: '2026-01-01' } });
     fireEvent.change(screen.getByLabelText('Frequenza'), { target: { value: '3' } });
 
     fireEvent.click(screen.getByText('Crea obiettivo'));
@@ -50,6 +51,21 @@ describe('CreateGoalForm', () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ ricorrente: true, frequenzaMesi: 3 })
     );
+  });
+
+  it('richiede una scadenza per un ricorrente anche se bloccato (serve per calcolare il ciclo)', () => {
+    const onSubmit = vi.fn();
+    render(<CreateGoalForm categories={[]} onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Tidal' } });
+    fireEvent.change(screen.getByLabelText('Importo target'), { target: { value: '10' } });
+    fireEvent.click(screen.getByLabelText('Ricorrente'));
+
+    expect(screen.getByText('Crea obiettivo')).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Scadenza'), { target: { value: '2026-01-01' } });
+
+    expect(screen.getByText('Crea obiettivo')).toBeEnabled();
   });
 
   it('mostra il pannello di suggerimento quando si seleziona una categoria', async () => {

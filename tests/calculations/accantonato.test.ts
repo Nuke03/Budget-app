@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeAccantonatoFinora, computeQuotaMensile, nextOccurrence } from '@/lib/calculations/accantonato';
+import {
+  computeAccantonatoFinora,
+  computeQuotaMensile,
+  computeFinestraGoal,
+  nextOccurrence,
+} from '@/lib/calculations/accantonato';
 import type { GoalForCalc } from '@/lib/calculations/types';
 
 describe('computeAccantonatoFinora', () => {
@@ -133,6 +138,116 @@ describe('computeAccantonatoFinora', () => {
         process.env.TZ = originalTz;
       }
     }
+  });
+
+  it('sottrae la spesa collegata dal riservato per un obiettivo bloccato (es. gita)', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 400,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: null,
+      createdAt: '2026-01-01',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    expect(computeAccantonatoFinora(goal, new Date(2026, 5, 1), 50)).toBe(350);
+  });
+
+  it('non va mai sotto zero anche se la spesa collegata supera il riservato', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 400,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: null,
+      createdAt: '2026-01-01',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    expect(computeAccantonatoFinora(goal, new Date(2026, 5, 1), 450)).toBe(0);
+  });
+
+  it('sottrae la spesa collegata anche per un obiettivo dilazionato', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 300,
+      modalita: 'dilazionato',
+      stato: 'aperto',
+      scadenza: '2026-11-27',
+      createdAt: '2026-01-27',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    // teorico a metà finestra = 150 (vedi test sopra), meno 100 già pagati => 50
+    expect(computeAccantonatoFinora(goal, new Date(2026, 5, 27), 100)).toBeCloseTo(50, 5);
+  });
+});
+
+describe('computeFinestraGoal', () => {
+  it('per un bloccato non ricorrente la finestra resta aperta da quando è stato creato', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 400,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: null,
+      createdAt: '2026-01-15',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    expect(computeFinestraGoal(goal, new Date(2026, 5, 1))).toEqual({
+      windowStart: new Date(2026, 0, 15),
+      windowEnd: null,
+    });
+  });
+
+  it('per un bloccato ricorrente con scadenza usa il ciclo corrente', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 9.99,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: '2026-01-01',
+      createdAt: '2026-01-01',
+      ricorrente: true,
+      frequenzaMesi: 1,
+    };
+
+    expect(computeFinestraGoal(goal, new Date(2026, 5, 10))).toEqual({
+      windowStart: new Date(2026, 5, 1),
+      windowEnd: new Date(2026, 6, 1),
+    });
+  });
+
+  it('per un bloccato ricorrente SENZA scadenza non lancia un errore: resta aperto da sempre', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 9.99,
+      modalita: 'bloccato',
+      stato: 'aperto',
+      scadenza: null,
+      createdAt: '2026-01-01',
+      ricorrente: true,
+      frequenzaMesi: 1,
+    };
+
+    expect(computeFinestraGoal(goal, new Date(2026, 5, 10))).toEqual({
+      windowStart: new Date(2026, 0, 1),
+      windowEnd: null,
+    });
+  });
+
+  it('per un dilazionato senza scadenza lancia comunque un errore (non può fare a meno del calcolo temporale)', () => {
+    const goal: GoalForCalc = {
+      importoTarget: 100,
+      modalita: 'dilazionato',
+      stato: 'aperto',
+      scadenza: null,
+      createdAt: '2026-01-01',
+      ricorrente: false,
+      frequenzaMesi: null,
+    };
+
+    expect(() => computeFinestraGoal(goal, new Date(2026, 5, 1))).toThrow();
   });
 });
 

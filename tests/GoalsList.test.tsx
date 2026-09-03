@@ -17,6 +17,7 @@ describe('GoalsList', () => {
         stato: 'aperto' as const,
         createdAt: '2026-01-01T00:00:00Z',
         quotaMensile: 30,
+        accantonato: 150,
       },
     ];
 
@@ -40,6 +41,7 @@ describe('GoalsList', () => {
         stato: 'aperto' as const,
         createdAt: '2026-01-01T00:00:00Z',
         quotaMensile: null,
+        accantonato: 130,
       },
     ];
 
@@ -62,6 +64,7 @@ describe('GoalsList', () => {
         stato: 'aperto' as const,
         createdAt: '2026-01-01T00:00:00Z',
         quotaMensile: 9.99,
+        accantonato: 9.99,
       },
     ];
 
@@ -85,6 +88,7 @@ describe('GoalsList', () => {
       stato: 'aperto' as const,
       createdAt: '2026-01-01T00:00:00Z',
       quotaMensile: null,
+      accantonato: 130,
     };
     const onEdit = vi.fn();
 
@@ -92,5 +96,52 @@ describe('GoalsList', () => {
     fireEvent.click(screen.getByLabelText('Modifica obiettivo'));
 
     expect(onEdit).toHaveBeenCalledWith(goal);
+  });
+
+  it('mostra quanto resta ancora riservato quando è già stata collegata una spesa', () => {
+    const goals = [
+      {
+        id: '1',
+        nome: 'Gita',
+        importoTarget: 400,
+        modalita: 'bloccato' as const,
+        scadenza: null,
+        categoriaId: null,
+        ricorrente: false,
+        frequenzaMesi: null,
+        stato: 'aperto' as const,
+        createdAt: '2026-01-01T00:00:00Z',
+        quotaMensile: null,
+        accantonato: 350,
+      },
+    ];
+
+    render(<GoalsList goals={goals} categories={[]} />);
+
+    expect(screen.getByText(/Ancora riservato/)).toBeInTheDocument();
+    expect(screen.getByText(/350,00/)).toBeInTheDocument();
+  });
+
+  it('non mostra la riga "ancora riservato" se non è stata collegata nessuna spesa', () => {
+    const goals = [
+      {
+        id: '1',
+        nome: 'Gita',
+        importoTarget: 400,
+        modalita: 'bloccato' as const,
+        scadenza: null,
+        categoriaId: null,
+        ricorrente: false,
+        frequenzaMesi: null,
+        stato: 'aperto' as const,
+        createdAt: '2026-01-01T00:00:00Z',
+        quotaMensile: null,
+        accantonato: 400,
+      },
+    ];
+
+    render(<GoalsList goals={goals} categories={[]} />);
+
+    expect(screen.queryByText(/Ancora riservato/)).not.toBeInTheDocument();
   });
 });

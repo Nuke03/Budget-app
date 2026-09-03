@@ -5,20 +5,27 @@ import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getOpenGoals, createGoal, updateGoal } from '@/lib/data/goals';
 import { getCategories } from '@/lib/data/categories';
-import { computeQuotaMensile } from '@/lib/calculations/accantonato';
+import { getSpecoCollegato } from '@/lib/data/goalSpending';
+import { computeQuotaMensile, computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { GoalsList, type GoalWithQuotaMensile } from './GoalsList';
 import { CreateGoalForm, type GoalPayload } from './CreateGoalForm';
 import type { BudgetGoal, Category } from '@/lib/types';
 
+type GoalConSpeso = BudgetGoal & { specoCollegato: number };
+
 export default function GoalsPage() {
-  const [goals, setGoals] = useState<BudgetGoal[]>([]);
+  const [goals, setGoals] = useState<GoalConSpeso[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editingGoal, setEditingGoal] = useState<GoalWithQuotaMensile | null>(null);
 
   async function refresh() {
     const supabase = createClient();
     const [openGoals, cats] = await Promise.all([getOpenGoals(supabase), getCategories(supabase)]);
-    setGoals(openGoals);
+    const today = new Date();
+    const speseCollegate = await Promise.all(
+      openGoals.map((g) => getSpecoCollegato(supabase, g, today))
+    );
+    setGoals(openGoals.map((g, i) => ({ ...g, specoCollegato: speseCollegate[i] })));
     setCategories(cats);
   }
 
@@ -40,10 +47,14 @@ export default function GoalsPage() {
     await refresh();
   }
 
-  const goalsConQuota = goals.map((g) => ({
-    ...g,
-    quotaMensile: computeQuotaMensile(g, new Date()),
-  }));
+  const goalsConQuota = goals.map((g) => {
+    const oggi = new Date();
+    return {
+      ...g,
+      quotaMensile: computeQuotaMensile(g, oggi),
+      accantonato: computeAccantonatoFinora(g, oggi, g.specoCollegato),
+    };
+  });
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">

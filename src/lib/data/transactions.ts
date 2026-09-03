@@ -145,3 +145,26 @@ export async function getRecentTransactionAmounts(
   if (error) throw error;
   return (data as { importo: number }[]).map((row) => row.importo);
 }
+
+export async function getTransactionAmountsForGoal(
+  supabase: SupabaseClient,
+  goalId: string,
+  da: string,
+  a: string | null
+): Promise<number[]> {
+  let query = supabase
+    .from('transactions')
+    .select('importo')
+    .eq('goal_id', goalId)
+    .eq('tipo', 'expense')
+    .gte('data', da);
+
+  if (a) {
+    query = query.lte('data', a);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return (data as { importo: number }[]).map((row) => row.importo);
+}
