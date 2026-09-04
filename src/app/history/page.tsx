@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/data/transactions';
 import { getCategories } from '@/lib/data/categories';
 import { getAccounts, updateAccountBalance } from '@/lib/data/accounts';
+import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
 import { computeAggiornamentiSaldoPerModifica } from '@/lib/calculations/accountBalance';
@@ -14,26 +15,46 @@ import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { HistoryChartCard } from './HistoryChartCard';
 import { PeriodoFilter } from './PeriodoFilter';
 import { AddTransactionForm } from '../add/AddTransactionForm';
-import type { Transaction, Category, Account, TransactionTipo } from '@/lib/types';
+import type { Transaction, Category, Account, BudgetGoal, TransactionTipo } from '@/lib/types';
 
 export default function HistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [goals, setGoals] = useState<BudgetGoal[]>([]);
   const [periodo, setPeriodo] = useState<Periodo>('mese');
   const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   async function refresh() {
     const supabase = createClient();
-    const [tx, cats, accs] = await Promise.all([
+    const [tx, cats, accs, openGoals] = await Promise.all([
       getTransactions(supabase),
       getCategories(supabase),
       getAccounts(supabase),
+      getOpenGoals(supabase),
     ]);
     setTransactions(tx);
     setCategories(cats);
     setAccounts(accs);
+    setGoals(openGoals);
+  }
+
+  async function handleCreateGoal(payload: {
+    nome: string;
+    importoTarget: number;
+    categoriaId: string | null;
+  }) {
+    const supabase = createClient();
+    return createGoal(supabase, {
+      nome: payload.nome,
+      importoTarget: payload.importoTarget,
+      modalita: 'bloccato',
+      scadenza: null,
+      categoriaId: payload.categoriaId,
+      ricorrente: false,
+      frequenzaMesi: null,
+    });
   }
 
   useEffect(() => {
@@ -66,6 +87,7 @@ export default function HistoryPage() {
     importo: number;
     categoriaId: string | null;
     accountId: string | null;
+    goalId: string | null;
     descrizione: string;
   }) {
     if (!editingTransaction) return;
@@ -73,7 +95,6 @@ export default function HistoryPage() {
     await updateTransaction(supabase, editingTransaction.id, {
       ...payload,
       data: editingTransaction.data,
-      goalId: editingTransaction.goalId,
       nota: editingTransaction.nota,
     });
     await applicaAggiornamentiSaldo(
@@ -190,11 +211,14 @@ export default function HistoryPage() {
               <AddTransactionForm
                 categories={categories}
                 accounts={accounts}
+                goals={goals}
+                onCreateGoal={handleCreateGoal}
                 initial={{
                   tipo: editingTransaction.tipo,
                   importo: editingTransaction.importo,
                   categoriaId: editingTransaction.categoriaId,
                   accountId: editingTransaction.accountId,
+                  goalId: editingTransaction.goalId,
                   descrizione: editingTransaction.descrizione,
                 }}
                 submitLabel="Salva modifiche"

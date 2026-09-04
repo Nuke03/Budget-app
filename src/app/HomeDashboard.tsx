@@ -7,6 +7,7 @@ import { ChevronDown, Plus, X } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { createClient } from '@/lib/supabase/client';
 import { createTransaction } from '@/lib/data/transactions';
+import { createGoal } from '@/lib/data/goals';
 import { updateAccountBalance } from '@/lib/data/accounts';
 import { computeNuovoSaldoConto } from '@/lib/calculations/accountBalance';
 import { AddTransactionForm } from './add/AddTransactionForm';
@@ -53,13 +54,13 @@ export function HomeDashboard({
     importo: number;
     categoriaId: string | null;
     accountId: string | null;
+    goalId: string | null;
     descrizione: string;
   }) {
     const supabase = createClient();
     await createTransaction(supabase, {
       ...payload,
       data: format(new Date(), 'yyyy-MM-dd'),
-      goalId: null,
       nota: null,
     });
 
@@ -73,6 +74,23 @@ export function HomeDashboard({
 
     router.refresh();
     setIsAddOpen(false);
+  }
+
+  async function handleCreateGoal(payload: {
+    nome: string;
+    importoTarget: number;
+    categoriaId: string | null;
+  }) {
+    const supabase = createClient();
+    return createGoal(supabase, {
+      nome: payload.nome,
+      importoTarget: payload.importoTarget,
+      modalita: 'bloccato',
+      scadenza: null,
+      categoriaId: payload.categoriaId,
+      ricorrente: false,
+      frequenzaMesi: null,
+    });
   }
 
   return (
@@ -164,6 +182,8 @@ export function HomeDashboard({
               <AddTransactionForm
                 categories={categories}
                 accounts={accounts}
+                goals={goals}
+                onCreateGoal={handleCreateGoal}
                 onSubmit={handleAddTransaction}
               />
             </div>
