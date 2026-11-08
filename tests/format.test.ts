@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatEuro, formatDateIt } from '@/lib/format';
+import { formatEuro, formatDateIt, formatNumero } from '@/lib/format';
 
 describe('formatEuro', () => {
   it('formats a positive amount as Italian euros', () => {
@@ -22,5 +22,17 @@ describe('formatDateIt', () => {
 
   it('formats an ISO date string', () => {
     expect(formatDateIt('2026-01-05')).toBe('05/01/2026');
+  });
+});
+
+describe('formatNumero', () => {
+  it('formatNumero(1321) è "1.321"', () => {
+    expect(formatNumero(1321)).toBe('1.321');
+  });
+  it('formatNumero(1380.5) è "1.380,5"', () => {
+    expect(formatNumero(1380.5)).toBe('1.380,5');
+  });
+  it('formatNumero(59) è "59"', () => {
+    expect(formatNumero(59)).toBe('59');
   });
 });

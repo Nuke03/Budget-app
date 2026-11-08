@@ -18,3 +18,10 @@ export function formatDateIt(date: Date | string): string {
     year: 'numeric',
   }).format(d);
 }
+
+export function formatNumero(value: number): string {
+  return new Intl.NumberFormat('it-IT', {
+    useGrouping: true,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
