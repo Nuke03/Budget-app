@@ -123,6 +123,27 @@ describe('buildPlanVersions', () => {
     expect(v[0].quote[0].inCasaDal).toBe('2025-06-01');
   });
 
+  it('rivedere il piano rigenera la versione di transizione dall\'in_casa_dal salvato (le versioni successive vengono sostituite)', () => {
+    // Piano riaperto: Giulia è ancora un segnaposto con in_casa_dal 2027-02-01.
+    const persone = [fabio, giulia('2027-02-01')];
+    const prima = buildPlanVersions(draft({ persone, periodoIniziale: { tipo: 'tutto_a_chi_abita' } }));
+    const dopo = buildPlanVersions(
+      draft({
+        persone,
+        periodoIniziale: { tipo: 'tutto_a_chi_abita' },
+        voci: voci.map((v) => (v.nome === 'Affitto' ? { ...v, importoRicorrenza: 800 } : v)),
+      }),
+    );
+    expect(dopo.map((x) => x.validoDal)).toEqual(prima.map((x) => x.validoDal));
+    expect(dopo[1].validoDal).toBe('2027-03-01');
+    expect(dopo[1].totaleMensile).toBeGreaterThan(prima[1].totaleMensile);
+    // se Giulia anticipa l'ingresso, la versione successiva si sposta: la vecchia va sostituita
+    const anticipo = buildPlanVersions(
+      draft({ persone: [fabio, giulia('2026-12-01')], periodoIniziale: { tipo: 'tutto_a_chi_abita' } }),
+    );
+    expect(anticipo.map((x) => x.validoDal)).toEqual(['2026-12-01']);
+  });
+
   it('le percentuali che non sommano a 100 lanciano', () => {
     expect(() =>
       buildPlanVersions(

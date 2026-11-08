@@ -1,6 +1,6 @@
 -- supabase/tests/rls_casa.sql
 -- Prova delle policy RLS e delle funzioni della casa comune. Si esegue a mano nel SQL editor
--- di Supabase DOPO la migrazione 0004. Non lascia nulla nel database: crea utenti finti e
+-- di Supabase DOPO le migrazioni 0004 e 0005. Non lascia nulla nel database: crea utenti finti e
 -- dati di prova, poi termina con un errore voluto che annulla tutto e mostra il referto.
 -- Esito atteso: "RISULTATO: ... 0 FAIL" e solo righe OK.
 begin;
@@ -165,7 +165,7 @@ declare
   mese date := date_trunc('month', now() at time zone 'Europe/Rome')::date;
   s_pre numeric; s_casa0 numeric; s_a0 numeric; s_casa1 numeric; s_a1 numeric; v_c numeric; v_b numeric;
   vjson constant text := '{"valido_dal": "%s", "giorno_versamento": 5, "regola": "parti_uguali", "cuscinetto_obiettivo": 0, "cuscinetto_quota_mensile": 0, "arrotondamento": 10, "totale_mensile": 100, "voci": [{"nome": "Luce", "categoria_nome": "Luce", "frequenza_mesi": 2, "importo_ricorrenza": 110, "origine_stima": "suggerita", "ordine": 0}], "quote": [{"slot": 1, "display_name": "A", "reddito_netto_mensile": 1800, "quota_mensile": 50}, {"slot": 2, "display_name": "B", "reddito_netto_mensile": 1500, "quota_mensile": 40}, {"slot": 3, "display_name": "C", "reddito_netto_mensile": 1200, "quota_mensile": 30}, {"slot": 4, "display_name": "Ospite", "reddito_netto_mensile": 0, "quota_mensile": 0}]}';
-  v1 text; v2 text; pl1 text; pl2 text; pl_passato text; pl_reddito text;
+  v1 text; v2 text; v3 text; pl1 text; pl2 text; pl_passato text; pl_reddito text;
 begin
   -- Preparazione come proprietario (senza ruolo): casa, membri, conti
   insert into public.households (nome, created_by) values ('Casa prova', a) returning id into h;
@@ -477,6 +477,35 @@ begin
   perform public.zz_verifica('le due versioni del piano sono salvate',
     (select count(*) from public.household_plans where household_id = h and valido_dal in (mese, (mese + interval '1 month')::date)) = 2,
     'versioni salvate diverse da 2');
+
+  -- 14b. Una revisione sostituisce il futuro (migrazione 0005)
+  v3 := format(vjson, to_char(mese + interval '3 month', 'YYYY-MM-DD'));
+  perform public.zz_ok('A salva tre versioni (mese, +1, +3)', a,
+    format('select public.save_household_plan(%L, %L::jsonb)', h,
+      '{"versioni": [' || v1 || ', ' || v2 || ', ' || v3 || ']}'));
+  perform public.zz_verifica('le tre versioni sono salvate',
+    (select count(*) from public.household_plans where household_id = h
+       and valido_dal in (mese, (mese + interval '1 month')::date, (mese + interval '3 month')::date)) = 3,
+    'versioni salvate diverse da 3');
+  perform public.zz_ok('A rivede dal mese +1 con una sola versione', a,
+    format('select public.save_household_plan(%L, %L::jsonb)', h, '{"versioni": [' || v2 || ']}'));
+  perform public.zz_verifica('la versione successiva non piu nel payload e sparita',
+    not exists (select 1 from public.household_plans where household_id = h
+                and valido_dal = (mese + interval '3 month')::date),
+    'la versione a +3 mesi e ancora presente');
+  perform public.zz_verifica('la versione precedente al payload resta',
+    exists (select 1 from public.household_plans where household_id = h and valido_dal = mese),
+    'la versione del mese corrente e sparita');
+  perform public.zz_verifica('la versione nel payload resta',
+    exists (select 1 from public.household_plans where household_id = h
+            and valido_dal = (mese + interval '1 month')::date),
+    'la versione a +1 mese e sparita');
+  perform public.zz_verifica('voci e quote della versione eliminata cadono a cascata',
+    not exists (select 1 from public.household_plan_items i
+                where i.plan_id not in (select id from public.household_plans))
+    and not exists (select 1 from public.household_plan_shares s
+                where s.plan_id not in (select id from public.household_plans)),
+    'righe orfane');
 
   -- 15. Ingresso nel segnaposto del piano; un ex membro non riprende la sua posizione
   perform public.zz_as(a);
