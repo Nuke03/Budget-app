@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
@@ -91,6 +92,10 @@ export default function AccountsPage() {
           Aggiungi conto
         </button>
       </section>
+
+      <Link href="/categories" className="text-sm font-semibold text-brand-dark">
+        Gestisci categorie
+      </Link>
     </main>
   );
 }

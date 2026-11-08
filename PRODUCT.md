@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Two primary users: Fabio and his partner, each with fully isolated personal finance data (no sharing or cross-visibility between the two accounts). Both check the app frequently on iPhone throughout the day — logging a purchase right after making it, or glancing at it before deciding whether to spend.
+Two primary users: Fabio and his partner, each with a private personal finance space, plus an optional shared household space (the Casa) that every member of the household can see. Both check the app frequently on iPhone throughout the day — logging a purchase right after making it, or glancing at it before deciding whether to spend.
 
 ## Product Purpose
 
@@ -28,12 +28,12 @@ Unlike a raw bank balance or a generic budgeting app's category totals, this app
 
 ## Capabilities and Constraints
 
-- Two isolated Supabase Auth accounts, enforced via Postgres Row Level Security (`user_id` default `auth.uid()`); no self-service signup, no data sharing between the two accounts in this version.
+- Supabase Auth accounts, with data protected by Postgres Row Level Security: personal rows (`household_id` null) are readable and writable only by their author; household rows (`household_id` set) are readable and writable by every active member of that household. Personal data is never visible to another member, not even as totals. A household has N members who join with a shareable invite code; no self-service signup.
 - Manual-only account balances — deliberately no Open Banking/PSD2 integration (cost and complexity).
 - Every write uses optimistic UI (interface updates immediately, write happens in the background); no offline support — the app requires connectivity at the moment of an action, not for the whole session.
 - Must run entirely on free tiers: Supabase (Postgres + Auth) and Vercel hosting, €0/month.
 - Currency is EUR only, `it-IT` number/date formatting throughout; all UI copy is in Italian.
-- A future, separate project may add shared household expense splitting (rent/bills/groceries, Tricount-style) between the same two accounts — not built yet, and this app's data model deliberately keeps the two accounts isolated so that future work can bridge them without redoing auth.
+- Shared household management (common account, monthly contributions, shared expenses and bills) is built in stages; the personal space and the household space stay separate, and the second never exposes the first.
 
 ## Brand Commitments
 
@@ -47,7 +47,7 @@ The original Google Sheet ("Weekly Expense + Income Tracker") exists as a refere
 
 1. The safe-to-spend number is the product — every screen should make that number feel earned and trustworthy, never like an estimate.
 2. Entry speed beats completeness — logging a transaction should never feel like filling out a form.
-3. Two private worlds, one app — nothing in the UI should make either user second-guess whether their data is truly separate.
+3. Two private worlds, one shared home: personal finances stay invisible to everyone else in the household, while the household's own money (common account, shared expenses, bills) is visible to all its members. Nothing in the UI should make anyone second-guess which is which.
 4. Free-tier-first — no feature should require a paid service or integration.
 5. Feels like an app, not a form — the current implementation reads as plain web forms; the product goal is a native-feeling mobile experience (the reason this design pass exists).
 

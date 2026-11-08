@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Account, BudgetGoal, Category, TransactionTipo } from '@/lib/types';
@@ -222,6 +223,10 @@ export function AddTransactionForm({
           </div>
         </div>
       )}
+
+      <Link href="/categories" className="-mt-2 self-start text-xs font-semibold text-brand-dark">
+        Gestisci categorie
+      </Link>
 
       {accounts.length > 0 && (
         <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
