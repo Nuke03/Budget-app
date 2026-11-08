@@ -27,7 +27,8 @@ export interface QuotaPersona {
 export type AvvisoQuota =
   | { tipo: 'quota_supera_reddito'; slot: number; nome: string }
   | { tipo: 'spese_oltre_redditi' }
-  | { tipo: 'redditi_mancanti'; slot: number; nome: string };
+  | { tipo: 'redditi_mancanti'; slot: number; nome: string }
+  | { tipo: 'percentuali_non_100' };
 
 export interface RisultatoQuota {
   totale: number;
@@ -45,12 +46,21 @@ function sommaRedditi(persone: PersonaQuotaInput[]): number {
 // Redditi che impediscono la regola: mancanti, oppure tutti a zero per la proporzionale.
 function redditiMancanti(persone: PersonaQuotaInput[], regola: RegolaQuota): PersonaQuotaInput[] {
   if (regola !== 'proporzionale' && regola !== 'pari_residuo') return [];
-  const nulli = persone.filter((p) => p.redditoNetto === null);
+  // Un reddito negativo vale come mancante: nessuna regola deve produrre quote negative.
+  const nulli = persone.filter((p) => p.redditoNetto === null || p.redditoNetto < 0);
   if (nulli.length > 0) return nulli;
   if (regola === 'proporzionale' && sommaRedditi(persone) <= 0) {
     return persone.filter((p) => reddito(p) <= 0);
   }
   return [];
+}
+
+function percentualiValide(persone: PersonaQuotaInput[]): boolean {
+  if (persone.some((p) => p.percentuale === null || p.percentuale === undefined || !(p.percentuale >= 0))) {
+    return false;
+  }
+  const somma = persone.reduce((s, p) => s + (p.percentuale ?? 0), 0);
+  return Math.abs(somma - 100) <= 0.01;
 }
 
 // Quote reali (con decimali), prima dell'arrotondamento all'euro. Stesso ordine di `persone`.
@@ -89,11 +99,9 @@ export function quoteReali(
       }
       return q;
     }
-    case 'personalizzata': {
-      const somma = persone.reduce((s, p) => s + Math.max(0, p.percentuale ?? 0), 0);
-      if (somma <= 0) return persone.map(() => totale / n);
-      return persone.map((p) => (totale * Math.max(0, p.percentuale ?? 0)) / somma);
-    }
+    case 'personalizzata':
+      // Le percentuali sono già validate da calcolaQuota (somma 100, nessuna null).
+      return persone.map((p) => (totale * (p.percentuale ?? 0)) / 100);
   }
 }
 
@@ -113,6 +121,15 @@ export function calcolaQuota(input: {
       totale,
       persone: persone.map((p) => ({ slot: p.slot, nome: p.nome, quota: 0, resta: null, peso: null })),
       avvisi: mancanti.map((p) => ({ tipo: 'redditi_mancanti', slot: p.slot, nome: p.nome })),
+      regolaDisponibile: false,
+    };
+  }
+
+  if (regola === 'personalizzata' && !percentualiValide(persone)) {
+    return {
+      totale,
+      persone: persone.map((p) => ({ slot: p.slot, nome: p.nome, quota: 0, resta: null, peso: null })),
+      avvisi: [{ tipo: 'percentuali_non_100' }],
       regolaDisponibile: false,
     };
   }

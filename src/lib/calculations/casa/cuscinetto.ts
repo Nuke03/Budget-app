@@ -7,5 +7,5 @@ export function cuscinettoDefault(
 
 export function mesiAlPieno(obiettivo: number, quotaMensile: number): number | null {
   if (!(quotaMensile > 0)) return null;
-  return Math.round(obiettivo / quotaMensile);
+  return Math.ceil(obiettivo / quotaMensile);
 }

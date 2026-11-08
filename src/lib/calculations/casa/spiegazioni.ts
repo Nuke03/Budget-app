@@ -87,7 +87,7 @@ export function spiegaQuotaPersona(input: {
       seconda =
         resta === null
           ? `${persona.nome}: la quota è ${formatNumero(valore)} euro.`
-          : `${persona.nome}: reddito ${formatNumero(redditoPersona)} euro, versa ${formatNumero(valore)} euro e gli restano ${formatNumero(resta)} euro.`;
+          : `${persona.nome}: reddito ${formatNumero(redditoPersona)} euro, versa ${formatNumero(valore)} euro e restano ${formatNumero(resta)} euro.`;
       ingredienti = [
         { etichetta: `Reddito di ${persona.nome}`, valore: redditoPersona },
         { etichetta: 'Reddito di tutti', valore: redditoTutti },

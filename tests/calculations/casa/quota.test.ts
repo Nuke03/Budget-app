@@ -70,6 +70,34 @@ describe('calcolaQuota personalizzata', () => {
   it('totale 1001 con 70 e 30 dà 701 e 300 (il resto va alla percentuale maggiore)', () => {
     expect(quote(calcolaQuota({ persone: pers(70, 30), totale: 1001, regola: 'personalizzata' }))).toEqual([701, 300]);
   });
+  it('percentuali che non sommano a 100 (60 e 30) bloccano la regola', () => {
+    const r = calcolaQuota({ persone: pers(60, 30), totale: 1380, regola: 'personalizzata' });
+    expect(r.regolaDisponibile).toBe(false);
+    expect(quote(r)).toEqual([0, 0]);
+    expect(r.avvisi).toEqual([{ tipo: 'percentuali_non_100' }]);
+    expect(JSON.stringify(r)).not.toContain('NaN');
+  });
+  it('percentuali 0 e 0 bloccano la regola', () => {
+    const r = calcolaQuota({ persone: pers(0, 0), totale: 1380, regola: 'personalizzata' });
+    expect(r.regolaDisponibile).toBe(false);
+    expect(quote(r)).toEqual([0, 0]);
+    expect(r.avvisi).toEqual([{ tipo: 'percentuali_non_100' }]);
+    expect(JSON.stringify(r)).not.toContain('NaN');
+  });
+  it('percentuali null bloccano la regola', () => {
+    const r = calcolaQuota({
+      persone: [
+        { slot: 1, nome: 'Fabio', redditoNetto: 1800, percentuale: null },
+        { slot: 2, nome: 'Giulia', redditoNetto: 1400 },
+      ],
+      totale: 1380,
+      regola: 'personalizzata',
+    });
+    expect(r.regolaDisponibile).toBe(false);
+    expect(quote(r)).toEqual([0, 0]);
+    expect(r.avvisi).toEqual([{ tipo: 'percentuali_non_100' }]);
+    expect(JSON.stringify(r)).not.toContain('NaN');
+  });
   it('non richiede i redditi', () => {
     const r = calcolaQuota({ persone: pers(70, 30, false), totale: 1380, regola: 'personalizzata' });
     expect(r.regolaDisponibile).toBe(true);
@@ -124,6 +152,21 @@ describe('calcolaQuota casi limite', () => {
     expect(quote(r)).toEqual([0, 0]);
     expect(r.avvisi.filter((a) => a.tipo === 'redditi_mancanti')).toHaveLength(2);
     expect(JSON.stringify(r)).not.toContain('NaN');
+  });
+  it('un reddito negativo vale come mancante e non dà quote negative', () => {
+    for (const regola of ['proporzionale', 'pari_residuo'] as RegolaQuota[]) {
+      const r = calcolaQuota({
+        persone: [
+          { slot: 1, nome: 'Fabio', redditoNetto: 1800 },
+          { slot: 2, nome: 'Giulia', redditoNetto: -200 },
+        ],
+        totale: 1380,
+        regola,
+      });
+      expect(r.regolaDisponibile).toBe(false);
+      expect(quote(r)).toEqual([0, 0]);
+      expect(r.avvisi).toEqual([{ tipo: 'redditi_mancanti', slot: 2, nome: 'Giulia' }]);
+    }
   });
   it('a parità di reddito il resto va allo slot minore', () => {
     const r = calcolaQuota({
