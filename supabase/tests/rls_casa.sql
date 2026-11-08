@@ -155,7 +155,8 @@ declare
   f constant uuid := 'ffffffff-0000-0000-0000-00000000000f';
   g constant uuid := '77777777-0000-0000-0000-000000000007';
   k constant uuid := '88888888-0000-0000-0000-000000000008';
-  h2 uuid; codice2 text; codice3 text; codice4 text; pid2 uuid; tok_a text; tok_e text; bc uuid;
+  h2 uuid; codice2 text; codice3 text; codice4 text; pid2 uuid; pid_h uuid; tok_a text; tok_e text; bc uuid;
+  tx_vuota uuid; mese2 date;
   conto_a2 uuid; conto_b uuid; conto_c uuid; conto_c2 uuid; conto_e uuid; conto_g uuid; conto_casa2 uuid;
   cat_a uuid; cat_b uuid; cat_casa uuid; goal_a uuid; goal_b uuid;
   tx_a_pers uuid; tx_b_pers uuid; tx_casa_a uuid; tx_carta_a uuid; tx_del_a uuid; tx_c uuid; tx_carta_c uuid;
@@ -510,6 +511,50 @@ begin
     format('update public.households set created_by = %L where id = %L', b, h));
   perform public.zz_tocca('A rinomina la casa', a,
     format('update public.households set nome = ''Casa rinominata'' where id = %L', h), 1);
+
+  -- 18. Immutabilita di household_id: il messaggio e quello del trigger forbid_household_change.
+  -- Righe costruite in modo che solo quel trigger possa fallire (nessuna categoria, nessun conto).
+  perform public.zz_err_msg('household_id non si cambia su un conto personale portato in casa', a,
+    format('update public.accounts set household_id = %L where id = %L', h, conto_a2),
+    'household_id non modificabile');
+  insert into public.transactions (user_id, tipo, importo, data, descrizione, household_id)
+    values (a, 'expense', 3, oggi, 'Senza conto ne categoria', h) returning id into tx_vuota;
+  perform public.zz_err_msg('household_id non si cambia su una spesa di casa senza conto ne categoria', a,
+    format('update public.transactions set household_id = null where id = %L', tx_vuota),
+    'household_id non modificabile');
+
+  -- 19. Piano della quota: si scrive solo con save_household_plan
+  mese2 := (mese + interval '2 months')::date;
+  select id into pid_h from public.household_plans where household_id = h and valido_dal = mese;
+  perform public.zz_err('A non inserisce una versione del piano direttamente', a,
+    format('insert into public.household_plans (household_id, valido_dal, giorno_versamento, regola, created_by) values (%L, %L, 5, ''parti_uguali'', %L)', h, mese2, a));
+  perform public.zz_err('A non aggiorna una versione del piano direttamente', a,
+    format('update public.household_plans set totale_mensile = 1 where id = %L', pid_h));
+  perform public.zz_err('A non cancella una versione del piano direttamente', a,
+    format('delete from public.household_plans where id = %L', pid_h));
+  perform public.zz_err('A non inserisce una voce del piano direttamente', a,
+    format('insert into public.household_plan_items (plan_id, nome, frequenza_mesi, importo_ricorrenza) values (%L, ''Voce'', 1, 1)', pid_h));
+  perform public.zz_err('A non cambia una voce del piano direttamente', a,
+    format('update public.household_plan_items set nome = ''X'' where plan_id = %L', pid_h));
+  perform public.zz_err('A non cancella una voce del piano direttamente', a,
+    format('delete from public.household_plan_items where plan_id = %L', pid_h));
+  perform public.zz_err('A non inserisce una quota direttamente', a,
+    format('insert into public.household_plan_shares (plan_id, slot, display_name, quota_mensile) values (%L, 9, ''Intruso'', 0)', pid_h));
+  perform public.zz_err('A non cambia la quota di B direttamente', a,
+    format('update public.household_plan_shares set quota_mensile = 0 where plan_id = %L and slot = 2', pid_h));
+  perform public.zz_err('A non assegna un membro a una quota direttamente', a,
+    format('update public.household_plan_shares set user_id = %L where plan_id = %L and slot = 4', a, pid_h));
+  perform public.zz_err('A non cancella una quota direttamente', a,
+    format('delete from public.household_plan_shares where plan_id = %L', pid_h));
+  perform public.zz_err_msg('D non salva un piano tramite la funzione', d,
+    format('select public.save_household_plan(%L, %L::jsonb)', h, pl1), 'casa non scrivibile');
+  perform public.zz_err_msg('E non salva il piano di una casa archiviata', e,
+    format('select public.save_household_plan(%L, %L::jsonb)', h2, pl1), 'casa non scrivibile');
+  perform public.zz_ok('A salva il piano tramite la funzione dopo i tentativi diretti', a,
+    format('select public.save_household_plan(%L, %L::jsonb)', h, pl1));
+  perform public.zz_verifica('la quota di B resta quella salvata dalla funzione',
+    (select quota_mensile from public.household_plan_shares where plan_id = pid_h and slot = 2) = 40,
+    'quota di B diversa da 40');
 
   -- Referto
   perform public.zz_reset();

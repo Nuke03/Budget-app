@@ -801,8 +801,11 @@ end $$;
 -- dei membri entrati arrivano dai membri, non dal payload. Una posizione legata a un altro
 -- membro non puo cambiare reddito rispetto all'ultima versione salvata.
 -- Ritorna gli id dei piani salvati, nello stesso ordine delle versioni.
+-- Security definer: le tabelle del piano non sono scrivibili dal client (vedi revoke in sezione 5).
+-- L'identita viene solo da auth.uid(); la scrittura richiede una casa non archiviata con un
+-- membro attivo (is_household_writer), prima di ogni altro controllo.
 create or replace function public.save_household_plan(p_household uuid, p_payload jsonb)
-returns uuid[] language plpgsql security invoker set search_path = public as $$
+returns uuid[] language plpgsql security definer set search_path = public as $$
 declare
   uid uuid := (select auth.uid());
   mese_corrente date := date_trunc('month', public._casa_oggi()::timestamp)::date;
@@ -1096,6 +1099,11 @@ from anon;
 
 revoke insert, update, delete, truncate on table
   public.household_members, public.household_invites, public.transfers, public.calendar_feeds
+from authenticated;
+
+-- il piano si scrive solo tramite save_household_plan (security definer): dal client resta lettura
+revoke insert, update, delete, truncate on table
+  public.household_plans, public.household_plan_items, public.household_plan_shares
 from authenticated;
 
 -- dei dati della casa un membro puo cambiare solo il nome

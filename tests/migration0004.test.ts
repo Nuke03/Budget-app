@@ -81,6 +81,18 @@ describe('migrazione 0004 (statica)', () => {
     expect(riga).toMatch(/grant execute on function public\.get_calendar_feed\(text\) to anon;/);
   });
 
+  it('save_household_plan è security definer con search_path = public', () => {
+    expect(codice).toMatch(
+      /create or replace function public\.save_household_plan\(p_household uuid, p_payload jsonb\)\s+returns uuid\[\] language plpgsql security definer set search_path = public as/,
+    );
+  });
+
+  it('le tabelle del piano non si scrivono dal client (solo lettura per authenticated)', () => {
+    expect(codice).toMatch(
+      /revoke insert, update, delete, truncate on table\s+public\.household_plans, public\.household_plan_items, public\.household_plan_shares\s+from authenticated;/,
+    );
+  });
+
   it('contiene tutte le tabelle del modello', () => {
     const tabelle = [
       'households',
