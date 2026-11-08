@@ -1,8 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export function fakeSelectClient(rows: unknown[]) {
   const builder: any = {
     select: () => builder,
     order: () => Promise.resolve({ data: rows, error: null }),
     eq: () => builder,
+    is: () => builder,
+    in: () => builder,
+    neq: () => builder,
+    gt: () => builder,
+    lt: () => builder,
     ilike: () => builder,
     gte: () => builder,
     lte: () => builder,

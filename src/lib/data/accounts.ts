@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Account } from '../types';
+import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
 
 interface AccountRow {
   id: string;
@@ -19,11 +20,11 @@ function mapRow(row: AccountRow): Account {
   };
 }
 
-export async function getAccounts(supabase: SupabaseClient): Promise<Account[]> {
-  const { data, error } = await supabase
-    .from('accounts')
-    .select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo')
-    .order('nome');
+export async function getAccounts(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<Account[]> {
+  const { data, error } = await applyScope(
+    supabase.from('accounts').select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo'),
+    scope
+  ).order('nome');
 
   if (error) throw error;
   return (data as AccountRow[]).map(mapRow);
@@ -31,7 +32,8 @@ export async function getAccounts(supabase: SupabaseClient): Promise<Account[]> 
 
 export async function createAccount(
   supabase: SupabaseClient,
-  input: { nome: string; saldoAttuale: number; contaInDisponibile: boolean; targetSaldo: number | null }
+  input: { nome: string; saldoAttuale: number; contaInDisponibile: boolean; targetSaldo: number | null },
+  scope: Scope = PERSONALE
 ): Promise<Account> {
   const { data, error } = await supabase
     .from('accounts')
@@ -40,6 +42,7 @@ export async function createAccount(
       saldo_attuale: input.saldoAttuale,
       conta_in_disponibile: input.contaInDisponibile,
       target_saldo: input.targetSaldo,
+      household_id: scopeHouseholdId(scope),
     })
     .select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo')
     .single();
@@ -53,6 +56,7 @@ export async function updateAccountBalance(
   id: string,
   saldoAttuale: number
 ): Promise<void> {
+  // household: per id
   const { error } = await supabase.from('accounts').update({ saldo_attuale: saldoAttuale }).eq('id', id);
   if (error) throw error;
 }
@@ -62,6 +66,7 @@ export async function updateAccountDetails(
   id: string,
   input: { nome: string; contaInDisponibile: boolean; targetSaldo: number | null }
 ): Promise<Account> {
+  // household: per id
   const { data, error } = await supabase
     .from('accounts')
     .update({

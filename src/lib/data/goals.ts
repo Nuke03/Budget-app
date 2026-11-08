@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BudgetGoal, GoalModalita } from '../types';
+import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
+
+const GOAL_COLUMNS =
+  'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at, accantona_da';
 
 interface GoalRow {
   id: string;
@@ -12,6 +16,7 @@ interface GoalRow {
   frequenza_mesi: number | null;
   stato: 'aperto' | 'chiuso' | 'scaduto';
   created_at: string;
+  accantona_da: string | null;
 }
 
 function mapRow(row: GoalRow): BudgetGoal {
@@ -26,15 +31,12 @@ function mapRow(row: GoalRow): BudgetGoal {
     frequenzaMesi: row.frequenza_mesi,
     stato: row.stato,
     createdAt: row.created_at,
+    accantonaDa: row.accantona_da,
   };
 }
 
-export async function getOpenGoals(supabase: SupabaseClient): Promise<BudgetGoal[]> {
-  const { data, error } = await supabase
-    .from('budget_goals')
-    .select(
-      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at'
-    )
+export async function getOpenGoals(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<BudgetGoal[]> {
+  const { data, error } = await applyScope(supabase.from('budget_goals').select(GOAL_COLUMNS), scope)
     .eq('stato', 'aperto')
     .order('scadenza', { ascending: true });
 
@@ -52,7 +54,8 @@ export async function createGoal(
     categoriaId: string | null;
     ricorrente: boolean;
     frequenzaMesi: number | null;
-  }
+  },
+  scope: Scope = PERSONALE
 ): Promise<BudgetGoal> {
   const { data, error } = await supabase
     .from('budget_goals')
@@ -65,10 +68,9 @@ export async function createGoal(
       ricorrente: input.ricorrente,
       frequenza_mesi: input.frequenzaMesi,
       stato: 'aperto',
+      household_id: scopeHouseholdId(scope),
     })
-    .select(
-      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at'
-    )
+    .select(GOAL_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -88,6 +90,7 @@ export async function updateGoal(
     frequenzaMesi: number | null;
   }
 ): Promise<BudgetGoal> {
+  // household: per id
   const { data, error } = await supabase
     .from('budget_goals')
     .update({
@@ -100,9 +103,7 @@ export async function updateGoal(
       frequenza_mesi: input.frequenzaMesi,
     })
     .eq('id', id)
-    .select(
-      'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at'
-    )
+    .select(GOAL_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -110,6 +111,7 @@ export async function updateGoal(
 }
 
 export async function closeGoal(supabase: SupabaseClient, id: string): Promise<void> {
+  // household: per id
   const { error } = await supabase.from('budget_goals').update({ stato: 'chiuso' }).eq('id', id);
   if (error) throw error;
 }

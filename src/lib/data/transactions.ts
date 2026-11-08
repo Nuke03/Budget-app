@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { parseISO } from 'date-fns';
 import type { Transaction, TransactionTipo } from '../types';
+import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
+
+const TRANSACTION_COLUMNS =
+  'id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at, pagata_da_user_id, origine';
 
 interface TransactionRow {
   id: string;
@@ -13,6 +17,8 @@ interface TransactionRow {
   descrizione: string;
   nota: string | null;
   created_at: string;
+  pagata_da_user_id: string | null;
+  origine: 'riconciliazione' | null;
 }
 
 function mapRow(row: TransactionRow): Transaction {
@@ -27,14 +33,19 @@ function mapRow(row: TransactionRow): Transaction {
     descrizione: row.descrizione,
     nota: row.nota,
     createdAt: row.created_at,
+    pagataDaUserId: row.pagata_da_user_id,
+    origine: row.origine,
   };
 }
 
-export async function getTransactions(supabase: SupabaseClient): Promise<Transaction[]> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at')
-    .order('data', { ascending: false });
+export async function getTransactions(
+  supabase: SupabaseClient,
+  scope: Scope = PERSONALE
+): Promise<Transaction[]> {
+  const { data, error } = await applyScope(
+    supabase.from('transactions').select(TRANSACTION_COLUMNS),
+    scope
+  ).order('data', { ascending: false });
 
   if (error) throw error;
   return (data as TransactionRow[]).map(mapRow);
@@ -51,7 +62,8 @@ export async function createTransaction(
     goalId: string | null;
     descrizione: string;
     nota: string | null;
-  }
+  },
+  scope: Scope = PERSONALE
 ): Promise<Transaction> {
   const { data, error } = await supabase
     .from('transactions')
@@ -64,8 +76,9 @@ export async function createTransaction(
       goal_id: input.goalId,
       descrizione: input.descrizione,
       nota: input.nota,
+      household_id: scopeHouseholdId(scope),
     })
-    .select('id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at')
+    .select(TRANSACTION_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -86,6 +99,7 @@ export async function updateTransaction(
     nota: string | null;
   }
 ): Promise<Transaction> {
+  // household: per id
   const { data, error } = await supabase
     .from('transactions')
     .update({
@@ -99,7 +113,7 @@ export async function updateTransaction(
       nota: input.nota,
     })
     .eq('id', id)
-    .select('id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at')
+    .select(TRANSACTION_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -107,14 +121,16 @@ export async function updateTransaction(
 }
 
 export async function deleteTransaction(supabase: SupabaseClient, id: string): Promise<void> {
+  // household: per id
   const { error } = await supabase.from('transactions').delete().eq('id', id);
   if (error) throw error;
 }
 
-export async function getLastIncomeDate(supabase: SupabaseClient): Promise<Date | null> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('data')
+export async function getLastIncomeDate(
+  supabase: SupabaseClient,
+  scope: Scope = PERSONALE
+): Promise<Date | null> {
+  const { data, error } = await applyScope(supabase.from('transactions').select('data'), scope)
     .eq('tipo', 'income')
     .order('data', { ascending: false });
 
@@ -128,11 +144,10 @@ export async function getRecentTransactionAmounts(
   supabase: SupabaseClient,
   categoriaId: string,
   limite: number,
-  parolaChiave?: string | null
+  parolaChiave?: string | null,
+  scope: Scope = PERSONALE
 ): Promise<number[]> {
-  let query = supabase
-    .from('transactions')
-    .select('importo')
+  let query = applyScope(supabase.from('transactions').select('importo'), scope)
     .eq('categoria_id', categoriaId)
     .eq('tipo', 'expense');
 
@@ -152,6 +167,7 @@ export async function getTransactionAmountsForGoal(
   da: string,
   a: string | null
 ): Promise<number[]> {
+  // household: per id
   let query = supabase
     .from('transactions')
     .select('importo')
