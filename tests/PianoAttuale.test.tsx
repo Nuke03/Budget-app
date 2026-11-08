@@ -55,6 +55,32 @@ const fabio = share({});
 const giuliaLegata = share({ slot: 2, userId: 'u2', displayName: 'Giulia', redditoNettoMensile: 1400, quotaMensile: 603 });
 const giuliaSegnaposto = { ...giuliaLegata, userId: null };
 
+describe('PianoAttuale: chi esce', () => {
+  it('nel mese di uscita la quota di chi esce dal mese dopo resta in elenco', () => {
+    const { container } = render(
+      <PianoAttuale
+        bundle={bundle([fabio, { ...giuliaLegata, esceDal: '2027-01-01' }])}
+        meseCorrente="2026-12-01"
+        onRivedi={() => {}}
+      />,
+    );
+    expect(screen.getByText('Fabio versa 777 euro e Giulia 603 euro, entro il 5 di ogni mese.')).toBeInTheDocument();
+    expect(screen.getByText('Giulia')).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('chi è già uscito (esce_dal non oltre il mese) non compare', () => {
+    render(
+      <PianoAttuale
+        bundle={bundle([fabio, { ...giuliaLegata, esceDal: '2026-12-01' }])}
+        meseCorrente="2026-12-01"
+        onRivedi={() => {}}
+      />,
+    );
+    expect(screen.queryByText('Giulia')).not.toBeInTheDocument();
+  });
+});
+
 describe('PianoAttuale', () => {
   it('mostra la frase "Fabio versa 777 euro e Giulia 603 euro, entro il 5 di ogni mese."', () => {
     render(<PianoAttuale bundle={bundle([fabio, giuliaLegata])} meseCorrente="2026-12-01" onRivedi={() => {}} />);

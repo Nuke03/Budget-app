@@ -77,7 +77,8 @@ function monta(over: Partial<React.ComponentProps<typeof QuotaWizard>> = {}) {
       meUserId="u1"
       meseCorrente="2026-12-01"
       membri={[fabio]}
-      pianoAttuale={null}
+      piani={[]}
+      slotMassimo={0}
       onSaved={onSaved}
       {...over}
     />,
@@ -149,13 +150,13 @@ describe('QuotaWizard: passo 1', () => {
 
   it('mostra "Il reddito che scrivi qui lo vede anche l\'altro."', () => {
     monta();
-    expect(screen.getByText("Il reddito che scrivi qui lo vede anche l'altro.")).toBeInTheDocument();
+    expect(screen.getByText("Il reddito che scrivi qui lo vede tutta la casa.")).toBeInTheDocument();
   });
 
   it('il reddito di una persona legata a un altro membro è in sola lettura quando il piano ha già un valore', () => {
     monta({
       membri: [fabio, giuliaMembro],
-      pianoAttuale: bundle([share({}), share({ slot: 2, userId: 'u2', displayName: 'Giulia', redditoNettoMensile: 1400 })]),
+      piani: [bundle([share({}), share({ slot: 2, userId: 'u2', displayName: 'Giulia', redditoNettoMensile: 1400 })])],
     });
     const [rFabio, rGiulia] = redditi();
     expect(rFabio).not.toHaveAttribute('readonly');
@@ -164,18 +165,18 @@ describe('QuotaWizard: passo 1', () => {
   });
 
   it('il reddito di un membro senza valore nel piano è modificabile', () => {
-    monta({ membri: [fabio, giuliaMembro], pianoAttuale: null });
+    monta({ membri: [fabio, giuliaMembro], piani: [] });
     const [, rGiulia] = redditi();
     expect(rGiulia).not.toHaveAttribute('readonly');
   });
 
   it('una posizione con esceDal valorizzato non entra tra le persone di partenza', () => {
     monta({
-      pianoAttuale: bundle([
+      piani: [bundle([
         share({}),
         share({ slot: 2, userId: null, displayName: 'Marco', esceDal: '2026-10-01' }),
         share({ slot: 3, userId: null, displayName: 'Giulia', redditoNettoMensile: 1400 }),
-      ]),
+      ])],
     });
     expect(redditi()).toHaveLength(2);
     expect(screen.queryByDisplayValue('Marco')).not.toBeInTheDocument();
@@ -516,7 +517,7 @@ describe('QuotaWizard: per questo periodo', () => {
 describe('QuotaWizard: riparte dal piano attuale', () => {
   it('riparte dal piano attuale quando pianoAttuale è presente', () => {
     monta({
-      pianoAttuale: bundle([share({}), share({ slot: 2, userId: null, displayName: 'Giulia', redditoNettoMensile: 1400, quotaMensile: 603 })]),
+      piani: [bundle([share({}), share({ slot: 2, userId: null, displayName: 'Giulia', redditoNettoMensile: 1400, quotaMensile: 603 })])],
     });
     expect(redditi()[0]).toHaveValue('1800');
     expect(redditi()[1]).toHaveValue('1400');
@@ -531,7 +532,7 @@ describe('QuotaWizard: riparte dal piano attuale', () => {
   });
 
   it('un nuovo segnaposto prende lo slot massimo più 1', async () => {
-    monta({ pianoAttuale: bundle([share({}), share({ slot: 4, userId: null, displayName: 'Giulia', redditoNettoMensile: 1400 })]) });
+    monta({ piani: [bundle([share({}), share({ slot: 4, userId: null, displayName: 'Giulia', redditoNettoMensile: 1400 })])] });
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi una persona' }));
     scrivi(screen.getAllByLabelText('Nome')[1], 'Marco');
     scrivi(redditi()[2], '900');
@@ -571,3 +572,93 @@ function finoAlPassoConControlli(container: HTMLElement) {
   assertNessunaParolaVietata(container);
   expect(container.textContent).not.toContain('NaN');
 }
+
+describe('QuotaWizard: ripartire da tutte le versioni', () => {
+  const giulia = (over: Partial<PlanShare> = {}) =>
+    share({ slot: 2, userId: 'u2', displayName: 'Giulia', redditoNettoMensile: 1400, ...over });
+  const versione = (validoDal: string, shares: PlanShare[], piano: Partial<PlanBundle['plan']> = {}): PlanBundle => {
+    const b = bundle(shares);
+    return { ...b, plan: { ...b.plan, validoDal, ...piano } };
+  };
+
+  it('il reddito e la sola lettura vengono dall\'ultimo valore salvato, non dalla versione del mese', () => {
+    monta({
+      membri: [fabio, giuliaMembro],
+      piani: [
+        versione('2026-12-01', [share({}), giulia()]),
+        versione('2027-02-01', [share({}), giulia({ redditoNettoMensile: 1500 })]),
+      ],
+    });
+    const [, rGiulia] = redditi();
+    expect(rGiulia).toHaveValue('1500');
+    expect(rGiulia).toHaveAttribute('readonly');
+  });
+
+  it('regola, cuscinetto e voci ripartono dalla versione più recente, non dal passaggio personalizzato', () => {
+    monta({
+      membri: [fabio, giuliaMembro],
+      piani: [
+        versione('2026-12-01', [share({ percentuale: 100 }), giulia({ percentuale: 0 })], { regola: 'personalizzata' }),
+        versione('2027-02-01', [share({}), giulia()], { regola: 'parti_uguali', cuscinettoQuotaMensile: 20 }),
+      ],
+    });
+    avanti();
+    avanti();
+    expect(screen.getByLabelText('Ogni mese')).toHaveValue('20');
+    avanti();
+    expect(screen.getByRole('radio', { name: 'Parti uguali' })).toBeChecked();
+    expect(screen.queryByText(/percentuali scelte/)).not.toBeInTheDocument();
+  });
+
+  it('se l\'ultima regola è personalizzata lo dice e porta con sé le percentuali', () => {
+    monta({
+      membri: [fabio, giuliaMembro],
+      piani: [versione('2026-12-01', [share({ percentuale: 70 }), giulia({ percentuale: 30 })], { regola: 'personalizzata' })],
+    });
+    avanti();
+    avanti();
+    avanti();
+    expect(screen.getByText(/Il piano di ora era diviso con percentuali scelte/)).toBeInTheDocument();
+  });
+
+  it('una nuova persona prende la posizione più alta mai usata più 1, anche di chi se n\'è andato', async () => {
+    monta({ piani: [versione('2026-12-01', [share({})])], slotMassimo: 6 });
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi una persona' }));
+    scrivi(screen.getByLabelText('Nome'), 'Marco');
+    scrivi(redditi()[1], '900');
+    avanti();
+    avanti();
+    avanti();
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermiamo' }));
+    await waitFor(() => expect(savePlan).toHaveBeenCalled());
+    const slots = savePlan.mock.calls[0][2][0].quote.map((q: { slot: number }) => q.slot);
+    expect(slots).toEqual([1, 7]);
+  });
+
+  it('una quota legata a chi non è più membro non resta tra le persone', () => {
+    monta({
+      piani: [versione('2026-12-01', [share({}), share({ slot: 3, userId: 'u3', displayName: 'Ex', redditoNettoMensile: 900 })])],
+    });
+    expect(redditi()).toHaveLength(1);
+    expect(screen.queryByText(/Ex/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      { message: 'il reddito di un altro membro non si modifica' },
+      "Il reddito di un'altra persona lo cambia solo lei. Ricarica la pagina per vedere i valori aggiornati.",
+    ],
+    [{ message: 'valido_dal nel passato' }, 'Il mese di partenza è passato: ricarica la pagina e riprova.'],
+    [{ message: 'altro' }, 'Salvataggio fallito, controlla la connessione e riprova.'],
+    [new Error('rete'), 'Salvataggio fallito, controlla la connessione e riprova.'],
+  ])('l\'errore %j mostra il testo giusto', async (errore, testo) => {
+    savePlan.mockRejectedValue(errore);
+    const { container } = monta();
+    finoAlPasso4();
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermiamo' }));
+    expect(await screen.findByText(testo)).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+});

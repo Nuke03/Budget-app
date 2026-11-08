@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPlanForMonth, savePlan, type PlanVersionInput } from '@/lib/data/householdPlans';
+import { getPlanForMonth, getPlansFromMonth, getMaxSlotUsato, savePlan, type PlanVersionInput } from '@/lib/data/householdPlans';
 import { createFakeDb } from '../helpers/fakeDb';
 import { fakeRpcClient } from '../helpers/fakeRpc';
 
@@ -64,6 +64,46 @@ describe('getPlanForMonth', () => {
   it('non legge i piani di un\'altra casa', async () => {
     const db = seed([piano('px', '2026-06-01', { household_id: 'altra' })]);
     expect(await getPlanForMonth(db.client, H, '2026-12-01')).toBeNull();
+  });
+});
+
+describe('getPlansFromMonth', () => {
+  it('ritorna il piano del mese e quelli successivi in ordine, senza i precedenti', async () => {
+    const db = seed([piano('p0', '2026-06-01'), piano('p1', '2026-11-01'), piano('p2', '2027-03-01'), piano('p3', '2027-01-01')]);
+    const bs = await getPlansFromMonth(db.client, H, '2026-12-01');
+    expect(bs.map((b) => b.plan.id)).toEqual(['p1', 'p3', 'p2']);
+    expect(bs[0].items.map((i) => i.nome)).toEqual(['Luce', 'Gas']);
+  });
+  it('senza piano valido parte dal primo futuro', async () => {
+    const db = seed([piano('p2', '2027-03-01'), piano('p1', '2027-01-01')]);
+    const bs = await getPlansFromMonth(db.client, H, '2026-12-01');
+    expect(bs.map((b) => b.plan.id)).toEqual(['p1', 'p2']);
+  });
+  it('vuoto senza piani e non legge altre case', async () => {
+    expect(await getPlansFromMonth(seed([]).client, H, '2026-12-01')).toEqual([]);
+    const db = seed([piano('px', '2026-06-01', { household_id: 'altra' })]);
+    expect(await getPlansFromMonth(db.client, H, '2026-12-01')).toEqual([]);
+  });
+});
+
+describe('getMaxSlotUsato', () => {
+  it('ritorna la posizione piu alta tra le quote di tutte le versioni della casa', async () => {
+    const db = createFakeDb(
+      {
+        household_plans: [piano('p0', '2026-06-01'), piano('p1', '2026-11-01'), piano('px', '2026-06-01', { household_id: 'altra' })] as Record<string, unknown>[],
+        household_plan_items: [],
+        household_plan_shares: [
+          { plan_id: 'p0', slot: 5, user_id: 'u9', display_name: 'Ex' },
+          { plan_id: 'p1', slot: 2, user_id: null, display_name: 'G' },
+          { plan_id: 'px', slot: 9, user_id: null, display_name: 'Altra casa' },
+        ],
+      },
+      { userId: 'u1' },
+    );
+    expect(await getMaxSlotUsato(db.client, H)).toBe(5);
+  });
+  it('0 senza piani', async () => {
+    expect(await getMaxSlotUsato(seed([]).client, H)).toBe(0);
   });
 });
 

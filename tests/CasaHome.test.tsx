@@ -70,6 +70,18 @@ describe('CasaHome', () => {
     expect(screen.getByRole('link', { name: 'Vedi la quota' })).toHaveAttribute('href', '/casa/quota');
   });
 
+  it('un piano attivo che parte in un mese futuro dice da quando parte', () => {
+    const { container } = render(<CasaHome casa={casa} piano={piano(true)} meseCorrente="2026-11-01" />);
+    expect(screen.getByText(/Parte da dicembre 2026: totale da versare ogni mese/)).toHaveTextContent('1.380 €');
+    expect(screen.queryByText(/Attivo/)).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('un piano che è già partito resta Attivo', () => {
+    render(<CasaHome casa={casa} piano={piano(true)} meseCorrente="2026-12-01" />);
+    expect(screen.getByText(/Attivo: totale da versare ogni mese/)).toBeInTheDocument();
+  });
+
   it('con un piano in bozza dice chi manca', () => {
     render(<CasaHome casa={casa} piano={piano(false)} />);
     expect(screen.getByText(/Bozza: totale da versare ogni mese/)).toBeInTheDocument();

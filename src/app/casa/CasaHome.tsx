@@ -1,11 +1,27 @@
 import Link from 'next/link';
+import { format, parseISO } from 'date-fns';
+import { it } from 'date-fns/locale';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import { formatNumero } from '@/lib/format';
 import { descriviStatoPiano } from '@/lib/calculations/casa/fraseVersamento';
 
-export function CasaHome({ casa, piano = null }: { casa: CasaCorrente; piano?: PlanBundle | null }) {
+export function CasaHome({
+  casa,
+  piano = null,
+  meseCorrente,
+}: {
+  casa: CasaCorrente;
+  piano?: PlanBundle | null;
+  meseCorrente?: string;
+}) {
   const stato = piano ? descriviStatoPiano(piano.shares.filter((s) => s.esceDal === null)) : null;
+  // Un piano attivo che parte in un mese futuro non e ancora in corso.
+  const partenza =
+    piano && meseCorrente && piano.plan.validoDal > meseCorrente
+      ? format(parseISO(piano.plan.validoDal), 'LLLL yyyy', { locale: it })
+      : null;
+  const etichetta = stato?.stato === 'bozza' ? 'Bozza' : partenza ? `Parte da ${partenza}` : 'Attivo';
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
@@ -28,7 +44,7 @@ export function CasaHome({ casa, piano = null }: { casa: CasaCorrente; piano?: P
         {piano && stato ? (
           <>
             <p className="text-sm">
-              {stato.stato === 'bozza' ? 'Bozza' : 'Attivo'}: totale da versare ogni mese{' '}
+              {etichetta}: totale da versare ogni mese{' '}
               <span className="font-bold">{formatNumero(piano.plan.totaleMensile)} €</span>
             </p>
             {stato.frase ? <p className="text-sm text-muted">{stato.frase}</p> : null}

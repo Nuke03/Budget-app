@@ -22,7 +22,8 @@ export function PianoAttuale({
   onRivedi: () => void;
 }) {
   const { plan, items } = bundle;
-  const shares = bundle.shares.filter((s) => s.esceDal === null);
+  // Chi esce resta in elenco fino all'inizio del mese di uscita: finche e in casa la sua quota conta.
+  const shares = bundle.shares.filter((s) => s.esceDal === null || s.esceDal > meseCorrente);
   const { stato, frase: fraseBozza } = descriviStatoPiano(shares);
 
   const sottotot = totaleVociMensili(items);

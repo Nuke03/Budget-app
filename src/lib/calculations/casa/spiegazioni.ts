@@ -68,7 +68,17 @@ export function spiegaQuotaPersona(input: {
   const redditoPersona = persona.redditoNetto ?? 0;
   const redditoTutti = persone.reduce((s, p) => s + (p.redditoNetto ?? 0), 0);
 
-  const prima = `Spese comuni ${formatNumero(input.sottotot)} euro + cuscinetto ${formatNumero(input.cuscinettoQuotaMensile)} euro = ${formatNumero(totale)} euro, ${FINE_PRIMA_RIGA[regola]}`;
+  // Pari residuo: chi ha un reddito troppo basso non versa niente e gli altri restano alla pari.
+  const reali = quoteReali(persone, totale, regola);
+  const residuo = Math.max(...persone.map((p, i) => (p.redditoNetto ?? 0) - reali[i]));
+  const azzerati =
+    regola === 'pari_residuo'
+      ? persone.filter((p, i) => reali[i] === 0 && (p.redditoNetto ?? 0) < residuo - 1e-9)
+      : [];
+  const fineRiga =
+    azzerati.length > 0 ? 'divisi tra chi può versare, in modo che a loro restino gli stessi soldi.' : FINE_PRIMA_RIGA[regola];
+
+  const prima = `Spese comuni ${formatNumero(input.sottotot)} euro + cuscinetto ${formatNumero(input.cuscinettoQuotaMensile)} euro = ${formatNumero(totale)} euro, ${fineRiga}`;
   let seconda: string;
   let ingredienti: { etichetta: string; valore: number }[];
 
@@ -96,6 +106,13 @@ export function spiegaQuotaPersona(input: {
         resta === null
           ? `${persona.nome}: la quota è ${formatNumero(valore)} euro.`
           : `${persona.nome}: reddito ${formatNumero(redditoPersona)} euro, versa ${formatNumero(valore)} euro e restano ${formatNumero(resta)} euro.`;
+      if (azzerati.some((a) => a.slot === slot)) {
+        seconda = `${persona.nome} non versa niente perché il reddito non basta; gli altri restano con la stessa cifra.`;
+      } else if (azzerati.length > 0) {
+        const nomi = azzerati.map((a) => a.nome);
+        const elenco = nomi.length === 1 ? nomi[0] : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`;
+        seconda += ` ${elenco} ${nomi.length === 1 ? 'non versa' : 'non versano'} niente perché il reddito non basta.`;
+      }
       ingredienti = [
         { etichetta: `Reddito di ${persona.nome}`, valore: redditoPersona },
         { etichetta: 'Reddito di tutti', valore: redditoTutti },
@@ -114,7 +131,7 @@ export function spiegaQuotaPersona(input: {
     }
   }
 
-  const reale = quoteReali(persone, totale, regola)[indice];
+  const reale = reali[indice];
   const diff = arrotonda2(valore - reale);
   if (risultato.regolaDisponibile && diff !== 0) {
     ingredienti.push({ etichetta: 'Arrotondamento', valore: diff });

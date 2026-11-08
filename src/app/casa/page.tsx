@@ -15,6 +15,7 @@ export default async function CasaPage() {
   const casa = await getMyHousehold(supabase, user.id);
   if (!casa) return <CasaSenzaCasa />;
 
-  const piano = await getPlanForMonth(supabase, casa.household.id, meseRomaISO());
-  return <CasaHome casa={casa} piano={piano} />;
+  const meseCorrente = meseRomaISO();
+  const piano = await getPlanForMonth(supabase, casa.household.id, meseCorrente);
+  return <CasaHome casa={casa} piano={piano} meseCorrente={meseCorrente} />;
 }

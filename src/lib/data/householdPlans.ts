@@ -161,7 +161,10 @@ export async function getPlanForMonth(
     riga = ((futuri ?? []) as PlanRow[])[0];
   }
   if (!riga) return null;
+  return leggiBundle(supabase, riga);
+}
 
+async function leggiBundle(supabase: SupabaseClient, riga: PlanRow): Promise<PlanBundle> {
   const { data: voci, error: e3 } = await supabase
     .from('household_plan_items')
     .select(
@@ -185,6 +188,44 @@ export async function getPlanForMonth(
     items: ((voci ?? []) as ItemRow[]).map(mapItem),
     shares: ((quote ?? []) as ShareRow[]).map(mapShare),
   };
+}
+
+// Il piano del mese (come getPlanForMonth) e tutte le versioni successive, in ordine di data.
+export async function getPlansFromMonth(
+  supabase: SupabaseClient,
+  householdId: string,
+  meseISO: string,
+): Promise<PlanBundle[]> {
+  const attuale = await getPlanForMonth(supabase, householdId, meseISO);
+  if (!attuale) return [];
+  const { data: dopo, error } = await supabase
+    .from('household_plans')
+    .select(COLONNE_PIANO)
+    .eq('household_id', householdId)
+    .gt('valido_dal', attuale.plan.validoDal)
+    .order('valido_dal', { ascending: true });
+  if (error) throw error;
+  const successivi = await Promise.all(((dopo ?? []) as PlanRow[]).map((r) => leggiBundle(supabase, r)));
+  return [attuale, ...successivi];
+}
+
+// La posizione piu alta mai usata in una quota di qualunque versione della casa (0 se nessuna).
+export async function getMaxSlotUsato(supabase: SupabaseClient, householdId: string): Promise<number> {
+  const { data: piani, error: e1 } = await supabase
+    .from('household_plans')
+    .select('id')
+    .eq('household_id', householdId);
+  if (e1) throw e1;
+  const ids = ((piani ?? []) as { id: string }[]).map((p) => p.id);
+  if (ids.length === 0) return 0;
+  const { data: quote, error: e2 } = await supabase
+    .from('household_plan_shares')
+    .select('slot')
+    .in('plan_id', ids)
+    .order('slot', { ascending: false })
+    .limit(1);
+  if (e2) throw e2;
+  return ((quote ?? []) as { slot: number }[])[0]?.slot ?? 0;
 }
 
 // Salva una o più versioni del piano con l'unica scrittura consentita: l'RPC.

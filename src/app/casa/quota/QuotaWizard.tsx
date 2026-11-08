@@ -5,7 +5,7 @@ import { addMonths, format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
 import { savePlan, type PlanBundle, type PlanVersionInput, type PlanVoceInput } from '@/lib/data/householdPlans';
-import type { HouseholdMember, OrigineStima, RegolaQuota } from '@/lib/types';
+import type { HouseholdMember, OrigineStima, PlanShare, RegolaQuota } from '@/lib/types';
 import { formatNumero } from '@/lib/format';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import { totaleVociMensili } from '@/lib/calculations/casa/mensilizza';
@@ -27,6 +27,16 @@ import {
 import { descriviStatoPiano, fraseVersamento } from '@/lib/calculations/casa/fraseVersamento';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
+const ERRORE_REDDITO_ALTRUI =
+  "Il reddito di un'altra persona lo cambia solo lei. Ricarica la pagina per vedere i valori aggiornati.";
+const ERRORE_MESE_PASSATO = 'Il mese di partenza è passato: ricarica la pagina e riprova.';
+
+function messaggioErrore(e: unknown): string {
+  const testo = typeof e === 'object' && e !== null && 'message' in e ? String((e as { message: unknown }).message) : '';
+  if (testo.includes('il reddito di un altro membro non si modifica')) return ERRORE_REDDITO_ALTRUI;
+  if (testo.includes('valido_dal nel passato')) return ERRORE_MESE_PASSATO;
+  return ERRORE_GENERICO;
+}
 const ARROTONDAMENTO = 10;
 const PASSI = ['Quanto entra ogni mese', 'Le spese di casa', 'Il cuscinetto', 'Come dividere', 'Quando e da quando'];
 
@@ -90,36 +100,52 @@ function opzioniMesi(da: string, extra: string[] = []): { value: string; label: 
   return tutti.map((value) => ({ value, label: format(parseISO(value), 'LLLL yyyy', { locale: it }) }));
 }
 
+// L'ultimo valore salvato per ogni posizione, scorrendo le versioni dalla più vecchia alla più recente.
+function ultimeQuote(piani: PlanBundle[]): Map<number, PlanShare> {
+  const ultime = new Map<number, PlanShare>();
+  for (const piano of piani) for (const s of piano.shares) ultime.set(s.slot, s);
+  return ultime;
+}
+
 function personeIniziali(
   membri: HouseholdMember[],
-  piano: PlanBundle | null,
+  piani: PlanBundle[],
   meUserId: string,
   meseCorrente: string,
 ): PersonaState[] {
   const attivi = membri.filter((m) => m.attivo).sort((a, b) => a.slot - b.slot);
-  const daMembro = (m: HouseholdMember): PersonaState => ({
-    slot: m.slot,
-    displayName: m.displayName,
-    userId: m.userId,
-    redditoText: '',
-    irregolare: false,
-    inCasaDal: meseCorrente,
-    soloLettura: false,
-  });
-  if (!piano) return attivi.map(daMembro);
+  const ultime = ultimeQuote(piani);
+  const daMembro = (m: HouseholdMember): PersonaState => {
+    const salvata = ultime.get(m.slot);
+    return {
+      slot: m.slot,
+      displayName: m.displayName,
+      userId: m.userId,
+      redditoText: salvata ? testoNumero(salvata.redditoNettoMensile) : '',
+      irregolare: salvata?.redditoIrregolare ?? false,
+      inCasaDal: meseCorrente,
+      soloLettura: salvata !== undefined && m.userId !== meUserId,
+    };
+  };
+  const ultimo = piani[piani.length - 1];
+  if (!ultimo) return attivi.map(daMembro);
 
   const out: PersonaState[] = [];
-  // Chi è già uscito non riparte: restano i segnaposto e i membri attivi.
-  for (const s of piano.shares.filter((x) => x.esceDal === null).sort((a, b) => a.slot - b.slot)) {
-    const membro = attivi.find((m) => m.slot === s.slot);
-    const userId = membro ? membro.userId : s.userId;
+  // Le persone sono quelle della versione più recente, con l'ultimo valore salvato di ciascuna.
+  // Chi è già uscito non riparte; una quota legata a chi non è più membro non resta (diventerebbe
+  // un segnaposto che nessuno potrebbe occupare).
+  for (const s0 of ultimo.shares.filter((x) => x.esceDal === null).sort((a, b) => a.slot - b.slot)) {
+    const membro = attivi.find((m) => m.slot === s0.slot);
+    if (s0.userId !== null && !membro) continue;
+    const s = ultime.get(s0.slot) ?? s0;
+    const userId = membro ? membro.userId : null;
     out.push({
-      slot: s.slot,
-      displayName: membro?.displayName ?? s.displayName,
+      slot: s0.slot,
+      displayName: membro?.displayName ?? s0.displayName,
       userId,
       redditoText: testoNumero(s.redditoNettoMensile),
       irregolare: s.redditoIrregolare,
-      inCasaDal: s.inCasaDal ?? meseCorrente,
+      inCasaDal: s0.inCasaDal ?? meseCorrente,
       // Il reddito di un altro membro lo corregge lui, ma solo se il piano ne ha già uno.
       soloLettura: userId !== null && userId !== meUserId,
     });
@@ -130,7 +156,7 @@ function personeIniziali(
   return out;
 }
 
-function vociIniziali(piano: PlanBundle | null): VoceState[] {
+function vociIniziali(piano: PlanBundle | undefined): VoceState[] {
   if (piano) {
     return [...piano.items]
       .sort((a, b) => a.ordine - b.ordine)
@@ -204,21 +230,27 @@ export function QuotaWizard({
   meUserId,
   meseCorrente,
   membri,
-  pianoAttuale,
+  piani,
+  slotMassimo,
   onSaved,
 }: {
   householdId: string;
   meUserId: string;
   meseCorrente: string;
   membri: HouseholdMember[];
-  pianoAttuale: PlanBundle | null;
+  // Le versioni del piano dal mese corrente in poi, dalla più vecchia alla più recente.
+  piani: PlanBundle[];
+  // La posizione più alta mai usata nella casa, anche da chi se n'è andato.
+  slotMassimo: number;
   onSaved: () => void;
 }) {
+  // Regola, cuscinetto e voci ripartono dalla versione più recente: è il regime dopo ogni passaggio.
+  const pianoAttuale = piani[piani.length - 1] ?? null;
   const [passo, setPasso] = useState(1);
   const [persone, setPersone] = useState<PersonaState[]>(() =>
-    personeIniziali(membri, pianoAttuale, meUserId, meseCorrente),
+    personeIniziali(membri, piani, meUserId, meseCorrente),
   );
-  const [voci, setVoci] = useState<VoceState[]>(() => vociIniziali(pianoAttuale));
+  const [voci, setVoci] = useState<VoceState[]>(() => vociIniziali(pianoAttuale ?? undefined));
   const [infoAperta, setInfoAperta] = useState<number | null>(null);
   const [mesiCuscinetto, setMesiCuscinetto] = useState<1 | 2>(() => {
     if (!pianoAttuale) return 1;
@@ -232,8 +264,20 @@ export function QuotaWizard({
     const r = pianoAttuale?.plan.regola;
     return r === 'parti_uguali' || r === 'pari_residuo' || r === 'proporzionale' ? r : 'proporzionale';
   });
-  const [periodoTipo, setPeriodoTipo] = useState<PeriodoIniziale['tipo']>('tutto_a_chi_abita');
-  const [percText, setPercText] = useState<Record<number, string>>({});
+  // Se il piano era diviso con percentuali scelte, quelle restano la proposta per il periodo iniziale.
+  const eraPersonalizzata = pianoAttuale?.plan.regola === 'personalizzata';
+  const [periodoTipo, setPeriodoTipo] = useState<PeriodoIniziale['tipo']>(
+    eraPersonalizzata ? 'percentuali' : 'tutto_a_chi_abita',
+  );
+  const [percText, setPercText] = useState<Record<number, string>>(() =>
+    pianoAttuale && eraPersonalizzata
+      ? Object.fromEntries(
+          pianoAttuale.shares
+            .filter((s) => s.percentuale !== null)
+            .map((s) => [s.slot, testoNumero(s.percentuale as number)]),
+        )
+      : {},
+  );
   const [giorno, setGiorno] = useState<number>(pianoAttuale?.plan.giornoVersamento ?? 5);
   const [partenza, setPartenza] = useState(meseCorrente);
   const [inCorso, setInCorso] = useState(false);
@@ -354,9 +398,10 @@ export function QuotaWizard({
   function aggiungiPersona() {
     const massimo = Math.max(
       0,
+      slotMassimo,
       ...persone.map((p) => p.slot),
       ...membri.map((m) => m.slot),
-      ...(pianoAttuale?.shares.map((s) => s.slot) ?? []),
+      ...piani.flatMap((p) => p.shares.map((s) => s.slot)),
     );
     setPersone((ps) => [
       ...ps,
@@ -379,8 +424,8 @@ export function QuotaWizard({
     try {
       await savePlan(createClient(), householdId, versioni);
       onSaved();
-    } catch {
-      setErrore(ERRORE_GENERICO);
+    } catch (e) {
+      setErrore(messaggioErrore(e));
     } finally {
       setInCorso(false);
     }
@@ -469,7 +514,7 @@ export function QuotaWizard({
               parte.
             </p>
           ) : null}
-          <p className="text-sm text-muted">Il reddito che scrivi qui lo vede anche l&apos;altro.</p>
+          <p className="text-sm text-muted">Il reddito che scrivi qui lo vede tutta la casa.</p>
           <button type="button" onClick={aggiungiPersona} className={`${bottoneSecondario} self-start`}>
             Aggiungi una persona
           </button>
@@ -613,6 +658,11 @@ export function QuotaWizard({
       {passo === 4 ? (
         <>
           <p className="text-base font-bold">{`Totale da versare ogni mese: ${euro(totale)}`}</p>
+          {eraPersonalizzata ? (
+            <p className="text-sm text-muted">
+              Il piano di ora era diviso con percentuali scelte. Qui scegli come dividere da adesso.
+            </p>
+          ) : null}
 
           {piuPeriodi ? (
             <fieldset className={carta} data-testid="per-questo-periodo">

@@ -14,7 +14,9 @@ export function fraseVersamento(input: {
   if (chiPaga.length === 0) return 'Nessun versamento in questo periodo.';
 
   const euro = (n: number) => `${formatNumero(n)} euro`;
-  const tutteUguali = chiPaga.length > 1 && chiPaga.every((q) => q.quota === chiPaga[0].quota);
+  // "Ognuno" solo se tutti versano, e la stessa cifra: con chi non versa niente si nomina chi paga.
+  const tutteUguali =
+    chiPaga.length > 1 && chiPaga.length === input.quote.length && chiPaga.every((q) => q.quota === chiPaga[0].quota);
   if (tutteUguali) {
     return `Ognuno versa ${euro(chiPaga[0].quota)} entro il ${input.giorno} di ogni mese.`;
   }

@@ -81,6 +81,25 @@ describe('spiegaQuotaPersona', () => {
     expect(s.valore).toBe(0);
     expect(s.formula).toBe('Quota da completare: manca il reddito di Giulia.');
   });
+  it('pari residuo con chi non versa niente: lo dice senza dire che a tutti resta lo stesso', () => {
+    const d = {
+      ...base,
+      regola: 'pari_residuo' as RegolaQuota,
+      slot: 1,
+      persone: [
+        { slot: 1, nome: 'Fabio', redditoNetto: 2000, percentuale: null },
+        { slot: 2, nome: 'Giulia', redditoNetto: 100, percentuale: null },
+      ],
+    };
+    const giulia = spiegaQuotaPersona({ ...d, slot: 2 });
+    expect(giulia.valore).toBe(0);
+    expect(giulia.formula).toContain('Giulia non versa niente perché il reddito non basta; gli altri restano con la stessa cifra.');
+    const fabio = spiegaQuotaPersona(d);
+    expect(fabio.formula.split('\n')[0]).not.toContain('a tutti restino gli stessi soldi');
+    expect(fabio.formula).toContain('Giulia non versa niente perché il reddito non basta.');
+    const tutto = (giulia.formula + fabio.formula).toLowerCase();
+    for (const parola of PAROLE_VIETATE) expect(tutto).not.toContain(parola);
+  });
   it('nessuna parola vietata nelle formule', () => {
     const regole: RegolaQuota[] = ['parti_uguali', 'proporzionale', 'pari_residuo', 'personalizzata'];
     const testi = [spiegaTotaleMensile(base).formula];

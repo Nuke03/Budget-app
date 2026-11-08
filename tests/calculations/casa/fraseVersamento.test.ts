@@ -21,6 +21,22 @@ describe('fraseVersamento', () => {
       fraseVersamento({ quote: [{ nome: 'Fabio', quota: 690 }, { nome: 'Giulia', quota: 690 }], giorno: 5 }),
     ).toBe('Ognuno versa 690 euro entro il 5 di ogni mese.');
   });
+  it('con chi non versa niente non dice "Ognuno": nomina chi paga', () => {
+    expect(
+      fraseVersamento({
+        quote: [{ nome: 'A', quota: 500 }, { nome: 'B', quota: 500 }, { nome: 'C', quota: 0 }],
+        giorno: 5,
+      }),
+    ).toBe('A versa 500 euro e B 500 euro, entro il 5 di ogni mese.');
+  });
+  it('tre persone con la stessa quota: Ognuno', () => {
+    expect(
+      fraseVersamento({
+        quote: [{ nome: 'A', quota: 460 }, { nome: 'B', quota: 460 }, { nome: 'C', quota: 460 }],
+        giorno: 5,
+      }),
+    ).toBe('Ognuno versa 460 euro entro il 5 di ogni mese.');
+  });
   it('tre persone', () => {
     expect(
       fraseVersamento({

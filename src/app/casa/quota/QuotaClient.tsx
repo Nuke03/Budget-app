@@ -12,14 +12,17 @@ export function QuotaClient({
   meUserId,
   meseCorrente,
   membri,
-  pianoAttuale,
+  piani,
+  slotMassimo,
 }: {
   householdId: string;
   meUserId: string;
   meseCorrente: string;
   membri: HouseholdMember[];
-  pianoAttuale: PlanBundle | null;
+  piani: PlanBundle[];
+  slotMassimo: number;
 }) {
+  const pianoAttuale = piani[0] ?? null;
   const router = useRouter();
   const [modifica, setModifica] = useState(false);
 
@@ -34,7 +37,8 @@ export function QuotaClient({
           meUserId={meUserId}
           meseCorrente={meseCorrente}
           membri={membri}
-          pianoAttuale={pianoAttuale}
+          piani={piani}
+          slotMassimo={slotMassimo}
           onSaved={() => {
             router.refresh();
             setModifica(false);
