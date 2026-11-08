@@ -68,6 +68,14 @@ La migrazione SQL va eseguita a mano nel pannello Supabase.
 3. Scrivere `DESIGN.md`, il design system di riferimento.
 4. Applicare le correzioni, schermata per schermata.
 
+**Eliminazioni con annullamento** (richiesta di Fabio, 8 novembre): ogni
+eliminazione (spesa, entrata, conto, obiettivo, categoria, movimento di casa)
+non deve essere definitiva subito. Dopo il tocco compare un avviso in basso con
+il pulsante "Annulla" per qualche secondo; solo allo scadere la cancellazione
+diventa effettiva. Per le eliminazioni più pesanti, prima del tocco, un avviso
+di conferma con l'opzione "Non avvisarmi più", che si può riattivare dalle
+impostazioni. Da applicare in modo uniforme in tutta l'app, Casa compresa.
+
 **Cambio palette** (dal verde a blu "corporate", più rassicuranti per l'occhio):
 deciso con Fabio di farlo **dopo** la co-gestione. Va fatto qui, come ultimo
 passo del blocco.
