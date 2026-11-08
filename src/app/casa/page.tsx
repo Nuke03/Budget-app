@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getMyHousehold } from '@/lib/data/households';
+import { getPlanForMonth } from '@/lib/data/householdPlans';
+import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { CasaHome } from './CasaHome';
 import { CasaSenzaCasa } from './CasaSenzaCasa';
 
@@ -11,6 +13,8 @@ export default async function CasaPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
   const casa = await getMyHousehold(supabase, user.id);
+  if (!casa) return <CasaSenzaCasa />;
 
-  return casa ? <CasaHome casa={casa} /> : <CasaSenzaCasa />;
+  const piano = await getPlanForMonth(supabase, casa.household.id, meseRomaISO());
+  return <CasaHome casa={casa} piano={piano} />;
 }
