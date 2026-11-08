@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcolaTotale, calcolaQuota, type PersonaQuotaInput } from '@/lib/calculations/casa/quota';
+import { calcolaTotale, calcolaQuota, quoteReali, type PersonaQuotaInput } from '@/lib/calculations/casa/quota';
 import type { RegolaQuota } from '@/lib/types';
 
 const due: PersonaQuotaInput[] = [
@@ -97,6 +97,15 @@ describe('calcolaQuota personalizzata', () => {
     expect(quote(r)).toEqual([0, 0]);
     expect(r.avvisi).toEqual([{ tipo: 'percentuali_non_100' }]);
     expect(JSON.stringify(r)).not.toContain('NaN');
+  });
+  it('una percentuale negativa (120 e -20) blocca la regola', () => {
+    const r = calcolaQuota({ persone: pers(120, -20), totale: 1380, regola: 'personalizzata' });
+    expect(r.regolaDisponibile).toBe(false);
+    expect(quote(r)).toEqual([0, 0]);
+    expect(r.avvisi).toEqual([{ tipo: 'percentuali_non_100' }]);
+  });
+  it('quoteReali con percentuali non valide dà zeri', () => {
+    expect(quoteReali(pers(60, 30), 1380, 'personalizzata')).toEqual([0, 0]);
   });
   it('non richiede i redditi', () => {
     const r = calcolaQuota({ persone: pers(70, 30, false), totale: 1380, regola: 'personalizzata' });

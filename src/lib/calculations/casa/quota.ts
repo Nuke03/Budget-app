@@ -100,7 +100,7 @@ export function quoteReali(
       return q;
     }
     case 'personalizzata':
-      // Le percentuali sono già validate da calcolaQuota (somma 100, nessuna null).
+      if (!percentualiValide(persone)) return persone.map(() => 0);
       return persone.map((p) => (totale * (p.percentuale ?? 0)) / 100);
   }
 }

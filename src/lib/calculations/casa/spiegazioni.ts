@@ -56,6 +56,14 @@ export function spiegaQuotaPersona(input: {
   const indice = persone.findIndex((p) => p.slot === slot);
   if (indice < 0) throw new Error('slot non trovato tra le persone');
   const persona = persone[indice];
+  if (!risultato.regolaDisponibile) {
+    const mancanti = risultato.avvisi.filter((a) => a.tipo === 'redditi_mancanti');
+    const formula =
+      mancanti.length > 0
+        ? `Quota da completare: manca il reddito di ${mancanti.map((a) => a.nome).join(', ')}.`
+        : 'Quota da completare: le percentuali devono fare 100.';
+    return { valore: 0, formula, ingredienti: [] };
+  }
   const valore = risultato.persone[indice].quota;
   const redditoPersona = persona.redditoNetto ?? 0;
   const redditoTutti = persone.reduce((s, p) => s + (p.redditoNetto ?? 0), 0);

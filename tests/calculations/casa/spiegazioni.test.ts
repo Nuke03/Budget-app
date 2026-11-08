@@ -66,6 +66,21 @@ describe('spiegaQuotaPersona', () => {
       }
     }
   });
+  it('con percentuali non valide la spiegazione è neutra e il valore è 0', () => {
+    const d = dati('personalizzata');
+    d.persone = d.persone.map((p, i) => ({ ...p, percentuale: i === 0 ? 60 : 30 }));
+    const s = spiegaQuotaPersona(d);
+    expect(s.valore).toBe(0);
+    expect(s.formula).toBe('Quota da completare: le percentuali devono fare 100.');
+    expect(s.formula).not.toContain('60%');
+  });
+  it('con reddito mancante la spiegazione dice di chi', () => {
+    const d = dati('proporzionale');
+    d.persone = d.persone.map((p, i) => ({ ...p, redditoNetto: i === 1 ? null : p.redditoNetto }));
+    const s = spiegaQuotaPersona(d);
+    expect(s.valore).toBe(0);
+    expect(s.formula).toBe('Quota da completare: manca il reddito di Giulia.');
+  });
   it('nessuna parola vietata nelle formule', () => {
     const regole: RegolaQuota[] = ['parti_uguali', 'proporzionale', 'pari_residuo', 'personalizzata'];
     const testi = [spiegaTotaleMensile(base).formula];
