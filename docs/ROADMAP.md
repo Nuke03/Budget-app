@@ -22,6 +22,16 @@ legge questo file più i documenti citati.
 - Ultimi rilasci: modifica di tutte le entità, obiettivi con "speso
   collegato", collegamento transazione → obiettivo, chiusura obiettivi.
 
+## Obiettivo trasversale: insegnare l'economia domestica
+
+Richiesta di Fabio, valida per ogni blocco: oltre a tenere i conti, l'app deve
+aiutare lui e la compagna ad acquisire le competenze di economia domestica,
+che nessuno ha mai insegnato loro. In ogni spec e in ogni passata di design
+servono: percorsi guidati e piccoli compiti, "Come si calcola?" sui numeri,
+italiano semplice senza gergo, spiegazioni nel momento in cui si decide,
+nessun senso di colpa e nessuna gamification. Base dei contenuti:
+`docs/research/2026-11-08-economia-domestica.md`.
+
 ## Ordine dei blocchi
 
 ### 1. Co-gestione casa (priorità: affitto in arrivo)
