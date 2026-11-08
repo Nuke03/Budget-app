@@ -1,6 +1,6 @@
 -- supabase/tests/rls_casa.sql
 -- Prova delle policy RLS e delle funzioni della casa comune. Si esegue a mano nel SQL editor
--- di Supabase DOPO le migrazioni 0004, 0005 e 0006. Non lascia nulla nel database: crea utenti finti e
+-- di Supabase DOPO le migrazioni 0004, 0005, 0006 e 0007. Non lascia nulla nel database: crea utenti finti e
 -- dati di prova, poi termina con un errore voluto che annulla tutto e mostra il referto.
 -- Esito atteso: "RISULTATO: ... 0 FAIL" e solo righe OK.
 begin;
@@ -20,7 +20,11 @@ insert into auth.users (id, email) values
   ('21212121-0000-0000-0000-000000000021', 'rls-n1@test.invalid'),
   ('22222222-0000-0000-0000-000000000022', 'rls-n2@test.invalid'),
   ('23232323-0000-0000-0000-000000000023', 'rls-n3@test.invalid'),
-  ('24242424-0000-0000-0000-000000000024', 'rls-n4@test.invalid');
+  ('24242424-0000-0000-0000-000000000024', 'rls-n4@test.invalid'),
+  ('41414141-0000-0000-0000-000000000041', 'rls-x1@test.invalid'),
+  ('42424242-0000-0000-0000-000000000042', 'rls-x2@test.invalid'),
+  ('43434343-0000-0000-0000-000000000043', 'rls-x3@test.invalid'),
+  ('44444444-0000-0000-0000-000000000044', 'rls-x4@test.invalid');
 
 create table public.zz_esiti (n serial, nome text, ok boolean, dettaglio text);
 grant all on public.zz_esiti to public;
@@ -708,6 +712,83 @@ begin
     perform public.zz_verifica('la quota tolta resta senza utente',
       not exists (select 1 from public.household_plan_shares where plan_id = pid_p and user_id is not null),
       'la quota del segnaposto tolto e stata collegata');
+  end;
+
+  -- 23. Migrazione 0007: fondatore uscito, segnaposto con uscita, categorie rinominate, uscenti del piano.
+  -- La casa e del fondatore x1, che esce per ultimo: gli altri casi la usano prima.
+  declare
+    x1 constant uuid := '41414141-0000-0000-0000-000000000041';
+    x2 constant uuid := '42424242-0000-0000-0000-000000000042';
+    x3 constant uuid := '43434343-0000-0000-0000-000000000043';
+    x4 constant uuid := '44444444-0000-0000-0000-000000000044';
+    hx uuid; cx text; pid_x uuid; cat_x uuid; n_cat_prima int;
+    m1 date := (mese + interval '1 month')::date;
+  begin
+    perform public.zz_as(x1);
+    select public.create_household('Casa fondatore', 'X1') into hx;
+    select public.create_invite(hx) into cx;
+    perform public.zz_reset();
+
+    -- segnaposto con uscita: join_household non lo occupa (il piano si inserisce come proprietario)
+    insert into public.household_plans (household_id, valido_dal, giorno_versamento, regola, created_by)
+      values (hx, mese, 5, 'parti_uguali', x1) returning id into pid_x;
+    insert into public.household_plan_shares (plan_id, slot, user_id, display_name, quota_mensile, esce_dal)
+      values (pid_x, 1, x1, 'X1', 0, null), (pid_x, 2, null, 'Giulia', 0, m1);
+    perform public.zz_ok('x3 entra col nome di un segnaposto con uscita', x3,
+      format('select public.join_household(%L, ''Giulia'')', cx));
+    perform public.zz_verifica('join_household non lega un segnaposto con esce_dal',
+      coalesce((select slot from public.household_members where household_id = hx and user_id = x3) <> 2, false),
+      'x3 ha preso lo slot 2 del segnaposto uscito');
+
+    -- rinominare una voce con categoria_id rinomina la categoria, non ne crea una nuova
+    perform public.zz_ok('x1 salva una voce Palestra', x1,
+      format('select public.save_household_plan(%L, %L::jsonb)', hx,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'X1', 1000), public.zz_q(3, 'Giulia', 800)],
+          '[{"nome": "Palestra", "categoria_nome": "Palestra", "frequenza_mesi": 1, "importo_ricorrenza": 30}]')])));
+    select id into cat_x from public.categories where household_id = hx and nome = 'Palestra';
+    select count(*) into n_cat_prima from public.categories where household_id = hx;
+    perform public.zz_ok('x1 rinomina la stessa voce con categoria_id e nome Yoga', x1,
+      format('select public.save_household_plan(%L, %L::jsonb)', hx,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'X1', 1000), public.zz_q(3, 'Giulia', 800)],
+          format('[{"nome": "Palestra", "categoria_id": "%s", "categoria_nome": "Yoga", "frequenza_mesi": 1, "importo_ricorrenza": 30}]', cat_x))])));
+    perform public.zz_verifica('la categoria collegata si chiama Yoga',
+      (select nome from public.categories where id = cat_x) = 'Yoga', 'la categoria non e stata rinominata');
+    perform public.zz_verifica('la rinomina non crea una categoria nuova',
+      (select count(*) from public.categories where household_id = hx) = n_cat_prima, 'numero di categorie di casa cambiato');
+
+    -- uscito: la sua posizione nel piano conserva user_id ed esce_dal
+    perform public.zz_ok('x1 aggiunge il segnaposto Ospite al piano', x1,
+      format('select public.save_household_plan(%L, %L::jsonb)', hx,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'X1', 1000), public.zz_q(3, 'Giulia', 800),
+          public.zz_q(4, 'Ospite', 0)])])));
+    perform public.zz_ok('x4 entra nel segnaposto Ospite', x4,
+      format('select public.join_household(%L, ''Ospite'')', cx));
+    perform public.zz_verifica('x4 occupa lo slot 4',
+      coalesce((select slot from public.household_members where household_id = hx and user_id = x4) = 4, false),
+      'slot diverso da 4');
+    perform public.zz_ok('x4 esce senza registri aperti', x4, 'select public.leave_household()');
+    perform public.zz_ok('x1 rivede il piano: la posizione di x4 esce dal mese successivo', x1,
+      format('select public.save_household_plan(%L, %L::jsonb)', hx,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'X1', 1000), public.zz_q(3, 'Giulia', 800),
+          json_build_object('slot', 4, 'display_name', 'Ospite', 'reddito_netto_mensile', 0, 'quota_mensile', 0,
+            'esce_dal', to_char(m1, 'YYYY-MM-DD'))::text])])));
+    perform public.zz_verifica('la posizione uscita conserva user_id ed esce_dal',
+      exists (select 1 from public.household_plan_shares s
+              join public.household_plans p on p.id = s.plan_id
+              where p.household_id = hx and p.valido_dal = mese and s.slot = 4
+                and s.user_id = x4 and s.esce_dal is not null),
+      'user_id o esce_dal della posizione di x4 non conservati');
+
+    -- il fondatore eliminato: la casa e la membership del socio restano (per ultimo)
+    perform public.zz_ok('x2 entra nella casa del fondatore', x2,
+      format('select public.join_household(%L, ''Socio'')', cx));
+    perform public.zz_reset();
+    delete from auth.users where id = x1;
+    perform public.zz_verifica('eliminare l utente fondatore non cancella la casa',
+      exists (select 1 from public.households where id = hx), 'la casa e stata cancellata');
+    perform public.zz_verifica('eliminare l utente fondatore non cancella la membership del socio',
+      exists (select 1 from public.household_members where household_id = hx and user_id = x2),
+      'la membership del socio e sparita');
   end;
 
   -- Referto
