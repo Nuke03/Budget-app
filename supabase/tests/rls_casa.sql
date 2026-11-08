@@ -1,6 +1,6 @@
 -- supabase/tests/rls_casa.sql
 -- Prova delle policy RLS e delle funzioni della casa comune. Si esegue a mano nel SQL editor
--- di Supabase DOPO le migrazioni 0004 e 0005. Non lascia nulla nel database: crea utenti finti e
+-- di Supabase DOPO le migrazioni 0004, 0005 e 0006. Non lascia nulla nel database: crea utenti finti e
 -- dati di prova, poi termina con un errore voluto che annulla tutto e mostra il referto.
 -- Esito atteso: "RISULTATO: ... 0 FAIL" e solo righe OK.
 begin;
@@ -13,7 +13,14 @@ insert into auth.users (id, email) values
   ('eeeeeeee-0000-0000-0000-00000000000e', 'rls-e@test.invalid'),
   ('ffffffff-0000-0000-0000-00000000000f', 'rls-f@test.invalid'),
   ('77777777-0000-0000-0000-000000000007', 'rls-g@test.invalid'),
-  ('88888888-0000-0000-0000-000000000008', 'rls-k@test.invalid');
+  ('88888888-0000-0000-0000-000000000008', 'rls-k@test.invalid'),
+  ('11111111-0000-0000-0000-000000000011', 'rls-p1@test.invalid'),
+  ('12121212-0000-0000-0000-000000000012', 'rls-q1@test.invalid'),
+  ('13131313-0000-0000-0000-000000000013', 'rls-r1@test.invalid'),
+  ('21212121-0000-0000-0000-000000000021', 'rls-n1@test.invalid'),
+  ('22222222-0000-0000-0000-000000000022', 'rls-n2@test.invalid'),
+  ('23232323-0000-0000-0000-000000000023', 'rls-n3@test.invalid'),
+  ('24242424-0000-0000-0000-000000000024', 'rls-n4@test.invalid');
 
 create table public.zz_esiti (n serial, nome text, ok boolean, dettaglio text);
 grant all on public.zz_esiti to public;
@@ -142,6 +149,15 @@ begin
   insert into public.zz_esiti (nome, ok, dettaglio)
   values (p_nome, coalesce(p_ok, false), case when coalesce(p_ok, false) then null else p_dettaglio end);
 end $$;
+
+-- frammenti di piano per i casi della 0006
+create function public.zz_q(p_slot int, p_nome text, p_reddito numeric) returns text language sql as $$
+  select json_build_object('slot', p_slot, 'display_name', p_nome, 'reddito_netto_mensile', p_reddito, 'quota_mensile', 0)::text $$;
+create function public.zz_v(p_dal date, p_quote text[], p_voci text default '[]') returns text language sql as $$
+  select '{"valido_dal": "' || p_dal || '", "giorno_versamento": 5, "regola": "parti_uguali", "totale_mensile": 0, "voci": '
+    || p_voci || ', "quote": [' || array_to_string(p_quote, ', ') || ']}' $$;
+create function public.zz_piano(p_versioni text[]) returns text language sql as $$
+  select '{"versioni": [' || array_to_string(p_versioni, ', ') || ']}' $$;
 
 -- CASI. Attori: A, B, C nella casa; D sempre fuori; E, F, G nella seconda casa; K entra nel piano.
 do $test$
@@ -584,6 +600,115 @@ begin
   perform public.zz_verifica('la quota di B resta quella salvata dalla funzione',
     (select quota_mensile from public.household_plan_shares where plan_id = pid_h and slot = 2) = 40,
     'quota di B diversa da 40');
+
+  -- 20. Redditi di altri membri (0006): si confrontano con l'ultimo valore di tutte le versioni
+  declare
+    p1 constant uuid := '11111111-0000-0000-0000-000000000011';
+    q1 constant uuid := '12121212-0000-0000-0000-000000000012';
+    r1 constant uuid := '13131313-0000-0000-0000-000000000013';
+    n1 constant uuid := '21212121-0000-0000-0000-000000000021';
+    n2 constant uuid := '22222222-0000-0000-0000-000000000022';
+    n3 constant uuid := '23232323-0000-0000-0000-000000000023';
+    n4 constant uuid := '24242424-0000-0000-0000-000000000024';
+    h3 uuid; h4 uuid; cd text; cat_h3 uuid; goal_h3 uuid; pid_p uuid;
+    m2 date := (mese + interval '2 months')::date;
+    m1p date := (mese + interval '1 month')::date;
+  begin
+    perform public.zz_as(p1);
+    select public.create_household('Casa redditi', 'P') into h3;
+    select public.create_invite(h3) into cd;
+    perform public.zz_reset();
+    perform public.zz_ok('Q entra nella casa dei redditi', q1, format('select public.join_household(%L, ''Q'')', cd));
+    perform public.zz_ok('P salva il piano con Q a 800', p1, format('select public.save_household_plan(%L, %L::jsonb)', h3,
+      public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 800)])])));
+    perform public.zz_ok('Q corregge il proprio reddito in una versione successiva', q1, format('select public.save_household_plan(%L, %L::jsonb)', h3,
+      public.zz_piano(array[
+        public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 800)]),
+        public.zz_v(m2, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)])])));
+    perform public.zz_err_msg('P dal mese corrente col vecchio reddito di Q viene rifiutato', p1,
+      format('select public.save_household_plan(%L, %L::jsonb)', h3,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 800)])])),
+      'il reddito di un altro membro non si modifica');
+    perform public.zz_verifica('la correzione di Q nella versione successiva non e stata cancellata',
+      exists (select 1 from public.household_plans pl join public.household_plan_shares sh on sh.plan_id = pl.id
+              where pl.household_id = h3 and pl.valido_dal = m2 and sh.slot = 2 and sh.reddito_netto_mensile = 900),
+      'versione successiva mancante o cambiata');
+    perform public.zz_ok('P salva col reddito aggiornato di Q', p1, format('select public.save_household_plan(%L, %L::jsonb)', h3,
+      public.zz_piano(array[
+        public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)]),
+        public.zz_v(m2, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)])])));
+    -- una posizione presente solo in una versione successiva
+    perform public.zz_as(p1);
+    select public.create_invite(h3) into cd;
+    perform public.zz_reset();
+    perform public.zz_ok('R entra nella casa dei redditi', r1, format('select public.join_household(%L, ''R'')', cd));
+    perform public.zz_verifica('R ha la posizione 3',
+      (select slot from public.household_members where household_id = h3 and user_id = r1) = 3, 'slot diverso da 3');
+    perform public.zz_ok('R salva la propria quota solo dalla versione successiva', r1, format('select public.save_household_plan(%L, %L::jsonb)', h3,
+      public.zz_piano(array[
+        public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)]),
+        public.zz_v(m2, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900), public.zz_q(3, 'R', 700)])])));
+    perform public.zz_err_msg('il reddito di R presente solo in una versione successiva e protetto', p1,
+      format('select public.save_household_plan(%L, %L::jsonb)', h3,
+        public.zz_piano(array[public.zz_v(m1p, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900), public.zz_q(3, 'R', 500)])])),
+      'il reddito di un altro membro non si modifica');
+    perform public.zz_verifica('la versione con R non e stata cancellata dal rifiuto',
+      exists (select 1 from public.household_plans where household_id = h3 and valido_dal = m2), 'versione a +2 mesi sparita');
+
+    -- 21. Voci del piano: categoria e obiettivo devono essere della casa (0006)
+    insert into public.categories (user_id, nome, tipo, household_id) values (p1, 'Luce casa redditi', 'expense', h3) returning id into cat_h3;
+    insert into public.budget_goals (user_id, nome, importo_target, modalita, household_id)
+      values (p1, 'Obiettivo casa redditi', 500, 'bloccato', h3) returning id into goal_h3;
+    perform public.zz_err_msg('una voce con la categoria personale di A non si salva', p1,
+      format('select public.save_household_plan(%L, %L::jsonb)', h3,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)],
+          format('[{"nome": "X", "categoria_id": "%s", "frequenza_mesi": 1, "importo_ricorrenza": 10}]', cat_a))])),
+      'categoria non appartenente alla casa');
+    perform public.zz_err_msg('una voce con l obiettivo personale di A non si salva', p1,
+      format('select public.save_household_plan(%L, %L::jsonb)', h3,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)],
+          format('[{"nome": "X", "goal_id": "%s", "frequenza_mesi": 1, "importo_ricorrenza": 10}]', goal_a))])),
+      'obiettivo non appartenente alla casa');
+    perform public.zz_ok('una voce con categoria e obiettivo della casa si salva', p1,
+      format('select public.save_household_plan(%L, %L::jsonb)', h3,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'P', 1000), public.zz_q(2, 'Q', 900)],
+          format('[{"nome": "X", "categoria_id": "%s", "goal_id": "%s", "frequenza_mesi": 1, "importo_ricorrenza": 10}]', cat_h3, goal_h3))])));
+
+    -- 22. Ingresso nel segnaposto giusto (0006)
+    perform public.zz_as(n1);
+    select public.create_household('Casa segnaposto', 'N1') into h4;
+    perform public.zz_reset();
+    perform public.zz_ok('N1 salva il piano con i segnaposto Giulia e Marco', n1,
+      format('select public.save_household_plan(%L, %L::jsonb)', h4,
+        public.zz_piano(array[public.zz_v(mese, array[public.zz_q(1, 'N1', 1000), public.zz_q(2, 'Giulia', 800), public.zz_q(3, 'Marco', 900)])])));
+    -- un segnaposto tolto: esiste solo in una versione passata
+    insert into public.household_plans (household_id, valido_dal, giorno_versamento, regola, created_by)
+      values (h4, (mese - interval '1 month')::date, 5, 'parti_uguali', n1) returning id into pid_p;
+    insert into public.household_plan_shares (plan_id, slot, display_name, quota_mensile) values (pid_p, 4, 'Ospite', 0);
+    perform public.zz_as(n1);
+    select public.create_invite(h4) into cd;
+    perform public.zz_reset();
+    perform public.zz_ok('Marco entra per primo', n2, format('select public.join_household(%L, ''  marco '')', cd));
+    perform public.zz_verifica('Marco prende la posizione di Marco',
+      (select slot from public.household_members where household_id = h4 and user_id = n2) = 3, 'slot diverso da 3');
+    perform public.zz_verifica('la quota di Marco e legata a lui con il suo reddito',
+      exists (select 1 from public.household_plan_shares sh join public.household_plans pl on pl.id = sh.plan_id
+              where pl.household_id = h4 and pl.valido_dal = mese and sh.slot = 3 and sh.user_id = n2 and sh.reddito_netto_mensile = 900),
+      'quota di Marco non legata');
+    perform public.zz_verifica('Giulia resta un segnaposto',
+      exists (select 1 from public.household_plan_shares sh join public.household_plans pl on pl.id = sh.plan_id
+              where pl.household_id = h4 and pl.valido_dal = mese and sh.slot = 2 and sh.user_id is null),
+      'Giulia non e piu un segnaposto');
+    perform public.zz_ok('Giulia entra', n3, format('select public.join_household(%L, ''GIULIA'')', cd));
+    perform public.zz_verifica('Giulia prende la posizione di Giulia',
+      (select slot from public.household_members where household_id = h4 and user_id = n3) = 2, 'slot diverso da 2');
+    perform public.zz_ok('Ospite entra', n4, format('select public.join_household(%L, ''Ospite'')', cd));
+    perform public.zz_verifica('un segnaposto tolto (solo in una versione passata) non si collega',
+      (select slot from public.household_members where household_id = h4 and user_id = n4) = 5, 'slot diverso da 5');
+    perform public.zz_verifica('la quota tolta resta senza utente',
+      not exists (select 1 from public.household_plan_shares where plan_id = pid_p and user_id is not null),
+      'la quota del segnaposto tolto e stata collegata');
+  end;
 
   -- Referto
   perform public.zz_reset();
