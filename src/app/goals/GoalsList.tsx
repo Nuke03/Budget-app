@@ -1,4 +1,4 @@
-import { Lock, Clock, Pencil } from 'lucide-react';
+import { Lock, Clock, Pencil, Trash2 } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import type { BudgetGoal, Category } from '@/lib/types';
 
@@ -20,10 +20,12 @@ export function GoalsList({
   goals,
   categories,
   onEdit,
+  onClose,
 }: {
   goals: GoalWithQuotaMensile[];
   categories: Category[];
   onEdit?: (goal: GoalWithQuotaMensile) => void;
+  onClose?: (goal: GoalWithQuotaMensile) => void;
 }) {
   if (goals.length === 0) {
     return (
@@ -57,6 +59,16 @@ export function GoalsList({
                     className="rounded-full p-1 text-muted hover:bg-surface-muted hover:text-foreground"
                   >
                     <Pencil size={14} />
+                  </button>
+                )}
+                {onClose && (
+                  <button
+                    type="button"
+                    onClick={() => onClose(g)}
+                    aria-label="Chiudi obiettivo"
+                    className="rounded-full p-1 text-muted hover:bg-surface-muted hover:text-danger"
+                  >
+                    <Trash2 size={14} />
                   </button>
                 )}
               </div>

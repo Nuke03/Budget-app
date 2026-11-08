@@ -144,4 +144,47 @@ describe('GoalsList', () => {
 
     expect(screen.queryByText(/Ancora riservato/)).not.toBeInTheDocument();
   });
+
+  it('chiama onClose con l\'obiettivo al click del pulsante di chiusura', () => {
+    const goal = {
+      id: '1',
+      nome: 'Telepass',
+      importoTarget: 130,
+      modalita: 'bloccato' as const,
+      scadenza: null,
+      categoriaId: null,
+      ricorrente: false,
+      frequenzaMesi: null,
+      stato: 'aperto' as const,
+      createdAt: '2026-01-01T00:00:00Z',
+      quotaMensile: null,
+      accantonato: 130,
+    };
+    const onClose = vi.fn();
+
+    render(<GoalsList goals={[goal]} categories={[]} onClose={onClose} />);
+    fireEvent.click(screen.getByLabelText('Chiudi obiettivo'));
+
+    expect(onClose).toHaveBeenCalledWith(goal);
+  });
+
+  it('non mostra il pulsante di chiusura se onClose non è passato', () => {
+    const goal = {
+      id: '1',
+      nome: 'Telepass',
+      importoTarget: 130,
+      modalita: 'bloccato' as const,
+      scadenza: null,
+      categoriaId: null,
+      ricorrente: false,
+      frequenzaMesi: null,
+      stato: 'aperto' as const,
+      createdAt: '2026-01-01T00:00:00Z',
+      quotaMensile: null,
+      accantonato: 130,
+    };
+
+    render(<GoalsList goals={[goal]} categories={[]} />);
+    expect(screen.queryByLabelText('Chiudi obiettivo')).not.toBeInTheDocument();
+  });
 });
