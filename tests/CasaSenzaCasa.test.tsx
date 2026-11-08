@@ -4,7 +4,7 @@ import { CasaSenzaCasa } from '@/app/casa/CasaSenzaCasa';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 describe('CasaSenzaCasa', () => {
-  it('mostra "Creo la casa" e "Ho un codice di invito" come link a /casa/inizia', () => {
+  it('mostra "Creo la casa" (verso /casa/inizia) e "Ho un codice di invito" (verso /casa/inizia?modo=entra) come link', () => {
     render(<CasaSenzaCasa />);
     expect(screen.getByRole('link', { name: 'Creo la casa' })).toHaveAttribute('href', '/casa/inizia');
     expect(screen.getByRole('link', { name: 'Ho un codice di invito' })).toHaveAttribute('href', '/casa/inizia?modo=entra');

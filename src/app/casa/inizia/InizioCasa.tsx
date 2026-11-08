@@ -39,8 +39,9 @@ export function InizioCasa({
     setInCorso(true);
     setErrore(null);
     let id: string;
-    const supabase = createClient();
+    let supabase: ReturnType<typeof createClient>;
     try {
+      supabase = createClient();
       id = await createHousehold(supabase, { nome: nomeCasa.trim(), displayName: displayName.trim() });
     } catch {
       setErrore(ERRORE_GENERICO);
