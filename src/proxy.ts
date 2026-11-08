@@ -42,8 +42,10 @@ export async function proxy(request: NextRequest) {
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
   const isResetPasswordPage = request.nextUrl.pathname.startsWith('/reset-password');
   const isForgotPasswordPage = request.nextUrl.pathname.startsWith('/forgot-password');
+  // Chiamata dal cron di Vercel senza sessione: deve arrivare alla route.
+  const isKeepAlive = request.nextUrl.pathname === '/api/keep-alive';
 
-  if (!hasSession && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
+  if (!hasSession && !isKeepAlive && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

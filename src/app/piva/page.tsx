@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getPivaSettings, createPivaSettings, updatePivaSettings } from '@/lib/data/pivaSettings';
 import { getCategories } from '@/lib/data/categories';
@@ -20,6 +21,7 @@ import { PivaDashboard } from './PivaDashboard';
 import type { Category, PivaSettings, Transaction } from '@/lib/types';
 
 export default function PivaPage() {
+  const fail = useThrowToBoundary();
   const [settings, setSettings] = useState<PivaSettings | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -40,8 +42,8 @@ export default function PivaPage() {
   }
 
   useEffect(() => {
-    refresh();
-  }, []);
+    refresh().catch(fail);
+  }, [fail]);
 
   async function handleSave(values: PivaSettingsFormValues) {
     const supabase = createClient();

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { Pencil, Trash2, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/data/transactions';
@@ -18,6 +19,7 @@ import { AddTransactionForm } from '../add/AddTransactionForm';
 import type { Transaction, Category, Account, BudgetGoal, TransactionTipo } from '@/lib/types';
 
 export default function HistoryPage() {
+  const fail = useThrowToBoundary();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -58,8 +60,8 @@ export default function HistoryPage() {
   }
 
   useEffect(() => {
-    refresh();
-  }, []);
+    refresh().catch(fail);
+  }, [fail]);
 
   async function applicaAggiornamentiSaldo(
     vecchia: { accountId: string | null; tipo: TransactionTipo; importo: number },

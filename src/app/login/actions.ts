@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { validateLoginInput } from './validation';
+import { messaggioErroreLogin } from './errors';
 
 export async function login(formData: FormData) {
   const email = String(formData.get('email') ?? '');
@@ -17,7 +18,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(messaggioErroreLogin(error.message))}`);
   }
 
   redirect('/');

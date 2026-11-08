@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { Archive, Pencil } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCategories, createCategory, updateCategory, archiveCategory } from '@/lib/data/categories';
@@ -8,6 +9,7 @@ import { CATEGORY_COLORS, CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import type { Category, CategoriaTipo } from '@/lib/types';
 
 export default function CategoriesPage() {
+  const fail = useThrowToBoundary();
   const [categories, setCategories] = useState<Category[]>([]);
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<CategoriaTipo>('expense');
@@ -21,8 +23,8 @@ export default function CategoriesPage() {
   }
 
   useEffect(() => {
-    refresh();
-  }, []);
+    refresh().catch(fail);
+  }, [fail]);
 
   function startEdit(c: Category) {
     setEditingCategory(c);

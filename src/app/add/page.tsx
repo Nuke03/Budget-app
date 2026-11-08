@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
@@ -11,6 +12,7 @@ import { AddTransactionForm } from './AddTransactionForm';
 import type { Account, Category } from '@/lib/types';
 
 export default function AddTransactionPage() {
+  const fail = useThrowToBoundary();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -20,8 +22,8 @@ export default function AddTransactionPage() {
     Promise.all([getCategories(supabase), getAccounts(supabase)]).then(([cats, accs]) => {
       setCategories(cats);
       setAccounts(accs);
-    });
-  }, []);
+    }).catch(fail);
+  }, [fail]);
 
   async function handleSubmit(payload: {
     tipo: 'expense' | 'income';

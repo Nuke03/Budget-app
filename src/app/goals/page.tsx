@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
@@ -14,6 +15,7 @@ import type { BudgetGoal, Category } from '@/lib/types';
 type GoalConSpeso = BudgetGoal & { specoCollegato: number };
 
 export default function GoalsPage() {
+  const fail = useThrowToBoundary();
   const [goals, setGoals] = useState<GoalConSpeso[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editingGoal, setEditingGoal] = useState<GoalWithQuotaMensile | null>(null);
@@ -30,8 +32,8 @@ export default function GoalsPage() {
   }
 
   useEffect(() => {
-    refresh();
-  }, []);
+    refresh().catch(fail);
+  }, [fail]);
 
   async function handleCreate(payload: GoalPayload) {
     const supabase = createClient();

@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount } from '@/lib/data/accounts';
 import { AccountRow } from './AccountRow';
 import type { Account } from '@/lib/types';
 
 export default function AccountsPage() {
+  const fail = useThrowToBoundary();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [nome, setNome] = useState('');
   const [contaInDisponibile, setContaInDisponibile] = useState(true);
@@ -17,8 +19,8 @@ export default function AccountsPage() {
   }
 
   useEffect(() => {
-    refresh();
-  }, []);
+    refresh().catch(fail);
+  }, [fail]);
 
   async function handleUpdateBalance(id: string, saldo: number) {
     const supabase = createClient();
