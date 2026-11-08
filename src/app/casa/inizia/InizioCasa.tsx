@@ -13,15 +13,22 @@ const MESSAGGIO_RPC_CODICE = 'Codice non valido o scaduto';
 const inputClass =
   'rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand';
 
-export function InizioCasa({ defaultDisplayName }: { defaultDisplayName: string }) {
+export function InizioCasa({
+  defaultDisplayName,
+  modoIniziale = 'crea',
+}: {
+  defaultDisplayName: string;
+  modoIniziale?: 'crea' | 'entra';
+}) {
   const router = useRouter();
-  const [modo, setModo] = useState<'crea' | 'entra'>('crea');
+  const [modo, setModo] = useState<'crea' | 'entra'>(modoIniziale);
   const [displayName, setDisplayName] = useState(defaultDisplayName);
   const [nomeCasa, setNomeCasa] = useState('');
   const [codice, setCodice] = useState('');
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
   const [codiceCreato, setCodiceCreato] = useState<string | null>(null);
+  const [casaCreata, setCasaCreata] = useState(false);
 
   function vaiAllaCasa() {
     router.push('/casa');
@@ -31,15 +38,23 @@ export function InizioCasa({ defaultDisplayName }: { defaultDisplayName: string 
   async function crea() {
     setInCorso(true);
     setErrore(null);
+    let id: string;
+    const supabase = createClient();
     try {
-      const supabase = createClient();
-      const id = await createHousehold(supabase, { nome: nomeCasa.trim(), displayName: displayName.trim() });
-      const nuovo = await createInvite(supabase, id);
-      // Niente router.refresh() qui: la pagina rimanda a /casa quando la casa esiste
-      // e farebbe sparire il codice appena creato. Il refresh avviene in vaiAllaCasa.
-      setCodiceCreato(nuovo);
+      id = await createHousehold(supabase, { nome: nomeCasa.trim(), displayName: displayName.trim() });
     } catch {
       setErrore(ERRORE_GENERICO);
+      setInCorso(false);
+      return;
+    }
+    // La casa esiste: da qui in poi non si può più riprovare a crearla.
+    setCasaCreata(true);
+    try {
+      // Niente router.refresh() qui: la pagina rimanda a /casa quando la casa esiste
+      // e farebbe sparire il codice appena creato. Il refresh avviene in vaiAllaCasa.
+      setCodiceCreato(await createInvite(supabase, id));
+    } catch {
+      // casa pronta senza codice: si genera da Impostazioni
     } finally {
       setInCorso(false);
     }
@@ -59,12 +74,18 @@ export function InizioCasa({ defaultDisplayName }: { defaultDisplayName: string 
     }
   }
 
-  if (codiceCreato) {
+  if (casaCreata) {
     return (
       <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
         <h1 className="text-2xl font-bold">La casa è pronta</h1>
         <section className="rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
-          <CodiceInvito codice={codiceCreato} />
+          {codiceCreato ? (
+            <CodiceInvito codice={codiceCreato} />
+          ) : (
+            <p className="text-sm text-muted">
+              Il codice di invito non è stato creato: puoi generarlo da Impostazioni, dentro la casa.
+            </p>
+          )}
         </section>
         <button
           type="button"

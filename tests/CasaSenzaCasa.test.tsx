@@ -7,7 +7,7 @@ describe('CasaSenzaCasa', () => {
   it('mostra "Creo la casa" e "Ho un codice di invito" come link a /casa/inizia', () => {
     render(<CasaSenzaCasa />);
     expect(screen.getByRole('link', { name: 'Creo la casa' })).toHaveAttribute('href', '/casa/inizia');
-    expect(screen.getByRole('link', { name: 'Ho un codice di invito' })).toHaveAttribute('href', '/casa/inizia');
+    expect(screen.getByRole('link', { name: 'Ho un codice di invito' })).toHaveAttribute('href', '/casa/inizia?modo=entra');
   });
 
   it('mostra la riga "Cosa vede l\'altro?" con la frase sulla privacy', () => {

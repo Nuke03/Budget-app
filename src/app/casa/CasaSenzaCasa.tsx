@@ -16,7 +16,7 @@ export function CasaSenzaCasa() {
           Creo la casa
         </Link>
         <Link
-          href="/casa/inizia"
+          href="/casa/inizia?modo=entra"
           className="rounded-[var(--radius-md)] border border-black/10 bg-surface py-3 text-center text-sm font-semibold"
         >
           Ho un codice di invito

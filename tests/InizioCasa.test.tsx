@@ -45,6 +45,26 @@ describe('InizioCasa', () => {
     expect(createHousehold.mock.invocationCallOrder[0]).toBeLessThan(createInvite.mock.invocationCallOrder[0]);
   });
 
+  it('se createInvite fallisce mostra la casa pronta senza codice e permette di andare alla casa', async () => {
+    createHousehold.mockResolvedValue('h1');
+    createInvite.mockRejectedValue(new Error('rete'));
+    render(<InizioCasa defaultDisplayName="fabio" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Crea la casa' }));
+
+    expect(await screen.findByText(/puoi generarlo da Impostazioni/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copia il codice' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Vai alla casa' }));
+    expect(push).toHaveBeenCalledWith('/casa');
+    expect(refresh).toHaveBeenCalled();
+    expect(createHousehold).toHaveBeenCalledTimes(1);
+  });
+
+  it('con modoIniziale entra si apre sul form del codice', () => {
+    render(<InizioCasa defaultDisplayName="anna" modoIniziale="entra" />);
+    expect(screen.getByLabelText('Codice di invito')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entra' })).toBeInTheDocument();
+  });
+
   it('entra con un codice e va su /casa', async () => {
     joinHousehold.mockResolvedValue('h1');
     render(<InizioCasa defaultDisplayName="anna" />);
