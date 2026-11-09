@@ -52,10 +52,29 @@ describe('creaFondoBolletta', () => {
     const db = nuovoDb();
     let n = 0;
     db.registerRpc('link_plan_item_goal', () => (n++ === 0 ? { error: { message: 'no' } } : { data: 1 }));
-    await expect(creaFondoBolletta(db.client, { ...input, item: { ...item, goalId: 'chiuso' } })).rejects.toBeTruthy();
+    await expect(creaFondoBolletta(db.client, { ...input, item: { ...item, goalId: 'chiuso' } })).rejects.toMatchObject({ message: 'no' });
     const fondo = await creaFondoBolletta(db.client, { ...input, item: { ...item, nome: 'tari', goalId: 'chiuso' } });
     expect(db.tables.budget_goals).toHaveLength(1);
     expect(db.rpcCalls).toHaveLength(2);
     expect(db.rpcCalls[1].args).toMatchObject({ p_goal: fondo.id });
+  });
+
+  it('fondo chiuso non viene riusato: ne nasce uno nuovo aperto', async () => {
+    const db = createFakeDb(
+      {
+        budget_goals: [
+          { id: 'g-chiuso', household_id: 'H1', user_id: 'U1', nome: 'TARI', categoria_id: 'c1', ricorrente: true, stato: 'chiuso' },
+        ],
+      },
+      { userId: 'U1', membri: { H1: ['U1'] } }
+    );
+    db.registerRpc('link_plan_item_goal', () => ({ data: 1 }));
+    const fondo = await creaFondoBolletta(db.client, { ...input, item: { ...item, goalId: 'g-chiuso' } });
+    expect(db.tables.budget_goals).toHaveLength(2);
+    expect(db.tables.budget_goals[1]).toMatchObject({ stato: 'aperto', nome: 'TARI', categoria_id: 'c1' });
+    expect(fondo.id).not.toBe('g-chiuso');
+    expect(db.rpcCalls).toEqual([
+      { name: 'link_plan_item_goal', args: { p_household: 'H1', p_item: 'i1', p_goal: fondo.id } },
+    ]);
   });
 });
