@@ -49,9 +49,14 @@ export function spiegaQuotaPersona(input: {
   arrotondamento: number;
   persone: PersonaQuotaInput[];
   slot: number;
+  // Chi sta per uscire e versa una quota fissa: si toglie dal totale prima di dividere.
+  quoteFisse?: { nome: string; quota: number }[];
 }): Spiegazione {
   const { regola, persone, slot } = input;
-  const totale = calcolaTotale(input.sottotot, input.cuscinettoQuotaMensile, input.arrotondamento);
+  const totaleCasa = calcolaTotale(input.sottotot, input.cuscinettoQuotaMensile, input.arrotondamento);
+  const fisse = (input.quoteFisse ?? []).filter((f) => f.quota > 0);
+  const parteFissa = fisse.reduce((s, f) => s + f.quota, 0);
+  const totale = Math.max(0, totaleCasa - parteFissa);
   const risultato = calcolaQuota({ persone, totale, regola });
   const indice = persone.findIndex((p) => p.slot === slot);
   if (indice < 0) throw new Error('slot non trovato tra le persone');
@@ -78,7 +83,11 @@ export function spiegaQuotaPersona(input: {
   const fineRiga =
     azzerati.length > 0 ? 'divisi tra chi può versare, in modo che a loro restino gli stessi soldi.' : FINE_PRIMA_RIGA[regola];
 
-  const prima = `Spese comuni ${formatNumero(input.sottotot)} euro + cuscinetto ${formatNumero(input.cuscinettoQuotaMensile)} euro = ${formatNumero(totale)} euro, ${fineRiga}`;
+  const elencoFisse = fisse.map((f) => `${f.nome} ${formatNumero(f.quota)} euro`).join(', ');
+  const prima =
+    fisse.length === 0
+      ? `Spese comuni ${formatNumero(input.sottotot)} euro + cuscinetto ${formatNumero(input.cuscinettoQuotaMensile)} euro = ${formatNumero(totale)} euro, ${fineRiga}`
+      : `Spese comuni ${formatNumero(input.sottotot)} euro + cuscinetto ${formatNumero(input.cuscinettoQuotaMensile)} euro = ${formatNumero(totaleCasa)} euro. Una parte fissa, ${elencoFisse}, la versa chi sta per uscire; gli altri ${formatNumero(totale)} euro sono ${fineRiga}`;
   let seconda: string;
   let ingredienti: { etichetta: string; valore: number }[];
 
@@ -129,6 +138,10 @@ export function spiegaQuotaPersona(input: {
       ];
       break;
     }
+  }
+
+  if (fisse.length > 0) {
+    ingredienti.unshift(...fisse.map((f) => ({ etichetta: `Parte fissa di ${f.nome}`, valore: f.quota })));
   }
 
   const reale = reali[indice];

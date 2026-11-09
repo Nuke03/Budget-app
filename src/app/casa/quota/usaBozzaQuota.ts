@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { format, parseISO, subMonths } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
 import { savePlan, type PlanBundle, type PlanVersionInput, type PlanVoceInput } from '@/lib/data/householdPlans';
 import type { HouseholdMember, RegolaQuota } from '@/lib/types';
@@ -113,6 +115,18 @@ export function useBozzaQuota(props: QuotaWizardProps) {
   const piene = cuscinettoQuota === null ? null : mesiAlPieno(cuscinettoObiettivo, cuscinettoQuota);
   const totale = calcolaTotale(sottotot, cuscinettoQuota ?? 0, ARROTONDAMENTO);
 
+  // Chi esce dopo la partenza versa una parte fissa: il resto lo dividono gli altri (come nel piano salvato).
+  const uscenti = uscentiDaPiani(piani);
+  const quoteFisse = uscenti
+    .filter((u) => partenza < u.esceDal && u.quotaMensile > 0)
+    .map((u) => ({
+      slot: u.slot,
+      nome: u.displayName,
+      quota: u.quotaMensile,
+      finoA: format(subMonths(parseISO(u.esceDal), 1), 'LLLL yyyy', { locale: it }),
+    }));
+  const totaleDaDividere = Math.max(0, totale - quoteFisse.reduce((s, f) => s + f.quota, 0));
+
   const personeQuota: PersonaQuotaInput[] = persone.map((p) => ({
     slot: p.slot,
     nome: nomePersona(p),
@@ -121,7 +135,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
   }));
   const colonne: { regola: (typeof REGOLE)[number]; risultato: RisultatoQuota }[] = REGOLE.map((r) => ({
     regola: r,
-    risultato: calcolaQuota({ persone: personeQuota, totale, regola: r.chiave }),
+    risultato: calcolaQuota({ persone: personeQuota, totale: totaleDaDividere, regola: r.chiave }),
   }));
   const colonnaScelta = colonne.find((c) => c.regola.chiave === regola) ?? colonne[0];
 
@@ -150,7 +164,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
     redditiOk && vociOk && cuscinettoQuota !== null
       ? {
           persone: draftPersone,
-          uscenti: uscentiDaPiani(piani),
+          uscenti,
           voci: vociPiano,
           cuscinettoObiettivo,
           cuscinettoQuotaMensile: cuscinettoQuota,
@@ -244,7 +258,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
     mesiCuscinetto, setMesiCuscinetto, setCuscinettoText, regola, setRegola, eraPersonalizzata,
     periodoTipo, setPeriodoTipo, percText, setPercText, giorno, setGiorno, partenza, setPartenza,
     inCorso, errore, nomePersona, sottotot, cuscinettoTestoEffettivo, cuscinettoObiettivo, piene, totale,
-    colonne, colonnaScelta, piuPeriodi, percentualiValide, versioni, statoBozza, avvisoUscenti, puoProseguire,
+    colonne, colonnaScelta, piuPeriodi, percentualiValide, versioni, statoBozza, avvisoUscenti, quoteFisse, puoProseguire,
     setPersona, setVoce, aggiungiPersona, conferma, irregolareAttivo,
   };
 }

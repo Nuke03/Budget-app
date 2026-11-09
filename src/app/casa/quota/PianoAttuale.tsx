@@ -34,7 +34,10 @@ export function PianoAttuale({
   });
 
   // Partecipa alla divisione chi versa o chi è già in casa alla data di questo piano.
+  // Chi esce dopo l'inizio di questo piano versa una parte fissa: gli altri dividono il resto.
+  const fisse = shares.filter((s) => s.esceDal !== null && s.esceDal > plan.validoDal && s.quotaMensile > 0);
   const partecipanti: PersonaQuotaInput[] = shares
+    .filter((s) => !fisse.includes(s))
     .filter((s) => s.quotaMensile > 0 || s.inCasaDal === null || s.inCasaDal <= plan.validoDal)
     .map((s) => ({
       slot: s.slot,
@@ -53,6 +56,7 @@ export function PianoAttuale({
         arrotondamento: plan.arrotondamento,
         persone: partecipanti,
         slot,
+        quoteFisse: fisse.map((f) => ({ nome: f.displayName, quota: f.quotaMensile })),
       });
     } catch {
       return null;

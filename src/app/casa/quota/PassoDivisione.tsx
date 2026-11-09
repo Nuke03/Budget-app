@@ -3,7 +3,7 @@ import { testoAvviso } from './quotaWizardState';
 import { carta, euro, inputClass } from './quotaWizardUi';
 
 export function PassoDivisione({ b }: { b: BozzaQuota }) {
-  const { totale, eraPersonalizzata, piuPeriodi, periodoTipo, setPeriodoTipo, persone, nomePersona, percText, setPercText, percentualiValide, versioni, colonne, regola, setRegola, colonnaScelta, avvisoUscenti } = b;
+  const { totale, eraPersonalizzata, piuPeriodi, periodoTipo, setPeriodoTipo, persone, nomePersona, percText, setPercText, percentualiValide, versioni, colonne, regola, setRegola, colonnaScelta, avvisoUscenti, quoteFisse } = b;
   return (
     <>
       <p className="text-base font-bold">{`Totale da versare ogni mese: ${euro(totale)}`}</p>
@@ -104,6 +104,12 @@ export function PassoDivisione({ b }: { b: BozzaQuota }) {
                       <li key={q.slot} className="flex justify-between gap-3">
                         <span>{q.nome}</span>
                         <span className="font-bold">{euro(q.quota)}</span>
+                      </li>
+                    ))}
+                    {quoteFisse.map((f) => (
+                      <li key={`fissa-${f.slot}`} className="flex justify-between gap-3 text-muted">
+                        <span>{`${f.nome}, fino a ${f.finoA}`}</span>
+                        <span className="font-bold">{euro(f.quota)}</span>
                       </li>
                     ))}
                   </ul>

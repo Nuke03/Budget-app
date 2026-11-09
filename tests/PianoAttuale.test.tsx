@@ -69,6 +69,20 @@ describe('PianoAttuale: chi esce', () => {
     assertNessunaParolaVietata(container);
   });
 
+  it('Come si calcola per chi resta cita la parte fissa di chi esce', () => {
+    const { container } = render(
+      <PianoAttuale
+        bundle={bundle([fabio, { ...giuliaLegata, esceDal: '2027-01-01' }])}
+        meseCorrente="2026-12-01"
+        onRivedi={() => {}}
+      />,
+    );
+    const riga = screen.getByText('Fabio').closest('li') as HTMLElement;
+    fireEvent.click(within(riga).getByRole('button', { name: 'Come si calcola?' }));
+    expect(within(riga).getByText(/parte fissa, Giulia 603 euro/)).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
   it('chi è già uscito (esce_dal non oltre il mese) non compare', () => {
     render(
       <PianoAttuale

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QuotaWizard } from '@/app/casa/quota/QuotaWizard';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import { ESEMPIO_VOCI } from './helpers/esempioCasa';
+import { euro } from '@/app/casa/quota/quotaWizardUi';
 import { buildPlanVersions } from '@/lib/calculations/casa/pianoVersioni';
 import type { PlanBundle, PlanVoceInput } from '@/lib/data/householdPlans';
 import type { HouseholdMember, PlanShare } from '@/lib/types';
@@ -212,6 +213,31 @@ describe('QuotaWizard: passo 1', () => {
     avanti();
     avanti();
     expect(screen.queryByText(/Diventa attivo quando entra/)).not.toBeInTheDocument();
+  });
+
+  it('l anteprima di Come dividere mostra le stesse cifre che vengono salvate, con la parte fissa di chi esce', async () => {
+    const { container } = monta({
+      piani: [bundle([
+        share({}),
+        share({ slot: 2, userId: null, displayName: 'Giulia', esceDal: '2027-03-01', quotaMensile: 603 }),
+      ])],
+    });
+    avanti();
+    avanti();
+    avanti();
+    const colonna = screen.getByTestId('colonna-proporzionale');
+    const quoteAnteprima = within(within(colonna).getByRole('list', { name: 'Quote' })).getAllByRole('listitem');
+    expect(quoteAnteprima).toHaveLength(2);
+    expect(quoteAnteprima[1]).toHaveTextContent('Giulia, fino a febbraio 2027');
+    assertNessunaParolaVietata(container);
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermiamo' }));
+    await waitFor(() => expect(savePlan).toHaveBeenCalled());
+    const salvate = savePlan.mock.calls[0][2][0].quote as { slot: number; quotaMensile: number }[];
+    const q = (slot: number) => salvate.find((x) => x.slot === slot)!.quotaMensile;
+    expect(quoteAnteprima[0]).toHaveTextContent(euro(q(1)));
+    expect(quoteAnteprima[1]).toHaveTextContent(euro(q(2)));
+    expect(q(1) + q(2)).toBe(1380);
   });
 
   it('gli usciti non compaiono come persone nei passi', () => {
