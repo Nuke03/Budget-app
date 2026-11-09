@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CasaCorrente } from '@/lib/data/households';
 import { getCheckin } from '@/lib/data/checkins';
 import { loadCasaData, type CasaData } from '@/lib/loadCasaData';
-import { computeCheckin, mesePrecedente, type CheckinCalcolato } from '@/lib/calculations/casa/checkin';
+import { computeCheckin, meseDaControllare, mesePrecedente, type CheckinCalcolato } from '@/lib/calculations/casa/checkin';
 import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
@@ -64,18 +64,23 @@ export async function loadCheckin(
     serveControllo,
   };
 
-  const haRiga = Object.values(dati.righe).some((righe) => righe.some((r) => r.mese === ultimoChiuso));
-  if (!haRiga) return vuoto;
-
-  const fatto = await getCheckin(supabase, householdId, ultimoChiuso);
-  if (fatto) {
+  // Lo stesso calcolo del promemoria: le righe sono quelle di chi guarda.
+  const mese = meseDaControllare({
+    oggi,
+    righe: dati.righe[casa.me.userId] ?? [],
+    ultimoCheckinMese: dati.controlli.ultimoCheckinMese,
+  });
+  if (mese === null) {
+    const haRiga = (dati.righe[casa.me.userId] ?? []).some((r) => r.mese === ultimoChiuso);
+    const fatto = haRiga ? await getCheckin(supabase, householdId, ultimoChiuso) : null;
+    if (!fatto) return vuoto;
     return { ...vuoto, stato: 'fatto', mese: ultimoChiuso, fatto, chi: nomi[fatto.userId] ?? null };
   }
 
-  const piano = pianoInVigore(dati.piani, ultimoChiuso);
+  const piano = pianoInVigore(dati.piani, mese);
   const calcola = (precedente: { esito: Checkin['esito'] } | null) =>
     computeCheckin({
-      mese: ultimoChiuso,
+      mese: mese,
       righePerMembro: dati.righe,
       piano,
       spese: dati.transazioni,
@@ -84,12 +89,12 @@ export async function loadCheckin(
   let calcolo = calcola(null);
   // Il mese prima serve solo per il secondo ammanco.
   if (calcolo.esito === 'ammanco') {
-    calcolo = calcola(await getCheckin(supabase, householdId, mesePrecedente(ultimoChiuso)));
+    calcolo = calcola(await getCheckin(supabase, householdId, mesePrecedente(mese)));
   }
 
   const versamenti = casa.members
     .map((m) => {
-      const riga = dati.righe[m.userId]?.find((r) => r.mese === ultimoChiuso);
+      const riga = dati.righe[m.userId]?.find((r) => r.mese === mese);
       return riga ? { userId: m.userId, nome: m.displayName, atteso: riga.atteso, versato: riga.versato } : null;
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
@@ -97,7 +102,7 @@ export async function loadCheckin(
   return {
     ...vuoto,
     stato: 'da_fare',
-    mese: ultimoChiuso,
+    mese,
     calcolo,
     fondiPerAvanzo: dati.aggiunta.obiettivi.filter((g) => g.modalita === 'bloccato' && !g.ricorrente),
     versamenti,

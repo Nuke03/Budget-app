@@ -23,7 +23,7 @@ function scrivi(id: string, oggi: string): void {
 }
 
 // I promemoria della casa: pochi, neutri, sempre rimandabili con "Più tardi" (per la giornata).
-// compatta: una sola riga, il primo promemoria, che porta a /casa.
+// compatta: una sola riga, il primo promemoria, che porta a /casa (al controllo o al check-in se è quello il promemoria).
 export function StrisciaPromemoria({
   promemoria,
   oggi,
@@ -50,7 +50,7 @@ export function StrisciaPromemoria({
   if (compatta) {
     return (
       <Link
-        href={visibili[0].azione?.tipo === 'controllo' && visibili[0].azione.href ? visibili[0].azione.href : '/casa'}
+        href={(visibili[0].azione?.tipo === 'controllo' || visibili[0].azione?.tipo === 'checkin') && visibili[0].azione.href ? visibili[0].azione.href : '/casa'}
         className="block rounded-[var(--radius-md)] bg-surface px-4 py-3 text-sm shadow-[var(--shadow-card)]"
       >
         {visibili[0].testo}

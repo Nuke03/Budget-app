@@ -131,15 +131,27 @@ describe('CheckinMensile', () => {
   });
 
   it('ammanco: neutro, nessuna scelta, destinazione assente', async () => {
-    const c = calcolo({ avanzo: -62, esito: 'ammanco' });
+    const c = calcolo({ avanzo: -62, esito: 'ammanco', spesoMensili: 1270 });
     const { container } = render(<CheckinMensile dati={dati({ calcolo: c })} />);
     expect(screen.getByText('Sono usciti 62 € più del previsto. Li prendiamo dal cuscinetto.')).toBeInTheDocument();
     expect(screen.queryByLabelText('Lasciamoli al cuscinetto')).not.toBeInTheDocument();
     expect(screen.queryByText(/quota è un po/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
     await waitFor(() => expect(saveCheckin).toHaveBeenCalledTimes(1));
-    expect(vi.mocked(saveCheckin).mock.calls[0][1]).toEqual({ ...base, avanzo: -62 });
+    expect(vi.mocked(saveCheckin).mock.calls[0][1]).toEqual({ ...base, avanzo: -62, spesoMensili: 1270 });
     assertNessunaParolaVietata(container);
+  });
+
+  it('ammanco per versamenti mancanti: lo dice', () => {
+    const c = calcolo({ avanzo: -30, esito: 'ammanco', versatoTotale: 1350 });
+    render(<CheckinMensile dati={dati({ calcolo: c })} />);
+    expect(screen.getByText('Mancano 30 € di versamenti. Li prendiamo dal cuscinetto.')).toBeInTheDocument();
+  });
+
+  it('ammanco con tutte e due le cause: frase generica', () => {
+    const c = calcolo({ avanzo: -90, esito: 'ammanco', versatoTotale: 1350, spesoMensili: 1300 });
+    render(<CheckinMensile dati={dati({ calcolo: c })} />);
+    expect(screen.getByText('Il mese chiude 90 € sotto il previsto. Li prendiamo dal cuscinetto.')).toBeInTheDocument();
   });
 
   it('in pari', () => {
@@ -183,6 +195,7 @@ describe('CheckinMensile', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
     expect(await screen.findByText('Il check-in di ottobre è già stato fatto da Anna.')).toBeInTheDocument();
     expect(screen.getByText('Fabio 776 di 776')).toBeInTheDocument();
+    expect(refresh).toHaveBeenCalledTimes(1);
     expect(push).not.toHaveBeenCalled();
   });
 

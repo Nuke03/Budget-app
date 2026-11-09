@@ -296,7 +296,7 @@ describe('HomeDashboard', () => {
         controlli: { ultimoControllo: null, ultimoCheckinMese: '2026-09-01' },
       });
       render(<HomeDashboard {...base} casa={stato} oggi="2026-11-01" />);
-      expect(screen.getByRole('link', { name: /check-in di ottobre/ })).toHaveAttribute('href', '/casa');
+      expect(screen.getByRole('link', { name: /check-in di ottobre/ })).toHaveAttribute('href', '/casa/controllo');
     });
 
     it('senza promemoria la riga compatta non compare', () => {

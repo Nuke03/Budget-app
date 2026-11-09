@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { CheckinGiaFattoError, getCheckin, messaggioErroreCheckin, saveCheckin } from '@/lib/data/checkins';
 import type { SaveCheckinInput } from '@/lib/data/checkins';
 import { formatNumero, nomeMese } from '@/lib/format';
+import type { CheckinCalcolato } from '@/lib/calculations/casa/checkin';
 import type { CheckinCaricato } from '@/lib/loadCheckin';
 import { CLASSE_CAMPO, ErroreMovimento } from '../CampiMovimento';
 import { ComeSiCalcola } from '../ComeSiCalcola';
@@ -32,10 +33,18 @@ function giornoEMese(iso: string): string {
   return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', timeZone: 'Europe/Rome' }).format(new Date(iso));
 }
 
-function fraseEsito(avanzo: number, esito: 'in_pari' | 'avanzo' | 'ammanco'): string {
-  if (esito === 'avanzo') return `In avanzo di ${euro(avanzo)}.`;
-  if (esito === 'ammanco') return `Sono usciti ${euro(Math.abs(avanzo))} più del previsto. Li prendiamo dal cuscinetto.`;
-  return 'Tutto è andato come previsto.';
+// Nell'ammanco la frase dice la causa, senza colpe: versamenti mancanti, spese sopra il previsto, o tutte e due.
+function fraseEsito(
+  c: Pick<CheckinCalcolato, 'avanzo' | 'esito' | 'attesoTotale' | 'versatoTotale' | 'previstoMensili' | 'spesoMensili' | 'nonRegistrate'>
+): string {
+  if (c.esito === 'avanzo') return `In avanzo di ${euro(c.avanzo)}.`;
+  if (c.esito === 'in_pari') return 'Tutto è andato come previsto.';
+  const x = euro(Math.abs(c.avanzo));
+  const versamentiMancanti = c.versatoTotale < c.attesoTotale;
+  const speseSopra = c.spesoMensili + c.nonRegistrate > c.previstoMensili;
+  if (versamentiMancanti && !speseSopra) return `Mancano ${x} di versamenti. Li prendiamo dal cuscinetto.`;
+  if (speseSopra && !versamentiMancanti) return `Sono usciti ${x} più del previsto. Li prendiamo dal cuscinetto.`;
+  return `Il mese chiude ${x} sotto il previsto. Li prendiamo dal cuscinetto.`;
 }
 
 type Scelta = 'cuscinetto' | 'fondo' | 'nuova';
@@ -70,7 +79,7 @@ export function CheckinMensile({ dati }: { dati: CheckinCaricato }) {
           <p className="text-sm">
             {`Spese del mese: previste ${euro(f.previstoMensili)}, registrate ${euro(f.spesoMensili)}, non registrate ${euro(f.nonRegistrate)}`}
           </p>
-          <p className="text-sm font-semibold">{fraseEsito(f.avanzo, f.esito)}</p>
+          <p className="text-sm font-semibold">{fraseEsito(f)}</p>
         </section>
         <Link href="/casa" className={CLASSE_LINK}>
           Torna alla casa
@@ -139,6 +148,8 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
           .then((c) => (c ? dati.nomi[c.userId] : undefined))
           .catch(() => undefined);
         setErrore(`Il check-in di ${nomeMese(mese)} è già stato fatto${chi ? ` da ${chi}` : ''}.`);
+        // La pagina ricarica e mostra il check-in fatto.
+        router.refresh();
       } else {
         setErrore(messaggioErroreCheckin(e));
       }
@@ -175,7 +186,7 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
 
       <section className="flex flex-col gap-2">
         <p className="text-base font-semibold">
-          {conAvanzo ? `${fraseEsito(calcolo.avanzo, calcolo.esito)} Cosa ne facciamo?` : fraseEsito(calcolo.avanzo, calcolo.esito)}
+          {conAvanzo ? `${fraseEsito(calcolo)} Cosa ne facciamo?` : fraseEsito(calcolo)}
         </p>
         <ComeSiCalcola spiegazione={calcolo.spiegazioneAvanzo} />
       </section>

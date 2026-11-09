@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { loadCheckin } from '@/lib/loadCheckin';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { HouseholdMember } from '@/lib/types';
+import { statoPromemoria } from '@/lib/calculations/casa/promemoria';
 import { createFakeDb } from './helpers/fakeDb';
 
 const T0 = '2026-01-01T00:00:00Z';
@@ -125,6 +126,18 @@ describe('loadCheckin', () => {
     expect(dopo.mese).toBe('2026-10-01');
     const prima = await carica(base({}, '2026-09-01'), new Date('2026-10-31T21:30:00Z'));
     expect(prima.mese).toBe('2026-09-01');
+  });
+
+  it('il mese da fare è lo stesso del promemoria', async () => {
+    const r = await carica(base());
+    const stato = statoPromemoria({
+      piano: null, righe: [{ mese: '2026-10-01', atteso: 776, versato: 776, mancano: 0 }, { mese: '2026-11-01', atteso: 776, versato: 0, mancano: 776 }],
+      oggi: '2026-11-09', nomi: {}, crediti: {}, debiti: [], ultimoCheckinMese: null,
+    });
+    expect(r.mese).toBe(stato.checkin?.mese);
+    const fatto = await carica(base({ household_checkins: [checkin('2026-10-01', 'avanzo')] }));
+    expect(fatto.stato).toBe('fatto');
+    expect(statoPromemoria({ piano: null, righe: [{ mese: '2026-10-01', atteso: 1, versato: 1, mancano: 0 }], oggi: '2026-11-09', nomi: {}, crediti: {}, debiti: [], ultimoCheckinMese: '2026-10-01' }).checkin?.mese).toBeNull();
   });
 
   it('serveControllo: solo se l ultimo controllo ha più di 14 giorni', async () => {
