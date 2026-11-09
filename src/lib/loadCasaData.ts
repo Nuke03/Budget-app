@@ -6,10 +6,14 @@ import { getSpecoCollegato } from '@/lib/data/goalSpending';
 import type { CasaCorrente } from '@/lib/data/households';
 import { casa as scopeCasa } from '@/lib/data/scope';
 import { getTransactions } from '@/lib/data/transactions';
+import { getPlanVersions, type PlanBundle } from '@/lib/data/householdPlans';
 import { getTransfers } from '@/lib/data/transfers';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
-import { creditiPerMembro } from '@/lib/calculations/casa/crediti';
+import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
+import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import type { Account, BudgetGoal, Category, Transaction, Transfer } from '@/lib/types';
 
 export interface CasaAggiunta {
@@ -29,6 +33,9 @@ export interface CasaData {
   disponibile: DisponibileCasa;
   trasferimenti: Transfer[];
   crediti: Record<string, number>;
+  piani: PlanBundle[];
+  righe: Record<string, RigaMese[]>;
+  debiti: DebitoMembro[];
 }
 
 export async function loadCasaAggiunta(
@@ -56,16 +63,19 @@ export async function loadCasaData(
   casa: CasaCorrente,
   today: Date = new Date()
 ): Promise<CasaData> {
-  const [aggiunta, transazioni, trasferimenti] = await Promise.all([
+  const [aggiunta, transazioni, trasferimenti, piani] = await Promise.all([
     loadCasaAggiunta(supabase, casa),
     getTransactions(supabase, scopeCasa(casa.household.id)),
     getTransfers(supabase, scopeCasa(casa.household.id)),
+    getPlanVersions(supabase, casa.household.id),
   ]);
-  const crediti = creditiPerMembro(
-    casa.members.map((m) => m.userId),
-    transazioni,
-    trasferimenti
-  );
+  const { righe, crediti, debiti } = calcolaRegistriCasa({
+    piani,
+    trasferimenti,
+    spese: transazioni,
+    membri: casa.members,
+    oggi: oggiRomaISO(today),
+  });
   const totaleCrediti = Object.values(crediti).reduce((s, v) => s + v, 0);
 
   const speso = await Promise.all(aggiunta.obiettivi.map((g) => getSpecoCollegato(supabase, g, today)));
@@ -83,5 +93,16 @@ export async function loadCasaData(
     crediti: totaleCrediti,
   });
 
-  return { casa, aggiunta, transazioni, obiettiviConAccantonato, disponibile, trasferimenti, crediti };
+  return {
+    casa,
+    aggiunta,
+    transazioni,
+    obiettiviConAccantonato,
+    disponibile,
+    trasferimenti,
+    crediti,
+    piani,
+    righe,
+    debiti,
+  };
 }

@@ -8,10 +8,15 @@ import { descriviStatoPiano } from '@/lib/calculations/casa/fraseVersamento';
 import { etichettaChiHaPagato } from '@/lib/calculations/casa/etichette';
 import type { DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
+import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
+import type { RigaMese } from '@/lib/calculations/casa/versamenti';
+import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Account, Transaction } from '@/lib/types';
 import { ComeSiCalcola } from './ComeSiCalcola';
 import { ContoComuneForm } from './ContoComuneForm';
 import { CasaFab } from './CasaFab';
+import { CasaAzioni } from './CasaAzioni';
+import { PannelliVersamenti } from './PannelliVersamenti';
 
 export interface FinanzeCasa {
   disponibile: DisponibileCasa;
@@ -20,6 +25,9 @@ export interface FinanzeCasa {
   nomi: Record<string, string>;
   aggiunta: CasaAggiunta;
   contiPersonali?: Account[];
+  righe?: Record<string, RigaMese[]>;
+  debiti?: DebitoMembro[];
+  crediti?: Record<string, number>;
 }
 
 export function CasaHome({
@@ -40,6 +48,9 @@ export function CasaHome({
       ? format(parseISO(piano.plan.validoDal), 'LLLL yyyy', { locale: it })
       : null;
   const etichetta = stato?.stato === 'bozza' ? 'Bozza' : partenza ? `Parte da ${partenza}` : 'Attivo';
+
+  const meseVersamenti = meseCorrente ?? meseRomaISO();
+  const membri = casa.members.map((m) => ({ userId: m.userId, nome: m.displayName }));
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
@@ -70,6 +81,26 @@ export function CasaHome({
               <ContoComuneForm householdId={casa.household.id} />
             )}
           </section>
+
+          <CasaAzioni
+            householdId={casa.household.id}
+            meUserId={casa.me.userId}
+            membri={membri}
+            contiPersonali={finanze.contiPersonali ?? []}
+            contiCasa={finanze.conti}
+            meseDefault={meseVersamenti}
+          >
+            {piano ? (
+              <PannelliVersamenti
+                meUserId={casa.me.userId}
+                membri={membri}
+                righe={finanze.righe ?? {}}
+                debiti={finanze.debiti ?? []}
+                crediti={finanze.crediti ?? {}}
+                meseCorrente={meseVersamenti}
+              />
+            ) : null}
+          </CasaAzioni>
 
           <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
             <h2 className="text-base font-bold">Ultime spese di casa</h2>

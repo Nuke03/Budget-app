@@ -12,9 +12,11 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transactions', () => ({ createTransaction: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/data/accounts', () => ({ adjustAccountBalance: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/lib/data/transfers', () => ({ recordTransfer: vi.fn().mockResolvedValue('t1'), messaggioErroreTrasferimento: () => 'errore' }));
 vi.mock('@/lib/data/casaSetup', () => ({ creaContoComune: vi.fn().mockResolvedValue({}) }));
 
 import { creaContoComune } from '@/lib/data/casaSetup';
+import { recordTransfer } from '@/lib/data/transfers';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { PlanBundle } from '@/lib/data/householdPlans';
@@ -172,6 +174,65 @@ describe('CasaHome', () => {
       expect(screen.getByText('Chi ha pagato')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Personale' })).not.toBeInTheDocument();
       expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
+    });
+
+    describe('versamenti e crediti', () => {
+      const registri = {
+        righe: { u1: [{ mese: '2026-12-01', atteso: 690, versato: 690, mancano: 0 }], u2: [{ mese: '2026-12-01', atteso: 690, versato: 300, mancano: 390 }] },
+        debiti: [],
+        crediti: { u1: 45, u2: 0 },
+      };
+      const contiPersonali: Account[] = [
+        { id: 'pf', nome: 'Conto Fabio', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+      ];
+      const monta = () =>
+        render(
+          <CasaHome
+            casa={casa}
+            piano={piano(true)}
+            meseCorrente="2026-12-01"
+            finanze={{ ...finanze([conto]), ...registri, contiPersonali }}
+          />
+        );
+
+      it('mostra i pannelli con le quote del mese e il credito in attesa', () => {
+        const { container } = monta();
+        expect(screen.getByText('Fabio 690 di 690 € fatto')).toBeInTheDocument();
+        expect(screen.getByText('Anna 300 di 690 € mancano 390 €')).toBeInTheDocument();
+        expect(screen.getByText('In attesa del rimborso: 45 €')).toBeInTheDocument();
+        assertNessunaParolaVietata(container);
+      });
+
+      it('Registra un versamento apre il modulo e a salvataggio riuscito ricarica e chiude', async () => {
+        monta();
+        fireEvent.click(screen.getByRole('button', { name: 'Registra un versamento' }));
+        fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '390' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Registra' }));
+        await waitFor(() => expect(refresh).toHaveBeenCalled());
+        expect(recordTransfer).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ causale: 'versamento', importo: 390, daAccountId: 'pf', aAccountId: 'ac' })
+        );
+        await waitFor(() => expect(screen.queryByLabelText('Importo')).toBeNull());
+      });
+
+      it('Rinuncia al credito chiede conferma e registra un rimborso a proprio favore', async () => {
+        monta();
+        fireEvent.click(screen.getByRole('button', { name: 'Rinuncia' }));
+        expect(screen.getByText(/Chiudi il credito di 45 €/)).toBeInTheDocument();
+        fireEvent.click(screen.getAllByRole('button', { name: 'Rinuncia' }).at(-1)!);
+        await waitFor(() =>
+          expect(recordTransfer).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+              causale: 'rimborso',
+              beneficiarioUserId: 'u1',
+              soloRegistrazione: true,
+              importo: 45,
+            })
+          )
+        );
+      });
     });
   });
 });

@@ -104,3 +104,46 @@ describe('loadCasaData', () => {
     expect(JSON.stringify(d)).not.toContain('Conto A');
   });
 });
+
+describe('loadCasaData registri', () => {
+  it('righe e debiti rispecchiano i registri con tre membri', async () => {
+    const casa3: CasaCorrente = {
+      ...casaA,
+      members: [
+        ...casaA.members,
+        { householdId: 'H1', userId: 'C', displayName: 'Carla', joinedAt: T0, slot: 3, attivo: true },
+      ],
+    };
+    const quota = (slot: number, user: string, nome: string, q: number) => ({
+      plan_id: 'p1', slot, user_id: user, display_name: nome, reddito_netto_mensile: 1000,
+      reddito_irregolare: false, percentuale: null, in_casa_dal: null, esce_dal: null, quota_mensile: q,
+    });
+    const versamento = (id: string, user: string, importo: number, mese: string, extra: object = {}) => ({
+      id, household_id: 'H1', user_id: user, da_account_id: null, a_account_id: 'ac-casa', importo,
+      data: '2026-11-05', causale: 'versamento', beneficiario_user_id: null, per_conto_di_user_id: null,
+      mese_competenza: mese, solo_registrazione: false, nota: null, created_at: '2026-11-05T10:00:00Z', ...extra,
+    });
+    const s = {
+      ...seed(),
+      household_plans: [
+        { id: 'p1', household_id: 'H1', valido_dal: '2026-10-01', giorno_versamento: 5, regola: 'parti_uguali',
+          cuscinetto_obiettivo: 0, cuscinetto_quota_mensile: 0, arrotondamento: 10, totale_mensile: 1000, created_at: T0 },
+      ],
+      household_plan_items: [],
+      household_plan_shares: [quota(1, 'A', 'Anna', 500), quota(2, 'B', 'Bruno', 300), quota(3, 'C', 'Carla', 200)],
+      transfers: [
+        versamento('v1', 'A', 200, '2026-10-01', { per_conto_di_user_id: 'C' }),
+        versamento('v2', 'B', 100, '2026-11-01'),
+      ],
+    };
+    const db = createFakeDb(s as never, { userId: 'A', membri: { H1: ['A', 'B', 'C'] } });
+    const d = await loadCasaData(db.client, casa3, TODAY);
+    expect(d.piani).toHaveLength(1);
+    expect(d.righe.C.find((r) => r.mese === '2026-10-01')).toMatchObject({ atteso: 200, versato: 200, mancano: 0 });
+    expect(d.righe.B.find((r) => r.mese === '2026-11-01')).toMatchObject({ atteso: 300, versato: 100, mancano: 200 });
+    expect(d.righe.A.find((r) => r.mese === '2026-10-01')).toMatchObject({ versato: 0, mancano: 500 });
+    expect(d.debiti).toEqual([
+      { debitoreId: 'C', creditoreId: 'A', importo: 200, mesi: [{ mese: '2026-10-01', importo: 200 }] },
+    ]);
+  });
+});
