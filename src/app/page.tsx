@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { loadHomeData } from '@/lib/loadHomeData';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { HomeDashboard } from './HomeDashboard';
 
 export default async function HomePage() {
@@ -21,6 +22,7 @@ export default async function HomePage() {
       goals={data.goals}
       casa={data.casa}
       meUserId={user.id}
+      oggi={oggiRomaISO()}
     />
   );
 }

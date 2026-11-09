@@ -6,6 +6,9 @@ import { ChevronDown, Plus } from 'lucide-react';
 import { formatEuro, formatDateIt, nomeMese } from '@/lib/format';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { ComeSiCalcola } from './casa/ComeSiCalcola';
+import { StrisciaPromemoria } from './casa/StrisciaPromemoria';
+import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { Account, BudgetGoal, Category } from '@/lib/types';
@@ -41,6 +44,7 @@ export function HomeDashboard({
   goals,
   casa = null,
   meUserId,
+  oggi = oggiRomaISO(),
 }: {
   disponibileLibero: number;
   margineGiornaliero: number;
@@ -50,6 +54,7 @@ export function HomeDashboard({
   goals: GoalWithAccantonato[];
   casa?: CasaPerHome | null;
   meUserId?: string;
+  oggi?: string;
 }) {
   const router = useRouter();
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -64,10 +69,26 @@ export function HomeDashboard({
   const debitiMiei = stato ? stato.debiti.filter((d) => d.debitoreId === stato.me.userId) : [];
   const debitiVersoDiMe = stato ? stato.debiti.filter((d) => d.creditoreId === stato.me.userId) : [];
   const creditoMio = stato ? (stato.crediti[stato.me.userId] ?? 0) : 0;
+  const promemoria = stato
+    ? computeReminders(
+        statoPromemoria({
+          piano: stato.piano,
+          righe: stato.righe,
+          oggi,
+          nomi: Object.fromEntries(stato.membri.map((m) => [m.userId, m.displayName])),
+          crediti: stato.crediti,
+          debiti: stato.debiti,
+        }),
+        { userId: stato.me.userId },
+        oggi
+      )
+    : [];
   const haRiserva = righeDaVersare.length > 0 || debitiMiei.length > 0;
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
+      <StrisciaPromemoria promemoria={promemoria} oggi={oggi} compatta />
+
       <section className="rounded-[var(--radius-lg)] bg-brand p-7 text-brand-foreground shadow-[var(--shadow-hero)]">
         <p className="text-sm font-medium text-brand-foreground/75">Disponibile libero</p>
         <p className="mt-1 text-5xl font-bold tabular-nums tracking-tight">

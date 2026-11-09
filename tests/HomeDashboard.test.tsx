@@ -256,6 +256,25 @@ describe('HomeDashboard', () => {
       expect(senza).not.toHaveTextContent('Versamento alla casa');
     });
 
+    it('in home compare una sola riga compatta che porta a /casa', () => {
+      const piano = { plan: { giornoVersamento: 5 } } as unknown as CasaStato['piano'];
+      const stato = casaPerHome({
+        piano,
+        righe: [{ mese: '2026-11-01', atteso: 776, versato: 0, mancano: 776 }],
+        crediti: { u1: 45, u2: 0 },
+      });
+      const { container } = render(<HomeDashboard {...base} casa={stato} oggi="2026-11-03" />);
+      const link = screen.getByRole('link', { name: 'Il tuo versamento di 776 € è da fare entro il 5.' });
+      expect(link).toHaveAttribute('href', '/casa');
+      expect(screen.queryByText(/In attesa del rimborso/)).not.toBeInTheDocument();
+      assertNessunaParolaVietata(container);
+    });
+
+    it('senza promemoria la riga compatta non compare', () => {
+      render(<HomeDashboard {...base} casa={casaPerHome()} oggi="2026-11-03" />);
+      expect(screen.queryByRole('link', { name: /versamento|rimborso|restituire/ })).not.toBeInTheDocument();
+    });
+
     it('nessuna parola vietata', () => {
       const { container } = render(
         <HomeDashboard

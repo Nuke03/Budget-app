@@ -176,6 +176,47 @@ describe('CasaHome', () => {
       expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
     });
 
+    describe('promemoria', () => {
+      const registri = {
+        righe: { u1: [{ mese: '2026-11-01', atteso: 690, versato: 0, mancano: 690 }] },
+        debiti: [],
+        crediti: { u1: 0, u2: 0 },
+      };
+      const monta = (oggi: string) =>
+        render(
+          <CasaHome
+            casa={casa}
+            piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-11-01' } }}
+            meseCorrente="2026-11-01"
+            oggi={oggi}
+            finanze={{ ...finanze([conto]), ...registri }}
+          />
+        );
+
+      it('la striscia compare in cima a /casa', () => {
+        const { container } = monta('2026-11-03');
+        const testo = screen.getByText('Il tuo versamento di 690 € è da fare entro il 5.');
+        expect(screen.getByRole('button', { name: 'Registra' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Più tardi' })).toBeInTheDocument();
+        const titolo = screen.getByRole('heading', { name: 'Casa Rossi' });
+        expect(titolo.compareDocumentPosition(testo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const disponibile = screen.getByText('Disponibile casa');
+        expect(testo.compareDocumentPosition(disponibile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        assertNessunaParolaVietata(container);
+      });
+
+      it('il pulsante Registra apre il modulo del versamento', () => {
+        monta('2026-11-03');
+        fireEvent.click(screen.getByRole('button', { name: 'Registra' }));
+        expect(screen.getAllByText('Registra un versamento').length).toBeGreaterThan(1);
+      });
+
+      it('prima dei tre giorni la striscia non compare', () => {
+        monta('2026-11-01');
+        expect(screen.queryByRole('button', { name: 'Più tardi' })).not.toBeInTheDocument();
+      });
+    });
+
     describe('versamenti e crediti', () => {
       const registri = {
         righe: { u1: [{ mese: '2026-12-01', atteso: 690, versato: 690, mancano: 0 }], u2: [{ mese: '2026-12-01', atteso: 690, versato: 300, mancano: 390 }] },

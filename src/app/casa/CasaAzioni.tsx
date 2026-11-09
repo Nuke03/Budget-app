@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { formatNumero } from '@/lib/format';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
+import type { AzionePromemoria, Promemoria } from '@/lib/calculations/casa/promemoria';
 import type { Account } from '@/lib/types';
+import { StrisciaPromemoria } from './StrisciaPromemoria';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { Annulla, ErroreMovimento, Registra } from './CampiMovimento';
 import { RestituisciForm } from './RestituisciForm';
@@ -28,6 +30,48 @@ export const CasaAzioniContext = createContext<CasaAzioniContestoValore>({ apri:
 
 export function useCasaAzioni(): CasaAzioniContestoValore {
   return useContext(CasaAzioniContext);
+}
+
+// Dall'azione di un promemoria al modulo che si apre.
+function azioneDaPromemoria(
+  az: AzionePromemoria,
+  meUserId: string,
+  debiti: DebitoMembro[],
+  nomi: Record<string, string>
+): AzioneCasa | null {
+  if (az.tipo === 'versamento') return { tipo: 'versamento' };
+  const altro = az.altroUserId ?? '';
+  const nome = nomi[altro] ?? 'Un altro membro';
+  if (az.tipo === 'rimborso') return { tipo: 'rimborso', creditore: { userId: altro, nome }, importo: az.importo };
+  const debito = debiti.find((d) => d.debitoreId === meUserId && d.creditoreId === altro);
+  return debito ? { tipo: 'restituisci', debito, nomeCreditore: nome } : null;
+}
+
+// La striscia dei promemoria dentro /casa: le azioni aprono gli stessi moduli dei pannelli.
+export function StrisciaPromemoriaCasa({
+  promemoria,
+  oggi,
+  meUserId,
+  debiti,
+  nomi,
+}: {
+  promemoria: Promemoria[];
+  oggi: string;
+  meUserId: string;
+  debiti: DebitoMembro[];
+  nomi: Record<string, string>;
+}) {
+  const { apri } = useCasaAzioni();
+  return (
+    <StrisciaPromemoria
+      promemoria={promemoria}
+      oggi={oggi}
+      onAzione={(az) => {
+        const azione = azioneDaPromemoria(az, meUserId, debiti, nomi);
+        if (azione) apri(azione);
+      }}
+    />
+  );
 }
 
 function Rinuncia({
