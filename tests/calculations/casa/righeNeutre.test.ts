@@ -53,7 +53,7 @@ describe('righeNeutreStorico', () => {
 
   it('rimborso ricevuto: entra', () => {
     const [r] = righe([
-      tr({ causale: 'rimborso', importo: 45, daAccountId: null, aAccountId: 'a1', beneficiarioUserId: 'u1' }),
+      tr({ causale: 'rimborso', importo: 45, userId: 'u2', daAccountId: null, aAccountId: 'a1', beneficiarioUserId: 'u1' }),
     ]);
     expect(r).toMatchObject({ etichetta: 'Rimborso dalla casa', importo: 45, verso: 'entra' });
   });
@@ -91,10 +91,25 @@ describe('righeNeutreStorico', () => {
     expect(righe([tr({ userId: 'u2' })])).toEqual([]);
   });
 
+  it('rimborso solo registrazione fatto da un altro membro: la riga compare', () => {
+    const [r] = righe([
+      tr({ causale: 'rimborso', userId: 'u2', soloRegistrazione: true, beneficiarioUserId: 'u1', aAccountId: null, daAccountId: null }),
+    ]);
+    expect(r).toMatchObject({ etichetta: 'Rimborso dalla casa', verso: 'entra' });
+  });
+
+  it('restituzione solo registrazione: compare per il debitore e per il creditore', () => {
+    const base = { causale: 'restituzione' as const, soloRegistrazione: true };
+    const [d] = righe([tr({ ...base, userId: 'u1', beneficiarioUserId: 'u2' })]);
+    expect(d).toMatchObject({ etichetta: 'Restituzione a Anna', verso: 'esce' });
+    const [c] = righe([tr({ ...base, userId: 'u2', beneficiarioUserId: 'u1' })]);
+    expect(c).toMatchObject({ etichetta: 'Restituzione da Anna', verso: 'entra' });
+  });
+
   it('le rinunce non compaiono', () => {
     expect(
       righe([
-        tr({ causale: 'rimborso', soloRegistrazione: true, beneficiarioUserId: 'u1', aAccountId: null, daAccountId: null }),
+        tr({ causale: 'rimborso', soloRegistrazione: true, userId: 'u1', beneficiarioUserId: 'u1', aAccountId: null, daAccountId: null }),
         tr({ id: 'x2', causale: 'restituzione', perContoDiUserId: 'u2', soloRegistrazione: true, beneficiarioUserId: 'u1' }),
         tr({ id: 'x3', causale: 'restituzione', perContoDiUserId: 'u2', beneficiarioUserId: 'u1' }),
       ])

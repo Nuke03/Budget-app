@@ -38,16 +38,18 @@ function rigaDaTrasferimento(
   }
 
   if (t.causale === 'rimborso') {
-    if (t.beneficiarioUserId !== userId || t.soloRegistrazione || !t.aAccountId) return null;
+    // Un rimborso registrato da un altro membro arriva anche come sola registrazione:
+    // la riga serve a chi deve aggiornare il proprio saldo. La rinuncia (autore = beneficiario) non compare.
+    if (t.beneficiarioUserId !== userId || t.userId === userId) return null;
     return { ...base, etichetta: 'Rimborso dalla casa', verso: 'entra' };
   }
 
   if (t.causale === 'restituzione') {
-    if (t.soloRegistrazione) return null;
-    if (t.userId === userId && !t.perContoDiUserId) {
+    if (t.perContoDiUserId) return null;
+    if (t.userId === userId) {
       return { ...base, etichetta: `Restituzione a ${nome(t.beneficiarioUserId)}`, verso: 'esce' };
     }
-    if (t.beneficiarioUserId === userId && !t.perContoDiUserId) {
+    if (t.beneficiarioUserId === userId) {
       return { ...base, etichetta: `Restituzione da ${nome(t.userId)}`, verso: 'entra' };
     }
   }
