@@ -22,10 +22,11 @@ const row = {
   descrizione: 'Spesa',
   nota: null,
   created_at: '2026-02-14T10:00:00Z',
+  user_id: 'u-1',
 };
 
 describe('getTransactions', () => {
-  it('mappa le righe in oggetti Transaction', async () => {
+  it('mapRow espone userId e mappa le righe in oggetti Transaction', async () => {
     const supabase = fakeSelectClient([row]);
     const result = await getTransactions(supabase);
 
@@ -41,6 +42,7 @@ describe('getTransactions', () => {
         descrizione: 'Spesa',
         nota: null,
         createdAt: '2026-02-14T10:00:00Z',
+        userId: 'u-1',
       },
     ]);
   });

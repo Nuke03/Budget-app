@@ -76,10 +76,19 @@ function unisci(...parti: Record<string, unknown[]>[]) {
   return out as Record<string, Record<string, unknown>[]>;
 }
 
-async function home(user: string, seed: Record<string, Record<string, unknown>[]>) {
+async function home(user: string, seed: Record<string, Record<string, unknown>[]>, conUserId = false) {
   const db = createFakeDb(seed, { userId: user, membri: MEMBRI });
-  return loadHomeData(db.client, TODAY);
+  return loadHomeData(db.client, TODAY, conUserId ? user : null);
 }
+
+const STRUTTURA_CASA = {
+  households: [{ id: 'H1', nome: 'Casa', created_at: '2026-01-01T00:00:00Z', archiviata_il: null }],
+  household_members: [
+    { household_id: 'H1', user_id: 'A', display_name: 'Anna', joined_at: '2026-01-01T00:00:00Z', slot: 1, attivo: true },
+    { household_id: 'H1', user_id: 'B', display_name: 'Bruno', joined_at: '2026-01-01T00:00:00Z', slot: 2, attivo: true },
+  ],
+  household_invites: [],
+};
 
 describe('isolamento della home', () => {
   it('la home di A ignora conti, obiettivi ed entrate di casa', async () => {
@@ -101,5 +110,24 @@ describe('isolamento della home', () => {
     const baseline = await home(user, personali);
     expect(conCasa).toEqual(baseline);
     expect(conCasa.disponibileLibero).toBe(870);
+  });
+
+  it('con userId e una casa, disponibile, dettaglio, margine e data target restano quelli personali e casa contiene solo righe di casa', async () => {
+    const baseline = await home('A', righePersonali('A'));
+    const conCasa = await home('A', { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA }, true);
+    const { casa, ...personali } = conCasa;
+    const { casa: nessuna, ...baselinePersonali } = baseline;
+    expect(nessuna).toBeNull();
+    expect(personali).toEqual(baselinePersonali);
+    expect(personali.disponibileLibero).toBe(870);
+    expect(casa?.householdId).toBe('H1');
+    expect(casa?.conti.map((c) => c.id)).toEqual(['acc-B-H1']);
+    expect(casa?.obiettivi.map((g) => g.id)).toEqual(['goal-B-H1']);
+  });
+
+  it('senza userId o senza casa attiva casa è null', async () => {
+    expect((await home('A', righePersonali('A'))).casa).toBeNull();
+    const senzaCasa = { ...righePersonali('A'), households: [], household_members: [], household_invites: [] };
+    expect((await home('A', senzaCasa, true)).casa).toBeNull();
   });
 });

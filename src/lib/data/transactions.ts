@@ -4,7 +4,7 @@ import type { Transaction, TransactionTipo } from '../types';
 import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
 
 const TRANSACTION_COLUMNS =
-  'id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at, pagata_da_user_id, origine';
+  'id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at, pagata_da_user_id, origine, user_id';
 
 interface TransactionRow {
   id: string;
@@ -19,6 +19,7 @@ interface TransactionRow {
   created_at: string;
   pagata_da_user_id: string | null;
   origine: 'riconciliazione' | null;
+  user_id: string;
 }
 
 function mapRow(row: TransactionRow): Transaction {
@@ -35,6 +36,7 @@ function mapRow(row: TransactionRow): Transaction {
     createdAt: row.created_at,
     pagataDaUserId: row.pagata_da_user_id,
     origine: row.origine,
+    userId: row.user_id,
   };
 }
 

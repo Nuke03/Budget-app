@@ -81,3 +81,14 @@ export async function updateAccountDetails(
   if (error) throw error;
   return mapRow(data as AccountRow);
 }
+
+// Aggiunge (o toglie, se negativo) un importo al saldo in un colpo solo, senza
+// leggere prima il valore: così due scritture insieme non si sovrascrivono.
+export async function adjustAccountBalance(
+  supabase: SupabaseClient,
+  id: string,
+  delta: number
+): Promise<void> {
+  const { error } = await supabase.rpc('adjust_account_balance', { p_account: id, p_delta: delta });
+  if (error) throw error;
+}

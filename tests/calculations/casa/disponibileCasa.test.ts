@@ -1,0 +1,93 @@
+import { describe, it, expect } from 'vitest';
+import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
+import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
+import type { GoalForCalc } from '@/lib/calculations/types';
+
+const TODAY = new Date('2026-11-15T12:00:00Z');
+
+function conto(saldo: number, incluso = true) {
+  return { saldoAttuale: saldo, contaInDisponibile: incluso };
+}
+
+function obiettivo(importo: number): GoalForCalc {
+  return {
+    importoTarget: importo,
+    modalita: 'bloccato',
+    stato: 'aperto',
+    scadenza: null,
+    createdAt: '2026-01-01T00:00:00Z',
+    ricorrente: false,
+    frequenzaMesi: null,
+  };
+}
+
+describe('computeDisponibileCasa', () => {
+  it('A meno B: 1000 di saldo e 130 messi da parte danno 870', () => {
+    const r = computeDisponibileCasa({ conti: [conto(1000)], obiettivi: [obiettivo(130)], today: TODAY });
+    expect(r.valore).toBe(870);
+    expect(r.a).toBe(1000);
+    expect(r.b).toBe(130);
+  });
+
+  it('il cuscinetto si riempie: E 1500 con obiettivo 1321 dà valore 179 e cuscinetto 1321', () => {
+    const r = computeDisponibileCasa({ conti: [conto(1500)], obiettivi: [], today: TODAY, cuscinettoObiettivo: 1321 });
+    expect(r.valore).toBe(179);
+    expect(r.cuscinetto).toBe(1321);
+  });
+
+  it('E 1000 con obiettivo 1321 dà valore 0 e cuscinetto 1000', () => {
+    const r = computeDisponibileCasa({ conti: [conto(1000)], obiettivi: [], today: TODAY, cuscinettoObiettivo: 1321 });
+    expect(r.valore).toBe(0);
+    expect(r.cuscinetto).toBe(1000);
+  });
+
+  it('E negativo resta negativo e il cuscinetto è 0: -50', () => {
+    const r = computeDisponibileCasa({ conti: [conto(-50)], obiettivi: [], today: TODAY, cuscinettoObiettivo: 500 });
+    expect(r.valore).toBe(-50);
+    expect(r.cuscinetto).toBe(0);
+  });
+
+  it('crediti e daPagareMese si sottraggono: 1000, 45, 100 danno 855', () => {
+    const r = computeDisponibileCasa({
+      conti: [conto(1000)],
+      obiettivi: [],
+      today: TODAY,
+      crediti: 45,
+      daPagareMese: 100,
+    });
+    expect(r.valore).toBe(855);
+    expect(r.c).toBe(45);
+    expect(r.d).toBe(100);
+  });
+
+  it('gli ingredienti sommano al valore', () => {
+    const r = computeDisponibileCasa({
+      conti: [conto(1500)],
+      obiettivi: [obiettivo(130)],
+      today: TODAY,
+      crediti: 45,
+      daPagareMese: 100,
+      cuscinettoObiettivo: 300,
+    });
+    const somma = r.spiegazione.ingredienti.reduce((s, i) => s + i.valore, 0);
+    expect(somma).toBeCloseTo(r.valore, 2);
+    expect(r.spiegazione.valore).toBe(r.valore);
+    expect(r.spiegazione.ingredienti.some((i) => i.etichetta === 'Cuscinetto')).toBe(true);
+  });
+
+  it('nessuna parola vietata nella formula e nelle etichette', () => {
+    const r = computeDisponibileCasa({
+      conti: [conto(1500)],
+      obiettivi: [obiettivo(130)],
+      today: TODAY,
+      cuscinettoObiettivo: 300,
+    });
+    const testo = [r.spiegazione.formula, ...r.spiegazione.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
+    for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
+  });
+
+  it('un conto escluso dal disponibile non conta in A', () => {
+    const r = computeDisponibileCasa({ conti: [conto(1000), conto(500, false)], obiettivi: [], today: TODAY });
+    expect(r.a).toBe(1000);
+  });
+});

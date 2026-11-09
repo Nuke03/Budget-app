@@ -46,6 +46,7 @@ export interface Transaction {
   createdAt: string;
   pagataDaUserId?: string | null;
   origine?: 'riconciliazione' | null;
+  userId?: string;
 }
 
 export interface PivaSettings {

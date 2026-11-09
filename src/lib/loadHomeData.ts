@@ -8,6 +8,8 @@ import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { getMyHousehold } from '@/lib/data/households';
+import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import type { Account, BudgetGoal, Category } from '@/lib/types';
 
 export interface HomeData {
@@ -17,19 +19,24 @@ export interface HomeData {
   accounts: Account[];
   categories: Category[];
   goals: (BudgetGoal & { accantonato: number })[];
+  casa: CasaAggiunta | null;
 }
 
 // Tutto ciò che la home mostra: solo dati personali (scope di default).
 export async function loadHomeData(
   supabase: SupabaseClient,
-  today: Date = new Date()
+  today: Date = new Date(),
+  userId: string | null = null
 ): Promise<HomeData> {
-  const [accounts, categories, goals, ultimaEntrata] = await Promise.all([
+  const [accounts, categories, goals, ultimaEntrata, casaCorrente] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     getOpenGoals(supabase),
     getLastIncomeDate(supabase),
+    userId ? getMyHousehold(supabase, userId) : Promise.resolve(null),
   ]);
+
+  const casa = casaCorrente ? await loadCasaAggiunta(supabase, casaCorrente) : null;
 
   // Quanto di ogni obiettivo è già stato speso (transazioni esplicitamente
   // collegate): va sottratto da quanto resta riservato, altrimenti quei soldi
@@ -58,5 +65,6 @@ export async function loadHomeData(
     accounts,
     categories,
     goals: goalsWithAccantonato,
+    casa,
   };
 }
