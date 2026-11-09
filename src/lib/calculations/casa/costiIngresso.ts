@@ -6,6 +6,7 @@ import type { Spiegazione } from './spiegazioni';
 export const COSTI_INGRESSO = {
   depositoMesiMax: 3,
   registroAliquota: 0.02,
+  registroMinimo: 67,
   bollo: 32,
   agenziaIva: 0.22,
   allaccioPerUtenza: 100,
@@ -25,6 +26,8 @@ export interface VoceCosto {
 export const NOTE_COSTI = {
   deposito: 'Per legge al massimo 3 mensilità. Ve lo restituiscono a fine contratto, con gli interessi.',
   registro: 'Di solito si divide a metà con il proprietario. Se sceglie la cedolare secca non si paga.',
+  bollo: 'Marca da bollo sul contratto: spesso la paga l\'inquilino, ma si può dividere con il proprietario. Non si paga con la cedolare secca.',
+  allacci: 'Attivazione o subentro di luce, gas e acqua: circa 100 euro per utenza, è una stima.',
 };
 
 export const AVVISO_COSTI = 'Cifre indicative per orientarvi, non consulenza legale o fiscale.';
@@ -41,14 +44,17 @@ export function calcolaCostiIngresso(input: {
   arredo: number;
 }): VoceCosto[] {
   const canone = nonNegativo(input.canoneMensile);
-  const mesi = Math.min(Math.max(Math.round(input.mesiDeposito), 1), COSTI_INGRESSO.depositoMesiMax);
+  const mesiGrezzi = Number.isFinite(input.mesiDeposito) ? input.mesiDeposito : 1;
+  const mesi = Math.min(Math.max(Math.round(mesiGrezzi), 1), COSTI_INGRESSO.depositoMesiMax);
   const utenze = Math.round(nonNegativo(input.numeroUtenze));
   const arredo = arrotonda2(nonNegativo(input.arredo));
 
   const depositoImporto = arrotonda2(canone * mesi);
 
   const annuo = arrotonda2(canone * 12);
-  const imposta = arrotonda2(annuo * COSTI_INGRESSO.registroAliquota);
+  const impostaPercentuale = arrotonda2(annuo * COSTI_INGRESSO.registroAliquota);
+  const minimoApplicato = canone > 0 && impostaPercentuale < COSTI_INGRESSO.registroMinimo;
+  const imposta = minimoApplicato ? COSTI_INGRESSO.registroMinimo : impostaPercentuale;
   const quotaInquilino = arrotonda2(imposta / 2);
   const registroImporto = input.cedolareSecca ? 0 : quotaInquilino;
 
@@ -83,10 +89,12 @@ export function calcolaCostiIngresso(input: {
           }
         : {
             valore: registroImporto,
-            formula: `Imposta del 2% su ${formatNumero(annuo)} euro di canone in un anno: ${formatNumero(imposta)} euro, diviso a metà: ${formatNumero(quotaInquilino)} euro.`,
+            formula: minimoApplicato
+              ? `Imposta minima di ${formatNumero(imposta)} euro, perché il 2% su ${formatNumero(annuo)} euro di canone in un anno ne fa meno: diviso a metà, ${formatNumero(quotaInquilino)} euro.`
+              : `Imposta del 2% su ${formatNumero(annuo)} euro di canone in un anno: ${formatNumero(imposta)} euro, diviso a metà: ${formatNumero(quotaInquilino)} euro.`,
             ingredienti: [
               { etichetta: 'Canone di un anno', valore: annuo },
-              { etichetta: 'Imposta al 2%', valore: imposta },
+              { etichetta: minimoApplicato ? 'Imposta minima' : 'Imposta al 2%', valore: imposta },
               { etichetta: "Quota dell'inquilino", valore: quotaInquilino },
             ],
           },
@@ -95,7 +103,7 @@ export function calcolaCostiIngresso(input: {
       chiave: 'bollo',
       nome: 'Imposta di bollo',
       importo: bolloImporto,
-      nota: '',
+      nota: NOTE_COSTI.bollo,
       spiegazione: input.cedolareSecca
         ? { valore: 0, formula: 'Con la cedolare secca non si paga il bollo.', ingredienti: [] }
         : {
@@ -124,7 +132,7 @@ export function calcolaCostiIngresso(input: {
       chiave: 'allacci',
       nome: 'Allacci delle utenze',
       importo: allacciImporto,
-      nota: '',
+      nota: NOTE_COSTI.allacci,
       spiegazione: {
         valore: allacciImporto,
         formula: `${utenze} ${utenze === 1 ? 'utenza' : 'utenze'} a ${formatNumero(COSTI_INGRESSO.allaccioPerUtenza)} euro ciascuna: ${formatNumero(allacciImporto)} euro.`,
@@ -160,7 +168,7 @@ export function anteprimaGraduale(input: {
   oggi: string;
 }): { mesi: number; quotaMensile: number } {
   const mesi = Math.max(1, differenceInCalendarMonths(parseISO(input.scadenza), parseISO(input.oggi)));
-  return { mesi, quotaMensile: arrotonda2(input.importo / mesi) };
+  return { mesi, quotaMensile: arrotonda2(nonNegativo(input.importo) / mesi) };
 }
 
 // Il canone si legge dalla voce 'Affitto' del piano, cercata per nome o per nome della categoria, senza distinguere maiuscole.

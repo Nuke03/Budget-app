@@ -56,6 +56,11 @@ describe('calcolaCostiIngresso', () => {
     expect(voce(calcolaCostiIngresso({ ...base, mesiDeposito: 0 }), 'deposito').importo).toBe(750);
   });
 
+  it('mesi di deposito non finiti (NaN, Infinity) diventano 1', () => {
+    expect(voce(calcolaCostiIngresso({ ...base, mesiDeposito: NaN }), 'deposito').importo).toBe(750);
+    expect(voce(calcolaCostiIngresso({ ...base, mesiDeposito: Infinity }), 'deposito').importo).toBe(750);
+  });
+
   it('registro: 2% del canone annuo, diviso a metà', () => {
     const registro = voce(calcolaCostiIngresso(base), 'registro');
     expect(registro.spiegazione.valore).toBe(90);
@@ -65,6 +70,23 @@ describe('calcolaCostiIngresso', () => {
       { etichetta: 'Imposta al 2%', valore: 180 },
       { etichetta: "Quota dell'inquilino", valore: 90 },
     ]);
+  });
+
+  it('registro: minimo 67 euro, quota inquilino 33,50 a canone 250', () => {
+    const registro = voce(calcolaCostiIngresso({ ...base, canoneMensile: 250 }), 'registro');
+    expect(registro.importo).toBe(33.5);
+    expect(registro.spiegazione.valore).toBe(33.5);
+    expect(registro.spiegazione.ingredienti).toEqual([
+      { etichetta: 'Canone di un anno', valore: 3000 },
+      { etichetta: 'Imposta minima', valore: 67 },
+      { etichetta: "Quota dell'inquilino", valore: 33.5 },
+    ]);
+  });
+
+  it('registro: canone 0 dà 0, senza minimo', () => {
+    const registro = voce(calcolaCostiIngresso({ ...base, canoneMensile: 0 }), 'registro');
+    expect(registro.importo).toBe(0);
+    expect(registro.spiegazione.valore).toBe(0);
   });
 
   it('gli ingredienti di ogni voce sommano al valore', () => {
@@ -85,6 +107,14 @@ describe('calcolaCostiIngresso', () => {
     expect(voce(voci, 'registro').nota).toBe(
       'Di solito si divide a metà con il proprietario. Se sceglie la cedolare secca non si paga.',
     );
+    expect(voce(voci, 'bollo').nota).toBe(
+      "Marca da bollo sul contratto: spesso la paga l'inquilino, ma si può dividere con il proprietario. Non si paga con la cedolare secca.",
+    );
+    expect(voce(voci, 'allacci').nota).toBe(
+      'Attivazione o subentro di luce, gas e acqua: circa 100 euro per utenza, è una stima.',
+    );
+    expect(voce(voci, 'agenzia').nota).toBe('');
+    expect(voce(voci, 'arredo').nota).toBe('');
     expect(AVVISO_COSTI).toBe('Cifre indicative per orientarvi, non consulenza legale o fiscale.');
     const testi = [...Object.values(NOTE_COSTI), AVVISO_COSTI, ...voci.map((v) => v.nota), ...voci.map((v) => v.nome)];
     for (const testo of testi) {
@@ -123,6 +153,13 @@ describe('anteprimaGraduale', () => {
     expect(anteprimaGraduale({ importo: 1500, scadenza: '2027-03-15', oggi: '2026-11-09' })).toEqual({
       mesi: 4,
       quotaMensile: 375,
+    });
+  });
+
+  it('importo negativo trattato come 0', () => {
+    expect(anteprimaGraduale({ importo: -300, scadenza: '2027-03-15', oggi: '2026-11-09' })).toEqual({
+      mesi: 4,
+      quotaMensile: 0,
     });
   });
 
