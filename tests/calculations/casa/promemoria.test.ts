@@ -164,3 +164,47 @@ describe('controllo del saldo dopo 14 giorni', () => {
     expect(computeReminders(base, me, '2026-11-20').map((p) => p.tipo)).toEqual(['versamento']);
   });
 });
+
+describe('check-in', () => {
+  const conCheckin = (mese: string | null): StatoPromemoria => ({ ...base, giornoVersamento: null, checkin: { mese } });
+
+  it('check-in pronto', () => {
+    const r = computeReminders(conCheckin('2026-10-01'), me, '2026-11-09');
+    expect(r).toHaveLength(1);
+    expect(r[0].id).toBe('checkin:2026-10-01');
+    expect(r[0].tipo).toBe('checkin');
+    expect(r[0].testo).toBe("Il check-in di ottobre è pronto: due minuti per vedere com'è andato il mese.");
+    expect(r[0].azione).toEqual({ tipo: 'checkin', etichetta: 'Apri', href: '/casa/controllo' });
+  });
+
+  it('mese null: nessun promemoria', () => {
+    expect(computeReminders(conCheckin(null), me, '2026-11-09')).toEqual([]);
+  });
+
+  it('viene dopo i debiti e prima del controllo del saldo', () => {
+    const r = computeReminders(
+      {
+        ...conCheckin('2026-10-01'),
+        debiti: [debito('u2', 'u1')],
+        controllo: { ultimo: null, riferimento: '2026-01-01', haConto: true },
+      },
+      me,
+      '2026-11-09'
+    );
+    expect(r.map((p) => p.tipo)).toEqual(['debito', 'checkin', 'controllo']);
+  });
+
+  it('statoPromemoria calcola il mese con ultimoCheckinMese', () => {
+    const input = {
+      piano: null,
+      righe: [{ mese: '2026-09-01', atteso: 1, versato: 1, mancano: 0 }, { mese: '2026-10-01', atteso: 1, versato: 1, mancano: 0 }],
+      oggi: '2026-11-09',
+      nomi: {},
+      crediti: {},
+      debiti: [],
+    };
+    expect(statoPromemoria({ ...input, ultimoCheckinMese: '2026-09-01' }).checkin).toEqual({ mese: '2026-10-01' });
+    expect(statoPromemoria({ ...input, ultimoCheckinMese: '2026-10-01' }).checkin).toEqual({ mese: null });
+    expect(statoPromemoria(input).checkin).toBeUndefined();
+  });
+});

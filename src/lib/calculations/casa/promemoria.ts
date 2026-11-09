@@ -3,6 +3,7 @@ import type { PlanBundle } from '../../data/householdPlans';
 import type { DebitoMembro } from './debitiMembri';
 import type { RigaMese } from './versamenti';
 import { meseRomaISO } from './oggi';
+import { meseDaControllare } from './checkin';
 
 export interface StatoPromemoria {
   giornoVersamento: number | null;
@@ -14,6 +15,8 @@ export interface StatoPromemoria {
   // Il controllo del saldo: ultimo è la data dell'ultimo controllo (null se mai fatto), riferimento
   // il giorno da cui si conta se non c'è mai stato. Senza conto il promemoria non compare.
   controllo?: { ultimo: string | null; riferimento: string; haConto: boolean };
+  // Il check-in: mese è l'ultimo mese chiuso ancora da controllare, null se non c'è niente da fare.
+  checkin?: { mese: string | null };
 }
 
 export interface AzionePromemoria {
@@ -65,6 +68,7 @@ export function statoPromemoria(input: {
   crediti: Record<string, number>;
   debiti: DebitoMembro[];
   controllo?: StatoPromemoria['controllo'];
+  ultimoCheckinMese?: string | null;
 }): StatoPromemoria {
   const mese = meseRomaISO(new Date(`${input.oggi}T12:00:00Z`));
   const riga = input.righe.find((r) => r.mese === mese) ?? null;
@@ -76,6 +80,12 @@ export function statoPromemoria(input: {
     crediti: input.crediti,
     debiti: input.debiti,
     controllo: input.controllo,
+    checkin:
+      input.ultimoCheckinMese === undefined
+        ? undefined
+        : {
+            mese: meseDaControllare({ oggi: input.oggi, righe: input.righe, ultimoCheckinMese: input.ultimoCheckinMese }),
+          },
   };
 }
 
@@ -132,6 +142,16 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
         azione: null,
       });
     }
+  }
+
+  const meseCheckin = stato.checkin?.mese ?? null;
+  if (meseCheckin) {
+    out.push({
+      id: `checkin:${meseCheckin}`,
+      tipo: 'checkin',
+      testo: `Il check-in di ${nomeMese(meseCheckin)} è pronto: due minuti per vedere com'è andato il mese.`,
+      azione: { tipo: 'checkin', etichetta: 'Apri', href: '/casa/controllo' },
+    });
   }
 
   const controllo = stato.controllo;
