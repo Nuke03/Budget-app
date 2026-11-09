@@ -25,12 +25,12 @@ export function computeDaPagareMese(input: {
   spese: Pick<Transaction, 'tipo' | 'importo' | 'data' | 'categoriaId'>[];
   mese: string;
   // Obiettivi aperti: sono già contati tra i soldi messi da parte (B).
-  obiettiviApertiIds?: string[];
+  obiettiviApertiIds: string[];
 }): number {
   const meseChiave = input.mese.slice(0, 7);
   // Le voci legate a un obiettivo aperto sono già contate tra i soldi messi da parte;
   // quelle legate a un obiettivo chiuso o scaduto restano da pagare.
-  const aperti = new Set(input.obiettiviApertiIds ?? []);
+  const aperti = new Set(input.obiettiviApertiIds);
   // Più voci nella stessa categoria condividono la stessa spesa: si sottrae una volta sola.
   const previstoPerCategoria = new Map<string, number>();
   for (const v of input.voci) {

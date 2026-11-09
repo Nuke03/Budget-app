@@ -6,6 +6,7 @@ import { getPlanForMonth } from '@/lib/data/householdPlans';
 import { loadCasaData } from '@/lib/loadCasaData';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoDelMese } from '@/lib/calculations/casa/versamenti';
+import { statoVociDaParte } from '@/lib/calculations/casa/fondi';
 import { CasaHome } from './CasaHome';
 import { CasaSenzaCasa } from './CasaSenzaCasa';
 
@@ -36,6 +37,12 @@ export default async function CasaPage() {
         righe: dati.righe,
         debiti: dati.debiti,
         crediti: dati.crediti,
+        fondiBollette: dati.obiettiviConAccantonato
+          .filter((g) => g.ricorrente)
+          .map((g) => ({ id: g.id, nome: g.nome, accantonato: g.accantonato, importoTarget: g.importoTarget })),
+        bolletteDaMettere: piano
+          ? statoVociDaParte(piano.items, dati.obiettiviConAccantonato).filter((v) => v.stato === 'da_mettere').length
+          : 0,
       }
     : undefined;
   return <CasaHome casa={casa} piano={piano} meseCorrente={meseCorrente} finanze={finanze} />;

@@ -175,6 +175,26 @@ describe('CasaHome', () => {
       assertNessunaParolaVietata(container);
     });
 
+    it('da parte per le bollette: i fondi aperti e quante voci mancano, con il link', () => {
+      const fondiBollette = [{ id: 'g1', nome: 'TARI', accantonato: 100, importoTarget: 300 }];
+      const { container, rerender } = render(
+        <CasaHome casa={casa} finanze={{ ...finanze([conto]), fondiBollette, bolletteDaMettere: 3 }} />
+      );
+      expect(screen.getByRole('heading', { name: 'Da parte per le bollette' })).toBeInTheDocument();
+      expect(screen.getByText('TARI')).toBeInTheDocument();
+      expect(screen.getByText('100 di 300 €')).toBeInTheDocument();
+      expect(screen.getByText('3 bollette non sono ancora messe da parte')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Vai a Da parte' })).toHaveAttribute('href', '/casa/da-parte');
+      assertNessunaParolaVietata(container);
+      rerender(<CasaHome casa={casa} finanze={{ ...finanze([conto]), fondiBollette, bolletteDaMettere: 1 }} />);
+      expect(screen.getByText('1 bolletta non è ancora messa da parte')).toBeInTheDocument();
+    });
+
+    it("senza fondi e senza voci da mettere la sezione non c'è", () => {
+      render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), fondiBollette: [], bolletteDaMettere: 0 }} />);
+      expect(screen.queryByRole('heading', { name: 'Da parte per le bollette' })).not.toBeInTheDocument();
+    });
+
     it('senza piano in vigore niente riga del cuscinetto', () => {
       render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), cuscinetto: null }} />);
       expect(screen.queryByText(/Cuscinetto \d/)).not.toBeInTheDocument();

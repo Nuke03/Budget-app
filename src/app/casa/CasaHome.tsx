@@ -30,6 +30,9 @@ export interface FinanzeCasa {
   righe?: Record<string, RigaMese[]>;
   debiti?: DebitoMembro[];
   crediti?: Record<string, number>;
+  // I fondi aperti per le bollette e quante voci del piano non sono ancora messe da parte.
+  fondiBollette?: { id: string; nome: string; accantonato: number; importoTarget: number }[];
+  bolletteDaMettere?: number;
 }
 
 export function CasaHome({
@@ -157,6 +160,34 @@ export function CasaHome({
               Vedi tutte
             </Link>
           </section>
+
+          {(finanze.fondiBollette?.length ?? 0) > 0 || (finanze.bolletteDaMettere ?? 0) > 0 ? (
+            <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
+              <h2 className="text-base font-bold">Da parte per le bollette</h2>
+              {(finanze.fondiBollette?.length ?? 0) > 0 ? (
+                <ul className="flex flex-col gap-1.5">
+                  {finanze.fondiBollette!.map((f) => (
+                    <li key={f.id} className="flex justify-between gap-3 text-sm">
+                      <span>{f.nome}</span>
+                      <span className="font-semibold tabular-nums">
+                        {`${formatNumero(f.accantonato)} di ${formatNumero(f.importoTarget)} €`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {(finanze.bolletteDaMettere ?? 0) > 0 ? (
+                <p className="text-sm">
+                  {finanze.bolletteDaMettere === 1
+                    ? '1 bolletta non è ancora messa da parte'
+                    : `${finanze.bolletteDaMettere} bollette non sono ancora messe da parte`}
+                </p>
+              ) : null}
+              <Link href="/casa/da-parte" className="text-sm font-semibold text-brand-dark">
+                Vai a Da parte
+              </Link>
+            </section>
+          ) : null}
         </>
       ) : null}
 

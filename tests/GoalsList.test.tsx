@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GoalsList } from '@/app/goals/GoalsList';
+import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 describe('GoalsList', () => {
   it('mostra la quota da spostare questo mese per un obiettivo dilazionato', () => {
@@ -186,5 +187,35 @@ describe('GoalsList', () => {
 
     render(<GoalsList goals={[goal]} categories={[]} />);
     expect(screen.queryByLabelText('Chiudi obiettivo')).not.toBeInTheDocument();
+  });
+});
+
+describe('GoalsList variante casa', () => {
+  const fondo = {
+    id: 'g1', nome: 'TARI', importoTarget: 300, modalita: 'dilazionato' as const, scadenza: '2027-03-31',
+    categoriaId: null, ricorrente: true, frequenzaMesi: 12, stato: 'aperto' as const,
+    createdAt: '2026-11-09T00:00:00Z', quotaMensile: 25, accantonato: 100,
+    spiegazione: { valore: 100, formula: 'Bolletta di 300 euro in 12 mesi.', ingredienti: [] },
+  };
+
+  it('etichetta Da parte, niente Bloccato né Dilazionato', () => {
+    const { container } = render(<GoalsList goals={[fondo]} categories={[]} variante="casa" />);
+    expect(screen.getByText('Da parte')).toBeInTheDocument();
+    expect(screen.getByText('100 di 300 €')).toBeInTheDocument();
+    expect(screen.getByText('25 € al mese')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Come si calcola?' })).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('vuota: Ancora niente messo da parte.', () => {
+    render(<GoalsList goals={[]} categories={[]} variante="casa" />);
+    expect(screen.getByText('Ancora niente messo da parte.')).toBeInTheDocument();
+  });
+
+  it('la variante di default resta com\'è', () => {
+    render(<GoalsList goals={[fondo]} categories={[]} />);
+    expect(screen.getByText('Dilazionato')).toBeInTheDocument();
+    render(<GoalsList goals={[]} categories={[]} />);
+    expect(screen.getByText('Nessun obiettivo aperto.')).toBeInTheDocument();
   });
 });

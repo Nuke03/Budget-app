@@ -105,16 +105,16 @@ describe('computeDaPagareMese', () => {
 
   it('toglie le spese già fatte nel mese', () => {
     const spese = [spesa('aff', 750, '2026-11-03'), spesa('spesa', 64.2, '2026-11-08'), spesa('spesa', 50, '2026-10-30')];
-    expect(computeDaPagareMese({ voci, spese, mese })).toBe(235.8);
+    expect(computeDaPagareMese({ voci, spese, mese , obiettiviApertiIds: [] })).toBe(235.8);
   });
 
   it('non va sotto zero se si è speso oltre il previsto', () => {
     const spese = [spesa('aff', 750, '2026-11-03'), spesa('spesa', 400, '2026-11-08')];
-    expect(computeDaPagareMese({ voci, spese, mese })).toBe(0);
+    expect(computeDaPagareMese({ voci, spese, mese , obiettiviApertiIds: [] })).toBe(0);
   });
 
   it('le voci con frequenza maggiore di 1 non contano', () => {
-    expect(computeDaPagareMese({ voci: [voci[2]], spese: [], mese })).toBe(0);
+    expect(computeDaPagareMese({ voci: [voci[2]], spese: [], mese , obiettiviApertiIds: [] })).toBe(0);
   });
 
   it('le voci legate a un obiettivo aperto non contano (sono già in B)', () => {
@@ -132,12 +132,12 @@ describe('computeDaPagareMese', () => {
       { categoriaId: 'spesa', importoMensile: 300, frequenzaMesi: 1 },
       { categoriaId: 'spesa', importoMensile: 100, frequenzaMesi: 1 },
     ];
-    expect(computeDaPagareMese({ voci: v, spese: [spesa('spesa', 150, '2026-11-08')], mese })).toBe(250);
+    expect(computeDaPagareMese({ voci: v, spese: [spesa('spesa', 150, '2026-11-08')], mese , obiettiviApertiIds: [] })).toBe(250);
   });
 
   it('le entrate non contano', () => {
     const spese = [spesa('aff', 750, '2026-11-03', 'income')];
-    expect(computeDaPagareMese({ voci: [voci[0]], spese, mese })).toBe(750);
+    expect(computeDaPagareMese({ voci: [voci[0]], spese, mese , obiettiviApertiIds: [] })).toBe(750);
   });
 });
 

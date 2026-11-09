@@ -195,6 +195,15 @@ describe('loadCasaData disponibile completo', () => {
     expect(d.cuscinetto).toBeNull();
   });
 
+  it('una voce legata a un obiettivo CHIUSO resta in D', async () => {
+    const s = { ...seed(), ...pianoDal('2026-10-01') };
+    s.budget_goals = [...s.budget_goals, { ...obiettivo('g-chiuso', 'B', 'H1', 300), stato: 'chiuso' }];
+    s.household_plan_items = [{ ...s.household_plan_items[0], goal_id: 'g-chiuso' as never }];
+    const db = createFakeDb(s as never, { userId: 'A', membri: MEMBRI });
+    const d = await loadCasaData(db.client, casaA, TODAY);
+    expect(d.disponibile.d).toBe(280);
+  });
+
   it('mezzanotte italiana', async () => {
     const spesa = {
       id: 't-nov', user_id: 'B', household_id: 'H1', tipo: 'expense', importo: 50, data: '2026-11-01',
