@@ -283,7 +283,7 @@ describe('HomeDashboard', () => {
         },
       };
       const { container } = render(<HomeDashboard {...base} casa={conConto} oggi="2026-11-03" />);
-      expect(screen.getByRole('link', { name: /controllo veloce del conto comune/ })).toHaveAttribute('href', '/casa');
+      expect(screen.getByRole('link', { name: /controllo veloce del conto comune/ })).toHaveAttribute('href', '/casa/controllo/conto');
       assertNessunaParolaVietata(container);
     });
 

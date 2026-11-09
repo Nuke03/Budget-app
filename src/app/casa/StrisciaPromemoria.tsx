@@ -50,7 +50,7 @@ export function StrisciaPromemoria({
   if (compatta) {
     return (
       <Link
-        href="/casa"
+        href={visibili[0].azione?.tipo === 'controllo' && visibili[0].azione.href ? visibili[0].azione.href : '/casa'}
         className="block rounded-[var(--radius-md)] bg-surface px-4 py-3 text-sm shadow-[var(--shadow-card)]"
       >
         {visibili[0].testo}

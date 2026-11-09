@@ -1,5 +1,15 @@
 import { formatNumero } from '../../format';
-import type { Transaction } from '../../types';
+import type { Account, Transaction } from '../../types';
+import { oggiRomaISO } from './oggi';
+
+// Da quando si conta il promemoria se non c'è mai stato un controllo: il più tardi fra l'ingresso
+// in casa e l'apertura del conto comune, in giorni di Roma.
+export function riferimentoControllo(joinedAt: string, conti: Pick<Account, 'createdAt'>[]): string {
+  const giorni = [joinedAt, ...conti.map((c) => c.createdAt)]
+    .filter((x): x is string => !!x)
+    .map((x) => oggiRomaISO(new Date(x)));
+  return giorni.reduce((a, b) => (b > a ? b : a));
+}
 
 export type EsitoControllo = 'torna' | 'mancano' | 'in_piu';
 

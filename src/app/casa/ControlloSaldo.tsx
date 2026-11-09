@@ -8,7 +8,7 @@ import { messaggioErroreControllo, recordBalanceCheck } from '@/lib/data/balance
 import { valutaControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
-import { formatNumero } from '@/lib/format';
+import { formatDateIt, formatNumero } from '@/lib/format';
 import type { Account } from '@/lib/types';
 import { Campo, CLASSE_CAMPO, ErroreMovimento, SelezioneConto } from './CampiMovimento';
 import { ComeSiCalcola } from './ComeSiCalcola';
@@ -23,6 +23,7 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
   const [contoId, setContoId] = useState(conti[0]?.id ?? '');
   const [testo, setTesto] = useState('');
   const [data, setData] = useState(() => oggiRomaISO());
+  const [cambiaData, setCambiaData] = useState(false);
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
   const [saldoFinale, setSaldoFinale] = useState<number | null>(null);
@@ -68,7 +69,8 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
         accountId: conto.id,
         saldoDichiarato: dichiarato,
         data,
-        creaMovimento: esito.esito !== 'torna',
+        // Decide la funzione del database: registra la differenza solo se è di almeno 1 euro.
+        creaMovimento: true,
       });
       setSaldoFinale(dichiarato);
       router.refresh();
@@ -107,9 +109,18 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
           className={CLASSE_CAMPO}
         />
       </Campo>
-      <Campo etichetta="Data">
-        <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={CLASSE_CAMPO} />
-      </Campo>
+      {cambiaData ? (
+        <Campo etichetta="Data">
+          <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={CLASSE_CAMPO} />
+        </Campo>
+      ) : (
+        <p className="text-sm text-muted">
+          {data === oggiRomaISO() ? 'Oggi' : formatDateIt(data)}{' '}
+          <button type="button" onClick={() => setCambiaData(true)} className={CLASSE_LINK}>
+            Cambia data
+          </button>
+        </p>
+      )}
 
       {esito && dichiarato !== null ? (
         <div className="flex flex-col gap-2">
@@ -118,10 +129,12 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
             <ComeSiCalcola
               spiegazione={{
                 valore: esito.differenza,
-                formula:
+                formula: `In banca meno quello che risulta nell'app.
+${
                   esito.esito === 'mancano'
                     ? "Se in banca c'è meno di quanto registrato, la differenza sono spese non registrate."
-                    : "Se in banca c'è più di quanto registrato, la differenza è un'entrata non registrata.",
+                    : "Se in banca c'è più di quanto registrato, la differenza è un'entrata non registrata."
+                }`,
                 ingredienti: [
                   { etichetta: "Saldo nell'app", valore: conto.saldoAttuale },
                   { etichetta: 'Saldo in banca', valore: dichiarato },

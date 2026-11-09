@@ -9,6 +9,7 @@ export interface Account {
   saldoAttuale: number;
   contaInDisponibile: boolean;
   targetSaldo: number | null;
+  createdAt?: string;
 }
 
 export interface Category {

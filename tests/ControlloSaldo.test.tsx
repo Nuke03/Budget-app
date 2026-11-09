@@ -52,6 +52,24 @@ describe('ControlloSaldo', () => {
     assertNessunaParolaVietata(container);
   });
 
+  it('mostra Oggi e permette di cambiare la data', async () => {
+    monta();
+    expect(screen.getByText(/^Oggi/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Data')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cambia data' }));
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-11-05' } });
+    scrivi('940');
+    fireEvent.click(screen.getByRole('button', { name: 'Segna come spese non registrate' }));
+    await waitFor(() => expect(recordBalanceCheck).toHaveBeenCalled());
+    expect(vi.mocked(recordBalanceCheck).mock.calls[0][1].data).toBe('2026-11-05');
+  });
+
+  it('migliaia all italiana: 1.020 vale 1020', async () => {
+    monta();
+    scrivi('1.020');
+    expect(screen.getByText('Torna tutto.')).toBeInTheDocument();
+  });
+
   it('virgola decimale', async () => {
     monta();
     scrivi('940,5');
@@ -66,7 +84,7 @@ describe('ControlloSaldo', () => {
     expect(screen.getByText('Torna tutto.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await waitFor(() => expect(recordBalanceCheck).toHaveBeenCalled());
-    expect(vi.mocked(recordBalanceCheck).mock.calls[0][1]).toMatchObject({ saldoDichiarato: 1020.4, creaMovimento: false });
+    expect(vi.mocked(recordBalanceCheck).mock.calls[0][1]).toMatchObject({ saldoDichiarato: 1020.4, creaMovimento: true });
   });
 
   it('in più', async () => {
@@ -85,6 +103,7 @@ describe('ControlloSaldo', () => {
     scrivi('940');
     expect(screen.getByRole('link', { name: 'Ho dimenticato di registrare qualcosa' })).toHaveAttribute('href', '/casa');
     fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
+    expect(screen.getByText("In banca meno quello che risulta nell'app.")).toBeInTheDocument();
     expect(screen.getByText('Differenza')).toBeInTheDocument();
   });
 

@@ -8,6 +8,7 @@ interface AccountRow {
   saldo_attuale: number;
   conta_in_disponibile: boolean;
   target_saldo: number | null;
+  created_at?: string;
 }
 
 function mapRow(row: AccountRow): Account {
@@ -17,12 +18,13 @@ function mapRow(row: AccountRow): Account {
     saldoAttuale: row.saldo_attuale,
     contaInDisponibile: row.conta_in_disponibile,
     targetSaldo: row.target_saldo,
+    ...(row.created_at ? { createdAt: row.created_at } : {}),
   };
 }
 
 export async function getAccounts(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<Account[]> {
   const { data, error } = await applyScope(
-    supabase.from('accounts').select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo'),
+    supabase.from('accounts').select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo, created_at'),
     scope
   ).order('nome');
 

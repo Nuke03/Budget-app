@@ -11,6 +11,7 @@ import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Account, Transaction } from '@/lib/types';
 import { ComeSiCalcola } from './ComeSiCalcola';
@@ -73,7 +74,7 @@ export function CasaHome({
           debiti: finanze.debiti ?? [],
           controllo: {
             ultimo: finanze.ultimoControllo ?? null,
-            riferimento: casa.me.joinedAt.slice(0, 10),
+            riferimento: riferimentoControllo(casa.me.joinedAt, finanze.conti),
             haConto: finanze.conti.length > 0,
           },
         }),

@@ -211,6 +211,12 @@ describe('CasaHome', () => {
       assertNessunaParolaVietata(container);
     });
 
+    it('entrato da tempo, conto aperto oggi, mai controllato: nessun promemoria del controllo', () => {
+      const contoNuovo = { ...conto, createdAt: '2026-11-09T08:00:00Z' };
+      render(<CasaHome casa={casa} oggi="2026-11-09" finanze={finanze([contoNuovo])} />);
+      expect(screen.queryByText(/controllo veloce/)).not.toBeInTheDocument();
+    });
+
     it('senza conto comune mostra il modulo e crea il conto', async () => {
       render(<CasaHome casa={casa} finanze={finanze([])} />);
       expect(screen.getByText('Aprite il conto comune qui')).toBeInTheDocument();

@@ -8,6 +8,7 @@ import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { ComeSiCalcola } from './casa/ComeSiCalcola';
 import { StrisciaPromemoria } from './casa/StrisciaPromemoria';
 import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
 import type { CasaPerHome } from '@/lib/loadHomeData';
@@ -80,7 +81,7 @@ export function HomeDashboard({
           debiti: stato.debiti,
           controllo: {
             ultimo: stato.controlli.ultimoControllo,
-            riferimento: stato.me.joinedAt.slice(0, 10),
+            riferimento: riferimentoControllo(stato.me.joinedAt, casa?.aggiunta?.conti ?? []),
             haConto: (casa?.aggiunta?.conti.length ?? 0) > 0,
           },
         }),
