@@ -13,9 +13,11 @@ import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
 import type { Account, BudgetGoal, Category } from '@/lib/types';
 
+// Le due parti si leggono a parte: se manca lo stato, la casa esiste ma il disponibile
+// personale non tiene conto della quota (la home lo dice).
 export interface CasaPerHome {
-  aggiunta: CasaAggiunta;
-  stato: CasaStato;
+  aggiunta: CasaAggiunta | null;
+  stato: CasaStato | null;
 }
 
 export interface HomeData {
@@ -28,25 +30,27 @@ export interface HomeData {
   casa: CasaPerHome | null;
 }
 
-// La parte di casa non deve mai rompere la home personale: se non si riesce a
-// leggerla, la home si apre senza il selettore Casa e senza riserva.
+// La parte di casa non deve mai rompere la home personale. Se non si legge la casa corrente
+// si apre come senza casa; se si legge ma non il suo stato, si tiene il numero personale e
+// si segnala che la quota non è inclusa.
 async function casaOpzionale(
   supabase: SupabaseClient,
   userId: string | null,
   now: Date
 ): Promise<CasaPerHome | null> {
   if (!userId) return null;
+  let corrente;
   try {
-    const corrente = await getMyHousehold(supabase, userId);
-    if (!corrente) return null;
-    const [aggiunta, stato] = await Promise.all([
-      loadCasaAggiunta(supabase, corrente),
-      loadCasaStato(supabase, corrente, now),
-    ]);
-    return { aggiunta, stato };
+    corrente = await getMyHousehold(supabase, userId);
   } catch {
     return null;
   }
+  if (!corrente) return null;
+  const [aggiunta, stato] = await Promise.all([
+    loadCasaAggiunta(supabase, corrente).catch(() => null),
+    loadCasaStato(supabase, corrente, now).catch(() => null),
+  ]);
+  return { aggiunta, stato };
 }
 
 // Tutto ciò che la home mostra: solo dati personali (scope di default).
@@ -75,8 +79,8 @@ export async function loadHomeData(
     accounts,
     goalsConSpeso,
     today,
-    casa?.stato.riservaVersamento ?? 0,
-    casa?.stato.debitoDaRestituire ?? 0
+    casa?.stato?.riservaVersamento ?? 0,
+    casa?.stato?.debitoDaRestituire ?? 0
   );
   const dataTarget = stimaDataTarget(ultimaEntrata, today);
   const margineGiornaliero = computeMargineGiornaliero(disponibileLibero, dataTarget, today);

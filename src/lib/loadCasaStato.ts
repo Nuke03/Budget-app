@@ -8,7 +8,7 @@ import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
 import { oggiRomaISO, meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { riservaPersonale } from '@/lib/calculations/casa/riservoVersamento';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
-import type { RigaMese } from '@/lib/calculations/casa/versamenti';
+import { pianoDelMese, type RigaMese } from '@/lib/calculations/casa/versamenti';
 import type { HouseholdMember } from '@/lib/types';
 
 export interface CasaStato {
@@ -28,12 +28,6 @@ export interface CasaStato {
 }
 
 const MESI_ARRETRATI_MASSIMI = 2;
-
-function pianoDelMese(piani: PlanBundle[], mese: string): PlanBundle | null {
-  let attuale: PlanBundle | null = null;
-  for (const p of piani) if (p.plan.validoDal <= mese) attuale = p;
-  return attuale ?? piani[0] ?? null;
-}
 
 // Quanto la casa pesa sul disponibile personale di chi guarda. I registri sono quelli di
 // calcolaRegistriCasa, gli stessi della pagina Casa.

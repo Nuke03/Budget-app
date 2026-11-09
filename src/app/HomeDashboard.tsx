@@ -83,6 +83,7 @@ export function HomeDashboard({
         oggi
       )
     : [];
+  const statoNonLetto = !!casa && !casa.stato;
   const haRiserva = righeDaVersare.length > 0 || debitiMiei.length > 0;
 
   return (
@@ -141,6 +142,11 @@ export function HomeDashboard({
               <span className="tabular-nums">-{formatEuro(d.importo)}</span>
             </div>
           ))}
+          {statoNonLetto && (
+            <p className="mt-1 border-t border-black/5 pt-2 text-xs text-muted">
+              Non riesco a leggere la casa: il disponibile non tiene conto della quota.
+            </p>
+          )}
           {haRiserva && stato && (
             <ComeSiCalcola
               spiegazione={spiegaRiserva({ righe: stato.righe, debitoDaRestituire: stato.debitoDaRestituire })}

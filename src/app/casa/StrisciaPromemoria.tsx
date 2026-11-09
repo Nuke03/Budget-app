@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import type { AzionePromemoria, Promemoria } from '@/lib/calculations/casa/promemoria';
+import { MASSIMO_PROMEMORIA, type AzionePromemoria, type Promemoria } from '@/lib/calculations/casa/promemoria';
 
 const chiave = (id: string, oggi: string): string => `promemoria:${id}:${oggi}`;
 
@@ -44,7 +44,7 @@ export function StrisciaPromemoria({
   );
   const nascosti = new Set([...daOra, ...(memoria ? memoria.split('|') : [])]);
 
-  const visibili = promemoria.filter((p) => !nascosti.has(p.id));
+  const visibili = promemoria.filter((p) => !nascosti.has(p.id)).slice(0, MASSIMO_PROMEMORIA);
   if (visibili.length === 0) return null;
 
   if (compatta) {

@@ -95,7 +95,7 @@ describe('righeNeutreStorico', () => {
     const [r] = righe([
       tr({ causale: 'rimborso', userId: 'u2', soloRegistrazione: true, beneficiarioUserId: 'u1', aAccountId: null, daAccountId: null }),
     ]);
-    expect(r).toMatchObject({ etichetta: 'Rimborso dalla casa', verso: 'entra' });
+    expect(r).toMatchObject({ etichetta: 'Rimborso dalla casa (da aggiornare nel tuo saldo)', verso: 'entra' });
   });
 
   it('restituzione solo registrazione: compare per il debitore e per il creditore', () => {
@@ -103,7 +103,16 @@ describe('righeNeutreStorico', () => {
     const [d] = righe([tr({ ...base, userId: 'u1', beneficiarioUserId: 'u2' })]);
     expect(d).toMatchObject({ etichetta: 'Restituzione a Anna', verso: 'esce' });
     const [c] = righe([tr({ ...base, userId: 'u2', beneficiarioUserId: 'u1' })]);
-    expect(c).toMatchObject({ etichetta: 'Restituzione da Anna', verso: 'entra' });
+    expect(c).toMatchObject({ etichetta: 'Restituzione da Anna (da aggiornare nel tuo saldo)', verso: 'entra' });
+  });
+
+  it('le righe già applicate ai saldi non hanno il suffisso', () => {
+    const [rimborso] = righe([
+      tr({ causale: 'rimborso', userId: 'u2', beneficiarioUserId: 'u1', aAccountId: 'a1', daAccountId: null }),
+    ]);
+    expect(rimborso.etichetta).toBe('Rimborso dalla casa');
+    const [restituzione] = righe([tr({ causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1' })]);
+    expect(restituzione.etichetta).toBe('Restituzione da Anna');
   });
 
   it('le rinunce non compaiono', () => {

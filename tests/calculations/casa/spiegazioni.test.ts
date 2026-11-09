@@ -128,6 +128,11 @@ describe('spiegaRiserva', () => {
     expect(somma(s.ingredienti)).toBeCloseTo(s.valore, 8);
     expect(s.formula).toBe("Il versamento di ogni mese è riservato dall'inizio del mese, finché non lo registri.");
   });
+  it('senza debiti non c è l ingrediente Da restituire', () => {
+    const s = spiegaRiserva({ righe, debitoDaRestituire: 0 });
+    expect(s.ingredienti.map((i) => i.etichetta)).not.toContain('Da restituire');
+    expect(s.valore).toBe(777 + 677);
+  });
   it('senza nulla da riservare vale 0', () => {
     expect(spiegaRiserva({ righe: [], debitoDaRestituire: 0 }).valore).toBe(0);
   });

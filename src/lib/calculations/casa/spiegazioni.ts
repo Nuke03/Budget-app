@@ -161,7 +161,7 @@ export function spiegaRiserva(input: { righe: RigaMese[]; debitoDaRestituire: nu
   const ingredienti = righe
     .filter((r) => r.mancano > 0)
     .map((r) => ({ etichetta: `Versamento alla casa, ${nomeMese(r.mese)}`, valore: r.mancano }));
-  ingredienti.push({ etichetta: 'Da restituire', valore: debitoDaRestituire });
+  if (debitoDaRestituire > 0) ingredienti.push({ etichetta: 'Da restituire', valore: debitoDaRestituire });
   return {
     valore: arrotonda2(ingredienti.reduce((s, i) => s + i.valore, 0)),
     formula: "Il versamento di ogni mese è riservato dall'inizio del mese, finché non lo registri.",

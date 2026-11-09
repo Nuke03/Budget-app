@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
 import { HomeDashboard } from '@/app/HomeDashboard';
 
 vi.mock('next/navigation', () => ({
@@ -16,9 +16,10 @@ vi.mock('@/lib/data/transactions', () => ({
 
 vi.mock('@/lib/data/accounts', () => ({
   updateAccountBalance: vi.fn().mockResolvedValue(undefined),
+  adjustAccountBalance: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { updateAccountBalance } from '@/lib/data/accounts';
+import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { CasaStato } from '@/lib/loadCasaStato';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
@@ -155,7 +156,7 @@ describe('HomeDashboard', () => {
     expect(screen.getByText(/Fondo emergenza \(non conta nel disponibile\)/)).toBeInTheDocument();
   });
 
-  it('scarica una spesa dal saldo del conto selezionato quando si aggiunge una transazione', async () => {
+  it('scarica una spesa dal saldo del conto selezionato con un delta quando si aggiunge una transazione', async () => {
     render(
       <HomeDashboard
         disponibileLibero={870}
@@ -173,7 +174,8 @@ describe('HomeDashboard', () => {
     fireEvent.click(screen.getByText('Salva'));
 
     await waitFor(() => {
-      expect(updateAccountBalance).toHaveBeenCalledWith(expect.anything(), '1', 844);
+      expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), '1', -26);
+      expect(updateAccountBalance).not.toHaveBeenCalled();
     });
   });
 
@@ -275,12 +277,33 @@ describe('HomeDashboard', () => {
       expect(screen.queryByRole('link', { name: /versamento|rimborso|restituire/ })).not.toBeInTheDocument();
     });
 
+    it('con la casa ma senza stato il dettaglio dice che la quota non è inclusa', () => {
+      const casa = { ...casaPerHome(), stato: null };
+      const { container } = render(<HomeDashboard {...base} casa={casa} />);
+      expect(screen.queryByText(/Non riesco a leggere la casa/)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      expect(
+        screen.getByText('Non riesco a leggere la casa: il disponibile non tiene conto della quota.')
+      ).toBeInTheDocument();
+      assertNessunaParolaVietata(container);
+    });
+
+    it('senza casa e con lo stato letto la riga non compare', () => {
+      render(<HomeDashboard {...base} casa={null} />);
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      expect(screen.queryByText(/Non riesco a leggere la casa/)).not.toBeInTheDocument();
+      cleanup();
+      render(<HomeDashboard {...base} casa={casaPerHome()} />);
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      expect(screen.queryByText(/Non riesco a leggere la casa/)).not.toBeInTheDocument();
+    });
+
     it('nessuna parola vietata', () => {
       const { container } = render(
         <HomeDashboard
           {...base}
           casa={casaPerHome({
-            righe: conRiserva.stato.righe,
+            righe: conRiserva.stato?.righe ?? [],
             riservaVersamento: 777,
             crediti: { u1: 45, u2: 0 },
             avvisoArretrati: true,

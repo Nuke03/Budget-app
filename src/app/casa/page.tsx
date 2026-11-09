@@ -2,18 +2,12 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getMyHousehold } from '@/lib/data/households';
 import { getAccounts } from '@/lib/data/accounts';
-import { getPlanForMonth, type PlanBundle } from '@/lib/data/householdPlans';
+import { getPlanForMonth } from '@/lib/data/householdPlans';
 import { loadCasaData } from '@/lib/loadCasaData';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
+import { pianoDelMese } from '@/lib/calculations/casa/versamenti';
 import { CasaHome } from './CasaHome';
 import { CasaSenzaCasa } from './CasaSenzaCasa';
-
-// Come getPlanForMonth: la versione in vigore nel mese, altrimenti la prima futura.
-function pianoDelMese(piani: PlanBundle[], mese: string): PlanBundle | null {
-  let attuale: PlanBundle | null = null;
-  for (const p of piani) if (p.plan.validoDal <= mese) attuale = p;
-  return attuale ?? piani[0] ?? null;
-}
 
 export default async function CasaPage() {
   const supabase = await createClient();

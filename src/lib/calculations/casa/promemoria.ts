@@ -27,7 +27,8 @@ export interface Promemoria {
   azione: AzionePromemoria | null;
 }
 
-const MASSIMO = 2;
+// Quanti promemoria mostrare insieme: il taglio si fa dopo aver tolto quelli rimandati.
+export const MASSIMO_PROMEMORIA = 2;
 const GIORNI_DI_PREAVVISO = 3;
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
 const euro = (n: number): string => `${formatNumero(n)} €`;
@@ -120,5 +121,5 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
     }
   }
 
-  return out.slice(0, MASSIMO);
+  return out;
 }

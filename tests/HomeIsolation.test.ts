@@ -120,10 +120,10 @@ describe('isolamento della home', () => {
     expect(nessuna).toBeNull();
     expect(personali).toEqual(baselinePersonali);
     expect(personali.disponibileLibero).toBe(870);
-    expect(casa?.aggiunta.householdId).toBe('H1');
-    expect(casa?.aggiunta.conti.map((c) => c.id)).toEqual(['acc-B-H1']);
-    expect(casa?.aggiunta.obiettivi.map((g) => g.id)).toEqual(['goal-B-H1']);
-    expect(casa?.stato.riservaVersamento).toBe(0);
+    expect(casa?.aggiunta?.householdId).toBe('H1');
+    expect(casa?.aggiunta?.conti.map((c) => c.id)).toEqual(['acc-B-H1']);
+    expect(casa?.aggiunta?.obiettivi.map((g) => g.id)).toEqual(['goal-B-H1']);
+    expect(casa?.stato?.riservaVersamento).toBe(0);
   });
 
   it('un membro con piano attivo ha disponibile = base meno riserva e un non membro resta alla base', async () => {
@@ -143,7 +143,7 @@ describe('isolamento della home', () => {
     const seed = { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA, ...piano };
     const membro = await home('A', seed, true);
     expect(membro.disponibileLibero).toBe(870 - 500);
-    expect(membro.casa?.stato.riservaVersamento).toBe(500);
+    expect(membro.casa?.stato?.riservaVersamento).toBe(500);
     const nonMembro = await home('D', { ...unisci(righePersonali('D'), righeDiCasa()), ...STRUTTURA_CASA, ...piano }, true);
     expect(nonMembro.disponibileLibero).toBe(870);
     expect(nonMembro.casa).toBeNull();
@@ -168,7 +168,7 @@ describe('isolamento della home', () => {
     expect(dati.disponibileLibero).toBe(870);
   });
 
-  it('se solo il caricamento dei conti di casa fallisce casa è null', async () => {
+  it('se solo i conti di casa non si leggono la riserva resta e il selettore manca', async () => {
     const seed = { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA };
     const db = createFakeDb(seed, { userId: 'A', membri: MEMBRI });
     const from = db.client.from;
@@ -184,7 +184,23 @@ describe('isolamento della home', () => {
       return b;
     };
     const dati = await loadHomeData(db.client, TODAY, 'A');
-    expect(dati.casa).toBeNull();
+    expect(dati.casa?.aggiunta).toBeNull();
+    expect(dati.casa?.stato?.riservaVersamento).toBe(0);
+    expect(dati.disponibileLibero).toBe(870);
+  });
+
+  it('se lo stato della casa non si legge casa resta, con stato null, e il numero è quello personale', async () => {
+    const seed = { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA };
+    const db = createFakeDb(seed, { userId: 'A', membri: MEMBRI });
+    const from = db.client.from;
+    db.client.from = (nome: string) => {
+      if (nome === 'transfers' || nome === 'household_plans') throw new Error('giù');
+      return from(nome);
+    };
+    const dati = await loadHomeData(db.client, TODAY, 'A');
+    expect(dati.casa).not.toBeNull();
+    expect(dati.casa?.stato).toBeNull();
+    expect(dati.casa?.aggiunta?.householdId).toBe('H1');
     expect(dati.disponibileLibero).toBe(870);
   });
 });

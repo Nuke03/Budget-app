@@ -17,6 +17,9 @@ function meseIt(iso: string | null): string {
   return format(parseISO(`${iso.slice(0, 7)}-01`), 'LLLL', { locale: it }).toLowerCase();
 }
 
+// Una registrazione senza effetto sui conti non ha toccato il saldo di chi la riceve.
+const DA_AGGIORNARE = ' (da aggiornare nel tuo saldo)';
+
 function rigaDaTrasferimento(
   t: Transfer,
   userId: string,
@@ -41,7 +44,11 @@ function rigaDaTrasferimento(
     // Un rimborso registrato da un altro membro arriva anche come sola registrazione:
     // la riga serve a chi deve aggiornare il proprio saldo. La rinuncia (autore = beneficiario) non compare.
     if (t.beneficiarioUserId !== userId || t.userId === userId) return null;
-    return { ...base, etichetta: 'Rimborso dalla casa', verso: 'entra' };
+    return {
+      ...base,
+      etichetta: `Rimborso dalla casa${t.soloRegistrazione ? DA_AGGIORNARE : ''}`,
+      verso: 'entra',
+    };
   }
 
   if (t.causale === 'restituzione') {
@@ -50,7 +57,11 @@ function rigaDaTrasferimento(
       return { ...base, etichetta: `Restituzione a ${nome(t.beneficiarioUserId)}`, verso: 'esce' };
     }
     if (t.beneficiarioUserId === userId) {
-      return { ...base, etichetta: `Restituzione da ${nome(t.userId)}`, verso: 'entra' };
+      return {
+        ...base,
+        etichetta: `Restituzione da ${nome(t.userId)}${t.soloRegistrazione ? DA_AGGIORNARE : ''}`,
+        verso: 'entra',
+      };
     }
   }
   return null;

@@ -29,6 +29,18 @@ describe('StrisciaPromemoria', () => {
     expect(window.localStorage.getItem('promemoria:versamento:2026-11-01:2026-11-03')).not.toBeNull();
   });
 
+  it('i rimandati si tolgono prima del taglio a due: il terzo prende il posto', () => {
+    const tre: Promemoria[] = [
+      ...promemoria,
+      { id: 'debito:u2>u1', tipo: 'debito', testo: 'Anna deve ancora 10 € a te.', azione: null },
+    ];
+    render(<StrisciaPromemoria promemoria={tre} oggi="2026-11-03" />);
+    expect(screen.queryByText(/Anna deve ancora/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Più tardi' })[0]);
+    expect(screen.getByText('Anna deve ancora 10 € a te.')).toBeInTheDocument();
+    expect(screen.getByText('In attesa del rimborso: 45 €.')).toBeInTheDocument();
+  });
+
   it('un promemoria già rimandato oggi non ricompare', () => {
     window.localStorage.setItem('promemoria:versamento:2026-11-01:2026-11-03', '1');
     render(<StrisciaPromemoria promemoria={promemoria} oggi="2026-11-03" />);

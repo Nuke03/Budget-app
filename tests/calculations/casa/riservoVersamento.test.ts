@@ -101,6 +101,13 @@ describe('riservaPersonale', () => {
     expect(disponibile('anna', 2000, [prestito])).toBe(disponibile('anna', 1800, [prestito, resto]));
   });
 
+  it('con un versamento parziale la riserva è la quota meno il versato', () => {
+    const t = [vers({ importo: 300 })];
+    const righe = righeVersamento({ userId: 'bruno', oggi: OGGI, piani, membri, transfers: t });
+    expect(riservaPersonale({ righe, userId: 'bruno', debiti: [] }).riservaVersamento).toBe(477);
+    expect(disponibile('bruno', 1000 - 300, t)).toBe(223);
+  });
+
   it('il debito conta solo per il debitore, non per il creditore', () => {
     const t = [vers({ importo: 603, perContoDiUserId: 'anna' })];
     expect(riservaPersonale({ righe: [], userId: 'bruno', debiti: debitiMembri(t) }).riservaDebiti).toBe(0);

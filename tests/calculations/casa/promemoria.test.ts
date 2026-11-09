@@ -70,10 +70,10 @@ describe('computeReminders', () => {
     expect(c[0].azione).toBeNull();
   });
 
-  it('al massimo due promemoria nell ordine versamento, credito, debito', () => {
+  it('restituisce tutti i promemoria nell ordine versamento, credito, debito (il taglio a due lo fa la striscia)', () => {
     const s = { ...base, crediti: { u1: 45 }, debiti: [debito('u2', 'u1')] };
     const r = computeReminders(s, me, '2026-11-03');
-    expect(r.map((p) => p.tipo)).toEqual(['versamento', 'credito']);
+    expect(r.map((p) => p.tipo)).toEqual(['versamento', 'credito', 'debito']);
   });
 
   it('nessun testo contiene colpa, ritardo, scaduto o parole vietate', () => {

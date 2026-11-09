@@ -17,6 +17,13 @@ function meseSuccessivo(mese: string): string {
   return m === 12 ? `${anno + 1}-01-01` : `${anno}-${String(m + 1).padStart(2, '0')}-01`;
 }
 
+// Come getPlanForMonth: la versione in vigore nel mese, altrimenti la prima futura.
+export function pianoDelMese(piani: PlanBundle[], mese: string): PlanBundle | null {
+  let attuale: PlanBundle | null = null;
+  for (const p of piani) if (p.plan.validoDal <= mese) attuale = p;
+  return attuale ?? piani[0] ?? null;
+}
+
 // Le quote mensili che un membro avrebbe dovuto versare, mese per mese, e quanto ha versato davvero.
 // Rispecchia _casa_arretrati.
 export function righeVersamento(input: {
