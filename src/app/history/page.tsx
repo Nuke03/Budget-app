@@ -10,11 +10,11 @@ import { getMyHousehold } from '@/lib/data/households';
 import { getTransfers } from '@/lib/data/transfers';
 import { casa } from '@/lib/data/scope';
 import { righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
-import { getAccounts, updateAccountBalance } from '@/lib/data/accounts';
+import { getAccounts, adjustAccountBalance } from '@/lib/data/accounts';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
-import { computeAggiornamentiSaldoPerModifica } from '@/lib/calculations/accountBalance';
+import { deltaPerModifica } from '@/lib/calculations/accountBalance';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { HistoryChartCard } from './HistoryChartCard';
@@ -47,18 +47,23 @@ export default function HistoryPage() {
     setAccounts(accs);
     setGoals(openGoals);
 
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData.user?.id;
-    const casaCorrente = userId ? await getMyHousehold(supabase, userId) : null;
-    if (userId && casaCorrente) {
-      const scope = casa(casaCorrente.household.id);
-      const [txCasa, trasferimenti] = await Promise.all([
-        getTransactions(supabase, scope),
-        getTransfers(supabase, scope),
-      ]);
-      const nomi = Object.fromEntries(casaCorrente.members.map((m) => [m.userId, m.displayName]));
-      setRigheNeutre(righeNeutreStorico({ userId, transazioni: txCasa, trasferimenti, nomi }));
-    } else {
+    // La parte di casa è solo un di più: se non si legge, lo storico personale resta intero.
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      const casaCorrente = userId ? await getMyHousehold(supabase, userId) : null;
+      if (userId && casaCorrente) {
+        const scope = casa(casaCorrente.household.id);
+        const [txCasa, trasferimenti] = await Promise.all([
+          getTransactions(supabase, scope),
+          getTransfers(supabase, scope),
+        ]);
+        const nomi = Object.fromEntries(casaCorrente.members.map((m) => [m.userId, m.displayName]));
+        setRigheNeutre(righeNeutreStorico({ userId, transazioni: txCasa, trasferimenti, nomi }));
+      } else {
+        setRigheNeutre([]);
+      }
+    } catch {
       setRigheNeutre([]);
     }
   }
@@ -89,9 +94,9 @@ export default function HistoryPage() {
     nuova: { accountId: string | null; tipo: TransactionTipo; importo: number }
   ) {
     const supabase = createClient();
-    const aggiornamenti = computeAggiornamentiSaldoPerModifica(accounts, vecchia, nuova);
-    for (const a of aggiornamenti) {
-      await updateAccountBalance(supabase, a.accountId, a.nuovoSaldo);
+    // Per differenza: le altre scritture sugli stessi conti (casa, rimborsi) non si perdono.
+    for (const { accountId, delta } of deltaPerModifica(vecchia, nuova)) {
+      await adjustAccountBalance(supabase, accountId, delta);
     }
   }
 

@@ -162,11 +162,12 @@ describe('AddTransactionSheet', () => {
     expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ data: '2026-11-01' });
   });
 
-  it('salvare in Personale non chiama adjustAccountBalance', async () => {
+  it('salvare in Personale scala il conto con un delta, mai con un saldo assoluto', async () => {
     apri({ modoIniziale: 'personale' });
     compila('10');
-    await waitFor(() => expect(updateAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', 90));
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -10));
+    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+    expect(updateAccountBalance).not.toHaveBeenCalled();
     expect(vi.mocked(createTransaction).mock.calls[0]).toHaveLength(2);
   });
 
@@ -188,6 +189,32 @@ describe('AddTransactionSheet', () => {
     );
     expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
     expect(updateAccountBalance).not.toHaveBeenCalled();
+  });
+
+  it('una entrata personale aumenta il conto con delta positivo', async () => {
+    apri({
+      modoIniziale: 'personale',
+      casa: null,
+      personale: {
+        ...personale,
+        categories: [...personale.categories, { id: 'ci', nome: 'Stipendio', tipo: 'income', colore: null, archiviata: false }],
+      },
+    });
+    fireEvent.click(screen.getByText('Entrata'));
+    compila('40');
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', 40));
+  });
+
+  it('senza conto comune "Chi ha pagato" non sceglie da solo la prima carta personale', async () => {
+    apri({ modoIniziale: 'casa', casa: { ...casa, conti: [] }, contiPersonali: personale.accounts });
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '9' } });
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Prova' } });
+    expect(screen.getByText('Salva')).toBeDisabled();
+    expect(screen.getByText('Scegline uno per salvare')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Io, con Conto mio' }));
+    expect(screen.getByText('Salva')).not.toBeDisabled();
+    fireEvent.click(screen.getByText('Salva'));
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -9));
   });
 
   it('le entrate non offrono i conti personali', () => {

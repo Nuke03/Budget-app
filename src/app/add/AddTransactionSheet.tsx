@@ -5,9 +5,8 @@ import { format } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import { createTransaction } from '@/lib/data/transactions';
 import { createGoal } from '@/lib/data/goals';
-import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
+import { adjustAccountBalance } from '@/lib/data/accounts';
 import { casa as scopeCasa } from '@/lib/data/scope';
-import { computeNuovoSaldoConto } from '@/lib/calculations/accountBalance';
 import { nomiAltri } from '@/lib/calculations/casa/etichette';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
@@ -93,12 +92,13 @@ export function AddTransactionSheet({
       nota: null,
     });
 
-    const account = payload.accountId
-      ? personale.accounts.find((a) => a.id === payload.accountId)
-      : undefined;
-    if (account) {
-      const nuovoSaldo = computeNuovoSaldoConto(account.saldoAttuale, payload.tipo, payload.importo);
-      await updateAccountBalance(supabase, account.id, nuovoSaldo);
+    if (payload.accountId) {
+      // Per differenza: il saldo può essere cambiato altrove (casa, rimborsi) dopo che questa pagina l'ha letto.
+      await adjustAccountBalance(
+        supabase,
+        payload.accountId,
+        payload.tipo === 'income' ? payload.importo : -payload.importo
+      );
     }
   }
 
@@ -198,6 +198,7 @@ export function AddTransactionSheet({
           contoEtichetta="Chi ha pagato"
           obiettivoEtichetta="Da parte (opzionale)"
           nascondiGestisciCategorie
+          contoDaScegliere={casa.conti.length === 0 && contiPersonali.length > 0}
           nota={notaCasa}
           onSubmit={handleSubmit}
         />

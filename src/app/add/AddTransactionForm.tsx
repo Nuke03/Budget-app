@@ -51,6 +51,7 @@ export function AddTransactionForm({
   obiettivoEtichetta = 'Obiettivo (opzionale)',
   nota,
   idContiSoloSpesa = NESSUN_ID,
+  contoDaScegliere = false,
 }: {
   categories: Category[];
   accounts: Account[];
@@ -65,6 +66,8 @@ export function AddTransactionForm({
   obiettivoEtichetta?: string;
   nota?: string;
   idContiSoloSpesa?: string[];
+  // Nessun conto preselezionato: chi salva deve sceglierlo (es. "Chi ha pagato" senza conto comune).
+  contoDaScegliere?: boolean;
 }) {
   const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? 'expense');
   const [importo, setImporto] = useState(initial ? String(initial.importo) : '');
@@ -73,7 +76,7 @@ export function AddTransactionForm({
     initial?.categoriaId ?? categories[0]?.id ?? null
   );
   const [accountId, setAccountId] = useState<string | null>(
-    initial?.accountId ?? accounts[0]?.id ?? null
+    initial?.accountId ?? (contoDaScegliere ? null : (accounts[0]?.id ?? null))
   );
   const [goalId, setGoalId] = useState<string | null>(initial?.goalId ?? null);
   const [goalsDisponibili, setGoalsDisponibili] = useState<BudgetGoal[]>(goals);
@@ -99,7 +102,7 @@ export function AddTransactionForm({
     if (accountId !== null && contiVisibili.some((a) => a.id === accountId)) {
       return;
     }
-    setAccountId(contiVisibili[0]?.id ?? null);
+    setAccountId(contoDaScegliere ? null : (contiVisibili[0]?.id ?? null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts, tipo, idContiSoloSpesa]);
 
@@ -119,7 +122,9 @@ export function AddTransactionForm({
   }, [tipo]);
 
   const importoNumerico = Number(importo);
-  const isValid = importo.trim() !== '' && !Number.isNaN(importoNumerico) && descrizione.trim() !== '';
+  const contoMancante = contoDaScegliere && contiVisibili.length > 0 && accountId === null;
+  const isValid =
+    importo.trim() !== '' && !Number.isNaN(importoNumerico) && descrizione.trim() !== '' && !contoMancante;
 
   const nuovoGoalImportoNumerico = Number(nuovoGoalImporto);
   const isNuovoGoalValido =
@@ -249,6 +254,7 @@ export function AddTransactionForm({
       {contiVisibili.length > 0 && (
         <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
           {contoEtichetta}
+          {contoMancante && <span className="text-xs font-normal">Scegline uno per salvare</span>}
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
             {contiVisibili.map((a) => {
               const isSelected = accountId === a.id;
