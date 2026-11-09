@@ -86,6 +86,20 @@ diventa effettiva. Per le eliminazioni più pesanti, prima del tocco, un avviso
 di conferma con l'opzione "Non avvisarmi più", che si può riattivare dalle
 impostazioni. Da applicare in modo uniforme in tutta l'app, Casa compresa.
 
+**Velocità** (segnalazione di Fabio, 9 novembre: "l'app sta rallentando un
+botto"). Prima di toccare la grafica, misurare i tempi reali di Home, Casa e
+Storico sul telefono e correggere le cause. Sospetti già noti dalle revisioni:
+- la home e `/casa` leggono a ogni apertura tutte le transazioni e tutti i
+  trasferimenti della casa per calcolare crediti, debiti e arretrati, e alcune
+  letture sono in sequenza invece che in parallelo (`loadHomeData`,
+  `loadCasaStato`, `loadCasaData`);
+- Storico e P.IVA caricano tutte le transazioni senza limite (già nel backlog);
+- oltre circa 1000 righe Supabase tronca le risposte e i registri della casa
+  diventerebbero sbagliati: spostare il calcolo di crediti, debiti e arretrati in
+  SQL (le funzioni `_casa_*` esistono già) o filtrare le righe necessarie;
+- stati di caricamento: mostrare subito la pagina con i dati principali e il
+  resto dopo.
+
 **Cambio palette** (dal verde a blu "corporate", più rassicuranti per l'occhio):
 deciso con Fabio di farlo **dopo** la co-gestione. Va fatto qui, come ultimo
 passo del blocco.
