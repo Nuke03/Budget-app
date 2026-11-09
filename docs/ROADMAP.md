@@ -38,6 +38,14 @@ nessun senso di colpa e nessuna gamification. Base dei contenuti:
 
 **Stato (8 novembre 2026):** spec approvata in `docs/superpowers/specs/2026-11-08-co-gestione-casa-design.md`; consegne 1 a 3 pianificate in `docs/superpowers/plans/2026-11-08-casa-comune-consegne-1-3.md`. Le domande iniziali sono risolte nella spec. Consegna 1 (fondamenta) e consegna 2 (casa, invito, ingresso, uscita): fatte. Consegna 3 (la quota): fatta.
 
+**Stato (9 novembre 2026):** consegne 4 e 5 fatte, piano in `docs/superpowers/plans/2026-11-08-casa-comune-consegne-4-5.md`, migrazioni fino alla 0007 eseguite: spese di casa con selettore Personale|Casa, conto comune, spesa con carta personale e credito, versamenti, rimborsi, restituzioni, righe neutre nello storico, quota e debiti riservati nel disponibile personale, promemoria in app, calendario privato in abbonamento, invito con link. Prossimo passo del blocco 1: piano delle consegne 6 a 8 (fondi per le bollette, costi di ingresso, controllo del saldo, check-in mensile, stima contro reale, rifiniture).
+
+Rimandati dalle revisioni, da fare in un compito dedicato:
+- una sola funzione SQL che scrive insieme la riga e il saldo, così una spesa non resta mai a metà se cade la connessione;
+- modificare una spesa di casa pagata con la carta personale (oggi si cancella e si reinserisce);
+- `id` dell'obiettivo nel feed del calendario, per eventi stabili quando si rinomina un obiettivo;
+- avviso nel percorso guidato su iOS 18 se il menu per il calendario in abbonamento ha parole diverse.
+
 **Tipo:** architetturale. Cambia la premessa del prodotto: `PRODUCT.md` oggi
 dice "dati completamente isolati tra i due utenti".
 
