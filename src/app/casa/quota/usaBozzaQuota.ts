@@ -9,6 +9,7 @@ import { calcolaQuota, calcolaTotale, type PersonaQuotaInput, type RisultatoQuot
 import {
   buildPlanVersions,
   dateVersioni,
+  uscentiOltreTotale,
   type PeriodoIniziale,
   type PianoDraft,
 } from '@/lib/calculations/casa/pianoVersioni';
@@ -171,6 +172,11 @@ export function useBozzaQuota(props: QuotaWizardProps) {
     }
   }
 
+  const avvisoUscenti =
+    draft && periodoValido && uscentiOltreTotale(draft)
+      ? 'Le quote di chi è uscito coprono già tutto il totale: gli altri, per quel periodo, non versano nulla.'
+      : null;
+
   // Bozza: chi ha una quota ma non è ancora entrato.
   const statoBozza = descriviStatoPiano(
     (versioni ?? []).flatMap((v) =>
@@ -238,7 +244,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
     mesiCuscinetto, setMesiCuscinetto, setCuscinettoText, regola, setRegola, eraPersonalizzata,
     periodoTipo, setPeriodoTipo, percText, setPercText, giorno, setGiorno, partenza, setPartenza,
     inCorso, errore, nomePersona, sottotot, cuscinettoTestoEffettivo, cuscinettoObiettivo, piene, totale,
-    colonne, colonnaScelta, piuPeriodi, percentualiValide, versioni, statoBozza, puoProseguire,
+    colonne, colonnaScelta, piuPeriodi, percentualiValide, versioni, statoBozza, avvisoUscenti, puoProseguire,
     setPersona, setVoce, aggiungiPersona, conferma, irregolareAttivo,
   };
 }

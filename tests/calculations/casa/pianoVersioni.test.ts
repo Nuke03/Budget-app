@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlanVersions, type PianoDraft, type PianoDraftPersona } from '@/lib/calculations/casa/pianoVersioni';
+import { buildPlanVersions, uscentiOltreTotale, type PianoDraft, type PianoDraftPersona } from '@/lib/calculations/casa/pianoVersioni';
 import { ESEMPIO_VOCI } from '../../helpers/esempioCasa';
 import type { PlanVoceInput } from '@/lib/data/householdPlans';
 
@@ -199,5 +199,41 @@ describe('buildPlanVersions con uscenti', () => {
 
   it('senza uscenti il risultato è identico a prima', () => {
     expect(buildPlanVersions(draft({ uscenti: [] }))).toEqual(buildPlanVersions(draft()));
+  });
+
+  const somma = (v: { quote: { quotaMensile: number }[] }) => v.quote.reduce((t, q) => t + q.quotaMensile, 0);
+
+  it('da un piano salvato: Giulia versa 603 prima di esceDal e 0 dopo, gli altri dividono il resto e ogni versione somma al totale', () => {
+    // Salvato: versione dal 2026-12-01 con Giulia a 603; versione dal 2027-02-01 (esceDal) con Giulia a 0.
+    const v = buildPlanVersions(
+      draft({ persone: [fabio], uscenti: [{ ...uscito, esceDal: '2027-02-01' }], partenza: '2026-12-01' }),
+    );
+    expect(v.map((x) => x.validoDal)).toEqual(['2026-12-01', '2027-02-01']);
+    expect(v[0].quote.find((q) => q.slot === 2)).toMatchObject({ quotaMensile: 603, esceDal: '2027-02-01' });
+    expect(v[0].quote.find((q) => q.slot === 1)?.quotaMensile).toBe(1380 - 603);
+    expect(v[1].quote.find((q) => q.slot === 2)).toMatchObject({ quotaMensile: 0, esceDal: '2027-02-01' });
+    expect(v[1].quote.find((q) => q.slot === 1)?.quotaMensile).toBe(1380);
+    for (const x of v) expect(somma(x)).toBe(x.totaleMensile);
+  });
+
+  it('tre persone, una esce: la somma per versione è il totale', () => {
+    const v = buildPlanVersions(
+      draft({ persone: [fabio, marco(null)], uscenti: [{ ...uscito, esceDal: '2027-02-01' }] }),
+    );
+    expect(v).toHaveLength(2);
+    for (const x of v) expect(somma(x)).toBe(1380);
+  });
+
+  it('caso normale senza uscenti: la somma è il totale', () => {
+    for (const x of buildPlanVersions(draft())) expect(somma(x)).toBe(1380);
+  });
+
+  it('se la quota dell uscito supera il totale gli altri versano 0, mai negativo', () => {
+    const d = draft({ persone: [fabio], uscenti: [{ ...uscito, quotaMensile: 2000, esceDal: '2027-02-01' }] });
+    const v = buildPlanVersions(d);
+    expect(v[0].quote.find((q) => q.slot === 1)?.quotaMensile).toBe(0);
+    expect(v[0].quote.every((q) => q.quotaMensile >= 0)).toBe(true);
+    expect(uscentiOltreTotale(d)).toBe(true);
+    expect(uscentiOltreTotale(draft())).toBe(false);
   });
 });

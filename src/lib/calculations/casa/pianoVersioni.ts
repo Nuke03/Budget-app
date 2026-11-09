@@ -59,6 +59,12 @@ export function dateVersioni(persone: PianoDraftPersona[], partenza: string): st
   return Array.from(new Set([partenza, ...persone.map((p) => quotaDal(p, partenza))])).sort();
 }
 
+// Le date di cambio del piano, più il mese di uscita di chi esce dopo la partenza (da lì la sua quota è 0).
+function dateConUscenti(draft: PianoDraft): string[] {
+  const uscite = (draft.uscenti ?? []).map((u) => u.esceDal).filter((d) => d > draft.partenza);
+  return Array.from(new Set([...dateVersioni(draft.persone, draft.partenza), ...uscite])).sort();
+}
+
 interface Calcolata {
   regola: RegolaQuota;
   quote: PlanQuotaInput[];
@@ -112,22 +118,38 @@ function quoteUscenti(uscenti: UscitoDraft[], validoDal: string): PlanQuotaInput
   }));
 }
 
+// Quanto del totale di una versione è già coperto da chi sta per uscire (quota fissa fino al mese prima).
+function quotaFissaUscenti(uscenti: UscitoDraft[], validoDal: string): number {
+  return uscenti.reduce((s, u) => s + (validoDal < u.esceDal ? u.quotaMensile : 0), 0);
+}
+
+// Vero se in qualche versione le quote fisse di chi esce superano il totale: gli altri versano 0.
+export function uscentiOltreTotale(draft: PianoDraft): boolean {
+  const totale = calcolaTotale(totaleVociMensili(draft.voci), draft.cuscinettoQuotaMensile, draft.arrotondamento);
+  const uscenti = draft.uscenti ?? [];
+  return dateConUscenti(draft).some((d) => quotaFissaUscenti(uscenti, d) > totale);
+}
+
 const stessaDivisione = (a: PlanQuotaInput[], b: PlanQuotaInput[]) =>
   a.length === b.length && a.every((q, i) => q.slot === b[i].slot && q.quotaMensile === b[i].quotaMensile);
 
 export function buildPlanVersions(draft: PianoDraft): PlanVersionInput[] {
   const { partenza } = draft;
   const sottotot = totaleVociMensili(draft.voci);
-  const totale = calcolaTotale(sottotot, draft.cuscinettoQuotaMensile, draft.arrotondamento);
+  const totaleCasa = calcolaTotale(sottotot, draft.cuscinettoQuotaMensile, draft.arrotondamento);
 
-  const date = dateVersioni(draft.persone, partenza);
+  const date = dateConUscenti(draft);
+  // Il periodo iniziale riguarda solo chi entra dopo la partenza, non chi esce.
+  const conIngressi = dateVersioni(draft.persone, partenza).length > 1;
   const versioni: PlanVersionInput[] = [];
 
   date.forEach((data, indice) => {
+    // Chi esce versa la sua quota fissa fino al mese prima; gli altri si dividono il resto.
+    const totale = Math.max(0, totaleCasa - quotaFissaUscenti(draft.uscenti ?? [], data));
     const presenti = draft.persone.filter((p) => quotaDal(p, partenza) <= data);
     let calcolata: Calcolata;
 
-    if (indice === 0 && date.length > 1 && draft.periodoIniziale.tipo !== 'normale') {
+    if (indice === 0 && conIngressi && draft.periodoIniziale.tipo !== 'normale') {
       const periodo = draft.periodoIniziale;
       if (periodo.tipo === 'tutto_a_chi_abita' && presenti.length > 0) {
         const parte = 100 / presenti.length;
@@ -143,7 +165,7 @@ export function buildPlanVersions(draft: PianoDraft): PlanVersionInput[] {
       } else {
         calcolata = calcolaVersione(draft, totale, draft.regola, draft.persone, null);
       }
-    } else if (indice === 0 && date.length > 1) {
+    } else if (indice === 0 && conIngressi) {
       calcolata = calcolaVersione(draft, totale, draft.regola, draft.persone, null);
     } else {
       calcolata = calcolaVersione(draft, totale, draft.regola, presenti, null);
@@ -161,7 +183,7 @@ export function buildPlanVersions(draft: PianoDraft): PlanVersionInput[] {
       cuscinettoObiettivo: draft.cuscinettoObiettivo,
       cuscinettoQuotaMensile: draft.cuscinettoQuotaMensile,
       arrotondamento: draft.arrotondamento,
-      totaleMensile: totale,
+      totaleMensile: totaleCasa,
       voci: draft.voci,
       quote: calcolata.quote,
     });

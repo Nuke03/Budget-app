@@ -3,7 +3,7 @@ import { testoAvviso } from './quotaWizardState';
 import { carta, euro, inputClass } from './quotaWizardUi';
 
 export function PassoDivisione({ b }: { b: BozzaQuota }) {
-  const { totale, eraPersonalizzata, piuPeriodi, periodoTipo, setPeriodoTipo, persone, nomePersona, percText, setPercText, percentualiValide, versioni, colonne, regola, setRegola, colonnaScelta } = b;
+  const { totale, eraPersonalizzata, piuPeriodi, periodoTipo, setPeriodoTipo, persone, nomePersona, percText, setPercText, percentualiValide, versioni, colonne, regola, setRegola, colonnaScelta, avvisoUscenti } = b;
   return (
     <>
       <p className="text-base font-bold">{`Totale da versare ogni mese: ${euro(totale)}`}</p>
@@ -145,6 +145,7 @@ export function PassoDivisione({ b }: { b: BozzaQuota }) {
             </p>
           ))
         : null}
+      {avvisoUscenti ? <p className="text-sm text-muted">{avvisoUscenti}</p> : null}
     </>
   );
 }

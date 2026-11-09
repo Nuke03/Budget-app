@@ -200,6 +200,20 @@ describe('QuotaWizard: passo 1', () => {
     expect(quote).toContainEqual(expect.objectContaining({ slot: 2, esceDal: '2026-12-01', percentuale: null }));
   });
 
+  it('la bozza non aspetta chi sta per uscire (esceDal inoltrato allo stato della bozza)', () => {
+    monta({
+      piani: [bundle([
+        share({}),
+        share({ slot: 2, userId: null, displayName: 'Giulia', esceDal: '2027-03-01', quotaMensile: 603 }),
+      ])],
+    });
+    avanti();
+    avanti();
+    avanti();
+    avanti();
+    expect(screen.queryByText(/Diventa attivo quando entra/)).not.toBeInTheDocument();
+  });
+
   it('gli usciti non compaiono come persone nei passi', () => {
     const { container } = monta({
       piani: [bundle([

@@ -81,8 +81,15 @@ export function ultimeQuote(piani: PlanBundle[]): Map<number, PlanShare> {
   return ultime;
 }
 
-// Chi è uscito: per ogni posizione la cui riga più recente ha una data di uscita, con la quota di quella riga.
+// Chi è uscito: per ogni posizione la cui riga più recente ha una data di uscita. La quota è l'ultima
+// salvata in una versione precedente all'uscita (dopo l'uscita la riga vale 0 e non dice cosa versava).
 export function uscentiDaPiani(piani: PlanBundle[]): UscitoDraft[] {
+  const quotaPrima = new Map<number, number>();
+  for (const piano of piani) {
+    for (const s of piano.shares) {
+      if (s.esceDal !== null && piano.plan.validoDal < s.esceDal) quotaPrima.set(s.slot, s.quotaMensile);
+    }
+  }
   return Array.from(ultimeQuote(piani).values())
     .filter((s) => s.esceDal !== null)
     .sort((a, b) => a.slot - b.slot)
@@ -93,7 +100,7 @@ export function uscentiDaPiani(piani: PlanBundle[]): UscitoDraft[] {
       redditoIrregolare: s.redditoIrregolare,
       inCasaDal: s.inCasaDal,
       esceDal: s.esceDal as string,
-      quotaMensile: s.quotaMensile,
+      quotaMensile: quotaPrima.get(s.slot) ?? 0,
     }));
 }
 
