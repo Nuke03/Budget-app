@@ -26,7 +26,7 @@ const prestito = (importo: number, mese = '2026-10-01', autore = 'u1', perConto 
 describe('debitiMembri', () => {
   it('u1 versa 603 per conto di u2: u2 deve 603 a u1', () => {
     expect(debitiMembri([prestito(603)])).toEqual([
-      { debitoreId: 'u2', creditoreId: 'u1', importo: 603, mesi: [{ mese: '2026-10-01', importo: 603 }] },
+      { debitoreId: 'u2', creditoreId: 'u1', importo: 603, mesi: [{ mese: '2026-10-01', importo: 603, versato: 603 }] },
     ]);
   });
 
@@ -65,7 +65,7 @@ describe('debitiMembri', () => {
     const d = debitiMembri([prestito(603, '2026-11-01'), prestito(603, '2026-10-01'), rest]);
     expect(d).toHaveLength(1);
     expect(d[0].importo).toBe(506);
-    expect(d[0].mesi).toEqual([{ mese: '2026-11-01', importo: 506 }]);
+    expect(d[0].mesi).toEqual([{ mese: '2026-11-01', importo: 506, versato: 603 }]);
   });
 
   it('con tre membri ci sono tre coppie e il debito verso i membri si somma per debitore', () => {

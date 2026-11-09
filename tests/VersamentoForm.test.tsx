@@ -126,6 +126,19 @@ describe('VersamentoForm', () => {
     expect(vi.mocked(recordTransfer).mock.calls[0][1]).toMatchObject({ soloRegistrazione: true });
   });
 
+  it('con già riflesso nei saldi non servono i conti personali', async () => {
+    monta({ contiPersonali: [] });
+    fireEvent.change(importo(), { target: { value: '10' } });
+    expect(registra()).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("Il bonifico l'ho già riflesso nei saldi"));
+    fireEvent.click(registra());
+    await waitFor(() => expect(recordTransfer).toHaveBeenCalled());
+    expect(vi.mocked(recordTransfer).mock.calls[0][1]).toMatchObject({
+      daAccountId: null,
+      soloRegistrazione: true,
+    });
+  });
+
   it('nessuna parola vietata', () => {
     const { container } = monta();
     assertNessunaParolaVietata(container);

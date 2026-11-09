@@ -4,7 +4,8 @@ export interface DebitoMembro {
   debitoreId: string;
   creditoreId: string;
   importo: number;
-  mesi: { mese: string; importo: number }[];
+  // importo: il residuo del mese; versato: quanto il creditore aveva coperto in quel mese.
+  mesi: { mese: string; importo: number; versato: number }[];
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -55,7 +56,7 @@ export function debitiMembri(transfers: Transfer[]): DebitoMembro[] {
       const coperto = Math.min(importo, daCoprire);
       daCoprire -= coperto;
       const residuo = arrotonda(importo - coperto);
-      if (residuo > 0) mesi.push({ mese, importo: residuo });
+      if (residuo > 0) mesi.push({ mese, importo: residuo, versato: arrotonda(importo) });
     }
     out.push({ debitoreId: c.debitoreId, creditoreId: c.creditoreId, importo: totale, mesi });
   }

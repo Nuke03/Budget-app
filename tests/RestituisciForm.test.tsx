@@ -16,7 +16,7 @@ const debito: DebitoMembro = {
   debitoreId: 'u2',
   creditoreId: 'u1',
   importo: 603,
-  mesi: [{ mese: '2026-10-01', importo: 603 }],
+  mesi: [{ mese: '2026-10-01', importo: 603, versato: 603 }],
 };
 
 function monta() {
@@ -74,6 +74,30 @@ describe('RestituisciForm', () => {
       beneficiarioUserId: 'u1',
     });
     expect(input.meseCompetenza).toBeUndefined();
+  });
+
+  it('con già riflesso nei saldi non servono i conti personali', async () => {
+    const onDone = vi.fn();
+    render(
+      <RestituisciForm
+        householdId="h1"
+        debito={debito}
+        nomeCreditore="Fabio"
+        contiPersonali={[]}
+        contiCasa={[]}
+        onDone={onDone}
+        onClose={vi.fn()}
+      />
+    );
+    expect(registra()).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Già riflesso nei saldi'));
+    fireEvent.click(registra());
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(vi.mocked(recordTransfer).mock.calls[0][1]).toMatchObject({
+      causale: 'restituzione',
+      daAccountId: null,
+      soloRegistrazione: true,
+    });
   });
 
   it('non accetta più del debito residuo', () => {

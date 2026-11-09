@@ -51,5 +51,13 @@ describe('useRegistraMovimento', () => {
     expect(con('100,01')).toBeNull();
     expect(result.current.oltreMax).toBe(true);
     expect(con('100')).toBe(100);
+    expect(con('99,9951')).toBe(100);
+  });
+
+  it('arrotonda ai centesimi prima del tetto: 603,0004 diventa 603', () => {
+    const { result } = renderHook(() => useRegistraMovimento({ onDone: vi.fn(), max: 603 }));
+    act(() => result.current.setImportoTesto('603,0004'));
+    expect(result.current.importo).toBe(603);
+    expect(result.current.oltreMax).toBe(false);
   });
 });

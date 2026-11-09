@@ -143,7 +143,7 @@ describe('loadCasaData registri', () => {
     expect(d.righe.B.find((r) => r.mese === '2026-11-01')).toMatchObject({ atteso: 300, versato: 100, mancano: 200 });
     expect(d.righe.A.find((r) => r.mese === '2026-10-01')).toMatchObject({ versato: 0, mancano: 500 });
     expect(d.debiti).toEqual([
-      { debitoreId: 'C', creditoreId: 'A', importo: 200, mesi: [{ mese: '2026-10-01', importo: 200 }] },
+      { debitoreId: 'C', creditoreId: 'A', importo: 200, mesi: [{ mese: '2026-10-01', importo: 200, versato: 200 }] },
     ]);
   });
 });

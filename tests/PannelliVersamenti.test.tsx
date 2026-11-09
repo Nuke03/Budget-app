@@ -24,7 +24,7 @@ const debito: DebitoMembro = {
   debitoreId: 'u2',
   creditoreId: 'u1',
   importo: 603,
-  mesi: [{ mese: '2026-10-01', importo: 603 }],
+  mesi: [{ mese: '2026-10-01', importo: 603, versato: 603 }],
 };
 
 function monta(over: Partial<React.ComponentProps<typeof PannelliVersamenti>> = {}) {
@@ -61,6 +61,20 @@ describe('PannelliVersamenti', () => {
     expect(
       screen.getByText(
         'ottobre 2026: Fabio ha versato 603 € per Anna. Anna deve a Fabio 603 € (quota di ottobre 2026).'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('dopo una restituzione parziale dice quanto è stato versato e quanto è ancora dovuto', () => {
+    const parziale: DebitoMembro = {
+      ...debito,
+      importo: 403,
+      mesi: [{ mese: '2026-10-01', importo: 403, versato: 603 }],
+    };
+    monta({ debiti: [parziale] });
+    expect(
+      screen.getByText(
+        'ottobre 2026: Fabio ha versato 603 € per Anna. Anna deve ancora a Fabio 403 € (quota di ottobre 2026).'
       )
     ).toBeInTheDocument();
   });

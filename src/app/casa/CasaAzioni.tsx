@@ -132,8 +132,8 @@ export function CasaAzioni({
     titolo = 'Rinuncia al credito';
     corpo = (
       <Rinuncia
-        testo={`Chiudi il credito di ${formatNumero(azione.importo)} € senza rimborso. Non cambia nessun saldo.`}
-        conferma="Rinuncia"
+        testo={`Chiudi il credito di ${formatNumero(azione.importo)} € senza rimborso. Non cambia nessun saldo. Da qui non si può annullare.`}
+        conferma="Chiudi il credito"
         onDone={fatto}
         onClose={chiudi}
         input={{
@@ -150,8 +150,8 @@ export function CasaAzioni({
     titolo = 'Rinuncia';
     corpo = (
       <Rinuncia
-        testo={`Chiudi i ${formatNumero(azione.debito.importo)} € che ${azione.nomeDebitore} ti deve, senza restituzione. Non cambia nessun saldo.`}
-        conferma="Rinuncia"
+        testo={`Chiudi i ${formatNumero(azione.debito.importo)} € che ${azione.nomeDebitore} ti deve, senza restituzione. Non cambia nessun saldo. Da qui non si può annullare.`}
+        conferma="Chiudi il debito"
         onDone={fatto}
         onClose={chiudi}
         input={{

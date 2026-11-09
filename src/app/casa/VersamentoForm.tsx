@@ -54,7 +54,8 @@ export function VersamentoForm({
   const [riflesso, setRiflesso] = useState(false);
 
   const altri = membri.filter((m) => m.userId !== meUserId);
-  const valido = importo !== null && da !== '' && a !== '' && data !== '';
+  // Se il bonifico è già nei saldi, nessun conto viene toccato: i conti non servono.
+  const valido = importo !== null && (riflesso || (da !== '' && a !== '')) && data !== '';
 
   async function invia(e: React.FormEvent) {
     e.preventDefault();
@@ -64,8 +65,8 @@ export function VersamentoForm({
       causale: 'versamento',
       importo,
       data,
-      daAccountId: da,
-      aAccountId: a,
+      daAccountId: da || null,
+      aAccountId: a || null,
       meseCompetenza: mese,
       perContoDiUserId: perConto || null,
       soloRegistrazione: riflesso,

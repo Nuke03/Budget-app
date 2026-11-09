@@ -37,16 +37,17 @@ export function RestituisciForm({
   const [da, setDa] = useState(contiPersonali[0]?.id ?? '');
   const [a, setA] = useState(contiCasa[0]?.id ?? '');
   const [riflesso, setRiflesso] = useState(false);
-  const valido = importo !== null && da !== '' && (modo === 'diretto' || a !== '');
+  // Con "già riflesso" nessun conto viene toccato: non servono.
+  const valido = importo !== null && (riflesso || (da !== '' && (modo === 'diretto' || a !== '')));
 
   async function invia(e: React.FormEvent) {
     e.preventDefault();
     if (!valido || importo === null) return;
-    const comune = { householdId, importo, data: oggiRomaISO(), daAccountId: da, soloRegistrazione: riflesso };
+    const comune = { householdId, importo, data: oggiRomaISO(), daAccountId: da || null, soloRegistrazione: riflesso };
     if (modo === 'diretto') {
       await registra({ ...comune, causale: 'restituzione', beneficiarioUserId: debito.creditoreId });
     } else {
-      await registra({ ...comune, causale: 'versamento', aAccountId: a, beneficiarioUserId: debito.creditoreId });
+      await registra({ ...comune, causale: 'versamento', aAccountId: a || null, beneficiarioUserId: debito.creditoreId });
     }
   }
 

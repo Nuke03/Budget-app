@@ -24,7 +24,8 @@ export function useRegistraMovimento({
   // Il doppio tocco arriva prima che React ridisegni: lo blocca un ref, non lo stato.
   const occupato = useRef(false);
 
-  const letto = parseImporto(importoTesto);
+  const grezzo = parseImporto(importoTesto);
+  const letto = grezzo === null ? null : Math.round(grezzo * 100) / 100;
   const oltreMax = letto !== null && max !== undefined && letto > max + 0.001;
   const importo = letto !== null && letto > 0 && !oltreMax ? letto : null;
 
