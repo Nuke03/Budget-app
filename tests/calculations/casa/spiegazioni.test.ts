@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
-import { spiegaTotaleMensile, spiegaQuotaPersona, spiegaRiserva, spiegaCuscinetto, spiegaDaParte } from '@/lib/calculations/casa/spiegazioni';
+import { spiegaTotaleMensile, spiegaQuotaPersona, spiegaRiserva, spiegaDaParte } from '@/lib/calculations/casa/spiegazioni';
 import { calcolaQuota } from '@/lib/calculations/casa/quota';
 import type { RegolaQuota } from '@/lib/types';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
@@ -144,23 +144,6 @@ describe('spiegaRiserva', () => {
   });
 });
 
-describe('spiegaCuscinetto', () => {
-  it('59 su 1321 con 59 al mese: pieno tra circa 22 mesi, ingredienti chiari', () => {
-    const s = spiegaCuscinetto({ attuale: 59, obiettivo: 1321, quotaMensile: 59 });
-    expect(s.valore).toBe(59);
-    expect(s.formula).toContain('Soldi della casa per gli imprevisti');
-    expect(s.formula).toContain('circa 22 mesi');
-    expect(s.formula).toContain('1.321');
-    expect(s.ingredienti).toEqual([{ etichetta: 'Trattenuto dal disponibile', valore: 59 }]);
-    expect(somma(s.ingredienti)).toBe(s.valore);
-  });
-  it('senza parole vietate', () => {
-    const s = spiegaCuscinetto({ attuale: 59, obiettivo: 1321, quotaMensile: 59 });
-    const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
-    for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
-  });
-});
-
 describe('spiegaDaParte', () => {
   const tari = {
     importoTarget: 300, modalita: 'dilazionato' as const, stato: 'aperto' as const, scadenza: '2027-11-09',
@@ -196,6 +179,8 @@ describe('spiegaDaParte', () => {
     ]);
     expect(somma(s.ingredienti)).toBeCloseTo(0, 8);
     expect(s.formula).toContain('speso più di quanto');
+    const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
+    for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
   });
   it('senza parole vietate', () => {
     const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 20 });

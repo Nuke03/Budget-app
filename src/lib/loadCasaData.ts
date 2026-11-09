@@ -97,7 +97,12 @@ export async function loadCasaData(
   const mese = meseRomaISO(adesso);
   const pianoOra = pianoInVigore(piani, mese);
   const daPagareMese = pianoOra
-    ? computeDaPagareMese({ voci: pianoOra.items, spese: transazioni, mese })
+    ? computeDaPagareMese({
+        voci: pianoOra.items,
+        spese: transazioni,
+        mese,
+        obiettiviApertiIds: obiettiviConSpeso.filter((g) => g.stato === 'aperto').map((g) => g.id),
+      })
     : 0;
 
   const disponibile = computeDisponibileCasa({

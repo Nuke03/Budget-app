@@ -117,9 +117,14 @@ describe('computeDaPagareMese', () => {
     expect(computeDaPagareMese({ voci: [voci[2]], spese: [], mese })).toBe(0);
   });
 
-  it('le voci legate a un obiettivo non contano (sono già in B)', () => {
+  it('le voci legate a un obiettivo aperto non contano (sono già in B)', () => {
     const v = [{ categoriaId: 'aff', importoMensile: 750, frequenzaMesi: 1, goalId: 'g1' }, voci[1]];
-    expect(computeDaPagareMese({ voci: v, spese: [], mese })).toBe(300);
+    expect(computeDaPagareMese({ voci: v, spese: [], mese, obiettiviApertiIds: ['g1'] })).toBe(300);
+  });
+
+  it('le voci legate a un obiettivo chiuso o scaduto restano da pagare', () => {
+    const v = [{ categoriaId: 'aff', importoMensile: 750, frequenzaMesi: 1, goalId: 'g1' }, voci[1]];
+    expect(computeDaPagareMese({ voci: v, spese: [], mese, obiettiviApertiIds: [] })).toBe(1050);
   });
 
   it('due voci nella stessa categoria dividono la spesa una volta sola', () => {
@@ -142,5 +147,7 @@ describe('computeDisponibileCasa con cuscinetto', () => {
       conti: [conto(1000)], obiettivi: [], today: TODAY, cuscinettoObiettivo: 1321, cuscinettoQuotaMensile: 59,
     });
     expect(r.spiegazione.formula).toContain('Cuscinetto 1.000 di 1.321 €, pieno tra circa 6 mesi.');
+    const testo = [r.spiegazione.formula, ...r.spiegazione.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
+    for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
   });
 });

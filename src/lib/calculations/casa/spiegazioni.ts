@@ -2,7 +2,6 @@ import { differenceInCalendarMonths, parseISO } from 'date-fns';
 import { formatNumero, nomeMese } from '@/lib/format';
 import { computeAccantonatoFinora, computeFinestraGoal } from '@/lib/calculations/accantonato';
 import type { GoalForCalc } from '@/lib/calculations/types';
-import { mesiAlPieno } from './cuscinetto';
 import type { RigaMese } from './versamenti';
 import type { RegolaQuota } from '@/lib/types';
 import {
@@ -170,24 +169,6 @@ export function spiegaRiserva(input: { righe: RigaMese[]; debitoDaRestituire: nu
     valore: arrotonda2(ingredienti.reduce((s, i) => s + i.valore, 0)),
     formula: "Il versamento di ogni mese è riservato dall'inizio del mese, finché non lo registri.",
     ingredienti,
-  };
-}
-
-// Il cuscinetto: i soldi della casa per gli imprevisti, trattenuti dal disponibile un po' alla volta.
-export function spiegaCuscinetto(input: { attuale: number; obiettivo: number; quotaMensile: number }): Spiegazione {
-  const { attuale, obiettivo, quotaMensile } = input;
-  const mancano = Math.max(0, obiettivo - attuale);
-  const mesi = mesiAlPieno(mancano, quotaMensile);
-  const tempo =
-    mancano === 0
-      ? 'Il cuscinetto è già pieno.'
-      : mesi === null
-        ? 'Per ora non si versa niente, quindi non si riempie.'
-        : `Versando ${formatNumero(quotaMensile)} euro al mese sarà pieno tra circa ${mesi} mesi.`;
-  return {
-    valore: attuale,
-    formula: `Soldi della casa per gli imprevisti: l'obiettivo è ${formatNumero(obiettivo)} euro e ogni mese se ne versano ${formatNumero(quotaMensile)}. ${tempo}`,
-    ingredienti: [{ etichetta: 'Trattenuto dal disponibile', valore: attuale }],
   };
 }
 

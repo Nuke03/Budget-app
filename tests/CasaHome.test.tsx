@@ -154,14 +154,24 @@ describe('CasaHome', () => {
     });
 
     it('con un piano in vigore mostra il cuscinetto sotto il numero, con la spiegazione', () => {
+      const disponibile = computeDisponibileCasa({
+        conti: [{ ...conto, saldoAttuale: 1500 }],
+        obiettivi: [],
+        today: new Date('2026-11-09T10:00:00Z'),
+        cuscinettoObiettivo: 1321,
+        cuscinettoQuotaMensile: 59,
+      });
       const { container } = render(
         <CasaHome
           casa={casa}
-          finanze={{ ...finanze([conto]), cuscinetto: { attuale: 59, obiettivo: 1321, quotaMensile: 59 } }}
+          finanze={{ ...finanze([conto]), disponibile, cuscinetto: { attuale: 1321, obiettivo: 1321, quotaMensile: 59 } }}
         />
       );
-      expect(screen.getByText('Cuscinetto 59 di 1.321 €')).toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: 'Come si calcola?' })).toHaveLength(1);
+      expect(screen.getByText('Cuscinetto 1.321 di 1.321 €')).toBeInTheDocument();
+      const pulsanti = screen.getAllByRole('button', { name: 'Come si calcola?' });
+      expect(pulsanti).toHaveLength(1);
+      fireEvent.click(pulsanti[0]);
+      expect(screen.getByText(/Cuscinetto 1\.321 di 1\.321 €, già pieno/)).toBeInTheDocument();
       assertNessunaParolaVietata(container);
     });
 

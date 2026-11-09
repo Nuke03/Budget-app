@@ -24,13 +24,17 @@ export function computeDaPagareMese(input: {
   voci: (Pick<PlanItem, 'categoriaId' | 'importoMensile' | 'frequenzaMesi'> & { goalId?: string | null })[];
   spese: Pick<Transaction, 'tipo' | 'importo' | 'data' | 'categoriaId'>[];
   mese: string;
+  // Obiettivi aperti: sono già contati tra i soldi messi da parte (B).
+  obiettiviApertiIds?: string[];
 }): number {
   const meseChiave = input.mese.slice(0, 7);
-  // Le voci legate a un obiettivo sono già contate tra i soldi messi da parte.
+  // Le voci legate a un obiettivo aperto sono già contate tra i soldi messi da parte;
+  // quelle legate a un obiettivo chiuso o scaduto restano da pagare.
+  const aperti = new Set(input.obiettiviApertiIds ?? []);
   // Più voci nella stessa categoria condividono la stessa spesa: si sottrae una volta sola.
   const previstoPerCategoria = new Map<string, number>();
   for (const v of input.voci) {
-    if (v.frequenzaMesi !== 1 || !v.categoriaId || v.goalId) continue;
+    if (v.frequenzaMesi !== 1 || !v.categoriaId || (v.goalId && aperti.has(v.goalId))) continue;
     previstoPerCategoria.set(v.categoriaId, (previstoPerCategoria.get(v.categoriaId) ?? 0) + v.importoMensile);
   }
   let totale = 0;
