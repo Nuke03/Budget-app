@@ -210,6 +210,17 @@ export async function getPlansFromMonth(
   return [attuale, ...successivi];
 }
 
+// Tutte le versioni del piano della casa, in ordine di valido_dal, con voci e quote.
+export async function getPlanVersions(supabase: SupabaseClient, householdId: string): Promise<PlanBundle[]> {
+  const { data, error } = await supabase
+    .from('household_plans')
+    .select(COLONNE_PIANO)
+    .eq('household_id', householdId)
+    .order('valido_dal', { ascending: true });
+  if (error) throw error;
+  return Promise.all(((data ?? []) as PlanRow[]).map((r) => leggiBundle(supabase, r)));
+}
+
 // La posizione piu alta mai usata in una quota di qualunque versione della casa (0 se nessuna).
 export async function getMaxSlotUsato(supabase: SupabaseClient, householdId: string): Promise<number> {
   const { data: piani, error: e1 } = await supabase

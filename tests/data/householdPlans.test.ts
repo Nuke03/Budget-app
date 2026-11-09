@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPlanForMonth, getPlansFromMonth, getMaxSlotUsato, savePlan, type PlanVersionInput } from '@/lib/data/householdPlans';
+import { getPlanForMonth, getPlansFromMonth, getPlanVersions, getMaxSlotUsato, savePlan, type PlanVersionInput } from '@/lib/data/householdPlans';
 import { createFakeDb } from '../helpers/fakeDb';
 import { fakeRpcClient } from '../helpers/fakeRpc';
 
@@ -211,5 +211,17 @@ describe('savePlan', () => {
   it("rilancia l'errore dell'RPC", async () => {
     const { client } = fakeRpcClient({ save_household_plan: { error: { message: 'valido_dal nel passato' } } });
     await expect(savePlan(client, H, [versione])).rejects.toMatchObject({ message: 'valido_dal nel passato' });
+  });
+});
+
+describe('getPlanVersions', () => {
+  it('getPlanVersions restituisce tutte le versioni in ordine con voci e quote', async () => {
+    const db = seed([piano('p2', '2027-03-01'), piano('p0', '2026-06-01'), piano('p1', '2026-11-01'), piano('px', '2026-06-01', { household_id: 'altra' })]);
+    const v = await getPlanVersions(db.client, H);
+    expect(v.map((b) => b.plan.id)).toEqual(['p0', 'p1', 'p2']);
+    const p1 = v[1];
+    expect(p1.items.map((i) => i.nome)).toEqual(['Luce', 'Gas']);
+    expect(p1.shares.map((s) => s.displayName)).toEqual(['Fabio', 'Giulia']);
+    expect(v[2].items.map((i) => i.nome)).toEqual(['Altro']);
   });
 });

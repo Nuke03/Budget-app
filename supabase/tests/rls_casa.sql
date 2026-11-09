@@ -24,7 +24,9 @@ insert into auth.users (id, email) values
   ('41414141-0000-0000-0000-000000000041', 'rls-x1@test.invalid'),
   ('42424242-0000-0000-0000-000000000042', 'rls-x2@test.invalid'),
   ('43434343-0000-0000-0000-000000000043', 'rls-x3@test.invalid'),
-  ('44444444-0000-0000-0000-000000000044', 'rls-x4@test.invalid');
+  ('44444444-0000-0000-0000-000000000044', 'rls-x4@test.invalid'),
+  ('51515151-0000-0000-0000-000000000051', 'rls-t1@test.invalid'),
+  ('52525252-0000-0000-0000-000000000052', 'rls-t2@test.invalid');
 
 create table public.zz_esiti (n serial, nome text, ok boolean, dettaglio text);
 grant all on public.zz_esiti to public;
@@ -789,6 +791,64 @@ begin
     perform public.zz_verifica('eliminare l utente fondatore non cancella la membership del socio',
       exists (select 1 from public.household_members where household_id = hx and user_id = x2),
       'la membership del socio e sparita');
+  end;
+
+  -- 24. Trasferimenti del caso 12 (0007): rinunce, rimborsi da conti non della casa, conti non collegati.
+  -- Casa dedicata: t1 resta, t2 esce dopo le prove e rimane ex membro.
+  declare
+    t1 constant uuid := '51515151-0000-0000-0000-000000000051';
+    t2 constant uuid := '52525252-0000-0000-0000-000000000052';
+    h5 uuid; c5 text; t1_pers uuid; t2_pers uuid; conto_casa5 uuid; tr5 uuid;
+  begin
+    perform public.zz_as(t1);
+    select public.create_household('Casa trasferimenti', 'T1') into h5;
+    select public.create_invite(h5) into c5;
+    perform public.zz_reset();
+    perform public.zz_ok('t2 entra nella casa dei trasferimenti', t2,
+      format('select public.join_household(%L, ''T2'')', c5));
+    insert into public.accounts (user_id, nome, saldo_attuale) values (t1, 'Conto personale t1', 300)
+      returning id into t1_pers;
+    insert into public.accounts (user_id, nome, saldo_attuale) values (t2, 'Conto personale t2', 300)
+      returning id into t2_pers;
+    insert into public.accounts (user_id, nome, saldo_attuale, household_id) values (t1, 'Conto comune t', 500, h5)
+      returning id into conto_casa5;
+
+    perform public.zz_err_msg('una rinuncia a una restituzione non registrata dal creditore fallisce', t1,
+      format('select public.record_transfer(%L, ''restituzione'', 10, %L, null, null, %L, %L, null, true, null)', h5, oggi, t2, t2),
+      'rinuncia non valida');
+    perform public.zz_err_msg('una rinuncia a un credito con importo e conti fallisce', t1,
+      format('select public.record_transfer(%L, ''rimborso'', 10, %L, %L, null, %L, null, null, false, null)', h5, oggi, conto_casa5, t1),
+      'rinuncia non valida');
+    perform public.zz_err_msg('una rinuncia a un credito con un conto collegato fallisce anche in solo registrazione', t1,
+      format('select public.record_transfer(%L, ''rimborso'', 10, %L, %L, null, %L, null, null, true, null)', h5, oggi, conto_casa5, t1),
+      'rinuncia non valida');
+    perform public.zz_err_msg('un rimborso da un conto che non e della casa fallisce', t1,
+      format('select public.record_transfer(%L, ''rimborso'', 10, %L, %L, null, %L, null, null, false, null)', h5, oggi, t1_pers, t2),
+      'conto della casa non valido');
+
+    perform public.zz_as(t2);
+    select public.record_transfer(h5, 'restituzione', 10, oggi, t1_pers, conto_casa5, t1, null, null, true, null) into tr5;
+    perform public.zz_reset();
+    perform public.zz_verifica('una restituzione solo registrazione con un conto altrui non lascia conti collegati',
+      exists (select 1 from public.transfers where id = tr5 and da_account_id is null and a_account_id is null),
+      'la restituzione ha lasciato conti collegati');
+
+    perform public.zz_as(t1);
+    select public.record_transfer(h5, 'rimborso', 5, oggi, t2_pers, t2_pers, t2, null, null, true, null) into tr5;
+    perform public.zz_reset();
+    perform public.zz_verifica('un rimborso solo registrazione non lascia conti collegati',
+      exists (select 1 from public.transfers where id = tr5 and da_account_id is null and a_account_id is null),
+      'il rimborso ha lasciato conti collegati');
+    perform public.zz_verifica('le restituzioni e i rimborsi solo registrazione non toccano i saldi',
+      (select saldo_attuale from public.accounts where id = t1_pers) = 300
+        and (select saldo_attuale from public.accounts where id = t2_pers) = 300
+        and (select saldo_attuale from public.accounts where id = conto_casa5) = 500,
+      'un saldo e cambiato');
+
+    perform public.zz_ok('t2 esce senza registri aperti', t2, 'select public.leave_household()');
+    perform public.zz_err_msg('una rinuncia a una restituzione con debitore ex membro fallisce', t1,
+      format('select public.record_transfer(%L, ''restituzione'', 10, %L, null, null, %L, %L, null, true, null)', h5, oggi, t1, t2),
+      'membro non valido');
   end;
 
   -- Referto
