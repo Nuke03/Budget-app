@@ -5,7 +5,7 @@ import { formatNumero } from '@/lib/format';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { Account } from '@/lib/types';
-import { useRegistraMovimento } from './usaRegistraMovimento';
+import { useRegistraMovimento } from './useRegistraMovimento';
 import { Annulla, CampoImporto, ErroreMovimento, Registra, SelezioneConto, Spunta } from './CampiMovimento';
 
 type Modo = 'diretto' | 'conto_comune';

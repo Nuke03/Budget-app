@@ -92,5 +92,6 @@ export function messaggioErroreTrasferimento(e: unknown): string {
     return "Chi riceve il rimborso non ha ancora un conto nell'app: scegliete \"Già riflesso nei saldi\".";
   }
   if (testo.includes('membro non valido')) return 'Quella persona non è più in casa.';
+  if (testo.includes('beneficiario non valido')) return 'Questa persona non fa più parte della casa.';
   return 'Salvataggio fallito, controlla la connessione e riprova.';
 }

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { formatNumero } from '@/lib/format';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Account } from '@/lib/types';
-import { useRegistraMovimento } from './usaRegistraMovimento';
+import { useRegistraMovimento } from './useRegistraMovimento';
 import { Annulla, CampoImporto, ErroreMovimento, Registra, SelezioneConto, Spunta } from './CampiMovimento';
 
 // Chi rimborsa lo fa dal conto comune; il conto di chi riceve non serve.

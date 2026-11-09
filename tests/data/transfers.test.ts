@@ -122,6 +122,9 @@ describe('messaggioErroreTrasferimento', () => {
       "Chi riceve il rimborso non ha ancora un conto nell'app: scegliete \"Già riflesso nei saldi\".",
     );
     expect(messaggioErroreTrasferimento(new Error('membro non valido'))).toBe('Quella persona non è più in casa.');
+    expect(messaggioErroreTrasferimento(new Error('beneficiario non valido'))).toBe(
+      'Questa persona non fa più parte della casa.',
+    );
     expect(messaggioErroreTrasferimento(new Error('boh'))).toBe(
       'Salvataggio fallito, controlla la connessione e riprova.',
     );

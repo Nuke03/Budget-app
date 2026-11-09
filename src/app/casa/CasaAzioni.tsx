@@ -12,7 +12,7 @@ import { FoglioInferiore } from '../FoglioInferiore';
 import { Annulla, ErroreMovimento, Registra } from './CampiMovimento';
 import { RestituisciForm } from './RestituisciForm';
 import { RimborsoForm } from './RimborsoForm';
-import { useRegistraMovimento } from './usaRegistraMovimento';
+import { useRegistraMovimento } from './useRegistraMovimento';
 import { VersamentoForm } from './VersamentoForm';
 
 export type AzioneCasa =
@@ -176,7 +176,7 @@ export function CasaAzioni({
     titolo = 'Rinuncia al credito';
     corpo = (
       <Rinuncia
-        testo={`Chiudi il credito di ${formatNumero(azione.importo)} € senza rimborso. Non cambia nessun saldo. Da qui non si può annullare.`}
+        testo={`Chiudi il credito di ${formatNumero(azione.importo)} € senza rimborso. Non cambia nessun saldo. Puoi annullarla dai movimenti della casa.`}
         conferma="Chiudi il credito"
         onDone={fatto}
         onClose={chiudi}
@@ -194,7 +194,7 @@ export function CasaAzioni({
     titolo = 'Rinuncia';
     corpo = (
       <Rinuncia
-        testo={`Chiudi i ${formatNumero(azione.debito.importo)} € che ${azione.nomeDebitore} ti deve, senza restituzione. Non cambia nessun saldo. Da qui non si può annullare.`}
+        testo={`Chiudi i ${formatNumero(azione.debito.importo)} € che ${azione.nomeDebitore} ti deve, senza restituzione. Non cambia nessun saldo. Puoi annullarla dai movimenti della casa.`}
         conferma="Chiudi il debito"
         onDone={fatto}
         onClose={chiudi}

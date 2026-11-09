@@ -6,8 +6,9 @@ import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Transaction, Transfer } from '@/lib/types';
 
+const refresh = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ refresh, push: vi.fn() }),
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transactions', () => ({
@@ -162,6 +163,74 @@ describe('MovimentiCasa', () => {
     expect(riga.textContent).toContain('Fabio');
     expect(screen.getByText('Elimina')).toBeInTheDocument();
     expect(screen.queryByText('Modifica')).not.toBeInTheDocument();
+  });
+
+  it('se la spesa è salvata ma il saldo fallisce la riga resta nuova, si ricarica e compare l errore', async () => {
+    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+    apri();
+    fireEvent.click(screen.getAllByText('Modifica')[0]);
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '70' } });
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+    expect(updateTransaction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('-70,00 €')).toBeInTheDocument();
+    expect(screen.queryByText('-64,20 €')).not.toBeInTheDocument();
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('se è la spesa a non salvarsi la riga torna quella vecchia', async () => {
+    vi.mocked(updateTransaction).mockRejectedValueOnce(new Error('rete'));
+    apri();
+    fireEvent.click(screen.getAllByText('Modifica')[0]);
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '70' } });
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+    expect(screen.getByText('-64,20 €')).toBeInTheDocument();
+    expect(adjustAccountBalance).not.toHaveBeenCalled();
+  });
+
+  describe('conferma prima di lasciare qualcuno senza soldi', () => {
+    const cartaRimborsata = tx({ id: 'carta', descrizione: 'Spesa carta', importo: 100, accountId: 'ap', pagataDaUserId: 'u1' });
+    const rimborso = trasf({ id: 'rb', causale: 'rimborso', userId: 'u2', beneficiarioUserId: 'u1', importo: 100, aAccountId: null });
+
+    it('eliminare una spesa già rimborsata chiede conferma e spiega chi resta senza', async () => {
+      apri([rimborso], [cartaRimborsata]);
+      fireEvent.click(screen.getByText('Elimina'));
+      expect(screen.getByText(/già stata rimborsata a Fabio/)).toBeInTheDocument();
+      expect(screen.getByText(/la casa resta senza 100,00 €/)).toBeInTheDocument();
+      expect(deleteTransaction).not.toHaveBeenCalled();
+      assertNessunaParolaVietata(screen.getByLabelText('Conferma'));
+      fireEvent.click(screen.getByText('Procedi lo stesso'));
+      await waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 'carta'));
+      expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
+    });
+
+    it('Lascia com è non cancella niente', () => {
+      apri([rimborso], [cartaRimborsata]);
+      fireEvent.click(screen.getByText('Elimina'));
+      fireEvent.click(screen.getByText("Lascia com'è"));
+      expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
+      expect(screen.getByText('Spesa carta')).toBeInTheDocument();
+      expect(deleteTransaction).not.toHaveBeenCalled();
+    });
+
+    it('una spesa non rimborsata si elimina subito, senza conferma', async () => {
+      apri([], [cartaRimborsata]);
+      fireEvent.click(screen.getByText('Elimina'));
+      expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
+      await waitFor(() => expect(deleteTransaction).toHaveBeenCalled());
+    });
+
+    it('annullare un versamento per conto di un altro già restituito chiede conferma', async () => {
+      const prestito = trasf({ id: 'pc', perContoDiUserId: 'u2', importo: 200, aAccountId: null });
+      const resto = trasf({ id: 'rs', causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo: 200, meseCompetenza: null, aAccountId: null });
+      apri([prestito, resto], []);
+      fireEvent.click(screen.getAllByText('Annulla')[0]);
+      expect(screen.getByText(/Anna ha già restituito dei soldi a Fabio/)).toBeInTheDocument();
+      expect(deleteTransfer).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByText('Procedi lo stesso'));
+      await waitFor(() => expect(deleteTransfer).toHaveBeenCalledWith(expect.anything(), 'pc'));
+    });
   });
 
   it('nessuna parola vietata', () => {

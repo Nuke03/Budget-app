@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useRegistraMovimento } from '@/app/casa/usaRegistraMovimento';
+import { useRegistraMovimento } from '@/app/casa/useRegistraMovimento';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transfers', async () => ({

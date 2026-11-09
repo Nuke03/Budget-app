@@ -260,7 +260,7 @@ describe('CasaHome', () => {
       it('Rinuncia al credito chiede conferma e registra un rimborso a proprio favore', async () => {
         monta();
         fireEvent.click(screen.getByRole('button', { name: 'Rinuncia' }));
-        expect(screen.getByText(/Chiudi il credito di 45 €.*Da qui non si può annullare/)).toBeInTheDocument();
+        expect(screen.getByText(/Chiudi il credito di 45 €.*Puoi annullarla dai movimenti della casa/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Chiudi il credito' }));
         await waitFor(() =>
           expect(recordTransfer).toHaveBeenCalledWith(

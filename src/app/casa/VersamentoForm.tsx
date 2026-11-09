@@ -5,7 +5,7 @@ import { addMonths, format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Account } from '@/lib/types';
-import { useRegistraMovimento } from './usaRegistraMovimento';
+import { useRegistraMovimento } from './useRegistraMovimento';
 import {
   Annulla,
   Campo,

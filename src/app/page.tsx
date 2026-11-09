@@ -8,8 +8,15 @@ export default async function HomePage() {
   const supabase = await createClient();
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) {
+    // Senza sessione (o con sessione non valida, errori 4xx) si va al login. Se Supabase non risponde
+    // (rete, pausa del servizio) l'errore sale alla pagina "Non riesco a raggiungere il database".
+    const status = (error as { status?: number } | null)?.status ?? 0;
+    if (error && (status < 400 || status >= 500)) throw error;
+    redirect('/login');
+  }
   const data = await loadHomeData(supabase, new Date(), user.id);
 
   return (
