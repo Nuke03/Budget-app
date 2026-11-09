@@ -94,6 +94,14 @@ diventa effettiva. Per le eliminazioni più pesanti, prima del tocco, un avviso
 di conferma con l'opzione "Non avvisarmi più", che si può riattivare dalle
 impostazioni. Da applicare in modo uniforme in tutta l'app, Casa compresa.
 
+**Ordine deciso con Fabio (9 novembre):** prima questo blocco di design e UX,
+poi si implementano nel nuovo design la parte P.IVA guidata con il reddito
+irregolare ("pezzo 2": dove trovare i dati, stipendio dal cuscinetto, scadenze
+F24 di giugno e novembre) e il percorso di apprendimento personale ("pezzo 3").
+Durante questo blocco si progetta come se le due parti esistessero già, con
+segnaposto nelle schermate e nella navigazione, così non serve ristrutturare
+dopo.
+
 **Semplicità d'uso** (Fabio, 9 novembre): oggi il piano della quota e i
 flussi simili risultano meccanici e difficili da gestire. Nell'audit vanno
 trattati come difetti: meno passaggi, valori di partenza sensati, una decisione
