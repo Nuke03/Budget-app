@@ -5,6 +5,7 @@ import {
   messaggioErroreControllo,
 } from '@/lib/data/balanceChecks';
 import { createFakeDb } from '../helpers/fakeDb';
+import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
 
 describe('recordBalanceCheck', () => {
   it('chiama la rpc con i parametri giusti e restituisce l id', async () => {
@@ -58,16 +59,16 @@ describe('getControlliRecenti', () => {
     expect(await getControlliRecenti(db.client, 'H1')).toEqual({ ultimoControllo: null, ultimoCheckinMese: null });
   });
 
-  it('fa due sole query con limit 1', async () => {
-    const db = createFakeDb({ balance_checks: [], household_checkins: [] }, { userId: 'U1', membri: { H1: ['U1'] } });
-    const letture: string[] = [];
-    const from = db.client.from.bind(db.client);
-    db.client.from = (nome: string) => {
-      letture.push(nome);
-      return from(nome);
-    };
-    await getControlliRecenti(db.client, 'H1');
-    expect(letture.sort()).toEqual(['balance_checks', 'household_checkins']);
+  it('legge solo l ultimo controllo e l ultimo check-in: order desc e limit 1', async () => {
+    const { client, calls } = createRecordingClient([]);
+    await getControlliRecenti(client, 'H1');
+    const bc = calls.find((c) => c.table === 'balance_checks');
+    const hc = calls.find((c) => c.table === 'household_checkins');
+    expect(calls).toHaveLength(2);
+    expect(callsOf(bc!, 'order')).toEqual([['data', { ascending: false }]]);
+    expect(callsOf(bc!, 'limit')).toEqual([[1]]);
+    expect(callsOf(hc!, 'order')).toEqual([['mese', { ascending: false }]]);
+    expect(callsOf(hc!, 'limit')).toEqual([[1]]);
   });
 });
 

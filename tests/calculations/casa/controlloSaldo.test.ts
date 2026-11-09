@@ -47,3 +47,13 @@ describe('speseNonRegistrate', () => {
     expect(speseNonRegistrate([], '2026-11-01')).toBe(0);
   });
 });
+
+describe('speseNonRegistrate: arrotondamento', () => {
+  it('la somma è arrotondata ai centesimi (0.1 + 0.2 fa 0.3)', () => {
+    const transazioni = [
+      { tipo: 'expense' as const, importo: 0.1, data: '2026-11-02', origine: 'riconciliazione' as const },
+      { tipo: 'expense' as const, importo: 0.2, data: '2026-11-03', origine: 'riconciliazione' as const },
+    ];
+    expect(speseNonRegistrate(transazioni, '2026-11-01')).toBe(0.3);
+  });
+});

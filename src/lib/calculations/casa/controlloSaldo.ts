@@ -38,7 +38,8 @@ export function speseNonRegistrate(
   mese: string
 ): number {
   const meseIso = mese.slice(0, 7);
-  return transazioni
+  const totale = transazioni
     .filter((t) => t.tipo === 'expense' && t.origine === 'riconciliazione' && t.data.slice(0, 7) === meseIso)
     .reduce((somma, t) => somma + t.importo, 0);
+  return Math.round(totale * 100) / 100;
 }
