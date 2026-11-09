@@ -13,6 +13,8 @@ import {
   type MotivoBlocco,
 } from '@/lib/data/households';
 import { CodiceInvito } from '../CodiceInvito';
+import { CalendarioCasa } from './CalendarioCasa';
+import type { CalendarFeed } from '@/lib/types';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
 
@@ -31,7 +33,15 @@ const CONFERMA_CHIUSURA =
 
 const bottoneSecondario = 'rounded-[var(--radius-md)] border border-black/10 px-4 py-2.5 text-sm font-semibold';
 
-export function ImpostazioniCasa({ casa }: { casa: CasaCorrente }) {
+export function ImpostazioniCasa({
+  casa,
+  feedCalendario = null,
+  origin,
+}: {
+  casa: CasaCorrente;
+  feedCalendario?: CalendarFeed | null;
+  origin?: string;
+}) {
   const router = useRouter();
   const [codice, setCodice] = useState<string | null>(casa.invite?.codice ?? null);
   const [errore, setErrore] = useState<string | null>(null);
@@ -128,6 +138,8 @@ export function ImpostazioniCasa({ casa }: { casa: CasaCorrente }) {
           </p>
         )}
       </section>
+
+      <CalendarioCasa feedIniziale={feedCalendario} origin={origin} />
 
       <section className="flex flex-col gap-3 pt-4">
         {ultimo ? (

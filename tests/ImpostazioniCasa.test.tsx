@@ -133,3 +133,11 @@ describe('ImpostazioniCasa', () => {
     assertNessunaParolaVietata(container);
   });
 });
+
+describe('ImpostazioniCasa, calendario', () => {
+  it('mostra la sezione Calendario', () => {
+    render(<ImpostazioniCasa casa={casa()} />);
+    expect(screen.getByRole('heading', { name: 'Calendario' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Crea il link' })).toBeInTheDocument();
+  });
+});
