@@ -85,6 +85,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
               key: nuovaChiave(),
               nome: '',
               categoriaNome: '',
+              categoriaId: null,
               importoText: '',
               frequenzaText: '1',
               custom: true,

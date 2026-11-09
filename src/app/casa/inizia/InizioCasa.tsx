@@ -142,7 +142,7 @@ export function InizioCasa({
         )}
 
         <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
-          Come ti chiami per l&apos;altro?
+          Come ti chiami per gli altri in casa?
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
         </label>
 

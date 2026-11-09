@@ -10,9 +10,10 @@ describe('CasaSenzaCasa', () => {
     expect(screen.getByRole('link', { name: 'Ho un codice di invito' })).toHaveAttribute('href', '/casa/inizia?modo=entra');
   });
 
-  it('mostra la riga "Cosa vede l\'altro?" con la frase sulla privacy', () => {
-    render(<CasaSenzaCasa />);
-    expect(screen.getByText(/Cosa vede l'altro\?/)).toBeInTheDocument();
+  it(`non nomina "l'altro": usa "le altre persone di casa"`, () => {
+    const { container } = render(<CasaSenzaCasa />);
+    expect(screen.getByText(/Cosa vedono le altre persone di casa\?/)).toBeInTheDocument();
+    expect(container.textContent).not.toContain("l'altro");
     expect(
       screen.getByText(/Solo conti, spese e obiettivi della casa\. Le tue cose personali no, mai\./)
     ).toBeInTheDocument();

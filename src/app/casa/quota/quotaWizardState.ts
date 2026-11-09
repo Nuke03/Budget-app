@@ -45,6 +45,7 @@ export interface VoceState {
   key: number;
   nome: string;
   categoriaNome: string;
+  categoriaId: string | null;
   importoText: string;
   frequenzaText: string;
   custom: boolean;
@@ -138,6 +139,7 @@ export function vociIniziali(piano: PlanBundle | undefined): VoceState[] {
           key: nuovaChiave(),
           nome: i.nome,
           categoriaNome: i.nome,
+          categoriaId: i.categoriaId,
           importoText: testoNumero(i.importoRicorrenza),
           frequenzaText: String(i.frequenzaMesi),
           custom: !tipica,
@@ -152,6 +154,7 @@ export function vociIniziali(piano: PlanBundle | undefined): VoceState[] {
     key: nuovaChiave(),
     nome: t.nome,
     categoriaNome: t.nome,
+    categoriaId: null,
     importoText: t.stimaRicorrenza === null ? '' : testoNumero(t.stimaRicorrenza),
     frequenzaText: String(t.frequenzaMesi),
     custom: false,

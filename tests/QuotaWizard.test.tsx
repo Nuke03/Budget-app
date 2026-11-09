@@ -348,6 +348,7 @@ describe('QuotaWizard: passo 4 e 5', () => {
     const voci: PlanVoceInput[] = ESEMPIO_VOCI.map((v, i) => ({
       nome: v.nome,
       categoriaNome: v.nome,
+      categoriaId: null,
       frequenzaMesi: v.frequenzaMesi,
       importoRicorrenza: v.importoRicorrenza,
       origineStima: v.chiave === 'affitto' || v.chiave === 'assicurazione' ? 'utente' : 'suggerita',
@@ -529,6 +530,40 @@ describe('QuotaWizard: riparte dal piano attuale', () => {
     expect(screen.getByLabelText('Ogni mese')).toHaveValue('59');
     avanti();
     expect(screen.getByText('Totale da versare ogni mese: 1.380 €')).toBeInTheDocument();
+  });
+
+  it('rinominare una voce personalizzata esistente manda la stessa categoriaId con il nuovo nome', async () => {
+    const piano = bundle([share({})]);
+    piano.items = [{ ...piano.items[0], nome: 'Palestra', categoriaId: 'c9', ordine: 0 }];
+    monta({ piani: [piano] });
+    avanti();
+    scrivi(screen.getByLabelText('Nome della voce'), 'Yoga');
+    avanti();
+    avanti();
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermiamo' }));
+    await waitFor(() => expect(savePlan).toHaveBeenCalled());
+    const voci = savePlan.mock.calls[0][2][0].voci;
+    expect(voci[0]).toMatchObject({ categoriaId: 'c9', categoriaNome: 'Yoga', nome: 'Yoga' });
+  });
+
+  it('una voce aggiunta dopo ha categoriaId null', async () => {
+    const piano = bundle([share({})]);
+    piano.items = [{ ...piano.items[0], nome: 'Palestra', categoriaId: 'c9', ordine: 0 }];
+    monta({ piani: [piano] });
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi una voce' }));
+    const nomi = screen.getAllByLabelText('Nome della voce');
+    scrivi(nomi[1], 'Pulizie');
+    scrivi(screen.getByLabelText('Importo Pulizie'), '40');
+    avanti();
+    avanti();
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermiamo' }));
+    await waitFor(() => expect(savePlan).toHaveBeenCalled());
+    const voci = savePlan.mock.calls[0][2][0].voci;
+    expect(voci[0].categoriaId).toBe('c9');
+    expect(voci[1]).toMatchObject({ nome: 'Pulizie', categoriaId: null });
   });
 
   it('un nuovo segnaposto prende lo slot massimo più 1', async () => {

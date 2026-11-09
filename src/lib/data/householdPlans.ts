@@ -10,6 +10,7 @@ export interface PlanBundle {
 export interface PlanVoceInput {
   nome: string;
   categoriaNome: string;
+  categoriaId?: string | null;
   frequenzaMesi: number;
   importoRicorrenza: number;
   origineStima: OrigineStima;
@@ -246,6 +247,7 @@ export async function savePlan(
       voci: v.voci.map((x) => ({
         nome: x.nome,
         categoria_nome: x.categoriaNome,
+        categoria_id: x.categoriaId ?? null,
         frequenza_mesi: x.frequenzaMesi,
         importo_ricorrenza: x.importoRicorrenza,
         origine_stima: x.origineStima,

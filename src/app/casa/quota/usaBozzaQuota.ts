@@ -94,6 +94,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
   const vociPiano: PlanVoceInput[] = voci.map((v, i) => ({
     nome: v.nome.trim(),
     categoriaNome: v.custom ? v.nome.trim() : v.categoriaNome,
+    categoriaId: v.categoriaId,
     frequenzaMesi: parseMesi(v.frequenzaText) ?? 1,
     importoRicorrenza: parseImporto(v.importoText) ?? 0,
     origineStima: v.origine,

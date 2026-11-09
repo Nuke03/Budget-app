@@ -164,6 +164,7 @@ describe('savePlan', () => {
               {
                 nome: 'Luce',
                 categoria_nome: 'Luce',
+                categoria_id: null,
                 frequenza_mesi: 2,
                 importo_ricorrenza: 110,
                 origine_stima: 'suggerita',
@@ -188,6 +189,23 @@ describe('savePlan', () => {
         ],
       },
     });
+  });
+
+  it('savePlan manda categoria_id accanto a categoria_nome', async () => {
+    const { client, calls } = fakeRpcClient({ save_household_plan: { data: ['plan-1'] } });
+    const conId: PlanVersionInput = {
+      ...versione,
+      voci: [{ ...versione.voci[0], nome: 'Yoga', categoriaNome: 'Yoga', categoriaId: 'c9' }],
+    };
+    await savePlan(client, H, [conId]);
+    const voce = (calls[0].args as { p_payload: { versioni: { voci: Record<string, unknown>[] }[] } }).p_payload
+      .versioni[0].voci[0];
+    expect(voce.categoria_id).toBe('c9');
+    expect(voce.categoria_nome).toBe('Yoga');
+    await savePlan(client, H, [versione]);
+    const senza = (calls[1].args as { p_payload: { versioni: { voci: Record<string, unknown>[] }[] } }).p_payload
+      .versioni[0].voci[0];
+    expect(senza.categoria_id).toBeNull();
   });
 
   it("rilancia l'errore dell'RPC", async () => {

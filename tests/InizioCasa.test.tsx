@@ -28,7 +28,7 @@ beforeEach(() => {
 describe('InizioCasa', () => {
   it('il nome di chi crea è precompilato con defaultDisplayName', () => {
     render(<InizioCasa defaultDisplayName="fabio" />);
-    expect(screen.getByLabelText("Come ti chiami per l'altro?")).toHaveValue('fabio');
+    expect(screen.getByLabelText("Come ti chiami per gli altri in casa?")).toHaveValue('fabio');
   });
 
   it('crea la casa, genera l\'invito e mostra il codice con il trattino e "Copia il codice"', async () => {
@@ -106,7 +106,7 @@ describe('InizioCasa', () => {
   it('chiede il nome visualizzato anche a chi entra', () => {
     render(<InizioCasa defaultDisplayName="anna" />);
     fireEvent.click(screen.getByRole('button', { name: 'Ho un codice di invito' }));
-    expect(screen.getByLabelText("Come ti chiami per l'altro?")).toHaveValue('anna');
+    expect(screen.getByLabelText("Come ti chiami per gli altri in casa?")).toHaveValue('anna');
   });
 
   it('non contiene parole vietate', () => {
