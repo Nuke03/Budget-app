@@ -42,7 +42,7 @@ function azioneDaPromemoria(
   if (az.tipo === 'versamento') return { tipo: 'versamento' };
   const altro = az.altroUserId ?? '';
   const nome = nomi[altro] ?? 'Un altro membro';
-  if (az.tipo === 'rimborso') return { tipo: 'rimborso', creditore: { userId: altro, nome }, importo: az.importo };
+  if (az.tipo === 'rimborso') return { tipo: 'rimborso', creditore: { userId: altro, nome }, importo: az.importo ?? 0 };
   const debito = debiti.find((d) => d.debitoreId === meUserId && d.creditoreId === altro);
   return debito ? { tipo: 'restituisci', debito, nomeCreditore: nome } : null;
 }

@@ -11,18 +11,22 @@ export interface StatoPromemoria {
   nomi: Record<string, string>;
   crediti: Record<string, number>;
   debiti: DebitoMembro[];
+  // Il controllo del saldo: ultimo è la data dell'ultimo controllo (null se mai fatto), riferimento
+  // il giorno da cui si conta se non c'è mai stato. Senza conto il promemoria non compare.
+  controllo?: { ultimo: string | null; riferimento: string; haConto: boolean };
 }
 
 export interface AzionePromemoria {
-  tipo: 'versamento' | 'rimborso' | 'restituisci';
+  tipo: 'versamento' | 'rimborso' | 'restituisci' | 'controllo' | 'checkin';
   etichetta: string;
-  importo: number;
+  importo?: number;
   altroUserId?: string;
+  href?: string;
 }
 
 export interface Promemoria {
   id: string;
-  tipo: 'versamento' | 'credito' | 'debito';
+  tipo: 'versamento' | 'credito' | 'debito' | 'controllo' | 'checkin';
   testo: string;
   azione: AzionePromemoria | null;
 }
@@ -30,8 +34,15 @@ export interface Promemoria {
 // Quanti promemoria mostrare insieme: il taglio si fa dopo aver tolto quelli rimandati.
 export const MASSIMO_PROMEMORIA = 2;
 const GIORNI_DI_PREAVVISO = 3;
+// Dopo più di questi giorni dall'ultimo controllo del saldo il promemoria ricompare.
+const GIORNI_CONTROLLO = 14;
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
 const euro = (n: number): string => `${formatNumero(n)} €`;
+
+// Giorni di calendario fra due date YYYY-MM-DD (mai fra istanti, così nessun fuso li sposta).
+function giorniTra(da: string, a: string): number {
+  return (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${da}T00:00:00Z`)) / 86_400_000;
+}
 
 // Il primo giorno in cui il promemoria del versamento compare: tre giorni prima, ma dentro il mese.
 function primoGiornoVisibile(mesePiano: string, giorno: number): string {
@@ -117,6 +128,19 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
         tipo: 'debito',
         testo: `${nome(d.debitoreId)} deve ancora ${euro(d.importo)} a te.`,
         azione: null,
+      });
+    }
+  }
+
+  const controllo = stato.controllo;
+  if (controllo?.haConto) {
+    const da = controllo.ultimo ?? controllo.riferimento;
+    if (giorniTra(da, oggi) > GIORNI_CONTROLLO) {
+      out.push({
+        id: `controllo:${da}`,
+        tipo: 'controllo',
+        testo: 'Un controllo veloce del conto comune? Confrontate il saldo con quello della banca.',
+        azione: { tipo: 'controllo', etichetta: 'Controlla', href: '/casa/controllo/conto' },
       });
     }
   }

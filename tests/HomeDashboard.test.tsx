@@ -53,6 +53,7 @@ function casaPerHome(stato: Partial<CasaStato> = {}): CasaPerHome {
       debitoDaRestituire: 0,
       crediti: { u1: 0, u2: 0 },
       avvisoArretrati: false,
+      controlli: { ultimoControllo: null, ultimoCheckinMese: null },
       ...stato,
     },
   };

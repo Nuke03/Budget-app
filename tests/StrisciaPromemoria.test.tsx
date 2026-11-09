@@ -78,3 +78,19 @@ describe('StrisciaPromemoria', () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe('StrisciaPromemoria con href', () => {
+  it('l azione con href è un link alla pagina', () => {
+    const controllo: Promemoria[] = [
+      {
+        id: 'controllo:2026-10-25',
+        tipo: 'controllo',
+        testo: 'Un controllo veloce del conto comune? Confrontate il saldo con quello della banca.',
+        azione: { tipo: 'controllo', etichetta: 'Controlla', href: '/casa/controllo/conto' },
+      },
+    ];
+    render(<StrisciaPromemoria promemoria={controllo} oggi="2026-11-09" />);
+    expect(screen.getByRole('link', { name: 'Controlla' })).toHaveAttribute('href', '/casa/controllo/conto');
+    expect(screen.queryByRole('button', { name: 'Controlla' })).not.toBeInTheDocument();
+  });
+});

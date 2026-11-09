@@ -4,6 +4,7 @@ import { casa as scopeCasa } from '@/lib/data/scope';
 import { getTransactions } from '@/lib/data/transactions';
 import { getPlanVersions, type PlanBundle } from '@/lib/data/householdPlans';
 import { getTransfers } from '@/lib/data/transfers';
+import { getControlliRecenti } from '@/lib/data/balanceChecks';
 import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
 import { oggiRomaISO, meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { riservaPersonale } from '@/lib/calculations/casa/riservoVersamento';
@@ -25,6 +26,7 @@ export interface CasaStato {
   debitoDaRestituire: number;
   crediti: Record<string, number>;
   avvisoArretrati: boolean;
+  controlli: { ultimoControllo: string | null; ultimoCheckinMese: string | null };
 }
 
 const MESI_ARRETRATI_MASSIMI = 2;
@@ -37,10 +39,11 @@ export async function loadCasaStato(
   now: Date = new Date()
 ): Promise<CasaStato> {
   const scope = scopeCasa(casa.household.id);
-  const [piani, trasferimenti, spese] = await Promise.all([
+  const [piani, trasferimenti, spese, controlli] = await Promise.all([
     getPlanVersions(supabase, casa.household.id),
     getTransfers(supabase, scope),
     getTransactions(supabase, scope),
+    getControlliRecenti(supabase, casa.household.id),
   ]);
   const { righe: righePerMembro, crediti, debiti } = calcolaRegistriCasa({
     piani,
@@ -63,5 +66,6 @@ export async function loadCasaStato(
     debitoDaRestituire: riservaDebiti,
     crediti,
     avvisoArretrati: righe.filter((r) => r.mancano > 0).length > MESI_ARRETRATI_MASSIMI,
+    controlli,
   };
 }

@@ -72,7 +72,11 @@ export function StrisciaPromemoria({
         >
           <p>{p.testo}</p>
           <div className="flex gap-4">
-            {p.azione ? (
+            {p.azione?.href ? (
+              <Link href={p.azione.href} className="text-sm font-semibold text-brand-dark">
+                {p.azione.etichetta}
+              </Link>
+            ) : p.azione ? (
               <button
                 type="button"
                 onClick={() => onAzione?.(p.azione as AzionePromemoria)}

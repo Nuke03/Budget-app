@@ -104,3 +104,63 @@ describe('statoPromemoria', () => {
     expect(s).toMatchObject({ giornoVersamento: null, mesePiano: null, versamentoMese: null });
   });
 });
+
+describe('controllo del saldo dopo 14 giorni', () => {
+  const conControllo = (controllo: StatoPromemoria['controllo']): StatoPromemoria => ({ ...base, controllo });
+  const testoControllo = 'Un controllo veloce del conto comune? Confrontate il saldo con quello della banca.';
+
+  it('dopo più di 14 giorni dall ultimo controllo compare con href', () => {
+    const r = computeReminders(
+      conControllo({ ultimo: '2026-10-25', riferimento: '2026-10-01', haConto: true }),
+      me,
+      '2026-11-09'
+    );
+    const controllo = r.find((p) => p.tipo === 'controllo');
+    expect(controllo?.testo).toBe(testoControllo);
+    expect(controllo?.azione).toEqual({ tipo: 'controllo', etichetta: 'Controlla', href: '/casa/controllo/conto' });
+  });
+
+  it('a 14 giorni esatti non compare', () => {
+    const r = computeReminders(
+      conControllo({ ultimo: '2026-10-26', riferimento: '2026-10-01', haConto: true }),
+      me,
+      '2026-11-09'
+    );
+    expect(r.some((p) => p.tipo === 'controllo')).toBe(false);
+  });
+
+  it('senza nessun controllo conta dal riferimento', () => {
+    const r = computeReminders(
+      conControllo({ ultimo: null, riferimento: '2026-10-20', haConto: true }),
+      me,
+      '2026-11-09'
+    );
+    expect(r.some((p) => p.tipo === 'controllo')).toBe(true);
+  });
+
+  it('senza conto non compare mai', () => {
+    const r = computeReminders(
+      conControllo({ ultimo: null, riferimento: '2026-01-01', haConto: false }),
+      me,
+      '2026-11-09'
+    );
+    expect(r.some((p) => p.tipo === 'controllo')).toBe(false);
+  });
+
+  it('viene dopo versamento, crediti e debiti', () => {
+    const r = computeReminders(
+      {
+        ...conControllo({ ultimo: null, riferimento: '2026-01-01', haConto: true }),
+        crediti: { u1: 45 },
+        debiti: [debito('u2', 'u1')],
+      },
+      me,
+      '2026-11-09'
+    );
+    expect(r.map((p) => p.tipo)).toEqual(['versamento', 'credito', 'debito', 'controllo']);
+  });
+
+  it('senza il campo controllo i promemoria restano quelli di prima', () => {
+    expect(computeReminders(base, me, '2026-11-20').map((p) => p.tipo)).toEqual(['versamento']);
+  });
+});

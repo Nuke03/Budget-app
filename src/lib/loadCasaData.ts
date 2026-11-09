@@ -8,6 +8,7 @@ import { casa as scopeCasa } from '@/lib/data/scope';
 import { getTransactions } from '@/lib/data/transactions';
 import { getPlanVersions, type PlanBundle } from '@/lib/data/householdPlans';
 import { getTransfers } from '@/lib/data/transfers';
+import { getControlliRecenti } from '@/lib/data/balanceChecks';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { computeDaPagareMese, computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
@@ -38,6 +39,8 @@ export interface CasaData {
   piani: PlanBundle[];
   righe: Record<string, RigaMese[]>;
   debiti: DebitoMembro[];
+  // L'ultimo controllo del saldo e l'ultimo check-in mensile della casa.
+  controlli: { ultimoControllo: string | null; ultimoCheckinMese: string | null };
 }
 
 export async function loadCasaAggiunta(
@@ -66,11 +69,12 @@ export async function loadCasaData(
   adesso: Date = new Date()
 ): Promise<CasaData> {
   const today = oggiRomaData(adesso);
-  const [aggiunta, transazioni, trasferimenti, piani] = await Promise.all([
+  const [aggiunta, transazioni, trasferimenti, piani, controlli] = await Promise.all([
     loadCasaAggiunta(supabase, casa),
     getTransactions(supabase, scopeCasa(casa.household.id)),
     getTransfers(supabase, scopeCasa(casa.household.id)),
     getPlanVersions(supabase, casa.household.id),
+    getControlliRecenti(supabase, casa.household.id),
   ]);
   const { righe, crediti, debiti } = calcolaRegistriCasa({
     piani,
@@ -134,5 +138,6 @@ export async function loadCasaData(
     piani,
     righe,
     debiti,
+    controlli,
   };
 }

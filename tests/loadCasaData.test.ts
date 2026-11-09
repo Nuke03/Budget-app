@@ -215,3 +215,37 @@ describe('loadCasaData disponibile completo', () => {
     expect(d.disponibile.d).toBe(230);
   });
 });
+
+describe('loadCasaData controlli', () => {
+  const controlliSeed = {
+    balance_checks: [
+      { id: 'b1', household_id: 'H1', account_id: 'ac-casa', data: '2026-11-02' },
+      { id: 'b2', household_id: 'H1', account_id: 'ac-casa', data: '2026-10-02' },
+    ],
+    household_checkins: [{ id: 'c1', household_id: 'H1', mese: '2026-10-01' }],
+  };
+
+  it('espone controlli con data e mese più recenti', async () => {
+    const db = createFakeDb({ ...seed(), ...controlliSeed }, { userId: 'A', membri: MEMBRI });
+    const dati = await loadCasaData(db.client, casaA, TODAY);
+    expect(dati.controlli).toEqual({ ultimoControllo: '2026-11-02', ultimoCheckinMese: '2026-10-01' });
+  });
+
+  it('senza controlli sono null', async () => {
+    const dati = await carica();
+    expect(dati.controlli).toEqual({ ultimoControllo: null, ultimoCheckinMese: null });
+  });
+
+  it('nessuna query in più oltre alle due limit 1', async () => {
+    const db = createFakeDb({ ...seed(), ...controlliSeed }, { userId: 'A', membri: MEMBRI });
+    const letture: string[] = [];
+    const from = db.client.from.bind(db.client);
+    db.client.from = (nome: string) => {
+      letture.push(nome);
+      return from(nome);
+    };
+    await loadCasaData(db.client, casaA, TODAY);
+    expect(letture.filter((t) => t === 'balance_checks')).toHaveLength(1);
+    expect(letture.filter((t) => t === 'household_checkins')).toHaveLength(1);
+  });
+});

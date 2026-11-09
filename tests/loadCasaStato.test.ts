@@ -126,3 +126,26 @@ describe('loadCasaStato', () => {
     expect(cieco.riservaVersamento).toBe(0);
   });
 });
+
+describe('loadCasaStato controlli', () => {
+  it('espone controlli e fa una sola lettura per tabella', async () => {
+    const db = createFakeDb(
+      {
+        household_plan_items: [], transactions: [], transfers: [], household_plans: [], household_plan_shares: [],
+        balance_checks: [{ id: 'b1', household_id: 'H1', data: '2026-11-05' }],
+        household_checkins: [{ id: 'c1', household_id: 'H1', mese: '2026-10-01' }],
+      },
+      { userId: 'B', membri: { H1: ['A', 'B'] } }
+    );
+    const letture: string[] = [];
+    const from = db.client.from.bind(db.client);
+    db.client.from = (nome: string) => {
+      letture.push(nome);
+      return from(nome);
+    };
+    const s = await loadCasaStato(db.client, casaDi(B, [A, B]), NOW);
+    expect(s.controlli).toEqual({ ultimoControllo: '2026-11-05', ultimoCheckinMese: '2026-10-01' });
+    expect(letture.filter((t) => t === 'balance_checks')).toHaveLength(1);
+    expect(letture.filter((t) => t === 'household_checkins')).toHaveLength(1);
+  });
+});
