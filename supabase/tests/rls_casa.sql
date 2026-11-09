@@ -1,6 +1,6 @@
 -- supabase/tests/rls_casa.sql
 -- Prova delle policy RLS e delle funzioni della casa comune. Si esegue a mano nel SQL editor
--- di Supabase DOPO le migrazioni 0004, 0005, 0006 e 0007. Non lascia nulla nel database: crea utenti finti e
+-- di Supabase DOPO le migrazioni 0004, 0005, 0006, 0007 e 0008. Non lascia nulla nel database: crea utenti finti e
 -- dati di prova, poi termina con un errore voluto che annulla tutto e mostra il referto.
 -- Esito atteso: "RISULTATO: ... 0 FAIL" e solo righe OK.
 begin;
@@ -849,6 +849,103 @@ begin
     perform public.zz_err_msg('una rinuncia a una restituzione con debitore ex membro fallisce', t1,
       format('select public.record_transfer(%L, ''restituzione'', 10, %L, null, null, %L, %L, null, true, null)', h5, oggi, t1, t2),
       'membro non valido');
+  end;
+
+  -- 25. Migrazione 0008: check-in mensile e fondo "da parte", voci del piano, controllo del saldo.
+  -- Casa h: A, B e C dentro, D fuori. Il mese corrente non si chiude mai.
+  declare
+    mese_prec date := (mese - interval '1 month')::date;
+    fondo_casa uuid; fondo_ricorrente uuid; fondo_altra uuid; h_altra uuid;
+    tgt_0 numeric; tgt_1 numeric; tgt_2 numeric;
+    voce_m0 uuid; voce_m1 uuid;
+  begin
+    insert into public.budget_goals (user_id, nome, importo_target, modalita, household_id)
+      values (a, 'Fondo casa 0008', 300, 'bloccato', h) returning id into fondo_casa;
+    insert into public.budget_goals (user_id, nome, importo_target, modalita, household_id, ricorrente, frequenza_mesi)
+      values (a, 'Fondo ricorrente 0008', 100, 'bloccato', h, true, 12) returning id into fondo_ricorrente;
+    insert into public.households (nome, created_by) values ('Casa altra 0008', d) returning id into h_altra;
+    insert into public.budget_goals (user_id, nome, importo_target, modalita, household_id)
+      values (d, 'Fondo altra casa 0008', 100, 'bloccato', h_altra) returning id into fondo_altra;
+
+    -- check-in mensile
+    perform public.zz_err_msg('D non registra il check-in della casa', d,
+      format('select public.save_household_checkin(%L, %L, 0, 0, 0, 0, 0, 0, null, null, null)', h, mese_prec),
+      'casa non scrivibile');
+    perform public.zz_err_msg('un check-in senza avanzo fallisce', a,
+      format('select public.save_household_checkin(%L, %L, 0, 0, 0, 0, 0, null, null, null, null)', h, mese_prec),
+      'avanzo non valido');
+    perform public.zz_err_msg('il mese corrente non si chiude con il check-in', a,
+      format('select public.save_household_checkin(%L, %L, 0, 0, 0, 0, 0, 10, null, null, null)', h, mese),
+      'mese non ancora chiuso');
+    perform public.zz_err_msg('un avanzo non va in un fondo ricorrente', a,
+      format('select public.save_household_checkin(%L, %L, 0, 0, 0, 0, 0, 50, ''da_parte'', %L, null)', h, mese_prec, fondo_ricorrente),
+      'obiettivo non valido');
+    select importo_target into tgt_0 from public.budget_goals where id = fondo_casa;
+    perform public.zz_ok('A registra il check-in del mese scorso con l avanzo nel fondo', a,
+      format('select public.save_household_checkin(%L, %L, 100, 100, 50, 50, 0, 50, ''da_parte'', %L, null)', h, mese_prec, fondo_casa));
+    select importo_target into tgt_1 from public.budget_goals where id = fondo_casa;
+    perform public.zz_verifica('l avanzo aumenta il target del fondo di 50',
+      tgt_1 = tgt_0 + 50, format('target %s, atteso %s', tgt_1, tgt_0 + 50));
+    perform public.zz_verifica('il check-in salva esito avanzo e il fondo scelto',
+      exists (select 1 from public.household_checkins c where c.household_id = h and c.mese = mese_prec
+              and c.esito = 'avanzo' and c.destinazione_avanzo = 'da_parte' and c.goal_id = fondo_casa),
+      'check-in mancante o con campi diversi');
+    perform public.zz_err_msg('un secondo check-in dello stesso mese fallisce', a,
+      format('select public.save_household_checkin(%L, %L, 100, 100, 50, 50, 0, 50, ''da_parte'', %L, null)', h, mese_prec, fondo_casa),
+      'check-in gia fatto');
+    select importo_target into tgt_2 from public.budget_goals where id = fondo_casa;
+    perform public.zz_verifica('il check-in doppio lascia invariato il target del fondo',
+      tgt_2 = tgt_1, format('target %s, atteso %s', tgt_2, tgt_1));
+
+    -- voci del piano: tre versioni (mese, +1, +3) come al punto 14b
+    perform public.zz_ok('A salva il piano con tre versioni per le voci', a,
+      format('select public.save_household_plan(%L, %L::jsonb)', h,
+        '{"versioni": [' || v1 || ', ' || v2 || ', ' || v3 || ']}'));
+    select i.id into voce_m0 from public.household_plan_items i
+      join public.household_plans p on p.id = i.plan_id
+      where p.household_id = h and p.valido_dal = mese and i.nome = 'Luce';
+    select i.id into voce_m1 from public.household_plan_items i
+      join public.household_plans p on p.id = i.plan_id
+      where p.household_id = h and p.valido_dal = (mese + interval '1 month')::date and i.nome = 'Luce';
+    perform public.zz_err_msg('D non collega un fondo a una voce del piano', d,
+      format('select public.link_plan_item_goal(%L, %L, %L)', h, voce_m1, fondo_casa), 'casa non scrivibile');
+    perform public.zz_err_msg('un fondo di un altra casa non si collega alla voce', a,
+      format('select public.link_plan_item_goal(%L, %L, %L)', h, voce_m1, fondo_altra), 'obiettivo non valido');
+    perform public.zz_ok('A collega il fondo alla voce del piano', a,
+      format('select public.link_plan_item_goal(%L, %L, %L)', h, voce_m1, fondo_casa));
+    perform public.zz_verifica('il collegamento vale dal mese della voce in poi e non prima',
+      exists (select 1 from public.household_plan_items where id = voce_m1 and goal_id = fondo_casa)
+      and exists (select 1 from public.household_plan_items i join public.household_plans p on p.id = i.plan_id
+                  where p.household_id = h and p.valido_dal = (mese + interval '3 month')::date
+                    and i.nome = 'Luce' and i.goal_id = fondo_casa)
+      and exists (select 1 from public.household_plan_items where id = voce_m0 and goal_id is null),
+      'collegamento non propagato o applicato anche al mese precedente');
+    perform public.zz_ok('A scollega il fondo con p_goal nullo', a,
+      format('select public.link_plan_item_goal(%L, %L, null)', h, voce_m1));
+    perform public.zz_verifica('lo scollegamento toglie il fondo dalla voce',
+      exists (select 1 from public.household_plan_items where id = voce_m1 and goal_id is null),
+      'la voce e ancora collegata al fondo');
+    perform public.zz_err_msg('D non rifiuta una stima del piano', d,
+      format('select public.set_plan_item_stima_ignorata(%L, %L, 7)', h, voce_m1), 'casa non scrivibile');
+    perform public.zz_err_msg('un numero di stima fuori range non si salva', a,
+      format('select public.set_plan_item_stima_ignorata(%L, %L, 40000)', h, voce_m1), 'valore non valido');
+    perform public.zz_ok('A rifiuta la stima della voce del mese +1', a,
+      format('select public.set_plan_item_stima_ignorata(%L, %L, 7)', h, voce_m1));
+    perform public.zz_verifica('il rifiuto della stima vale anche nella versione successiva (+3 mesi)',
+      exists (select 1 from public.household_plan_items i join public.household_plans p on p.id = i.plan_id
+              where p.household_id = h and p.valido_dal = (mese + interval '3 month')::date
+                and i.nome = 'Luce' and i.stima_ignorata_con_n = 7),
+      'versione di +3 mesi non aggiornata');
+    perform public.zz_verifica('il rifiuto della stima non tocca la versione precedente (mese corrente)',
+      exists (select 1 from public.household_plan_items
+              where id = voce_m0 and stima_ignorata_con_n is distinct from 7),
+      'versione del mese corrente aggiornata');
+
+    -- controllo del saldo
+    perform public.zz_err_msg('il controllo del saldo con data futura fallisce', b,
+      format('select public.record_balance_check(%L, 100, %L)', conto_casa, oggi + 1), 'data non valida');
+    perform public.zz_err_msg('il controllo del saldo senza saldo dichiarato fallisce', b,
+      format('select public.record_balance_check(%L, null, %L)', conto_casa, oggi), 'saldo mancante');
   end;
 
   -- Referto
