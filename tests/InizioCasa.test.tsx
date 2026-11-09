@@ -31,7 +31,7 @@ describe('InizioCasa', () => {
     expect(screen.getByLabelText("Come ti chiami per gli altri in casa?")).toHaveValue('fabio');
   });
 
-  it('crea la casa, genera l\'invito e mostra il codice con il trattino e "Copia il codice"', async () => {
+  it("crea la casa, genera l'invito e mostra il codice con il trattino e Copia l'invito", async () => {
     createHousehold.mockResolvedValue('h1');
     createInvite.mockResolvedValue('K7M2QX9P');
     render(<InizioCasa defaultDisplayName="fabio" />);
@@ -39,7 +39,7 @@ describe('InizioCasa', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Crea la casa' }));
 
     expect(await screen.findByText('K7M2-QX9P')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copia il codice' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Copia l'invito" })).toBeInTheDocument();
     expect(createHousehold).toHaveBeenCalledWith({}, { nome: 'Casa Rossi', displayName: 'fabio' });
     expect(createInvite).toHaveBeenCalledWith({}, 'h1');
     expect(createHousehold.mock.invocationCallOrder[0]).toBeLessThan(createInvite.mock.invocationCallOrder[0]);
@@ -52,7 +52,7 @@ describe('InizioCasa', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Crea la casa' }));
 
     expect(await screen.findByText(/puoi generarlo da Impostazioni/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Copia il codice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: "Copia l'invito" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Vai alla casa' }));
     expect(push).toHaveBeenCalledWith('/casa');
     expect(refresh).toHaveBeenCalled();

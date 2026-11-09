@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { createHousehold, createInvite, joinHousehold } from '@/lib/data/households';
-import { formatCodiceInvito } from '@/lib/data/households';
+import { createHousehold, createInvite, formatCodiceInvito, joinHousehold } from '@/lib/data/households';
 import { CodiceInvito } from '../CodiceInvito';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';

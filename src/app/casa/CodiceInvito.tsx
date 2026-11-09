@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { formatCodiceInvito } from '@/lib/data/households';
-import { linkInvito, testoInvito } from '@/lib/invito';
+import { testoInvito } from '@/lib/invito';
 
 // Unico blocco che mostra un codice di invito, ovunque compaia.
 export function CodiceInvito({
@@ -15,6 +15,7 @@ export function CodiceInvito({
   children?: ReactNode;
 }) {
   const [copiato, setCopiato] = useState(false);
+  const [copiaFallita, setCopiaFallita] = useState(false);
   const mostrato = formatCodiceInvito(codice);
   const puoCondividere = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
@@ -25,14 +26,16 @@ export function CodiceInvito({
     try {
       await navigator.clipboard.writeText(testoInvito(indirizzo(), codice));
       setCopiato(true);
+      setCopiaFallita(false);
     } catch {
       setCopiato(false);
+      setCopiaFallita(true);
     }
   }
 
   async function condividi() {
     try {
-      await navigator.share({ text: testoInvito(indirizzo(), codice), url: linkInvito(indirizzo(), codice) });
+      await navigator.share({ text: testoInvito(indirizzo(), codice) });
     } catch {
       // l'utente ha annullato la condivisione
     }
@@ -51,7 +54,7 @@ export function CodiceInvito({
           onClick={copia}
           className="rounded-[var(--radius-md)] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground"
         >
-          Copia il codice
+          Copia l&apos;invito
         </button>
         {puoCondividere && (
           <button
@@ -64,9 +67,14 @@ export function CodiceInvito({
         )}
         {children}
       </div>
-      {copiato && <p className="text-xs text-brand-dark">Codice copiato.</p>}
+      {copiaFallita && (
+        <p role="alert" className="text-xs text-danger">
+          Non riesco a copiare: tieni premuto sul codice qui sopra per copiarlo.
+        </p>
+      )}
+      {copiato && <p className="text-xs text-brand-dark">Invito copiato.</p>}
       <p className="text-sm text-muted">
-        Scrivilo alla persona con cui vivi: dovrà aprire Casa e scegliere &quot;Ho un codice di invito&quot;.
+        Chi lo riceve tocca il link ed entra; il codice serve solo se lo scrive a mano.
       </p>
     </div>
   );
