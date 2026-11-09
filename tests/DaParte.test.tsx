@@ -7,7 +7,13 @@ import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
-vi.mock('@/lib/data/fondiCasa', () => ({ creaFondoBolletta: vi.fn() }));
+vi.mock('@/lib/data/fondiCasa', () => ({
+  creaFondoBolletta: vi.fn(),
+  creaFondoUnaVolta: vi.fn(),
+  creaFondiIngresso: vi.fn(),
+}));
+vi.mock('@/lib/data/goals', () => ({ closeGoal: vi.fn() }));
+import { closeGoal } from '@/lib/data/goals';
 import { creaFondoBolletta } from '@/lib/data/fondiCasa';
 
 const voce = (id: string, nome: string, importo: number, freq: number) => ({
@@ -33,6 +39,8 @@ beforeEach(() => {
   refresh.mockReset();
   vi.mocked(creaFondoBolletta).mockReset();
   vi.mocked(creaFondoBolletta).mockResolvedValue({} as never);
+  vi.mocked(closeGoal).mockReset();
+  vi.mocked(closeGoal).mockResolvedValue(undefined);
 });
 
 describe('DaParte', () => {
@@ -83,7 +91,7 @@ describe('DaParte', () => {
       .mockResolvedValueOnce({} as never)
       .mockRejectedValueOnce(new Error('no'));
     monta({ voci: [tari, luce] });
-    fireEvent.click(screen.getByRole('button', { name: 'Metti da parte tutto' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Metti da parte tutto' })[0]);
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
     expect(creaFondoBolletta).toHaveBeenCalledTimes(2);
     // TARI è fatta: resta solo Luce
@@ -111,6 +119,30 @@ describe('DaParte', () => {
       screen.getByText('Prima calcolate la quota: servono le voci per sapere cosa mettere da parte.')
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Calcolate la nostra quota' })).toHaveAttribute('href', '/casa/quota');
+    assertNessunaParolaVietata(container);
+  });
+
+  it('senza fondi una volta: messaggio vuoto', () => {
+    const { container } = monta();
+    expect(screen.getByText('Ancora niente da pagare una volta.')).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it("L'ho pagato: conferma sotto il pulsante, poi chiude il fondo e rinfresca", async () => {
+    const divano: ObiettivoCasa = {
+      ...fondo, id: 'g9', nome: 'Divano', ricorrente: false, frequenzaMesi: null, importoTarget: 600, accantonato: 100,
+    };
+    const { container } = monta({ unaVolta: [divano] });
+    expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
+    expect(
+      screen.getByText(/Segna come pagato: il fondo si chiude e i soldi tornano disponibili\./)
+    ).toBeInTheDocument();
+    expect(closeGoal).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Conferma' }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(closeGoal).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(closeGoal).mock.calls[0][1]).toBe('g9');
     assertNessunaParolaVietata(container);
   });
 

@@ -14,6 +14,10 @@ import {
 import { formatDateIt, formatNumero } from '@/lib/format';
 import type { PlanItem } from '@/lib/types';
 import { GoalsList } from '@/app/goals/GoalsList';
+import { closeGoal } from '@/lib/data/goals';
+import { ComeSiCalcola } from '../ComeSiCalcola';
+import { CostiIngresso } from './CostiIngresso';
+import { NuovaCosa } from './NuovaCosa';
 
 const ERRORE = 'Salvataggio fallito, controlla la connessione e riprova.';
 
@@ -39,6 +43,7 @@ export function DaParte({
   voci,
   fondi,
   unaVolta,
+  canonePiano = 0,
 }: {
   householdId: string;
   oggi: string;
@@ -46,6 +51,7 @@ export function DaParte({
   voci: StatoVoceDaParte[];
   fondi: ObiettivoCasa[];
   unaVolta: ObiettivoCasa[];
+  canonePiano?: number;
 }) {
   const router = useRouter();
   const [scelte, setScelte] = useState<Record<string, string>>({});
@@ -56,6 +62,27 @@ export function DaParte({
   // Blocca il doppio tocco prima ancora che React ridisegni il pulsante.
   const occupato = useRef(false);
   const fatteRef = useRef<Set<string>>(new Set());
+  const [chiedePagato, setChiedePagato] = useState<string | null>(null);
+  const [chiudendo, setChiudendo] = useState(false);
+  const [errorePagato, setErrorePagato] = useState<string | null>(null);
+  const chiudeRef = useRef(false);
+
+  async function pagato(id: string) {
+    if (chiudeRef.current) return;
+    chiudeRef.current = true;
+    setChiudendo(true);
+    setErrorePagato(null);
+    try {
+      await closeGoal(createClient(), id);
+      setChiedePagato(null);
+      router.refresh();
+    } catch {
+      setErrorePagato(ERRORE);
+    } finally {
+      chiudeRef.current = false;
+      setChiudendo(false);
+    }
+  }
 
   const daMettere = voci.filter((v) => v.stato === 'da_mettere' && !fatte.includes(v.item.id));
   const scadenzaDi = (item: PlanItem) => scelte[item.id] ?? ultimaScadenza(item, oggi);
@@ -193,8 +220,61 @@ export function DaParte({
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-bold">Da pagare una volta</h2>
-        <GoalsList goals={unaVolta} categories={[]} variante="casa" />
+        {unaVolta.length === 0 ? (
+          <p className="text-sm text-muted">Ancora niente da pagare una volta.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {unaVolta.map((g) => (
+              <li
+                key={g.id}
+                className="flex flex-col gap-1 rounded-[var(--radius-md)] bg-surface p-3 shadow-[var(--shadow-card)]"
+              >
+                <p className="text-sm font-semibold">{`${g.nome}: ${formatNumero(g.importoTarget)} €`}</p>
+                <p className="text-xs text-muted">
+                  {`Messi da parte ${formatNumero(g.accantonato)} €${g.scadenza ? `, entro il ${formatDateIt(g.scadenza)}` : ''}.`}
+                </p>
+                <ComeSiCalcola spiegazione={g.spiegazione} />
+                <button
+                  type="button"
+                  onClick={() => setChiedePagato(g.id)}
+                  className="self-start text-sm font-semibold text-brand-dark"
+                >
+                  L&apos;ho pagato
+                </button>
+                {chiedePagato === g.id ? (
+                  <p className="flex flex-wrap items-center gap-2 text-xs">
+                    Segna come pagato: il fondo si chiude e i soldi tornano disponibili.
+                    <button
+                      type="button"
+                      disabled={chiudendo}
+                      onClick={() => pagato(g.id)}
+                      className="font-semibold text-brand-dark disabled:opacity-50"
+                    >
+                      Conferma
+                    </button>
+                    <button type="button" onClick={() => setChiedePagato(null)} className="font-semibold text-muted">
+                      Annulla
+                    </button>
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {errorePagato ? (
+          <p role="alert" className="text-sm text-danger">
+            {errorePagato}
+          </p>
+        ) : null}
+        <NuovaCosa householdId={householdId} oggi={oggi} />
       </section>
+
+      <CostiIngresso
+        householdId={householdId}
+        oggi={oggi}
+        canonePiano={canonePiano}
+        esistenti={unaVolta.map((g) => g.nome)}
+      />
     </main>
   );
 }

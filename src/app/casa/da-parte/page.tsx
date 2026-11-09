@@ -9,6 +9,7 @@ import { casa as scopeCasa } from '@/lib/data/scope';
 import { meseRomaISO, oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
 import { obiettiviCasaConSpiegazione, statoVociDaParte } from '@/lib/calculations/casa/fondi';
+import { canoneDaPiano } from '@/lib/calculations/casa/costiIngresso';
 import { DaParte } from './DaParte';
 
 export default async function DaPartePage() {
@@ -37,6 +38,9 @@ export default async function DaPartePage() {
       voci={piano ? statoVociDaParte(piano.items, obiettivi) : []}
       fondi={conSpiegazione.filter((g) => g.ricorrente)}
       unaVolta={conSpiegazione.filter((g) => !g.ricorrente)}
+      canonePiano={
+        piano ? canoneDaPiano(piano.items.map((i) => ({ nome: i.nome, importoMensile: i.importoMensile }))) : 0
+      }
     />
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { creaFondoBolletta } from '@/lib/data/fondiCasa';
+import { creaFondoBolletta, creaFondoUnaVolta, creaFondiIngresso } from '@/lib/data/fondiCasa';
 import { createFakeDb } from '../helpers/fakeDb';
 import type { PlanItem } from '@/lib/types';
 
@@ -76,5 +76,46 @@ describe('creaFondoBolletta', () => {
     expect(db.rpcCalls).toEqual([
       { name: 'link_plan_item_goal', args: { p_household: 'H1', p_item: 'i1', p_goal: fondo.id } },
     ]);
+  });
+});
+
+describe('fondi una volta', () => {
+  const base = { householdId: 'H1', scadenza: '2027-03-01', oggi: '2026-11-09' };
+
+  it('creaFondoUnaVolta scrive un fondo graduale con scadenza e accantona_da', async () => {
+    const db = nuovoDb();
+    await creaFondoUnaVolta(db.client, { ...base, nome: 'Divano', importo: 600 });
+    expect(db.tables.budget_goals[0]).toMatchObject({
+      household_id: 'H1', nome: 'Divano', modalita: 'dilazionato', ricorrente: false, importo_target: 600,
+      scadenza: '2027-03-01', categoria_id: null, accantona_da: '2026-11-09',
+    });
+  });
+
+  it('creaFondiIngresso crea un fondo per voce con importo', async () => {
+    const db = nuovoDb();
+    const r = await creaFondiIngresso(db.client, {
+      ...base,
+      esistenti: [],
+      voci: [
+        { nome: 'Deposito cauzionale', importo: 1500 },
+        { nome: 'Agenzia immobiliare', importo: 0 },
+        { nome: 'Allacci delle utenze', importo: 300 },
+      ],
+    });
+    expect(r).toHaveLength(2);
+    expect(db.tables.budget_goals).toHaveLength(2);
+  });
+
+  it('ripetuto non duplica', async () => {
+    const db = nuovoDb();
+    await creaFondiIngresso(db.client, {
+      ...base,
+      esistenti: ['Deposito cauzionale'],
+      voci: [
+        { nome: 'Deposito cauzionale', importo: 1500 },
+        { nome: 'Allacci delle utenze', importo: 300 },
+      ],
+    });
+    expect((db.tables.budget_goals as { nome: string }[]).map((g) => g.nome)).toEqual(['Allacci delle utenze']);
   });
 });
