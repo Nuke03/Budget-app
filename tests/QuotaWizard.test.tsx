@@ -183,6 +183,35 @@ describe('QuotaWizard: passo 1', () => {
     expect(screen.getByDisplayValue('Giulia')).toBeInTheDocument();
   });
 
+  it('rivedere il piano dopo l uscita di Giulia invia ancora la sua posizione con esceDal 2026-12-01', async () => {
+    monta({
+      piani: [bundle([
+        share({}),
+        share({ slot: 2, userId: 'u2', displayName: 'Giulia', redditoNettoMensile: 1400, esceDal: '2026-12-01', quotaMensile: 603 }),
+      ])],
+    });
+    avanti();
+    avanti();
+    avanti();
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermiamo' }));
+    await waitFor(() => expect(savePlan).toHaveBeenCalled());
+    const quote = savePlan.mock.calls[0][2][0].quote;
+    expect(quote).toContainEqual(expect.objectContaining({ slot: 2, esceDal: '2026-12-01', percentuale: null }));
+  });
+
+  it('gli usciti non compaiono come persone nei passi', () => {
+    const { container } = monta({
+      piani: [bundle([
+        share({}),
+        share({ slot: 2, userId: 'u2', displayName: 'Giulia', esceDal: '2026-12-01', quotaMensile: 603 }),
+      ])],
+    });
+    expect(redditi()).toHaveLength(1);
+    expect(screen.queryByDisplayValue('Giulia')).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
   it('redditi vuoti o negativi disabilitano Avanti e nel DOM non compare mai NaN', () => {
     const { container } = monta();
     const avantiBtn = screen.getByRole('button', { name: 'Avanti' });

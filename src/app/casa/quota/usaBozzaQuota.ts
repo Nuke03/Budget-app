@@ -21,6 +21,7 @@ import {
   parseMesi,
   personeIniziali,
   testoNumero,
+  uscentiDaPiani,
   vociIniziali,
   type PersonaState,
   type RegolaScelta,
@@ -148,6 +149,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
     redditiOk && vociOk && cuscinettoQuota !== null
       ? {
           persone: draftPersone,
+          uscenti: uscentiDaPiani(piani),
           voci: vociPiano,
           cuscinettoObiettivo,
           cuscinettoQuotaMensile: cuscinettoQuota,
@@ -176,7 +178,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
         displayName: q.displayName,
         quotaMensile: q.quotaMensile,
         userId: persone.find((p) => p.slot === q.slot)?.userId ?? null,
-        esceDal: null,
+        esceDal: q.esceDal ?? null,
       })),
     ),
   );

@@ -17,8 +17,20 @@ export type PeriodoIniziale =
   | { tipo: 'tutto_a_chi_abita' }
   | { tipo: 'percentuali'; percentuali: Record<number, number> };
 
+// Chi è uscito dalla casa: la sua posizione resta nel piano, con la quota fino al mese prima dell'uscita.
+export interface UscitoDraft {
+  slot: number;
+  displayName: string;
+  redditoNettoMensile: number;
+  redditoIrregolare: boolean;
+  inCasaDal: string | null;
+  esceDal: string;
+  quotaMensile: number;
+}
+
 export interface PianoDraft {
   persone: PianoDraftPersona[];
+  uscenti?: UscitoDraft[];
   voci: PlanVoceInput[];
   cuscinettoObiettivo: number;
   cuscinettoQuotaMensile: number;
@@ -87,6 +99,19 @@ function calcolaVersione(
   return { regola, quote };
 }
 
+function quoteUscenti(uscenti: UscitoDraft[], validoDal: string): PlanQuotaInput[] {
+  return uscenti.map((u) => ({
+    slot: u.slot,
+    displayName: u.displayName,
+    redditoNettoMensile: u.redditoNettoMensile,
+    redditoIrregolare: u.redditoIrregolare,
+    percentuale: null,
+    inCasaDal: u.inCasaDal,
+    esceDal: u.esceDal,
+    quotaMensile: validoDal < u.esceDal ? u.quotaMensile : 0,
+  }));
+}
+
 const stessaDivisione = (a: PlanQuotaInput[], b: PlanQuotaInput[]) =>
   a.length === b.length && a.every((q, i) => q.slot === b[i].slot && q.quotaMensile === b[i].quotaMensile);
 
@@ -123,6 +148,8 @@ export function buildPlanVersions(draft: PianoDraft): PlanVersionInput[] {
     } else {
       calcolata = calcolaVersione(draft, totale, draft.regola, presenti, null);
     }
+
+    calcolata = { ...calcolata, quote: [...calcolata.quote, ...quoteUscenti(draft.uscenti ?? [], data)] };
 
     const precedente = versioni[versioni.length - 1];
     if (precedente && stessaDivisione(precedente.quote, calcolata.quote)) return;

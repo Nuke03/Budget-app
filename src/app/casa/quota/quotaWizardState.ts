@@ -5,6 +5,7 @@ import type { HouseholdMember, OrigineStima, PlanShare } from '@/lib/types';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import { VOCI_CASA_TIPICHE } from '@/lib/calculations/casa/vociTipiche';
 import type { AvvisoQuota } from '@/lib/calculations/casa/quota';
+import type { UscitoDraft } from '@/lib/calculations/casa/pianoVersioni';
 
 export const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
 export const ERRORE_REDDITO_ALTRUI =
@@ -78,6 +79,22 @@ export function ultimeQuote(piani: PlanBundle[]): Map<number, PlanShare> {
   const ultime = new Map<number, PlanShare>();
   for (const piano of piani) for (const s of piano.shares) ultime.set(s.slot, s);
   return ultime;
+}
+
+// Chi è uscito: per ogni posizione la cui riga più recente ha una data di uscita, con la quota di quella riga.
+export function uscentiDaPiani(piani: PlanBundle[]): UscitoDraft[] {
+  return Array.from(ultimeQuote(piani).values())
+    .filter((s) => s.esceDal !== null)
+    .sort((a, b) => a.slot - b.slot)
+    .map((s) => ({
+      slot: s.slot,
+      displayName: s.displayName,
+      redditoNettoMensile: s.redditoNettoMensile,
+      redditoIrregolare: s.redditoIrregolare,
+      inCasaDal: s.inCasaDal,
+      esceDal: s.esceDal as string,
+      quotaMensile: s.quotaMensile,
+    }));
 }
 
 export function personeIniziali(

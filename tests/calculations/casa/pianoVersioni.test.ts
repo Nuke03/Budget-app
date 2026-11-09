@@ -166,3 +166,38 @@ describe('buildPlanVersions', () => {
     expect(() => buildPlanVersions(draft({ persone: [fabio, { ...giulia(), redditoNetto: null }] }))).toThrow();
   });
 });
+
+describe('buildPlanVersions con uscenti', () => {
+  const uscito = {
+    slot: 2,
+    displayName: 'Giulia',
+    redditoNettoMensile: 1400,
+    redditoIrregolare: false,
+    inCasaDal: null,
+    esceDal: '2026-12-01',
+    quotaMensile: 603,
+  };
+
+  it('una quota di un uscito resta in ogni versione con esceDal e senza percentuale', () => {
+    const v = buildPlanVersions(
+      draft({ persone: [fabio], uscenti: [uscito], partenza: '2026-11-01' }),
+    );
+    for (const x of v) {
+      expect(x.quote.find((q) => q.slot === 2)).toMatchObject({ esceDal: '2026-12-01', percentuale: null });
+    }
+  });
+
+  it('la quota dell uscito vale quella salvata prima di esceDal e zero dopo', () => {
+    // Un secondo ingresso (Marco dal 2026-11-15) crea una versione dal 2026-12-01.
+    const v = buildPlanVersions(
+      draft({ persone: [fabio, marco('2026-11-15')], uscenti: [uscito], partenza: '2026-11-01' }),
+    );
+    expect(v.map((x) => x.validoDal)).toEqual(['2026-11-01', '2026-12-01']);
+    expect(v[0].quote.find((q) => q.slot === 2)?.quotaMensile).toBe(603);
+    expect(v[1].quote.find((q) => q.slot === 2)?.quotaMensile).toBe(0);
+  });
+
+  it('senza uscenti il risultato è identico a prima', () => {
+    expect(buildPlanVersions(draft({ uscenti: [] }))).toEqual(buildPlanVersions(draft()));
+  });
+});
