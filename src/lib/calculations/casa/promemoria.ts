@@ -64,6 +64,7 @@ export function statoPromemoria(input: {
   nomi: Record<string, string>;
   crediti: Record<string, number>;
   debiti: DebitoMembro[];
+  controllo?: StatoPromemoria['controllo'];
 }): StatoPromemoria {
   const mese = meseRomaISO(new Date(`${input.oggi}T12:00:00Z`));
   const riga = input.righe.find((r) => r.mese === mese) ?? null;
@@ -74,6 +75,7 @@ export function statoPromemoria(input: {
     nomi: input.nomi,
     crediti: input.crediti,
     debiti: input.debiti,
+    controllo: input.controllo,
   };
 }
 

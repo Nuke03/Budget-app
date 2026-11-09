@@ -273,6 +273,20 @@ describe('HomeDashboard', () => {
       assertNessunaParolaVietata(container);
     });
 
+    it('con l ultimo controllo di 15 giorni fa la riga compatta porta il controllo del conto', () => {
+      const stato = casaPerHome({ controlli: { ultimoControllo: '2026-10-19', ultimoCheckinMese: null } });
+      const conConto = {
+        ...stato,
+        aggiunta: {
+          ...stato.aggiunta!,
+          conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null }],
+        },
+      };
+      const { container } = render(<HomeDashboard {...base} casa={conConto} oggi="2026-11-03" />);
+      expect(screen.getByRole('link', { name: /controllo veloce del conto comune/ })).toHaveAttribute('href', '/casa');
+      assertNessunaParolaVietata(container);
+    });
+
     it('senza promemoria la riga compatta non compare', () => {
       render(<HomeDashboard {...base} casa={casaPerHome()} oggi="2026-11-03" />);
       expect(screen.queryByRole('link', { name: /versamento|rimborso|restituire/ })).not.toBeInTheDocument();

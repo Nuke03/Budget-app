@@ -78,6 +78,11 @@ export function HomeDashboard({
           nomi: Object.fromEntries(stato.membri.map((m) => [m.userId, m.displayName])),
           crediti: stato.crediti,
           debiti: stato.debiti,
+          controllo: {
+            ultimo: stato.controlli.ultimoControllo,
+            riferimento: stato.me.joinedAt.slice(0, 10),
+            haConto: (casa?.aggiunta?.conti.length ?? 0) > 0,
+          },
         }),
         { userId: stato.me.userId },
         oggi

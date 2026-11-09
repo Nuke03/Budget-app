@@ -33,6 +33,9 @@ export interface FinanzeCasa {
   // I fondi aperti per le bollette e quante voci del piano non sono ancora messe da parte.
   fondiBollette?: { id: string; nome: string; accantonato: number; importoTarget: number }[];
   bolletteDaMettere?: number;
+  // L'ultimo controllo del saldo e le spese che il controllo ha segnato questo mese.
+  ultimoControllo?: string | null;
+  speseNonRegistrate?: number;
 }
 
 export function CasaHome({
@@ -68,6 +71,11 @@ export function CasaHome({
           nomi: nomiMembri,
           crediti: finanze.crediti ?? {},
           debiti: finanze.debiti ?? [],
+          controllo: {
+            ultimo: finanze.ultimoControllo ?? null,
+            riferimento: casa.me.joinedAt.slice(0, 10),
+            haConto: finanze.conti.length > 0,
+          },
         }),
         { userId: casa.me.userId },
         oggi
@@ -123,6 +131,18 @@ export function CasaHome({
               ) : (
                 <ContoComuneForm householdId={casa.household.id} />
               )}
+              {finanze.conti.length > 0 ? (
+                <>
+                  {(finanze.speseNonRegistrate ?? 0) > 0 ? (
+                    <p className="text-sm text-muted">
+                      Spese non registrate questo mese: {formatNumero(finanze.speseNonRegistrate ?? 0)} €
+                    </p>
+                  ) : null}
+                  <Link href="/casa/controllo/conto" className="text-sm font-semibold text-brand-dark">
+                    Controlla il conto
+                  </Link>
+                </>
+              ) : null}
             </section>
 
             {piano ? (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { CasaHome } from '@/app/casa/CasaHome';
 import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
@@ -201,6 +201,16 @@ describe('CasaHome', () => {
       expect(screen.getAllByRole('button', { name: 'Come si calcola?' })).toHaveLength(1);
     });
 
+    it('porta al controllo del conto e dice le spese non registrate solo se ci sono', () => {
+      render(<CasaHome casa={casa} finanze={finanze([conto])} />);
+      expect(screen.getByRole('link', { name: 'Controlla il conto' })).toHaveAttribute('href', '/casa/controllo/conto');
+      expect(screen.queryByText(/Spese non registrate/)).not.toBeInTheDocument();
+      cleanup();
+      const { container } = render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), speseNonRegistrate: 80 }} />);
+      expect(screen.getByText('Spese non registrate questo mese: 80 €')).toBeInTheDocument();
+      assertNessunaParolaVietata(container);
+    });
+
     it('senza conto comune mostra il modulo e crea il conto', async () => {
       render(<CasaHome casa={casa} finanze={finanze([])} />);
       expect(screen.getByText('Aprite il conto comune qui')).toBeInTheDocument();
@@ -237,7 +247,7 @@ describe('CasaHome', () => {
             piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-11-01' } }}
             meseCorrente="2026-11-01"
             oggi={oggi}
-            finanze={{ ...finanze([conto]), ...registri }}
+            finanze={{ ...finanze([conto]), ...registri, ultimoControllo: '2026-10-30' }}
           />
         );
 
