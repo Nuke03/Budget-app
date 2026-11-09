@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { utenteOLogin } from '@/lib/utenteOLogin';
 import { getMyHousehold } from '@/lib/data/households';
 import { getAccounts } from '@/lib/data/accounts';
 import { getPlanForMonth } from '@/lib/data/householdPlans';
@@ -11,10 +11,7 @@ import { CasaSenzaCasa } from './CasaSenzaCasa';
 
 export default async function CasaPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const user = await utenteOLogin(supabase);
   const casa = await getMyHousehold(supabase, user.id);
   if (!casa) return <CasaSenzaCasa />;
 

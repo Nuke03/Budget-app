@@ -111,7 +111,7 @@ export function ImpostazioniCasa({
       <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
         <h2 className="text-base font-bold">Invito</h2>
         {codice ? (
-          <CodiceInvito codice={codice}>
+          <CodiceInvito codice={codice} origin={origin}>
             <button type="button" onClick={genera} disabled={inCorso} className={bottoneSecondario}>
               Rigenera
             </button>

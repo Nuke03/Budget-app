@@ -2,16 +2,28 @@
 
 import { useState, type ReactNode } from 'react';
 import { formatCodiceInvito } from '@/lib/data/households';
+import { linkInvito, testoInvito } from '@/lib/invito';
 
 // Unico blocco che mostra un codice di invito, ovunque compaia.
-export function CodiceInvito({ codice, children }: { codice: string; children?: ReactNode }) {
+export function CodiceInvito({
+  codice,
+  origin,
+  children,
+}: {
+  codice: string;
+  origin?: string;
+  children?: ReactNode;
+}) {
   const [copiato, setCopiato] = useState(false);
   const mostrato = formatCodiceInvito(codice);
   const puoCondividere = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
+  // L'indirizzo arriva dal server quando c'è; altrimenti è quello della pagina aperta.
+  const indirizzo = () => origin || window.location.origin;
+
   async function copia() {
     try {
-      await navigator.clipboard.writeText(mostrato);
+      await navigator.clipboard.writeText(testoInvito(indirizzo(), codice));
       setCopiato(true);
     } catch {
       setCopiato(false);
@@ -20,7 +32,7 @@ export function CodiceInvito({ codice, children }: { codice: string; children?: 
 
   async function condividi() {
     try {
-      await navigator.share({ text: `Il codice per entrare nella nostra casa: ${mostrato}` });
+      await navigator.share({ text: testoInvito(indirizzo(), codice), url: linkInvito(indirizzo(), codice) });
     } catch {
       // l'utente ha annullato la condivisione
     }

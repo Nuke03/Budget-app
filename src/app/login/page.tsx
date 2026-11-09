@@ -1,12 +1,14 @@
+import { percorsoInternoSicuro } from '@/lib/percorsoSicuro';
 import { login } from './actions';
 import { SubmitButton } from './SubmitButton';
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
+  const destinazione = percorsoInternoSicuro(next);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
@@ -23,6 +25,7 @@ export default async function LoginPage({
       )}
 
       <form action={login} className="flex flex-col gap-3">
+        <input type="hidden" name="next" value={destinazione} />
         <input
           name="email"
           type="email"

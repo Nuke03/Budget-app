@@ -114,3 +114,11 @@ describe('InizioCasa', () => {
     assertNessunaParolaVietata(container);
   });
 });
+
+describe('InizioCasa: codice dal link', () => {
+  it('precompila il codice e usa il modo entra', () => {
+    render(<InizioCasa defaultDisplayName="fabio" modoIniziale="entra" codiceIniziale="K7M2QX9P" />);
+    expect(screen.getByLabelText('Codice di invito')).toHaveValue('K7M2-QX9P');
+    expect(screen.getByRole('button', { name: 'Entra' })).toBeEnabled();
+  });
+});

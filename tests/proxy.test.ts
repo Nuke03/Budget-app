@@ -23,3 +23,20 @@ describe('proxy', () => {
     expect(new URL(res.headers.get('location')!).pathname).toBe('/login');
   });
 });
+
+describe('proxy: ritorno dopo il login', () => {
+  it('porta il percorso richiesto in next', async () => {
+    const res = await proxy(new NextRequest('http://localhost/casa/inizia?modo=entra&codice=K7M2QX9P'));
+    expect(res.status).toBe(307);
+    const url = new URL(res.headers.get('location')!);
+    expect(url.pathname).toBe('/login');
+    expect(url.searchParams.get('next')).toBe('/casa/inizia?modo=entra&codice=K7M2QX9P');
+  });
+
+  it('dalla home non aggiunge next', async () => {
+    const res = await proxy(new NextRequest('http://localhost/'));
+    const url = new URL(res.headers.get('location')!);
+    expect(url.pathname).toBe('/login');
+    expect(url.searchParams.has('next')).toBe(false);
+  });
+});

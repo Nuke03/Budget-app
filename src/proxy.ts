@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { percorsoInternoSicuro } from '@/lib/percorsoSicuro';
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -49,7 +50,11 @@ export async function proxy(request: NextRequest) {
 
   if (!hasSession && !isKeepAlive && !isCalendar && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
     const url = request.nextUrl.clone();
+    // Dopo l'accesso si torna dove si voleva andare (per esempio al link di invito alla casa).
+    const destinazione = percorsoInternoSicuro(request.nextUrl.pathname + request.nextUrl.search);
     url.pathname = '/login';
+    url.search = '';
+    if (destinazione !== '/') url.searchParams.set('next', destinazione);
     return NextResponse.redirect(url);
   }
 

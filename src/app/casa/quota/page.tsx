@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { utenteOLogin } from '@/lib/utenteOLogin';
 import { getMyHousehold } from '@/lib/data/households';
 import { getMaxSlotUsato, getPlansFromMonth } from '@/lib/data/householdPlans';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
@@ -7,10 +8,7 @@ import { QuotaClient } from './QuotaClient';
 
 export default async function QuotaPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const user = await utenteOLogin(supabase);
   const casa = await getMyHousehold(supabase, user.id);
   if (!casa) redirect('/casa');
 

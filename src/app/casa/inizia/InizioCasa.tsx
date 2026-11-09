@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { createHousehold, createInvite, joinHousehold } from '@/lib/data/households';
+import { formatCodiceInvito } from '@/lib/data/households';
 import { CodiceInvito } from '../CodiceInvito';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
@@ -16,15 +17,19 @@ const inputClass =
 export function InizioCasa({
   defaultDisplayName,
   modoIniziale = 'crea',
+  codiceIniziale = '',
+  origin,
 }: {
   defaultDisplayName: string;
   modoIniziale?: 'crea' | 'entra';
+  codiceIniziale?: string;
+  origin?: string;
 }) {
   const router = useRouter();
   const [modo, setModo] = useState<'crea' | 'entra'>(modoIniziale);
   const [displayName, setDisplayName] = useState(defaultDisplayName);
   const [nomeCasa, setNomeCasa] = useState('');
-  const [codice, setCodice] = useState('');
+  const [codice, setCodice] = useState(codiceIniziale ? formatCodiceInvito(codiceIniziale) : '');
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
   const [codiceCreato, setCodiceCreato] = useState<string | null>(null);
@@ -81,7 +86,7 @@ export function InizioCasa({
         <h1 className="text-2xl font-bold">La casa è pronta</h1>
         <section className="rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
           {codiceCreato ? (
-            <CodiceInvito codice={codiceCreato} />
+            <CodiceInvito codice={codiceCreato} origin={origin} />
           ) : (
             <p className="text-sm text-muted">
               Il codice di invito non è stato creato: puoi generarlo da Impostazioni, dentro la casa.
