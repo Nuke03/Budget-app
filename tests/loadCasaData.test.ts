@@ -59,6 +59,23 @@ function carica() {
   return loadCasaData(db.client, casaA, TODAY);
 }
 
+describe('loadCasaData crediti', () => {
+  it('il disponibile casa sottrae i crediti: conto 1000, spesa anticipata 45, il valore è 955', async () => {
+    const s = seed();
+    s.budget_goals = [];
+    s.transactions.push({
+      id: 't-anticipo', user_id: 'B', household_id: 'H1', tipo: 'expense', importo: 45, data: '2026-11-12',
+      categoria_id: 'ca-casa', account_id: 'ac-B', goal_id: null, descrizione: 'Spesa con carta', nota: null,
+      created_at: '2026-11-12T10:00:00Z', pagata_da_user_id: 'B',
+    } as never);
+    const db = createFakeDb(s, { userId: 'A', membri: MEMBRI });
+    const d = await loadCasaData(db.client, casaA, TODAY);
+    expect(d.crediti).toEqual({ A: 0, B: 45 });
+    expect(d.disponibile.valore).toBe(955);
+    expect(d.trasferimenti).toEqual([]);
+  });
+});
+
 describe('loadCasaData', () => {
   it('carica solo conti, categorie e obiettivi di casa', async () => {
     const d = await carica();

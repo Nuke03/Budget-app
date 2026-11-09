@@ -6,9 +6,11 @@ import { getSpecoCollegato } from '@/lib/data/goalSpending';
 import type { CasaCorrente } from '@/lib/data/households';
 import { casa as scopeCasa } from '@/lib/data/scope';
 import { getTransactions } from '@/lib/data/transactions';
+import { getTransfers } from '@/lib/data/transfers';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
-import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
+import { creditiPerMembro } from '@/lib/calculations/casa/crediti';
+import type { Account, BudgetGoal, Category, Transaction, Transfer } from '@/lib/types';
 
 export interface CasaAggiunta {
   householdId: string;
@@ -25,6 +27,8 @@ export interface CasaData {
   transazioni: Transaction[];
   obiettiviConAccantonato: (BudgetGoal & { accantonato: number })[];
   disponibile: DisponibileCasa;
+  trasferimenti: Transfer[];
+  crediti: Record<string, number>;
 }
 
 export async function loadCasaAggiunta(
@@ -52,10 +56,17 @@ export async function loadCasaData(
   casa: CasaCorrente,
   today: Date = new Date()
 ): Promise<CasaData> {
-  const [aggiunta, transazioni] = await Promise.all([
+  const [aggiunta, transazioni, trasferimenti] = await Promise.all([
     loadCasaAggiunta(supabase, casa),
     getTransactions(supabase, scopeCasa(casa.household.id)),
+    getTransfers(supabase, scopeCasa(casa.household.id)),
   ]);
+  const crediti = creditiPerMembro(
+    casa.members.map((m) => m.userId),
+    transazioni,
+    trasferimenti
+  );
+  const totaleCrediti = Object.values(crediti).reduce((s, v) => s + v, 0);
 
   const speso = await Promise.all(aggiunta.obiettivi.map((g) => getSpecoCollegato(supabase, g, today)));
   const obiettiviConSpeso = aggiunta.obiettivi.map((g, i) => ({ ...g, specoCollegato: speso[i] }));
@@ -69,7 +80,8 @@ export async function loadCasaData(
     conti: aggiunta.conti,
     obiettivi: obiettiviConSpeso,
     today,
+    crediti: totaleCrediti,
   });
 
-  return { casa, aggiunta, transazioni, obiettiviConAccantonato, disponibile };
+  return { casa, aggiunta, transazioni, obiettiviConAccantonato, disponibile, trasferimenti, crediti };
 }

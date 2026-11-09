@@ -117,6 +117,7 @@ export function HomeDashboard({
         onClose={() => setIsAddOpen(false)}
         personale={{ categories, accounts, goals }}
         casa={casa}
+        contiPersonali={accounts}
         meUserId={meUserId}
         onSaved={() => router.refresh()}
       />

@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
+import type { Account } from '@/lib/types';
 import { AddTransactionSheet } from '../add/AddTransactionSheet';
 
-export function CasaFab({ aggiunta }: { aggiunta: CasaAggiunta }) {
+export function CasaFab({ aggiunta, contiPersonali }: { aggiunta: CasaAggiunta; contiPersonali?: Account[] }) {
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
 
@@ -25,6 +26,7 @@ export function CasaFab({ aggiunta }: { aggiunta: CasaAggiunta }) {
         onClose={() => setAperto(false)}
         personale={null}
         casa={aggiunta}
+        contiPersonali={contiPersonali}
         modoIniziale="casa"
         meUserId={aggiunta.meUserId}
         onSaved={() => router.refresh()}

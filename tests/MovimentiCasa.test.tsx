@@ -4,7 +4,7 @@ import { MovimentiCasa } from '@/app/casa/movimenti/MovimentiCasa';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
-import type { Transaction } from '@/lib/types';
+import type { Transaction, Transfer } from '@/lib/types';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
@@ -14,10 +14,12 @@ vi.mock('@/lib/data/transactions', () => ({
   deleteTransaction: vi.fn().mockResolvedValue(undefined),
   updateTransaction: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@/lib/data/transfers', () => ({ deleteTransfer: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/data/accounts', () => ({ adjustAccountBalance: vi.fn().mockResolvedValue(undefined) }));
 
 import { deleteTransaction, updateTransaction } from '@/lib/data/transactions';
 import { adjustAccountBalance } from '@/lib/data/accounts';
+import { deleteTransfer } from '@/lib/data/transfers';
 
 const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: '2026-01-01', slot: 1, attivo: true };
 const anna = { householdId: 'h1', userId: 'u2', displayName: 'Anna', joinedAt: '2026-01-02', slot: 2, attivo: true };
@@ -52,8 +54,18 @@ const lista = [
   tx({ id: 'altrui', descrizione: 'Spesa di Anna', importo: 12, data: '2026-11-03', pagataDaUserId: 'u2' }),
 ];
 
-function apri() {
-  return render(<MovimentiCasa casa={casa} aggiunta={aggiunta} transazioni={lista} meUserId="u1" />);
+function trasf(over: Partial<Transfer>): Transfer {
+  return {
+    id: 'v1', householdId: 'h1', userId: 'u1', daAccountId: null, aAccountId: 'ac', importo: 250,
+    data: '2026-11-04', causale: 'versamento', beneficiarioUserId: null, perContoDiUserId: null,
+    meseCompetenza: '2026-11-01', soloRegistrazione: false, nota: null, createdAt: '', ...over,
+  };
+}
+
+function apri(trasferimenti: Transfer[] = [], transazioni: Transaction[] = lista) {
+  return render(
+    <MovimentiCasa casa={casa} aggiunta={aggiunta} transazioni={transazioni} trasferimenti={trasferimenti} meUserId="u1" />
+  );
 }
 
 beforeEach(() => {
@@ -117,6 +129,39 @@ describe('MovimentiCasa', () => {
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
     expect(screen.getByText('Luce')).toBeInTheDocument();
     expect(adjustAccountBalance).not.toHaveBeenCalled();
+  });
+
+  it('mostra un versamento in stile neutro e senza importo nei totali', () => {
+    apri([trasf({})]);
+    expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
+    const riga = screen.getByText('Versamento di Fabio').closest('li') as HTMLElement;
+    expect(riga.textContent).toContain('novembre');
+    expect(riga.textContent).not.toMatch(/[+-]\s?250/);
+    expect(riga.querySelector('.text-danger, .text-success')).toBeNull();
+  });
+
+  it('Annulla compare solo per l autore e chiama deleteTransfer', async () => {
+    apri([trasf({}), trasf({ id: 'v2', userId: 'u2', importo: 90 })]);
+    expect(screen.getAllByText('Annulla')).toHaveLength(1);
+    fireEvent.click(screen.getByText('Annulla'));
+    expect(screen.queryByText('Versamento di Fabio')).not.toBeInTheDocument();
+    await waitFor(() => expect(deleteTransfer).toHaveBeenCalledWith(expect.anything(), 'v1'));
+  });
+
+  it('se Annulla fallisce mostra il messaggio standard e rimette il movimento', async () => {
+    vi.mocked(deleteTransfer).mockRejectedValueOnce(new Error('rete'));
+    apri([trasf({})]);
+    fireEvent.click(screen.getByText('Annulla'));
+    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+    expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
+  });
+
+  it('una spesa pagata da Fabio con la sua carta mostra "Fabio" come chi ha pagato', () => {
+    apri([], [tx({ id: 'carta', descrizione: 'Spesa carta', accountId: 'ap', pagataDaUserId: 'u1' })]);
+    const riga = screen.getByText('Spesa carta').closest('li') as HTMLElement;
+    expect(riga.textContent).toContain('Fabio');
+    expect(screen.getByText('Elimina')).toBeInTheDocument();
+    expect(screen.queryByText('Modifica')).not.toBeInTheDocument();
   });
 
   it('nessuna parola vietata', () => {

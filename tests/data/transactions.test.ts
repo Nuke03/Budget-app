@@ -10,6 +10,7 @@ import {
   getTransactionAmountsForGoal,
 } from '@/lib/data/transactions';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
+import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
 
 const row = {
   id: '1',
@@ -63,6 +64,35 @@ describe('createTransaction', () => {
     });
 
     expect(result.id).toBe('1');
+  });
+});
+
+describe('createTransaction con casa', () => {
+  const input = {
+    tipo: 'expense' as const,
+    importo: 30,
+    data: '2026-11-05',
+    categoriaId: 'cat-1',
+    accountId: 'acc-personale',
+    goalId: null,
+    descrizione: 'Spesa',
+    nota: null,
+  };
+
+  it('createTransaction scrive pagata_da_user_id con scope casa', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await createTransaction(client, { ...input, pagataDaUserId: 'u-1' }, { kind: 'casa', householdId: 'h1' });
+    const [payload] = callsOf(calls[0], 'insert')[0] as [Record<string, unknown>];
+    expect(payload).toMatchObject({ household_id: 'h1', pagata_da_user_id: 'u-1', account_id: 'acc-personale' });
+  });
+
+  it('senza pagataDaUserId o in personale non scrive pagata_da_user_id', async () => {
+    const a = createRecordingClient([row]);
+    await createTransaction(a.client, input, { kind: 'casa', householdId: 'h1' });
+    expect(callsOf(a.calls[0], 'insert')[0][0]).not.toHaveProperty('pagata_da_user_id');
+    const b = createRecordingClient([row]);
+    await createTransaction(b.client, { ...input, pagataDaUserId: 'u-1' });
+    expect(callsOf(b.calls[0], 'insert')[0][0]).not.toHaveProperty('pagata_da_user_id');
   });
 });
 

@@ -64,6 +64,8 @@ export async function createTransaction(
     goalId: string | null;
     descrizione: string;
     nota: string | null;
+    // Solo con scope casa: chi ha pagato di tasca sua (il vincolo SQL vuole l'autore e il suo conto personale).
+    pagataDaUserId?: string | null;
   },
   scope: Scope = PERSONALE
 ): Promise<Transaction> {
@@ -79,6 +81,7 @@ export async function createTransaction(
       descrizione: input.descrizione,
       nota: input.nota,
       household_id: scopeHouseholdId(scope),
+      ...(scopeHouseholdId(scope) && input.pagataDaUserId ? { pagata_da_user_id: input.pagataDaUserId } : {}),
     })
     .select(TRANSACTION_COLUMNS)
     .single();

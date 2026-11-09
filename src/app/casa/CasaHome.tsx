@@ -19,6 +19,7 @@ export interface FinanzeCasa {
   ultimeSpese: Transaction[];
   nomi: Record<string, string>;
   aggiunta: CasaAggiunta;
+  contiPersonali?: Account[];
 }
 
 export function CasaHome({
@@ -132,7 +133,7 @@ export function CasaHome({
         Impostazioni
       </Link>
 
-      {finanze ? <CasaFab aggiunta={finanze.aggiunta} /> : null}
+      {finanze ? <CasaFab aggiunta={finanze.aggiunta} contiPersonali={finanze.contiPersonali} /> : null}
     </main>
   );
 }

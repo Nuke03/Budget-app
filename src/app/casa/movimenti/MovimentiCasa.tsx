@@ -1,53 +1,101 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { format, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { createClient } from '@/lib/supabase/client';
-import { deleteTransaction, updateTransaction } from '@/lib/data/transactions';
-import { adjustAccountBalance } from '@/lib/data/accounts';
-import { deltaPerModifica } from '@/lib/calculations/accountBalance';
-import { etichettaChiHaPagato } from '@/lib/calculations/casa/etichette';
-import { meseRomaISO } from '@/lib/calculations/casa/oggi';
-import { formatDateIt, formatEuro } from '@/lib/format';
-import type { CasaCorrente } from '@/lib/data/households';
-import type { CasaAggiunta } from '@/lib/loadCasaData';
-import type { Transaction, TransactionTipo } from '@/lib/types';
-import { AddTransactionForm } from '../../add/AddTransactionForm';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { format, parseISO } from "date-fns";
+import { it } from "date-fns/locale";
+import { createClient } from "@/lib/supabase/client";
+import { deleteTransaction, updateTransaction } from "@/lib/data/transactions";
+import { adjustAccountBalance } from "@/lib/data/accounts";
+import { deltaPerModifica } from "@/lib/calculations/accountBalance";
+import { deleteTransfer } from "@/lib/data/transfers";
+import { descriviTrasferimento } from "@/lib/calculations/casa/descriviTrasferimento";
+import { etichettaChiHaPagato } from "@/lib/calculations/casa/etichette";
+import { meseRomaISO } from "@/lib/calculations/casa/oggi";
+import { formatDateIt, formatEuro } from "@/lib/format";
+import type { CasaCorrente } from "@/lib/data/households";
+import type { CasaAggiunta } from "@/lib/loadCasaData";
+import type { Transaction, TransactionTipo, Transfer } from "@/lib/types";
+import { AddTransactionForm } from "../../add/AddTransactionForm";
 
-const ERRORE_SALVATAGGIO = 'Salvataggio fallito, controlla la connessione e riprova.';
+const ERRORE_SALVATAGGIO =
+  "Salvataggio fallito, controlla la connessione e riprova.";
 
 function etichettaMese(mese: string): string {
-  return format(parseISO(`${mese}-01`), 'LLLL yyyy', { locale: it });
+  return format(parseISO(`${mese}-01`), "LLLL yyyy", { locale: it });
 }
 
 export function MovimentiCasa({
   casa,
   aggiunta,
   transazioni,
+  trasferimenti = [],
   meUserId,
 }: {
   casa: CasaCorrente;
   aggiunta: CasaAggiunta;
   transazioni: Transaction[];
+  trasferimenti?: Transfer[];
   meUserId: string;
 }) {
   const router = useRouter();
   const [righe, setRighe] = useState<Transaction[]>(transazioni);
   const meseCorrente = meseRomaISO().slice(0, 7);
+  const [mosse, setMosse] = useState<Transfer[]>(trasferimenti);
   const [mese, setMese] = useState(meseCorrente);
   const [inModifica, setInModifica] = useState<string | null>(null);
   const [errore, setErrore] = useState(false);
 
   const nomi = Object.fromEntries(aggiunta.nomi.map((n) => [n.userId, n.nome]));
-  const mesi = Array.from(new Set([meseCorrente, ...righe.map((t) => t.data.slice(0, 7))])).sort().reverse();
-  const visibili = righe
-    .filter((t) => t.data.startsWith(mese))
-    .sort((a, b) => (a.data === b.data ? 0 : a.data < b.data ? 1 : -1));
-  const categoria = (id: string | null) => aggiunta.categorie.find((c) => c.id === id)?.nome ?? '';
-  const puoModificare = (t: Transaction) => !t.pagataDaUserId || t.pagataDaUserId === meUserId;
+  const mesi = Array.from(
+    new Set([
+      meseCorrente,
+      ...righe.map((t) => t.data.slice(0, 7)),
+      ...mosse.map((t) => t.data.slice(0, 7)),
+    ]),
+  )
+    .sort()
+    .reverse();
+  type Voce =
+    { tipo: "spesa"; t: Transaction } | { tipo: "trasferimento"; m: Transfer };
+  const voci: Voce[] = [
+    ...righe
+      .filter((t) => t.data.startsWith(mese))
+      .map((t): Voce => ({ tipo: "spesa", t })),
+    ...mosse
+      .filter((m) => m.data.startsWith(mese))
+      .map((m): Voce => ({ tipo: "trasferimento", m })),
+  ].sort((a, b) => {
+    const da = a.tipo === "spesa" ? a.t.data : a.m.data;
+    const db = b.tipo === "spesa" ? b.t.data : b.m.data;
+    return da === db ? 0 : da < db ? 1 : -1;
+  });
+  const categoria = (id: string | null) =>
+    aggiunta.categorie.find((c) => c.id === id)?.nome ?? "";
+  const puoModificare = (t: Transaction) =>
+    !t.pagataDaUserId || t.pagataDaUserId === meUserId;
+  // Una spesa pagata con la carta personale si cambia dal conto personale: il modulo qui conosce solo i conti di casa.
+  const conCartaPersonale = (t: Transaction) =>
+    !!t.accountId && !aggiunta.conti.some((c) => c.id === t.accountId);
+
+  async function annulla(m: Transfer) {
+    const posizione = mosse.findIndex((x) => x.id === m.id);
+    setErrore(false);
+    setMosse((r) => r.filter((x) => x.id !== m.id));
+    try {
+      await deleteTransfer(createClient(), m.id);
+      router.refresh();
+    } catch {
+      setErrore(true);
+      setMosse((r) => {
+        if (r.some((x) => x.id === m.id)) return r;
+        const copia = [...r];
+        copia.splice(Math.min(posizione, copia.length), 0, m);
+        return copia;
+      });
+    }
+  }
 
   async function elimina(t: Transaction) {
     const posizione = righe.findIndex((r) => r.id === t.id);
@@ -59,7 +107,11 @@ export function MovimentiCasa({
       await deleteTransaction(supabase, t.id);
       cancellata = true;
       if (t.accountId) {
-        await adjustAccountBalance(supabase, t.accountId, t.tipo === 'expense' ? t.importo : -t.importo);
+        await adjustAccountBalance(
+          supabase,
+          t.accountId,
+          t.tipo === "expense" ? t.importo : -t.importo,
+        );
       }
       router.refresh();
     } catch {
@@ -84,7 +136,7 @@ export function MovimentiCasa({
       accountId: string | null;
       goalId: string | null;
       descrizione: string;
-    }
+    },
   ) {
     const nuova: Transaction = { ...t, ...payload };
     setErrore(false);
@@ -142,69 +194,120 @@ export function MovimentiCasa({
         </p>
       )}
 
-      {visibili.length === 0 ? (
+      {voci.length === 0 ? (
         <p className="text-sm text-muted">Nessun movimento in questo mese.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {visibili.map((t) => (
-            <li
-              key={t.id}
-              className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]"
-            >
-              {inModifica === t.id ? (
-                <div className="-mx-5">
-                  <AddTransactionForm
-                    categories={aggiunta.categorie}
-                    accounts={aggiunta.conti}
-                    goals={aggiunta.obiettivi}
-                    initial={{
-                      tipo: t.tipo,
-                      importo: t.importo,
-                      categoriaId: t.categoriaId,
-                      accountId: t.accountId,
-                      goalId: t.goalId,
-                      descrizione: t.descrizione,
-                    }}
-                    contoEtichetta="Chi ha pagato"
-                    obiettivoEtichetta="Da parte (opzionale)"
-                    nascondiGestisciCategorie
-                    submitLabel="Salva modifiche"
-                    onCancel={() => setInModifica(null)}
-                    onSubmit={(payload) => salva(t, payload)}
-                  />
-                </div>
-              ) : (
-                <>
+          {voci.map((voce) => {
+            if (voce.tipo === "trasferimento") {
+              const m = voce.m;
+              const { titolo, dettaglio } = descriviTrasferimento(m, nomi);
+              return (
+                <li
+                  key={`tr-${m.id}`}
+                  className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface-muted p-4"
+                >
                   <div className="flex justify-between gap-3">
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold">{t.descrizione}</span>
+                      <span className="text-sm font-semibold">{titolo}</span>
                       <span className="text-xs text-muted">
-                        {formatDateIt(t.data)}
-                        {categoria(t.categoriaId) ? ` · ${categoria(t.categoriaId)}` : ''}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {etichettaChiHaPagato(t, aggiunta.conti, nomi)}
+                        {formatDateIt(m.data)}
+                        {dettaglio ? ` · ${dettaglio}` : ""}
                       </span>
                     </div>
-                    <span className="text-sm font-bold tabular-nums">
-                      {t.tipo === 'expense' ? '-' : '+'}
-                      {formatEuro(t.importo)}
+                    <span className="text-sm tabular-nums text-muted">
+                      {formatEuro(m.importo)}
                     </span>
                   </div>
-                  {puoModificare(t) && (
+                  {m.userId === meUserId && (
                     <div className="flex gap-4 text-sm font-semibold">
-                      <button type="button" onClick={() => setInModifica(t.id)} className="text-brand-dark">
-                        Modifica
-                      </button>
-                      <button type="button" onClick={() => elimina(t)} className="text-danger">
-                        Elimina
+                      <button
+                        type="button"
+                        onClick={() => annulla(m)}
+                        className="text-brand-dark"
+                      >
+                        Annulla
                       </button>
                     </div>
                   )}
-                </>
-              )}
-            </li>
-          ))}
+                </li>
+              );
+            }
+            const t = voce.t;
+            return (
+              <li
+                key={t.id}
+                className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]"
+              >
+                {inModifica === t.id ? (
+                  <div className="-mx-5">
+                    <AddTransactionForm
+                      categories={aggiunta.categorie}
+                      accounts={aggiunta.conti}
+                      goals={aggiunta.obiettivi}
+                      initial={{
+                        tipo: t.tipo,
+                        importo: t.importo,
+                        categoriaId: t.categoriaId,
+                        accountId: t.accountId,
+                        goalId: t.goalId,
+                        descrizione: t.descrizione,
+                      }}
+                      contoEtichetta="Chi ha pagato"
+                      obiettivoEtichetta="Da parte (opzionale)"
+                      nascondiGestisciCategorie
+                      submitLabel="Salva modifiche"
+                      onCancel={() => setInModifica(null)}
+                      onSubmit={(payload) => salva(t, payload)}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between gap-3">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold">
+                          {t.descrizione}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {formatDateIt(t.data)}
+                          {categoria(t.categoriaId)
+                            ? ` · ${categoria(t.categoriaId)}`
+                            : ""}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {etichettaChiHaPagato(t, aggiunta.conti, nomi)}
+                        </span>
+                      </div>
+                      <span className="text-sm font-bold tabular-nums">
+                        {t.tipo === "expense" ? "-" : "+"}
+                        {formatEuro(t.importo)}
+                      </span>
+                    </div>
+                    {puoModificare(t) && (
+                      <div className="flex gap-4 text-sm font-semibold">
+                        {!conCartaPersonale(t) && (
+                          <button
+                            type="button"
+                            onClick={() => setInModifica(t.id)}
+                            className="text-brand-dark"
+                          >
+                            Modifica
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => elimina(t)}
+                          className="text-danger"
+                        >
+                          Elimina
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </main>

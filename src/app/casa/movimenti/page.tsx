@@ -19,6 +19,7 @@ export default async function MovimentiCasaPage() {
       casa={casa}
       aggiunta={dati.aggiunta}
       transazioni={dati.transazioni}
+      trasferimenti={dati.trasferimenti}
       meUserId={user.id}
     />
   );

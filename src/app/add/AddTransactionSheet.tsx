@@ -49,6 +49,7 @@ export function AddTransactionSheet({
   onClose,
   personale,
   casa,
+  contiPersonali = [],
   modoIniziale = 'ricorda',
   meUserId,
   onSaved,
@@ -61,7 +62,7 @@ export function AddTransactionSheet({
     goals: (BudgetGoal & { accantonato: number })[];
   } | null;
   casa: CasaAggiunta | null;
-  // Riservato alla schermata dei trasferimenti verso il conto comune (T7.2).
+  // I conti personali di chi scrive: in Casa permettono "Io, con <conto>" (spesa anticipata di tasca propria).
   contiPersonali?: Account[];
   modoIniziale?: 'ricorda' | 'personale' | 'casa';
   meUserId?: string;
@@ -104,6 +105,20 @@ export function AddTransactionSheet({
   async function salvaCasa(payload: Payload) {
     if (!casa) return;
     const supabase = createClient();
+    const conPersonale =
+      payload.tipo === 'expense' &&
+      !!payload.accountId &&
+      contiPersonali.some((a) => a.id === payload.accountId);
+    if (conPersonale && payload.accountId) {
+      // Anticipata con la propria carta: il credito verso la casa nasce dalla spesa, il saldo scalato è quello personale.
+      await createTransaction(
+        supabase,
+        { ...payload, data: oggiRomaISO(), nota: null, pagataDaUserId: meUserId ?? casa.meUserId },
+        scopeCasa(casa.householdId)
+      );
+      await adjustAccountBalance(supabase, payload.accountId, -payload.importo);
+      return;
+    }
     await createTransaction(
       supabase,
       { ...payload, data: oggiRomaISO(), nota: null },
@@ -142,6 +157,10 @@ export function AddTransactionSheet({
     });
   }
 
+  const contiCasaEPersonali = [
+    ...(casa?.conti ?? []),
+    ...contiPersonali.map((a) => ({ ...a, nome: `Io, con ${a.nome}` })),
+  ];
   const altri = casa && meUserId ? nomiAltri(casa.nomi, meUserId) : null;
   const quantiAltri = casa && meUserId ? casa.nomi.filter((n) => n.userId !== meUserId).length : 0;
   const notaCasa = altri
@@ -173,7 +192,8 @@ export function AddTransactionSheet({
         <AddTransactionForm
           key="casa"
           categories={casa.categorie}
-          accounts={casa.conti}
+          accounts={contiCasaEPersonali}
+          idContiSoloSpesa={contiPersonali.map((a) => a.id)}
           goals={casa.obiettivi}
           contoEtichetta="Chi ha pagato"
           obiettivoEtichetta="Da parte (opzionale)"

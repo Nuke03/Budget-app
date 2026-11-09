@@ -170,6 +170,44 @@ describe('AddTransactionSheet', () => {
     expect(vi.mocked(createTransaction).mock.calls[0]).toHaveLength(2);
   });
 
+  it('in Casa offre il conto comune e "Io, con <conto>"', () => {
+    apri({ modoIniziale: 'casa', contiPersonali: personale.accounts });
+    expect(screen.getByRole('button', { name: 'Conto comune' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Io, con Conto mio' })).toBeInTheDocument();
+  });
+
+  it('scegliere Io, con carta crea la spesa con pagataDaUserId e scala il conto personale con delta -30', async () => {
+    apri({ modoIniziale: 'casa', contiPersonali: personale.accounts });
+    fireEvent.click(screen.getByRole('button', { name: 'Io, con Conto mio' }));
+    compila('30');
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -30));
+    expect(createTransaction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accountId: 'ap', importo: 30, pagataDaUserId: 'u1' }),
+      { kind: 'casa', householdId: 'h1' }
+    );
+    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+    expect(updateAccountBalance).not.toHaveBeenCalled();
+  });
+
+  it('le entrate non offrono i conti personali', () => {
+    apri({
+      modoIniziale: 'casa',
+      contiPersonali: personale.accounts,
+      casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false }] },
+    });
+    fireEvent.click(screen.getByText('Entrata'));
+    expect(screen.queryByRole('button', { name: 'Io, con Conto mio' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Conto comune' })).toBeInTheDocument();
+  });
+
+  it('una spesa di casa con conto comune non imposta pagataDaUserId', async () => {
+    apri({ modoIniziale: 'casa', contiPersonali: personale.accounts });
+    compila('12');
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', -12));
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).not.toHaveProperty('pagataDaUserId');
+  });
+
   it('nessuna parola vietata', () => {
     const { container } = apri({ modoIniziale: 'casa' });
     assertNessunaParolaVietata(container);
