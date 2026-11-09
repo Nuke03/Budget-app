@@ -8,6 +8,7 @@ import {
   getLastIncomeDate,
   getRecentTransactionAmounts,
   getTransactionAmountsForGoal,
+  getSpeseCasaPerCategorie,
 } from '@/lib/data/transactions';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
@@ -172,5 +173,26 @@ describe('getTransactionAmountsForGoal', () => {
     const supabase = fakeSelectClient([]);
     const result = await getTransactionAmountsForGoal(supabase, 'goal-1', '2026-01-01', null);
     expect(result).toEqual([]);
+  });
+});
+
+describe('getSpeseCasaPerCategorie', () => {
+  it('legge solo le spese della casa nelle categorie e dal giorno dati, con un tetto', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    const r = await getSpeseCasaPerCategorie(client, 'H1', ['c1', 'c2'], '2026-01-01');
+    expect(r).toHaveLength(1);
+    expect(r[0].categoriaId).toBe('cat-1');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].table).toBe('transactions');
+    expect(callsOf(calls[0], 'eq')).toEqual([['household_id', 'H1'], ['tipo', 'expense']]);
+    expect(callsOf(calls[0], 'in')).toEqual([['categoria_id', ['c1', 'c2']]]);
+    expect(callsOf(calls[0], 'gte')).toEqual([['data', '2026-01-01']]);
+    expect(callsOf(calls[0], 'limit')).toHaveLength(1);
+  });
+
+  it('senza categorie non fa nessuna query', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    expect(await getSpeseCasaPerCategorie(client, 'H1', [], '2026-01-01')).toEqual([]);
+    expect(calls).toHaveLength(0);
   });
 });

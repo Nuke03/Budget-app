@@ -6,6 +6,9 @@ import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
 const TRANSACTION_COLUMNS =
   'id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at, pagata_da_user_id, origine, user_id';
 
+// Tetto di sicurezza alla lettura: bastano le spese recenti per una stima.
+const LIMITE_SPESE_STIME = 1000;
+
 interface TransactionRow {
   id: string;
   tipo: TransactionTipo;
@@ -188,4 +191,26 @@ export async function getTransactionAmountsForGoal(
 
   if (error) throw error;
   return (data as { importo: number }[]).map((row) => row.importo);
+}
+
+// Le spese della casa nelle categorie date dal giorno `da`: solo quelle che servono, mai l'intero storico.
+export async function getSpeseCasaPerCategorie(
+  supabase: SupabaseClient,
+  householdId: string,
+  categoriaIds: string[],
+  da: string
+): Promise<Transaction[]> {
+  if (categoriaIds.length === 0) return [];
+  const { data, error } = await applyScope(
+    supabase.from('transactions').select(TRANSACTION_COLUMNS),
+    { kind: 'casa', householdId }
+  )
+    .in('categoria_id', categoriaIds)
+    .eq('tipo', 'expense')
+    .gte('data', da)
+    .order('data', { ascending: false })
+    .limit(LIMITE_SPESE_STIME);
+
+  if (error) throw error;
+  return (data as TransactionRow[]).map(mapRow);
 }
