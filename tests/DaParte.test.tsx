@@ -91,7 +91,7 @@ describe('DaParte', () => {
       .mockResolvedValueOnce({} as never)
       .mockRejectedValueOnce(new Error('no'));
     monta({ voci: [tari, luce] });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Metti da parte tutto' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Metti da parte tutto' }));
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
     expect(creaFondoBolletta).toHaveBeenCalledTimes(2);
     // TARI è fatta: resta solo Luce
@@ -136,7 +136,7 @@ describe('DaParte', () => {
     expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
     expect(
-      screen.getByText(/Segna come pagato: il fondo si chiude e i soldi tornano disponibili\./)
+      screen.getByText(/Segna come pagato: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui. Ricordati di registrare la spesa nei movimenti della casa./)
     ).toBeInTheDocument();
     expect(closeGoal).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Conferma' }));

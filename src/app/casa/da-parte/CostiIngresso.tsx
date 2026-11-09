@@ -206,9 +206,9 @@ export function CostiIngresso({
         onClick={metti}
         className="rounded-[var(--radius-md)] bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground disabled:opacity-50"
       >
-        Metti da parte tutto
+        Metti da parte i costi per entrare
       </button>
-      {fatto ? <p className="text-sm">{'Fatto: trovate i fondi qui sotto, in "Da pagare una volta".'}</p> : null}
+      {fatto ? <p className="text-sm">{'Fatto: trovate i fondi qui sopra, in "Da pagare una volta".'}</p> : null}
       {errore ? (
         <p role="alert" className="text-sm text-danger">
           {errore}

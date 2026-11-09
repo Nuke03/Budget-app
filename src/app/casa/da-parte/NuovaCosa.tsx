@@ -72,7 +72,7 @@ export function NuovaCosa({ householdId, oggi }: { householdId: string; oggi: st
       </label>
       {passata ? (
         <p role="alert" className="text-sm text-danger">
-          La data di ingresso è già passata.
+          La data è già passata.
         </p>
       ) : null}
       <button

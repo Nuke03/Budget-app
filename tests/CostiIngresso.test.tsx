@@ -48,7 +48,7 @@ describe('CostiIngresso', () => {
 
   it('data passata: messaggio e pulsante disabilitato; data valida: anteprima del deposito', () => {
     monta();
-    const b = screen.getByRole('button', { name: 'Metti da parte tutto' });
+    const b = screen.getByRole('button', { name: 'Metti da parte i costi per entrare' });
     expect(b).toBeDisabled();
     scrivi('Data di ingresso', '2026-11-01');
     expect(screen.getByText('La data di ingresso è già passata.')).toBeInTheDocument();
@@ -58,10 +58,10 @@ describe('CostiIngresso', () => {
     expect(b).toBeEnabled();
   });
 
-  it('Metti da parte tutto: una chiamata anche con doppio click, la data è la scadenza', async () => {
+  it('Metti da parte i costi per entrare: una chiamata anche con doppio click, la data è la scadenza', async () => {
     monta();
     scrivi('Data di ingresso', '2027-03-09');
-    const b = screen.getByRole('button', { name: 'Metti da parte tutto' });
+    const b = screen.getByRole('button', { name: 'Metti da parte i costi per entrare' });
     fireEvent.click(b);
     fireEvent.click(b);
     await waitFor(() => expect(refresh).toHaveBeenCalled());
@@ -80,9 +80,9 @@ describe('CostiIngresso', () => {
     });
     const { container } = monta(750, ['Altro']);
     scrivi('Data di ingresso', '2027-03-09');
-    fireEvent.click(screen.getByRole('button', { name: 'Metti da parte tutto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Metti da parte i costi per entrare' }));
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Metti da parte tutto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Metti da parte i costi per entrare' }));
     await waitFor(() => expect(creaFondiIngresso).toHaveBeenCalledTimes(2));
     expect(vi.mocked(creaFondiIngresso).mock.calls[1][1].esistenti).toEqual(['Altro', 'Deposito cauzionale']);
     assertNessunaParolaVietata(container);
@@ -92,7 +92,7 @@ describe('CostiIngresso', () => {
     monta();
     scrivi('Data di ingresso', '2027-03-09');
     fireEvent.click(screen.getByRole('button', { name: 'Modifica' }));
-    const b = screen.getByRole('button', { name: 'Metti da parte tutto' });
+    const b = screen.getByRole('button', { name: 'Metti da parte i costi per entrare' });
     scrivi('Arredo (€)', '2000,5');
     expect(screen.getByText('2.000,5 €')).toBeInTheDocument();
     expect(b).toBeEnabled();

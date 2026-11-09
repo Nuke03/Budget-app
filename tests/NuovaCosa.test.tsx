@@ -52,7 +52,7 @@ describe('NuovaCosa', () => {
     scrivi('Nome', 'Divano');
     scrivi('Importo (€)', '50');
     scrivi('Entro quando', '2026-11-01');
-    expect(screen.getByText('La data di ingresso è già passata.')).toBeInTheDocument();
+    expect(screen.getByText('La data è già passata.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeDisabled();
   });
 });
