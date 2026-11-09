@@ -4,9 +4,9 @@
 export function parseImporto(testo: string): number | null {
   let t = testo.trim();
   if (t.includes(',')) {
-    if (!/^\d{1,3}(\.\d{3})*,\d+$|^\d+,\d+$/.test(t)) return null;
+    if (!/^[1-9]\d{0,2}(\.\d{3})*,\d+$|^\d+,\d+$/.test(t)) return null;
     t = t.replace(/\./g, '').replace(',', '.');
-  } else if (/^\d{1,3}(\.\d{3})+$/.test(t)) {
+  } else if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(t)) {
     t = t.replace(/\./g, '');
   }
   if (!/^\d+(\.\d+)?$/.test(t)) return null;

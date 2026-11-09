@@ -29,6 +29,12 @@ describe('parseImporto', () => {
     expect(parseImporto('10.25')).toBe(10.25);
     expect(parseImporto('1.02,5.3')).toBeNull();
   });
+  it('zero iniziale non è migliaia', () => {
+    expect(parseImporto('0.500')).toBe(0.5);
+    expect(parseImporto('0,50')).toBe(0.5);
+    expect(parseImporto('1.020')).toBe(1020);
+    expect(parseImporto('1.020,50')).toBe(1020.5);
+  });
   it('zero è valido', () => {
     expect(parseImporto('0')).toBe(0);
     expect(parseImporto(' 0,0 ')).toBe(0);
