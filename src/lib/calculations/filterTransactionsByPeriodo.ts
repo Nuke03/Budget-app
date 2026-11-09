@@ -1,14 +1,13 @@
 import { startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
-import type { Transaction } from '../types';
 
 export type Periodo = 'mese' | '3mesi' | '6mesi' | 'anno' | 'personalizzato';
 
-export function filterTransactionsByPeriodo(
-  transactions: Transaction[],
+export function filterTransactionsByPeriodo<T extends { data: string }>(
+  transactions: T[],
   periodo: Periodo,
   oggi: Date,
   rangePersonalizzato?: { da: string; a: string } | null
-): Transaction[] {
+): T[] {
   let from: Date;
   let to: Date;
 

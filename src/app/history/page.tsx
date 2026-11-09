@@ -6,6 +6,10 @@ import { Pencil, Trash2, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/data/transactions';
 import { getCategories } from '@/lib/data/categories';
+import { getMyHousehold } from '@/lib/data/households';
+import { getTransfers } from '@/lib/data/transfers';
+import { casa } from '@/lib/data/scope';
+import { righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 import { getAccounts, updateAccountBalance } from '@/lib/data/accounts';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
@@ -14,6 +18,7 @@ import { computeAggiornamentiSaldoPerModifica } from '@/lib/calculations/account
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { HistoryChartCard } from './HistoryChartCard';
+import { StoricoCasa } from './StoricoCasa';
 import { PeriodoFilter } from './PeriodoFilter';
 import { AddTransactionForm } from '../add/AddTransactionForm';
 import type { Transaction, Category, Account, BudgetGoal, TransactionTipo } from '@/lib/types';
@@ -24,6 +29,7 @@ export default function HistoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [goals, setGoals] = useState<BudgetGoal[]>([]);
+  const [righeNeutre, setRigheNeutre] = useState<RigaNeutra[]>([]);
   const [periodo, setPeriodo] = useState<Periodo>('mese');
   const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -40,6 +46,21 @@ export default function HistoryPage() {
     setCategories(cats);
     setAccounts(accs);
     setGoals(openGoals);
+
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+    const casaCorrente = userId ? await getMyHousehold(supabase, userId) : null;
+    if (userId && casaCorrente) {
+      const scope = casa(casaCorrente.household.id);
+      const [txCasa, trasferimenti] = await Promise.all([
+        getTransactions(supabase, scope),
+        getTransfers(supabase, scope),
+      ]);
+      const nomi = Object.fromEntries(casaCorrente.members.map((m) => [m.userId, m.displayName]));
+      setRigheNeutre(righeNeutreStorico({ userId, transazioni: txCasa, trasferimenti, nomi }));
+    } else {
+      setRigheNeutre([]);
+    }
   }
 
   async function handleCreateGoal(payload: {
@@ -109,6 +130,12 @@ export default function HistoryPage() {
 
   const transactionsFiltrate = filterTransactionsByPeriodo(
     transactions,
+    periodo,
+    new Date(),
+    rangePersonalizzato
+  );
+  const righeNeutreFiltrate = filterTransactionsByPeriodo(
+    righeNeutre,
     periodo,
     new Date(),
     rangePersonalizzato
@@ -187,6 +214,8 @@ export default function HistoryPage() {
           </p>
         )}
       </ul>
+
+      <StoricoCasa righe={righeNeutreFiltrate} />
 
       {editingTransaction && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
