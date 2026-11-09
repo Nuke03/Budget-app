@@ -24,6 +24,66 @@ describe('scope guard', () => {
     expect(findUnscopedQueries(src)).toEqual([]);
   });
 
+  it('segnala una arrow function esportata con from(accounts) senza scope', () => {
+    const src = `export const leggi = async (supabase) => {
+  return supabase.from('accounts').select('id');
+};
+`;
+    expect(findUnscopedQueries(src)).toEqual(['leggi']);
+  });
+
+  it('segnala una arrow function con parametri su più righe', () => {
+    const src = `export const leggi = async (
+  supabase: X,
+  scope: Scope
+): Promise<Y> => {
+  return supabase.from('transactions').select('id');
+};
+`;
+    expect(findUnscopedQueries(src)).toEqual(['leggi']);
+  });
+
+  it('accetta una arrow function con applyScope', () => {
+    const src = `export const leggi = async (supabase) => {
+  return applyScope(supabase.from('accounts').select('id'), p);
+};
+`;
+    expect(findUnscopedQueries(src)).toEqual([]);
+  });
+
+  it('segnala .from( fuori da qualunque funzione', () => {
+    const src = `const q = supabase.from('transactions').select('id');
+`;
+    expect(findUnscopedQueries(src)).toEqual(['<fuori da una funzione>']);
+  });
+
+  it('segnala una tabella dinamica', () => {
+    const src = "export async function a(s, t) { return s.from(t).select('id'); }";
+    expect(findUnscopedQueries(src)).toEqual(['a (tabella dinamica)']);
+  });
+
+  it('non segnala Array.from e Buffer.from', () => {
+    const src = 'export function a(x) { return Array.from(x).concat(Array.from(Buffer.from(x))); }';
+    expect(findUnscopedQueries(src)).toEqual([]);
+  });
+
+  it('segnala la seconda lettura quando la funzione ha un solo segno di scope', () => {
+    const src = `export async function x(s) {
+  const a = applyScope(s.from('accounts').select('id'), p);
+  const b = await s.from('categories').select('id');
+  return [a, b];
+}
+`;
+    expect(findUnscopedQueries(src)).toEqual(['x']);
+  });
+
+  it('segnala transfers senza scope e accetta transfers con applyScope', () => {
+    const senza = "export async function t(s) { return s.from('transfers').select('id'); }";
+    const con = "export async function t(s) { return applyScope(s.from('transfers').select('id'), p); }";
+    expect(findUnscopedQueries(senza)).toEqual(['t']);
+    expect(findUnscopedQueries(con)).toEqual([]);
+  });
+
   it('ogni file in src/lib/data rispetta lo scope tranne la allowlist', () => {
     const dir = path.resolve(__dirname, '../../src/lib/data');
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts') && !FILE_ESENTI.includes(f));
