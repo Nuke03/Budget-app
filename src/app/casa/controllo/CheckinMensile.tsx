@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CheckinGiaFattoError, getCheckin, messaggioErroreCheckin, saveCheckin } from '@/lib/data/checkins';
+import { CheckinGiaFattoError, messaggioErroreCheckin, saveCheckin } from '@/lib/data/checkins';
 import type { SaveCheckinInput } from '@/lib/data/checkins';
 import { formatNumero, nomeMese } from '@/lib/format';
 import type { CheckinCalcolato } from '@/lib/calculations/casa/checkin';
@@ -39,12 +39,23 @@ function fraseEsito(
 ): string {
   if (c.esito === 'avanzo') return `In avanzo di ${euro(c.avanzo)}.`;
   if (c.esito === 'in_pari') return 'Tutto è andato come previsto.';
-  const x = euro(Math.abs(c.avanzo));
-  const versamentiMancanti = c.versatoTotale < c.attesoTotale;
-  const speseSopra = c.spesoMensili + c.nonRegistrate > c.previstoMensili;
-  if (versamentiMancanti && !speseSopra) return `Mancano ${x} di versamenti. Li prendiamo dal cuscinetto.`;
-  if (speseSopra && !versamentiMancanti) return `Sono usciti ${x} più del previsto. Li prendiamo dal cuscinetto.`;
-  return `Il mese chiude ${x} sotto il previsto. Li prendiamo dal cuscinetto.`;
+  const dalCuscinetto = Math.abs(c.avanzo);
+  const mancanti = Math.round((c.attesoTotale - c.versatoTotale) * 100) / 100;
+  const sopra = Math.round((c.spesoMensili + c.nonRegistrate - c.previstoMensili) * 100) / 100;
+  const uguale = (n: number): boolean => Math.abs(n - dalCuscinetto) < 0.005;
+  if (mancanti > 0 && sopra <= 0) {
+    const causa = `Mancano ${euro(mancanti)} di versamenti.`;
+    return uguale(mancanti)
+      ? `${causa} Li prendiamo dal cuscinetto.`
+      : `${causa} Il mese chiude ${euro(dalCuscinetto)} sotto il previsto: li prendiamo dal cuscinetto.`;
+  }
+  if (sopra > 0 && mancanti <= 0) {
+    const causa = `Sono usciti ${euro(sopra)} più del previsto.`;
+    return uguale(sopra)
+      ? `${causa} Li prendiamo dal cuscinetto.`
+      : `${causa} Il mese chiude ${euro(dalCuscinetto)} sotto il previsto: li prendiamo dal cuscinetto.`;
+  }
+  return `Il mese chiude ${euro(dalCuscinetto)} sotto il previsto. Li prendiamo dal cuscinetto.`;
 }
 
 type Scelta = 'cuscinetto' | 'fondo' | 'nuova';
@@ -144,11 +155,7 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
       router.refresh();
     } catch (e) {
       if (e instanceof CheckinGiaFattoError) {
-        const chi = await getCheckin(createClient(), dati.householdId, mese)
-          .then((c) => (c ? dati.nomi[c.userId] : undefined))
-          .catch(() => undefined);
-        setErrore(`Il check-in di ${nomeMese(mese)} è già stato fatto${chi ? ` da ${chi}` : ''}.`);
-        // La pagina ricarica e mostra il check-in fatto.
+        // Lo ha già fatto un altro: la pagina ricarica e mostra "Fatto da ...", senza messaggio.
         router.refresh();
       } else {
         setErrore(messaggioErroreCheckin(e));

@@ -102,6 +102,15 @@ describe('loadCheckin', () => {
     expect(r.chi).toBe('Anna');
   });
 
+  it('un membro senza riga del mese vede comunque "Fatto da ..." se il check-in esiste', async () => {
+    const db = createFakeDb(base({ household_checkins: [checkin('2026-10-01', 'avanzo')] }), { userId: 'C', membri: { H1: ['A', 'B', 'C'] } });
+    const C = { ...membro('C', 'Carla', 3), joinedAt: '2026-11-03T00:00:00Z' };
+    const casaC: CasaCorrente = { ...casa, members: [A, B, C], me: C };
+    const r = await loadCheckin(db.client, casaC, NOW);
+    expect(r.stato).toBe('fatto');
+    expect(r.chi).toBe('Anna');
+  });
+
   it('nessun_mese senza piano o con piano partito a novembre', async () => {
     const senza = await carica(base({ household_plans: [], household_plan_shares: [], household_plan_items: [] }));
     expect(senza.stato).toBe('nessun_mese');

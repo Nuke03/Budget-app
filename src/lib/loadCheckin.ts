@@ -64,14 +64,15 @@ export async function loadCheckin(
     serveControllo,
   };
 
-  // Lo stesso calcolo del promemoria: le righe sono quelle di chi guarda.
+  // Il check-in è della casa: basta che un membro abbia la riga del mese (chi è entrato dopo non l'ha).
+  const righeCasa = Object.values(dati.righe).flat();
   const mese = meseDaControllare({
     oggi,
-    righe: dati.righe[casa.me.userId] ?? [],
+    righe: righeCasa,
     ultimoCheckinMese: dati.controlli.ultimoCheckinMese,
   });
   if (mese === null) {
-    const haRiga = (dati.righe[casa.me.userId] ?? []).some((r) => r.mese === ultimoChiuso);
+    const haRiga = righeCasa.some((r) => r.mese === ultimoChiuso);
     const fatto = haRiga ? await getCheckin(supabase, householdId, ultimoChiuso) : null;
     if (!fatto) return vuoto;
     return { ...vuoto, stato: 'fatto', mese: ultimoChiuso, fatto, chi: nomi[fatto.userId] ?? null };
