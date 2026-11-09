@@ -47,4 +47,15 @@ describe('creaFondoBolletta', () => {
     expect(db.tables.budget_goals).toHaveLength(0);
     expect(db.rpcCalls).toHaveLength(0);
   });
+
+  it('riprovo dopo un collegamento fallito: resta un solo fondo e il collegamento si rifà', async () => {
+    const db = nuovoDb();
+    let n = 0;
+    db.registerRpc('link_plan_item_goal', () => (n++ === 0 ? { error: { message: 'no' } } : { data: 1 }));
+    await expect(creaFondoBolletta(db.client, { ...input, item: { ...item, goalId: 'chiuso' } })).rejects.toBeTruthy();
+    const fondo = await creaFondoBolletta(db.client, { ...input, item: { ...item, nome: 'tari', goalId: 'chiuso' } });
+    expect(db.tables.budget_goals).toHaveLength(1);
+    expect(db.rpcCalls).toHaveLength(2);
+    expect(db.rpcCalls[1].args).toMatchObject({ p_goal: fondo.id });
+  });
 });

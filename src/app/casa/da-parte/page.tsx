@@ -2,11 +2,12 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { utenteOLogin } from '@/lib/utenteOLogin';
 import { getMyHousehold } from '@/lib/data/households';
-import { getPlanForMonth } from '@/lib/data/householdPlans';
+import { getPlanVersions } from '@/lib/data/householdPlans';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { casa as scopeCasa } from '@/lib/data/scope';
 import { meseRomaISO, oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
 import { obiettiviCasaConSpiegazione, statoVociDaParte } from '@/lib/calculations/casa/fondi';
 import { DaParte } from './DaParte';
 
@@ -20,10 +21,11 @@ export default async function DaPartePage() {
   const adesso = new Date();
   const today = oggiRomaData(adesso);
   // Letture mirate: il piano del mese, gli obiettivi aperti e il loro speso collegato.
-  const [piano, obiettivi] = await Promise.all([
-    getPlanForMonth(supabase, casa.household.id, meseRomaISO(adesso)),
+  const [piani, obiettivi] = await Promise.all([
+    getPlanVersions(supabase, casa.household.id),
     getOpenGoals(supabase, scope),
   ]);
+  const piano = pianoInVigore(piani, meseRomaISO(adesso));
   const speso = await getSpecoCollegatoPerObiettivi(supabase, obiettivi, today, scope);
   const conSpiegazione = obiettiviCasaConSpiegazione(obiettivi, speso, today);
 

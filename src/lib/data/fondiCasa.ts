@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createGoal } from './goals';
+import { createGoal, getOpenGoals } from './goals';
 import { casa } from './scope';
 import type { BudgetGoal, PlanItem } from '../types';
 
@@ -12,20 +12,28 @@ export async function creaFondoBolletta(
 ): Promise<BudgetGoal> {
   const { householdId, item, scadenza, oggi } = input;
   if (!item.categoriaId) throw new Error('voce senza categoria');
-  const fondo = await createGoal(
-    supabase,
-    {
-      nome: item.nome,
-      importoTarget: item.importoRicorrenza,
-      modalita: 'dilazionato',
-      scadenza,
-      categoriaId: item.categoriaId,
-      ricorrente: true,
-      frequenzaMesi: item.frequenzaMesi,
-      accantonaDa: oggi,
-    },
-    casa(householdId)
+  // Un fondo aperto uguale c'è già (tentativo precedente o un altro membro): si collega quello.
+  const aperti = await getOpenGoals(supabase, casa(householdId));
+  const esistente = aperti.find(
+    (g) =>
+      g.ricorrente && g.categoriaId === item.categoriaId && g.nome.toLowerCase() === item.nome.toLowerCase()
   );
+  const fondo =
+    esistente ??
+    (await createGoal(
+      supabase,
+      {
+        nome: item.nome,
+        importoTarget: item.importoRicorrenza,
+        modalita: 'dilazionato',
+        scadenza,
+        categoriaId: item.categoriaId,
+        ricorrente: true,
+        frequenzaMesi: item.frequenzaMesi,
+        accantonaDa: oggi,
+      },
+      casa(householdId)
+    ));
   const { error } = await supabase.rpc('link_plan_item_goal', {
     p_household: householdId,
     p_item: item.id,

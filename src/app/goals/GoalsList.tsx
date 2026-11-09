@@ -1,5 +1,4 @@
-import { Lock, Clock, Pencil, Trash2 } from 'lucide-react';
-import { PiggyBank } from 'lucide-react';
+import { Lock, Clock, Pencil, Trash2, PiggyBank } from 'lucide-react';
 import { formatEuro, formatDateIt, formatNumero } from '@/lib/format';
 import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { ComeSiCalcola } from '@/app/casa/ComeSiCalcola';
