@@ -12,7 +12,7 @@ const riga = (mese: string, atteso: number, versato: number): RigaMese => ({
   versato,
   mancano: Math.max(0, atteso - versato),
 });
-const voce = (nome: string, importoMensile: number, frequenzaMesi = 1, categoriaId: string | null = null): PlanItem => ({
+const voce = (nome: string, importoMensile: number, frequenzaMesi = 1, categoriaId: string | null = null, goalId: string | null = null): PlanItem => ({
   id: nome,
   planId: 'P1',
   nome,
@@ -21,7 +21,7 @@ const voce = (nome: string, importoMensile: number, frequenzaMesi = 1, categoria
   importoRicorrenza: importoMensile * frequenzaMesi,
   importoMensile,
   origineStima: 'utente',
-  goalId: null,
+  goalId,
   stimaIgnorataConN: null,
   ordine: 0,
 });
@@ -93,11 +93,10 @@ describe('computeCheckin', () => {
     const c = computeCheckin({
       mese: MESE,
       righePerMembro: {},
-      piano: piano([voce('Affitto', 100), voce('Assicurazione', 50, 12, 'CAT-ANNUALE')]),
+      piano: piano([voce('Affitto', 100), voce('Assicurazione', 50, 12, 'CAT-ANNUALE', 'G1')]),
       spese: [
         spesa(10),
-        spesa(500, { goalId: 'G1' }),
-        spesa(600, { categoriaId: 'CAT-ANNUALE' }),
+        spesa(600, { goalId: 'G1', categoriaId: 'CAT-ANNUALE' }),
         spesa(700, { tipo: 'income' }),
         spesa(800, { data: '2026-09-30' }),
         spesa(80, { origine: 'riconciliazione' }),
@@ -106,6 +105,28 @@ describe('computeCheckin', () => {
     });
     expect(c.spesoMensili).toBe(10);
     expect(c.nonRegistrate).toBe(80);
+  });
+
+  it('una categoria condivisa con una voce da parte tiene la spesa non collegata', () => {
+    const c = computeCheckin({
+      mese: MESE,
+      righePerMembro: {},
+      piano: piano([voce('Bollette', 100, 1, 'CAT-X'), voce('Assicurazione', 50, 12, 'CAT-X', 'G1')]),
+      spese: [spesa(40, { categoriaId: 'CAT-X' }), spesa(600, { categoriaId: 'CAT-X', goalId: 'G1' })],
+      precedente: null,
+    });
+    expect(c.spesoMensili).toBe(40);
+  });
+
+  it('un obiettivo una tantum non toglie la spesa dal mensile', () => {
+    const c = computeCheckin({
+      mese: MESE,
+      righePerMembro: {},
+      piano: piano([voce('Affitto', 100)]),
+      spese: [spesa(70, { goalId: 'VACANZA' })],
+      precedente: null,
+    });
+    expect(c.spesoMensili).toBe(70);
   });
 
   it('senza piano il previsto è 0', () => {

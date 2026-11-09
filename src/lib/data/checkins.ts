@@ -114,6 +114,9 @@ export function messaggioErroreCheckin(e: unknown): string {
   if (testo.includes('avanzo non valido')) return 'Il calcolo del mese non è valido: riapri la pagina e riprova.';
   if (testo.includes('obiettivo mancante')) return "Scegli a cosa destinare l'avanzo.";
   if (testo.includes('obiettivo non valido')) return "Quella voce non è più disponibile: scegline un'altra.";
+  if (testo.includes('casa non scrivibile')) return 'Non puoi modificare questa casa.';
+  if (testo.includes('mese non valido')) return 'Quel mese non è valido per il check-in.';
+  if (testo.includes('destinazione non valida')) return "Quella destinazione non va bene per l'avanzo di questo mese.";
   if (testo.includes('mese non ancora chiuso')) return 'Il check-in si fa a mese finito.';
   return ERRORE_GENERICO;
 }

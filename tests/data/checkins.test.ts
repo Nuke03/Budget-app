@@ -85,6 +85,14 @@ describe('messaggioErroreCheckin', () => {
     expect(messaggioErroreCheckin(new CheckinGiaFattoError())).toBe('Il check-in di questo mese è già stato fatto.');
     expect(messaggioErroreCheckin({ message: 'check-in gia fatto' })).toBe('Il check-in di questo mese è già stato fatto.');
   });
+  it('errori del server: frasi semplici, senza consigli sulla connessione', () => {
+    for (const m of ['casa non scrivibile', 'mese non valido', 'destinazione non valida']) {
+      const frase = messaggioErroreCheckin({ message: m });
+      expect(frase).not.toContain('connessione');
+      expect(frase).not.toBe('Salvataggio fallito, controlla la connessione e riprova.');
+    }
+    expect(messaggioErroreCheckin({ message: 'casa non scrivibile' })).toBe('Non puoi modificare questa casa.');
+  });
   it('errore sconosciuto: frase generica', () => {
     expect(messaggioErroreCheckin(new Error('boom'))).toBe('Salvataggio fallito, controlla la connessione e riprova.');
   });
