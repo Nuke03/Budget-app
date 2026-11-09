@@ -84,6 +84,41 @@ describe('scope guard', () => {
     expect(findUnscopedQueries(con)).toEqual([]);
   });
 
+  it('segnala una tabella dinamica in una catena con il punto a capo', () => {
+    const src = `export async function a(supabase, t) {
+  return supabase
+    .from(t)
+    .select('id');
+}`;
+    expect(findUnscopedQueries(src)).toEqual(['a (tabella dinamica)']);
+  });
+
+  it('un segno di scope in un commento o in una stringa non nasconde una lettura senza scope', () => {
+    const commento = `export async function a(s) {
+  // applyScope( qui non c'e'
+  return s.from('accounts').select('id');
+}`;
+    const stringa = `export async function b(s) {
+  const hint = 'applyScope(';
+  return s.from('accounts').select('id');
+}`;
+    expect(findUnscopedQueries(commento)).toEqual(['a']);
+    expect(findUnscopedQueries(stringa)).toEqual(['b']);
+  });
+
+  it('il marcatore vero esenta, citato in una stringa no', () => {
+    const vero = `export async function a(s) {
+  // household: per id
+  return s.from('accounts').select('id');
+}`;
+    const finto = `export async function b(s) {
+  const m = '// household: per id';
+  return s.from('accounts').select('id');
+}`;
+    expect(findUnscopedQueries(vero)).toEqual([]);
+    expect(findUnscopedQueries(finto)).toEqual(['b']);
+  });
+
   it('ogni file in src/lib/data rispetta lo scope tranne la allowlist', () => {
     const dir = path.resolve(__dirname, '../../src/lib/data');
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.ts') && !FILE_ESENTI.includes(f));
