@@ -27,6 +27,7 @@ export default async function CasaPage() {
   const finanze = dati
     ? {
         disponibile: dati.disponibile,
+        cuscinetto: dati.cuscinetto,
         conti: dati.aggiunta.conti,
         ultimeSpese: dati.transazioni.filter((t) => t.tipo === 'expense').slice(0, 5),
         nomi: Object.fromEntries(dati.aggiunta.nomi.map((n) => [n.userId, n.nome])),

@@ -11,6 +11,7 @@ import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { spiegaCuscinetto } from '@/lib/calculations/casa/spiegazioni';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Account, Transaction } from '@/lib/types';
 import { ComeSiCalcola } from './ComeSiCalcola';
@@ -21,6 +22,7 @@ import { PannelliVersamenti } from './PannelliVersamenti';
 
 export interface FinanzeCasa {
   disponibile: DisponibileCasa;
+  cuscinetto?: { attuale: number; obiettivo: number; quotaMensile: number } | null;
   conti: Account[];
   ultimeSpese: Transaction[];
   nomi: Record<string, string>;
@@ -98,6 +100,14 @@ export function CasaHome({
                 {formatEuro(finanze.disponibile.valore)}
               </p>
               <ComeSiCalcola spiegazione={finanze.disponibile.spiegazione} className="mt-4" />
+              {finanze.cuscinetto ? (
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-brand-foreground/20 pt-4">
+                  <p className="text-sm font-medium text-brand-foreground/75">
+                    Cuscinetto {formatNumero(finanze.cuscinetto.attuale)} di {formatNumero(finanze.cuscinetto.obiettivo)} €
+                  </p>
+                  <ComeSiCalcola spiegazione={spiegaCuscinetto(finanze.cuscinetto)} />
+                </div>
+              ) : null}
             </section>
 
             <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">

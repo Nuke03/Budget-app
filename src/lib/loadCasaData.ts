@@ -9,11 +9,11 @@ import { getTransactions } from '@/lib/data/transactions';
 import { getPlanVersions, type PlanBundle } from '@/lib/data/householdPlans';
 import { getTransfers } from '@/lib/data/transfers';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
-import { computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
+import { computeDaPagareMese, computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
-import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { meseRomaISO, oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
-import type { RigaMese } from '@/lib/calculations/casa/versamenti';
+import { pianoInVigore, type RigaMese } from '@/lib/calculations/casa/versamenti';
 import type { Account, BudgetGoal, Category, Transaction, Transfer } from '@/lib/types';
 
 export interface CasaAggiunta {
@@ -31,6 +31,8 @@ export interface CasaData {
   transazioni: Transaction[];
   obiettiviConAccantonato: (BudgetGoal & { accantonato: number })[];
   disponibile: DisponibileCasa;
+  // Il cuscinetto di oggi; null se nessun piano è ancora in vigore.
+  cuscinetto: { attuale: number; obiettivo: number; quotaMensile: number } | null;
   trasferimenti: Transfer[];
   crediti: Record<string, number>;
   piani: PlanBundle[];
@@ -92,12 +94,27 @@ export async function loadCasaData(
     accantonato: computeAccantonatoFinora(g, today, specoCollegato),
   }));
 
+  const mese = meseRomaISO(adesso);
+  const pianoOra = pianoInVigore(piani, mese);
+  const daPagareMese = pianoOra
+    ? computeDaPagareMese({ voci: pianoOra.items, spese: transazioni, mese })
+    : 0;
+
   const disponibile = computeDisponibileCasa({
     conti: aggiunta.conti,
     obiettivi: obiettiviConSpeso,
     today,
     crediti: totaleCrediti,
+    daPagareMese,
+    cuscinettoObiettivo: pianoOra?.plan.cuscinettoObiettivo ?? 0,
   });
+  const cuscinetto = pianoOra
+    ? {
+        attuale: disponibile.cuscinetto,
+        obiettivo: pianoOra.plan.cuscinettoObiettivo,
+        quotaMensile: pianoOra.plan.cuscinettoQuotaMensile,
+      }
+    : null;
 
   return {
     casa,
@@ -105,6 +122,7 @@ export async function loadCasaData(
     transazioni,
     obiettiviConAccantonato,
     disponibile,
+    cuscinetto,
     trasferimenti,
     crediti,
     piani,

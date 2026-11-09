@@ -162,3 +162,47 @@ describe('loadCasaData registri', () => {
     ]);
   });
 });
+
+describe('loadCasaData disponibile completo', () => {
+  const pianoDal = (validoDal: string) => ({
+    household_plans: [
+      { id: 'p1', household_id: 'H1', valido_dal: validoDal, giorno_versamento: 5, regola: 'parti_uguali',
+        cuscinetto_obiettivo: 100, cuscinetto_quota_mensile: 10, arrotondamento: 10, totale_mensile: 310, created_at: T0 },
+    ],
+    household_plan_items: [
+      { id: 'i1', plan_id: 'p1', nome: 'Luce', categoria_id: 'ca-casa', frequenza_mesi: 1, importo_ricorrenza: 300,
+        importo_mensile: 300, origine_stima: 'manuale', goal_id: null, stima_ignorata_con_n: null, ordine: 1 },
+    ],
+    household_plan_shares: [],
+  });
+  const carica2 = (validoDal: string, adesso: Date = TODAY, extra: object[] = []) => {
+    const s = { ...seed(), ...pianoDal(validoDal) };
+    s.transactions = [...s.transactions, ...extra] as never;
+    const db = createFakeDb(s as never, { userId: 'A', membri: MEMBRI });
+    return loadCasaData(db.client, casaA, adesso);
+  };
+
+  it('disponibile con D e cuscinetto', async () => {
+    const d = await carica2('2026-10-01');
+    expect(d.disponibile).toMatchObject({ a: 1000, b: 130, c: 0, d: 280, e: 590, cuscinetto: 100, valore: 490 });
+    expect(d.cuscinetto).toEqual({ attuale: 100, obiettivo: 100, quotaMensile: 10 });
+  });
+
+  it('piano che parte nel futuro: D e cuscinetto a zero', async () => {
+    const d = await carica2('2026-12-01');
+    expect(d.disponibile.valore).toBe(870);
+    expect(d.disponibile.d).toBe(0);
+    expect(d.cuscinetto).toBeNull();
+  });
+
+  it('mezzanotte italiana', async () => {
+    const spesa = {
+      id: 't-nov', user_id: 'B', household_id: 'H1', tipo: 'expense', importo: 50, data: '2026-11-01',
+      categoria_id: 'ca-casa', account_id: 'ac-casa', goal_id: null, descrizione: 'Luce', nota: null,
+      created_at: '2026-11-01T00:10:00Z',
+    };
+    const d = await carica2('2026-10-01', new Date('2026-10-31T23:30:00Z'), [spesa]);
+    // a Roma è già il 1 novembre: D = 300 - (20 + 50), non il mese di ottobre
+    expect(d.disponibile.d).toBe(230);
+  });
+});

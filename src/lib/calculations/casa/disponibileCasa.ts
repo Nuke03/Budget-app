@@ -1,5 +1,6 @@
 import { computeAccantonatoFinora } from '../accantonato';
 import type { AccountBalance, GoalForCalc } from '../types';
+import type { PlanItem, Transaction } from '@/lib/types';
 import type { Spiegazione } from './spiegazioni';
 
 export interface DisponibileCasa {
@@ -14,6 +15,25 @@ export interface DisponibileCasa {
 }
 
 const arrotonda2 = (n: number) => Math.round(n * 100) / 100;
+
+// Le spese del mese ancora da pagare: per ogni voce mensile, quanto manca al previsto
+// dopo quello già speso nel mese in quella categoria (mai sotto zero).
+export function computeDaPagareMese(input: {
+  voci: Pick<PlanItem, 'categoriaId' | 'importoMensile' | 'frequenzaMesi'>[];
+  spese: Pick<Transaction, 'tipo' | 'importo' | 'data' | 'categoriaId'>[];
+  mese: string;
+}): number {
+  const meseChiave = input.mese.slice(0, 7);
+  const totale = input.voci
+    .filter((v) => v.frequenzaMesi === 1 && v.categoriaId)
+    .reduce((s, v) => {
+      const speso = input.spese
+        .filter((t) => t.tipo === 'expense' && t.categoriaId === v.categoriaId && t.data.slice(0, 7) === meseChiave)
+        .reduce((x, t) => x + t.importo, 0);
+      return s + Math.max(0, v.importoMensile - speso);
+    }, 0);
+  return arrotonda2(totale);
+}
 
 // Quanto la casa può spendere davvero: i soldi sul conto comune meno quelli già
 // messi da parte per gli obiettivi, meno i rimborsi e le spese del mese ancora

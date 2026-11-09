@@ -1,4 +1,8 @@
+import { differenceInCalendarMonths, parseISO } from 'date-fns';
 import { formatNumero, nomeMese } from '@/lib/format';
+import { computeAccantonatoFinora, computeFinestraGoal } from '@/lib/calculations/accantonato';
+import type { GoalForCalc } from '@/lib/calculations/types';
+import { mesiAlPieno } from './cuscinetto';
 import type { RigaMese } from './versamenti';
 import type { RegolaQuota } from '@/lib/types';
 import {
@@ -167,4 +171,51 @@ export function spiegaRiserva(input: { righe: RigaMese[]; debitoDaRestituire: nu
     formula: "Il versamento di ogni mese è riservato dall'inizio del mese, finché non lo registri.",
     ingredienti,
   };
+}
+
+// Il cuscinetto: i soldi della casa per gli imprevisti, messi da parte un po' alla volta.
+export function spiegaCuscinetto(input: { attuale: number; obiettivo: number; quotaMensile: number }): Spiegazione {
+  const { attuale, obiettivo, quotaMensile } = input;
+  const mancano = Math.max(0, obiettivo - attuale);
+  const mesi = mesiAlPieno(mancano, quotaMensile);
+  const tempo =
+    mancano === 0
+      ? 'Il cuscinetto è già pieno.'
+      : mesi === null
+        ? 'Per ora non si versa niente, quindi non si riempie.'
+        : `Versando ${formatNumero(quotaMensile)} euro al mese sarà pieno tra circa ${mesi} mesi.`;
+  return {
+    valore: attuale,
+    formula: `Soldi della casa per gli imprevisti: ne avete messi da parte ${formatNumero(attuale)} euro su ${formatNumero(obiettivo)}. ${tempo}`,
+    ingredienti: [
+      { etichetta: 'Messo da parte finora', valore: attuale },
+      { etichetta: 'Obiettivo', valore: obiettivo },
+      { etichetta: 'Versato ogni mese per il cuscinetto', valore: quotaMensile },
+    ],
+  };
+}
+
+// Quanto è già messo da parte per una bolletta: la somma dei mesi messi da parte, meno quanto è già stato speso.
+export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoCollegato: number }): Spiegazione {
+  const { goal, today } = input;
+  const messo = arrotonda2(computeAccantonatoFinora(goal, today, 0));
+  const speso = Math.min(Math.max(input.spesoCollegato, 0), messo);
+  const valore = arrotonda2(computeAccantonatoFinora(goal, today, input.spesoCollegato));
+
+  let formula: string;
+  if (goal.modalita === 'bloccato') {
+    formula = `Questi ${formatNumero(goal.importoTarget)} euro sono già tutti messi da parte.`;
+  } else {
+    const { windowStart, windowEnd } = computeFinestraGoal(goal, today);
+    const mesiCiclo = Math.max(1, differenceInCalendarMonths(windowEnd!, windowStart));
+    const inizio =
+      goal.accantonaDa && parseISO(goal.accantonaDa) > windowStart ? parseISO(goal.accantonaDa) : windowStart;
+    const mesiMessi = Math.min(Math.max(differenceInCalendarMonths(today, inizio), 0), mesiCiclo);
+    const alMese = arrotonda2(goal.importoTarget / mesiCiclo);
+    formula = `Bolletta di ${formatNumero(goal.importoTarget)} euro in ${mesiCiclo} mesi: ${formatNumero(alMese)} euro al mese, per ${mesiMessi} ${mesiMessi === 1 ? 'mese' : 'mesi'} già messi da parte.`;
+  }
+
+  const ingredienti = [{ etichetta: 'Messo da parte finora', valore: messo }];
+  if (speso > 0) ingredienti.push({ etichetta: 'Già speso su questa bolletta', valore: -speso });
+  return { valore, formula, ingredienti };
 }

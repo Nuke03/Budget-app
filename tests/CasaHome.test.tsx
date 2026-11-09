@@ -153,6 +153,27 @@ describe('CasaHome', () => {
       assertNessunaParolaVietata(container);
     });
 
+    it('con un piano in vigore mostra il cuscinetto sotto il numero, con la spiegazione', () => {
+      const { container } = render(
+        <CasaHome
+          casa={casa}
+          finanze={{ ...finanze([conto]), cuscinetto: { attuale: 59, obiettivo: 1321, quotaMensile: 59 } }}
+        />
+      );
+      expect(screen.getByText('Cuscinetto 59 di 1.321 €')).toBeInTheDocument();
+      const pulsanti = screen.getAllByRole('button', { name: 'Come si calcola?' });
+      expect(pulsanti).toHaveLength(2);
+      fireEvent.click(pulsanti[1]);
+      expect(screen.getByText(/Soldi della casa per gli imprevisti/)).toBeInTheDocument();
+      assertNessunaParolaVietata(container);
+    });
+
+    it('senza piano in vigore niente riga del cuscinetto', () => {
+      render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), cuscinetto: null }} />);
+      expect(screen.queryByText(/Cuscinetto \d/)).not.toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Come si calcola?' })).toHaveLength(1);
+    });
+
     it('senza conto comune mostra il modulo e crea il conto', async () => {
       render(<CasaHome casa={casa} finanze={finanze([])} />);
       expect(screen.getByText('Aprite il conto comune qui')).toBeInTheDocument();

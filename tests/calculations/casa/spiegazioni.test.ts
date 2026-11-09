@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { spiegaTotaleMensile, spiegaQuotaPersona, spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
+import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { spiegaTotaleMensile, spiegaQuotaPersona, spiegaRiserva, spiegaCuscinetto, spiegaDaParte } from '@/lib/calculations/casa/spiegazioni';
 import { calcolaQuota } from '@/lib/calculations/casa/quota';
 import type { RegolaQuota } from '@/lib/types';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
@@ -140,5 +141,61 @@ describe('spiegaRiserva', () => {
     const s = spiegaRiserva({ righe, debitoDaRestituire: 603 });
     const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
     for (const p of PAROLE_VIETATE) expect(testo).not.toContain(p);
+  });
+});
+
+describe('spiegaCuscinetto', () => {
+  it('59 su 1321 con 59 al mese: pieno tra circa 22 mesi, ingredienti chiari', () => {
+    const s = spiegaCuscinetto({ attuale: 59, obiettivo: 1321, quotaMensile: 59 });
+    expect(s.valore).toBe(59);
+    expect(s.formula).toContain('Soldi della casa per gli imprevisti');
+    expect(s.formula).toContain('circa 22 mesi');
+    expect(s.ingredienti).toEqual([
+      { etichetta: 'Messo da parte finora', valore: 59 },
+      { etichetta: 'Obiettivo', valore: 1321 },
+      { etichetta: 'Versato ogni mese per il cuscinetto', valore: 59 },
+    ]);
+  });
+  it('senza parole vietate', () => {
+    const s = spiegaCuscinetto({ attuale: 59, obiettivo: 1321, quotaMensile: 59 });
+    const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
+    for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
+  });
+});
+
+describe('spiegaDaParte', () => {
+  const tari = {
+    importoTarget: 300, modalita: 'dilazionato' as const, stato: 'aperto' as const, scadenza: '2027-11-09',
+    createdAt: '2026-11-09T10:00:00Z', ricorrente: true, frequenzaMesi: 12, accantonaDa: '2026-11-09',
+  };
+  const today = new Date(2027, 0, 15);
+  it('50 = 25 al mese per 2 mesi, ingredienti sommano al valore', () => {
+    const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 0 });
+    expect(s.valore).toBe(50);
+    expect(s.valore).toBe(computeAccantonatoFinora(tari, today, 0));
+    expect(s.formula).toContain('300');
+    expect(s.formula).toContain('12 mesi');
+    expect(s.formula).toContain('25');
+    expect(s.formula).toContain('2 mesi');
+    expect(s.ingredienti).toEqual([{ etichetta: 'Messo da parte finora', valore: 50 }]);
+  });
+  it('con speso collegato 20 compare la riga in negativo e il valore è 30', () => {
+    const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 20 });
+    expect(s.valore).toBe(30);
+    expect(s.ingredienti).toEqual([
+      { etichetta: 'Messo da parte finora', valore: 50 },
+      { etichetta: 'Già speso su questa bolletta', valore: -20 },
+    ]);
+    expect(somma(s.ingredienti)).toBeCloseTo(s.valore, 8);
+  });
+  it('speso oltre il messo da parte: valore 0 e gli ingredienti sommano a 0', () => {
+    const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 80 });
+    expect(s.valore).toBe(0);
+    expect(somma(s.ingredienti)).toBeCloseTo(0, 8);
+  });
+  it('senza parole vietate', () => {
+    const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 20 });
+    const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
+    for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
   });
 });

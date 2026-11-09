@@ -24,6 +24,13 @@ export function pianoDelMese(piani: PlanBundle[], mese: string): PlanBundle | nu
   return attuale ?? piani[0] ?? null;
 }
 
+// Il piano in vigore nel mese: null se nessuna versione è ancora partita.
+export function pianoInVigore(piani: PlanBundle[], mese: string): PlanBundle | null {
+  let attuale: PlanBundle | null = null;
+  for (const p of piani) if (p.plan.validoDal <= mese) attuale = p;
+  return attuale;
+}
+
 // Le quote mensili che un membro avrebbe dovuto versare, mese per mese, e quanto ha versato davvero.
 // Rispecchia _casa_arretrati.
 export function righeVersamento(input: {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
+import { computeDisponibileCasa, computeDaPagareMese } from '@/lib/calculations/casa/disponibileCasa';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 import type { GoalForCalc } from '@/lib/calculations/types';
 
@@ -89,5 +89,36 @@ describe('computeDisponibileCasa', () => {
   it('un conto escluso dal disponibile non conta in A', () => {
     const r = computeDisponibileCasa({ conti: [conto(1000), conto(500, false)], obiettivi: [], today: TODAY });
     expect(r.a).toBe(1000);
+  });
+});
+
+describe('computeDaPagareMese', () => {
+  const voci = [
+    { categoriaId: 'aff', importoMensile: 750, frequenzaMesi: 1 },
+    { categoriaId: 'spesa', importoMensile: 300, frequenzaMesi: 1 },
+    { categoriaId: 'luce', importoMensile: 55, frequenzaMesi: 2 },
+  ];
+  const spesa = (categoriaId: string, importo: number, data: string, tipo: 'expense' | 'income' = 'expense') => ({
+    tipo, importo, data, categoriaId,
+  });
+  const mese = '2026-11-01';
+
+  it('toglie le spese già fatte nel mese', () => {
+    const spese = [spesa('aff', 750, '2026-11-03'), spesa('spesa', 64.2, '2026-11-08'), spesa('spesa', 50, '2026-10-30')];
+    expect(computeDaPagareMese({ voci, spese, mese })).toBe(235.8);
+  });
+
+  it('non va sotto zero se si è speso oltre il previsto', () => {
+    const spese = [spesa('aff', 750, '2026-11-03'), spesa('spesa', 400, '2026-11-08')];
+    expect(computeDaPagareMese({ voci, spese, mese })).toBe(0);
+  });
+
+  it('le voci con frequenza maggiore di 1 non contano', () => {
+    expect(computeDaPagareMese({ voci: [voci[2]], spese: [], mese })).toBe(0);
+  });
+
+  it('le entrate non contano', () => {
+    const spese = [spesa('aff', 750, '2026-11-03', 'income')];
+    expect(computeDaPagareMese({ voci: [voci[0]], spese, mese })).toBe(750);
   });
 });
