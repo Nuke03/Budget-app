@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Plus } from 'lucide-react';
-import { formatEuro, formatDateIt } from '@/lib/format';
+import { formatEuro, formatDateIt, nomeMese } from '@/lib/format';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
-import type { CasaAggiunta } from '@/lib/loadCasaData';
+import { ComeSiCalcola } from './casa/ComeSiCalcola';
+import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
+import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { Account, BudgetGoal, Category } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
@@ -21,6 +23,14 @@ const GOAL_MODALITA_LABEL: Record<BudgetGoal['modalita'], string> = {
   bloccato: 'Bloccato',
   dilazionato: 'Dilazionato',
 };
+
+// Nelle frasi gli importi tondi si scrivono senza decimali: "45 €".
+const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
+
+function elencoMesi(mesi: string[]): string {
+  const nomi = mesi.map(nomeMese);
+  return nomi.length <= 1 ? (nomi[0] ?? '') : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`;
+}
 
 export function HomeDashboard({
   disponibileLibero,
@@ -38,7 +48,7 @@ export function HomeDashboard({
   accounts: Account[];
   categories: Category[];
   goals: GoalWithAccantonato[];
-  casa?: CasaAggiunta | null;
+  casa?: CasaPerHome | null;
   meUserId?: string;
 }) {
   const router = useRouter();
@@ -47,6 +57,14 @@ export function HomeDashboard({
 
   const accountsDisponibili = accounts.filter((a) => a.contaInDisponibile);
   const accountsEsclusi = accounts.filter((a) => !a.contaInDisponibile);
+
+  const stato = casa?.stato ?? null;
+  const nomeDi = (userId: string): string => stato?.membri.find((m) => m.userId === userId)?.displayName ?? 'un altro membro';
+  const righeDaVersare = stato ? stato.righe.filter((r) => r.mancano > 0) : [];
+  const debitiMiei = stato ? stato.debiti.filter((d) => d.debitoreId === stato.me.userId) : [];
+  const debitiVersoDiMe = stato ? stato.debiti.filter((d) => d.creditoreId === stato.me.userId) : [];
+  const creditoMio = stato ? (stato.crediti[stato.me.userId] ?? 0) : 0;
+  const haRiserva = righeDaVersare.length > 0 || debitiMiei.length > 0;
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
@@ -90,6 +108,39 @@ export function HomeDashboard({
               <span className="tabular-nums">-{formatEuro(g.accantonato)}</span>
             </div>
           ))}
+          {righeDaVersare.map((r) => (
+            <div key={`versamento-${r.mese}`} className="flex justify-between py-1 text-muted">
+              <span>Versamento alla casa, {nomeMese(r.mese)}</span>
+              <span className="tabular-nums">-{formatEuro(r.mancano)}</span>
+            </div>
+          ))}
+          {debitiMiei.map((d) => (
+            <div key={`debito-${d.creditoreId}`} className="flex justify-between py-1 text-muted">
+              <span>Da restituire a {nomeDi(d.creditoreId)}</span>
+              <span className="tabular-nums">-{formatEuro(d.importo)}</span>
+            </div>
+          ))}
+          {haRiserva && stato && (
+            <ComeSiCalcola
+              spiegazione={spiegaRiserva({ righe: stato.righe, debitoDaRestituire: stato.debitoDaRestituire })}
+            />
+          )}
+          {(creditoMio > 0 || debitiVersoDiMe.length > 0 || stato?.avvisoArretrati) && (
+            <div className="mt-1 flex flex-col gap-1 border-t border-black/5 pt-2 text-xs text-muted">
+              {creditoMio > 0 && <p>Dalla casa ti spettano {euroInFrase(creditoMio)}</p>}
+              {debitiVersoDiMe.map((d) => (
+                <p key={`credito-${d.debitoreId}`}>
+                  {nomeDi(d.debitoreId)} deve a te {euroInFrase(d.importo)}, quota di {elencoMesi(d.mesi.map((m) => m.mese))}
+                </p>
+              ))}
+              {stato?.avvisoArretrati && (
+                <p>
+                  Sono più di due mesi di versamenti da registrare. Se li hai già fatti, registrali con &quot;Già riflesso nei
+                  saldi&quot;.
+                </p>
+              )}
+            </div>
+          )}
           {accountsEsclusi.length > 0 && (
             <div className="mt-1 flex flex-col gap-1 border-t border-black/5 pt-2">
               {accountsEsclusi.map((a) => (
@@ -116,7 +167,7 @@ export function HomeDashboard({
         aperto={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         personale={{ categories, accounts, goals }}
-        casa={casa}
+        casa={casa?.aggiunta ?? null}
         contiPersonali={accounts}
         meUserId={meUserId}
         onSaved={() => router.refresh()}

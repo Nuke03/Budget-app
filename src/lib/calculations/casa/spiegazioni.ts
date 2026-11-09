@@ -1,4 +1,5 @@
-import { formatNumero } from '@/lib/format';
+import { formatNumero, nomeMese } from '@/lib/format';
+import type { RigaMese } from './versamenti';
 import type { RegolaQuota } from '@/lib/types';
 import {
   calcolaQuota,
@@ -151,4 +152,19 @@ export function spiegaQuotaPersona(input: {
   }
 
   return { valore, formula: `${prima}\n${seconda}`, ingredienti };
+}
+
+// Perché il disponibile personale è più basso: il versamento di ogni mese è riservato dall'inizio del mese,
+// finché non lo registri, e a questo si aggiunge quello che devi ad altri membri.
+export function spiegaRiserva(input: { righe: RigaMese[]; debitoDaRestituire: number }): Spiegazione {
+  const { righe, debitoDaRestituire } = input;
+  const ingredienti = righe
+    .filter((r) => r.mancano > 0)
+    .map((r) => ({ etichetta: `Versamento alla casa, ${nomeMese(r.mese)}`, valore: r.mancano }));
+  ingredienti.push({ etichetta: 'Da restituire', valore: debitoDaRestituire });
+  return {
+    valore: arrotonda2(ingredienti.reduce((s, i) => s + i.valore, 0)),
+    formula: "Il versamento di ogni mese è riservato dall'inizio del mese, finché non lo registri.",
+    ingredienti,
+  };
 }

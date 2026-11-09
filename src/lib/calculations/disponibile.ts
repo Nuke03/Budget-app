@@ -4,7 +4,9 @@ import type { AccountBalance, GoalForCalc } from './types';
 export function computeDisponibileLibero(
   accounts: AccountBalance[],
   goals: GoalForCalc[],
-  today: Date
+  today: Date,
+  riservaVersamento = 0,
+  riservaDebiti = 0
 ): number {
   const saldoDisponibile = accounts
     .filter((a) => a.contaInDisponibile)
@@ -14,5 +16,6 @@ export function computeDisponibileLibero(
     .filter((g) => g.stato === 'aperto')
     .reduce((sum, g) => sum + computeAccantonatoFinora(g, today, g.specoCollegato ?? 0), 0);
 
-  return saldoDisponibile - riservato;
+  // Il versamento alla casa e i debiti verso gli altri membri sono già "usati": si tolgono come gli obiettivi.
+  return saldoDisponibile - riservato - riservaVersamento - riservaDebiti;
 }

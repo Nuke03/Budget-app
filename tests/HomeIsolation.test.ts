@@ -120,9 +120,33 @@ describe('isolamento della home', () => {
     expect(nessuna).toBeNull();
     expect(personali).toEqual(baselinePersonali);
     expect(personali.disponibileLibero).toBe(870);
-    expect(casa?.householdId).toBe('H1');
-    expect(casa?.conti.map((c) => c.id)).toEqual(['acc-B-H1']);
-    expect(casa?.obiettivi.map((g) => g.id)).toEqual(['goal-B-H1']);
+    expect(casa?.aggiunta.householdId).toBe('H1');
+    expect(casa?.aggiunta.conti.map((c) => c.id)).toEqual(['acc-B-H1']);
+    expect(casa?.aggiunta.obiettivi.map((g) => g.id)).toEqual(['goal-B-H1']);
+    expect(casa?.stato.riservaVersamento).toBe(0);
+  });
+
+  it('un membro con piano attivo ha disponibile = base meno riserva e un non membro resta alla base', async () => {
+    const piano = {
+      household_plans: [
+        { id: 'p1', household_id: 'H1', valido_dal: '2026-11-01', giorno_versamento: 5, regola: 'parti_uguali',
+          cuscinetto_obiettivo: 0, cuscinetto_quota_mensile: 0, arrotondamento: 10, totale_mensile: 1000, created_at: '2026-01-01T00:00:00Z' },
+      ],
+      household_plan_items: [],
+      household_plan_shares: [
+        { plan_id: 'p1', slot: 1, user_id: 'A', display_name: 'Anna', reddito_netto_mensile: 1000, reddito_irregolare: false,
+          percentuale: null, in_casa_dal: null, esce_dal: null, quota_mensile: 500 },
+        { plan_id: 'p1', slot: 2, user_id: 'B', display_name: 'Bruno', reddito_netto_mensile: 1000, reddito_irregolare: false,
+          percentuale: null, in_casa_dal: null, esce_dal: null, quota_mensile: 500 },
+      ],
+    };
+    const seed = { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA, ...piano };
+    const membro = await home('A', seed, true);
+    expect(membro.disponibileLibero).toBe(870 - 500);
+    expect(membro.casa?.stato.riservaVersamento).toBe(500);
+    const nonMembro = await home('D', { ...unisci(righePersonali('D'), righeDiCasa()), ...STRUTTURA_CASA, ...piano }, true);
+    expect(nonMembro.disponibileLibero).toBe(870);
+    expect(nonMembro.casa).toBeNull();
   });
 
   it('senza userId o senza casa attiva casa è null', async () => {

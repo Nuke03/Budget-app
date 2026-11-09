@@ -97,4 +97,19 @@ describe('computeDisponibileLibero', () => {
     // saldo 1000, riservato 400-50=350 => 650
     expect(computeDisponibileLibero(accounts, goals, new Date(2026, 5, 1))).toBe(650);
   });
+
+  it('sottrae riserva del versamento e dei debiti: saldo 1000, versamento 777, debiti 0 dà 223', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 777, 0)).toBe(223);
+  });
+
+  it('con debiti 603 e versamento 777 su 1000 dà -380', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 777, 603)).toBe(-380);
+  });
+
+  it('i parametri omessi valgono 0', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1))).toBe(1000);
+  });
 });

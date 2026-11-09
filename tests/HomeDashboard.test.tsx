@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { HomeDashboard } from '@/app/HomeDashboard';
 
 vi.mock('next/navigation', () => ({
@@ -19,6 +19,43 @@ vi.mock('@/lib/data/accounts', () => ({
 }));
 
 import { updateAccountBalance } from '@/lib/data/accounts';
+import type { CasaPerHome } from '@/lib/loadHomeData';
+import type { CasaStato } from '@/lib/loadCasaStato';
+import { assertNessunaParolaVietata } from './helpers/paroleVietate';
+
+const T0 = '2026-01-01T00:00:00Z';
+const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: T0, slot: 1, attivo: true };
+const anna = { householdId: 'h1', userId: 'u2', displayName: 'Anna', joinedAt: T0, slot: 2, attivo: true };
+
+function casaPerHome(stato: Partial<CasaStato> = {}): CasaPerHome {
+  return {
+    aggiunta: {
+      householdId: 'h1',
+      meUserId: 'u1',
+      nomi: [
+        { userId: 'u1', nome: 'Fabio' },
+        { userId: 'u2', nome: 'Anna' },
+      ],
+      conti: [],
+      categorie: [],
+      obiettivi: [],
+    },
+    stato: {
+      householdId: 'h1',
+      nomeCasa: 'Casa',
+      me: fabio,
+      membri: [fabio, anna],
+      piano: null,
+      righe: [],
+      riservaVersamento: 0,
+      debiti: [],
+      debitoDaRestituire: 0,
+      crediti: { u1: 0, u2: 0 },
+      avvisoArretrati: false,
+      ...stato,
+    },
+  };
+}
 
 const accounts = [
   { id: '1', nome: 'Conto corrente', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null },
@@ -150,21 +187,90 @@ describe('HomeDashboard', () => {
         categories={[]}
         goals={goals}
         meUserId="u1"
-        casa={{
-          householdId: 'h1',
-          meUserId: 'u1',
-          nomi: [
-            { userId: 'u1', nome: 'Fabio' },
-            { userId: 'u2', nome: 'Anna' },
-          ],
-          conti: [],
-          categorie: [],
-          obiettivi: [],
-        }}
+        casa={casaPerHome()}
       />
     );
     fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
     expect(screen.getByRole('button', { name: 'Personale' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Casa' })).toBeInTheDocument();
+  });
+
+  describe('riserva della casa nel dettaglio', () => {
+    const base = {
+      disponibileLibero: 223,
+      margineGiornaliero: 7,
+      dataTarget: '2026-07-01T00:00:00Z',
+      accounts,
+      categories: [],
+      goals: [],
+      meUserId: 'u1',
+    };
+    const conRiserva = casaPerHome({
+      righe: [{ mese: '2026-11-01', atteso: 777, versato: 0, mancano: 777 }],
+      riservaVersamento: 777,
+    });
+
+    it('mostra Versamento alla casa, novembre con segno meno solo a dettaglio aperto', () => {
+      render(<HomeDashboard {...base} casa={conRiserva} />);
+      expect(screen.queryByText('Versamento alla casa, novembre')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      const riga = screen.getByText('Versamento alla casa, novembre').parentElement as HTMLElement;
+      expect(riga).toHaveTextContent('-777,00 €');
+    });
+
+    it('mostra le righe informative del credito e del debito dell altro senza sommarle', () => {
+      const stato = casaPerHome({
+        crediti: { u1: 45, u2: 0 },
+        debiti: [
+          { debitoreId: 'u2', creditoreId: 'u1', importo: 603, mesi: [{ mese: '2026-11-01', importo: 603, versato: 603 }] },
+        ],
+        avvisoArretrati: true,
+      });
+      render(<HomeDashboard {...base} casa={stato} />);
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      expect(screen.getByText('Dalla casa ti spettano 45 €')).toBeInTheDocument();
+      expect(screen.getByText('Anna deve a te 603 €, quota di novembre')).toBeInTheDocument();
+      expect(screen.getByText(/Sono più di due mesi di versamenti da registrare/)).toBeInTheDocument();
+      expect(screen.queryByText(/Da restituire a/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Versamento alla casa/)).not.toBeInTheDocument();
+    });
+
+    it('al debitore mostra Da restituire a con segno meno', () => {
+      const stato = casaPerHome({
+        debiti: [
+          { debitoreId: 'u1', creditoreId: 'u2', importo: 603, mesi: [{ mese: '2026-11-01', importo: 603, versato: 603 }] },
+        ],
+        debitoDaRestituire: 603,
+      });
+      render(<HomeDashboard {...base} casa={stato} />);
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      expect(screen.getByText('Da restituire a Anna').parentElement).toHaveTextContent('-603,00 €');
+    });
+
+    it('senza casa il dettaglio è identico a prima', () => {
+      const { container: senza } = render(<HomeDashboard {...base} />);
+      fireEvent.click(within(senza).getByText('Mostra dettaglio'));
+      const { container: vuota } = render(<HomeDashboard {...base} casa={casaPerHome()} />);
+      fireEvent.click(within(vuota).getByText('Mostra dettaglio'));
+      expect(vuota.innerHTML).toBe(senza.innerHTML);
+      expect(senza).not.toHaveTextContent('Versamento alla casa');
+    });
+
+    it('nessuna parola vietata', () => {
+      const { container } = render(
+        <HomeDashboard
+          {...base}
+          casa={casaPerHome({
+            righe: conRiserva.stato.righe,
+            riservaVersamento: 777,
+            crediti: { u1: 45, u2: 0 },
+            avvisoArretrati: true,
+          })}
+        />
+      );
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByLabelText('Come si calcola?'));
+      assertNessunaParolaVietata(container);
+    });
   });
 });

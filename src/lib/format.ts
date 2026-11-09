@@ -25,3 +25,10 @@ export function formatNumero(value: number): string {
     maximumFractionDigits: 2,
   }).format(value);
 }
+
+// "2026-11-01" -> "novembre"
+export function nomeMese(meseISO: string): string {
+  return new Intl.DateTimeFormat('it-IT', { month: 'long', timeZone: 'UTC' }).format(
+    new Date(`${meseISO.slice(0, 10)}T12:00:00Z`)
+  );
+}

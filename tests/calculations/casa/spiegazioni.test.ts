@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { spiegaTotaleMensile, spiegaQuotaPersona } from '@/lib/calculations/casa/spiegazioni';
+import { spiegaTotaleMensile, spiegaQuotaPersona, spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
 import { calcolaQuota } from '@/lib/calculations/casa/quota';
 import type { RegolaQuota } from '@/lib/types';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
@@ -108,5 +108,32 @@ describe('spiegaQuotaPersona', () => {
     }
     const tutto = testi.join(' ').toLowerCase();
     for (const parola of PAROLE_VIETATE) expect(tutto).not.toContain(parola);
+  });
+});
+
+describe('spiegaRiserva', () => {
+  const righe = [
+    { mese: '2026-10-01', atteso: 777, versato: 0, mancano: 777 },
+    { mese: '2026-11-01', atteso: 777, versato: 777, mancano: 0 },
+    { mese: '2026-12-01', atteso: 777, versato: 100, mancano: 677 },
+  ];
+  it('valore uguale alla riserva e ingredienti che sommano', () => {
+    const s = spiegaRiserva({ righe, debitoDaRestituire: 603 });
+    expect(s.valore).toBe(777 + 677 + 603);
+    expect(s.ingredienti.map((i) => i.etichetta)).toEqual([
+      'Versamento alla casa, ottobre',
+      'Versamento alla casa, dicembre',
+      'Da restituire',
+    ]);
+    expect(somma(s.ingredienti)).toBeCloseTo(s.valore, 8);
+    expect(s.formula).toBe("Il versamento di ogni mese è riservato dall'inizio del mese, finché non lo registri.");
+  });
+  it('senza nulla da riservare vale 0', () => {
+    expect(spiegaRiserva({ righe: [], debitoDaRestituire: 0 }).valore).toBe(0);
+  });
+  it('nessuna parola vietata', () => {
+    const s = spiegaRiserva({ righe, debitoDaRestituire: 603 });
+    const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
+    for (const p of PAROLE_VIETATE) expect(testo).not.toContain(p);
   });
 });
