@@ -275,6 +275,36 @@ describe('CasaHome', () => {
         expect(screen.getAllByText('Registra un versamento').length).toBeGreaterThan(1);
       });
 
+      it('il primo del mese dopo compare il promemoria del check-in, con il link', () => {
+        const righe = { u1: [{ mese: '2026-10-01', atteso: 690, versato: 690, mancano: 0 }, { mese: '2026-11-01', atteso: 690, versato: 690, mancano: 0 }] };
+        const { container } = render(
+          <CasaHome
+            casa={casa}
+            piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-10-01' } }}
+            meseCorrente="2026-11-01"
+            oggi="2026-11-01"
+            finanze={{ ...finanze([conto]), ...registri, righe, ultimoControllo: '2026-10-30', ultimoCheckinMese: null }}
+          />
+        );
+        expect(screen.getByText(/Il check-in di ottobre è pronto/)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Apri' })).toHaveAttribute('href', '/casa/controllo');
+        assertNessunaParolaVietata(container);
+      });
+
+      it('con il check-in di ottobre già fatto il promemoria non compare', () => {
+        const righe = { u1: [{ mese: '2026-10-01', atteso: 690, versato: 690, mancano: 0 }, { mese: '2026-11-01', atteso: 690, versato: 690, mancano: 0 }] };
+        render(
+          <CasaHome
+            casa={casa}
+            piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-10-01' } }}
+            meseCorrente="2026-11-01"
+            oggi="2026-11-01"
+            finanze={{ ...finanze([conto]), ...registri, righe, ultimoControllo: '2026-10-30', ultimoCheckinMese: '2026-10-01' }}
+          />
+        );
+        expect(screen.queryByText(/check-in/)).not.toBeInTheDocument();
+      });
+
       it('prima dei tre giorni la striscia non compare', () => {
         monta('2026-11-01');
         expect(screen.queryByRole('button', { name: 'Più tardi' })).not.toBeInTheDocument();

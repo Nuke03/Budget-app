@@ -84,6 +84,7 @@ export function HomeDashboard({
             riferimento: riferimentoControllo(stato.me.joinedAt, casa?.aggiunta?.conti ?? []),
             haConto: (casa?.aggiunta?.conti.length ?? 0) > 0,
           },
+          ultimoCheckinMese: stato.controlli.ultimoCheckinMese,
         }),
         { userId: stato.me.userId },
         oggi

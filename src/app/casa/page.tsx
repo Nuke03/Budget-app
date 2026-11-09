@@ -42,6 +42,7 @@ export default async function CasaPage() {
           .filter((g) => g.ricorrente)
           .map((g) => ({ id: g.id, nome: g.nome, accantonato: g.accantonato, importoTarget: g.importoTarget })),
         ultimoControllo: dati.controlli.ultimoControllo,
+        ultimoCheckinMese: dati.controlli.ultimoCheckinMese,
         speseNonRegistrate: speseNonRegistrate(dati.transazioni, meseCorrente),
         bolletteDaMettere: pianoInVigore(dati.piani, meseCorrente)
           ? statoVociDaParte(pianoInVigore(dati.piani, meseCorrente)!.items, dati.obiettiviConAccantonato).filter((v) => v.stato === 'da_mettere').length

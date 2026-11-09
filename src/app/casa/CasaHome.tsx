@@ -36,6 +36,8 @@ export interface FinanzeCasa {
   bolletteDaMettere?: number;
   // L'ultimo controllo del saldo e le spese che il controllo ha segnato questo mese.
   ultimoControllo?: string | null;
+  // Il mese dell'ultimo check-in fatto: serve al promemoria del check-in.
+  ultimoCheckinMese?: string | null;
   speseNonRegistrate?: number;
 }
 
@@ -77,6 +79,7 @@ export function CasaHome({
             riferimento: riferimentoControllo(casa.me.joinedAt, finanze.conti),
             haConto: finanze.conti.length > 0,
           },
+          ultimoCheckinMese: finanze.ultimoCheckinMese,
         }),
         { userId: casa.me.userId },
         oggi

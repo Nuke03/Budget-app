@@ -287,6 +287,18 @@ describe('HomeDashboard', () => {
       assertNessunaParolaVietata(container);
     });
 
+    it('il primo del mese dopo la riga compatta porta il check-in', () => {
+      const stato = casaPerHome({
+        righe: [
+          { mese: '2026-10-01', atteso: 776, versato: 776, mancano: 0 },
+          { mese: '2026-11-01', atteso: 776, versato: 776, mancano: 0 },
+        ],
+        controlli: { ultimoControllo: null, ultimoCheckinMese: '2026-09-01' },
+      });
+      render(<HomeDashboard {...base} casa={stato} oggi="2026-11-01" />);
+      expect(screen.getByRole('link', { name: /check-in di ottobre/ })).toHaveAttribute('href', '/casa');
+    });
+
     it('senza promemoria la riga compatta non compare', () => {
       render(<HomeDashboard {...base} casa={casaPerHome()} oggi="2026-11-03" />);
       expect(screen.queryByRole('link', { name: /versamento|rimborso|restituire/ })).not.toBeInTheDocument();
