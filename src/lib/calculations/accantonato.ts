@@ -1,10 +1,23 @@
-import { addMonths, differenceInCalendarMonths, parseISO } from 'date-fns';
+import { addDays, addMonths, differenceInCalendarMonths, lastDayOfMonth, parseISO } from 'date-fns';
 import type { GoalForCalc } from './types';
 
+function eFineMese(d: Date): boolean {
+  return addDays(d, 1).getDate() === 1;
+}
+
+// Una scadenza a fine mese resta a fine mese (30 nov + 3 mesi = 28 feb, poi
+// 31 mag, non 28 mag); le altre scadenze si spostano come sempre.
+// lastDayOfMonth (non endOfMonth) tiene la mezzanotte: niente 23:59:59.
+function spostaMesi(d: Date, mesi: number, fineMese: boolean): Date {
+  const spostata = addMonths(d, mesi);
+  return fineMese ? lastDayOfMonth(spostata) : spostata;
+}
+
 export function nextOccurrence(scadenza: Date, frequenzaMesi: number, today: Date): Date {
+  const fineMese = eFineMese(scadenza);
   let occurrence = scadenza;
   while (occurrence < today) {
-    occurrence = addMonths(occurrence, frequenzaMesi);
+    occurrence = spostaMesi(occurrence, frequenzaMesi, fineMese);
   }
   return occurrence;
 }
@@ -34,15 +47,23 @@ export function computeFinestraGoal(goal: GoalForCalc, today: Date): FinestraGoa
       throw new Error('Obiettivo ricorrente con frequenzaMesi non valida');
     }
     if (goal.ricorrente) {
-      const windowEnd = nextOccurrence(parseISO(goal.scadenza), goal.frequenzaMesi!, today);
-      return { windowStart: addMonths(windowEnd, -goal.frequenzaMesi!), windowEnd };
+      const scadenza = parseISO(goal.scadenza);
+      const windowEnd = nextOccurrence(scadenza, goal.frequenzaMesi!, today);
+      return {
+        windowStart: spostaMesi(windowEnd, -goal.frequenzaMesi!, eFineMese(scadenza)),
+        windowEnd,
+      };
     }
     return { windowStart: createdAtDate, windowEnd: parseISO(goal.scadenza) };
   }
 
   if (haFrequenzaValida && goal.scadenza) {
-    const windowEnd = nextOccurrence(parseISO(goal.scadenza), goal.frequenzaMesi!, today);
-    return { windowStart: addMonths(windowEnd, -goal.frequenzaMesi!), windowEnd };
+    const scadenza = parseISO(goal.scadenza);
+    const windowEnd = nextOccurrence(scadenza, goal.frequenzaMesi!, today);
+    return {
+      windowStart: spostaMesi(windowEnd, -goal.frequenzaMesi!, eFineMese(scadenza)),
+      windowEnd,
+    };
   }
 
   return { windowStart: createdAtDate, windowEnd: null };
@@ -55,7 +76,13 @@ function computeAccantonatoTeorico(goal: GoalForCalc, today: Date): number {
 
   const { windowStart, windowEnd } = computeFinestraGoal(goal, today);
   const totalMonths = Math.max(1, differenceInCalendarMonths(windowEnd!, windowStart));
-  const elapsedMonthsRaw = differenceInCalendarMonths(today, windowStart);
+  // Un obiettivo creato a metà ciclo matura "da adesso": i mesi si contano da
+  // accantonaDa, ma la quota mensile resta quella del ciclo intero.
+  const inizio =
+    goal.accantonaDa && parseISO(goal.accantonaDa) > windowStart
+      ? parseISO(goal.accantonaDa)
+      : windowStart;
+  const elapsedMonthsRaw = differenceInCalendarMonths(today, inizio);
   const elapsedMonths = Math.min(Math.max(elapsedMonthsRaw, 0), totalMonths);
 
   const quotaMensile = goal.importoTarget / totalMonths;

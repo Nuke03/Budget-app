@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
+import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
 const row = {
@@ -51,6 +52,30 @@ describe('createGoal', () => {
     });
 
     expect(result.nome).toBe('Telepass');
+  });
+});
+
+describe('createGoal accantona_da', () => {
+  const input = {
+    nome: 'Telepass',
+    importoTarget: 130,
+    modalita: 'bloccato' as const,
+    scadenza: null,
+    categoriaId: null,
+    ricorrente: false,
+    frequenzaMesi: null,
+  };
+
+  it('scrive accantona_da quando passato', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await createGoal(client, { ...input, accantonaDa: '2026-11-09' });
+    expect(callsOf(calls[0], 'insert')[0][0]).toMatchObject({ accantona_da: '2026-11-09' });
+  });
+
+  it('senza il campo scrive accantona_da null', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await createGoal(client, input);
+    expect(callsOf(calls[0], 'insert')[0][0]).toMatchObject({ accantona_da: null });
   });
 });
 

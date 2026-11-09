@@ -1,3 +1,5 @@
+import { parseISO } from 'date-fns';
+
 // "Oggi" nel fuso Europe/Rome, indipendente dal fuso del server o del browser.
 function partiRoma(now: Date): { y: string; m: string; d: string } {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -18,4 +20,10 @@ export function oggiRomaISO(now: Date = new Date()): string {
 export function meseRomaISO(now: Date = new Date()): string {
   const { y, m } = partiRoma(now);
   return `${y}-${m}-01`;
+}
+
+// Mezzanotte locale del giorno di Roma: la data da passare ai calcoli che
+// ragionano in giorni e mesi di calendario.
+export function oggiRomaData(now: Date = new Date()): Date {
+  return parseISO(oggiRomaISO(now));
 }

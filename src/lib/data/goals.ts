@@ -54,6 +54,7 @@ export async function createGoal(
     categoriaId: string | null;
     ricorrente: boolean;
     frequenzaMesi: number | null;
+    accantonaDa?: string | null;
   },
   scope: Scope = PERSONALE
 ): Promise<BudgetGoal> {
@@ -68,6 +69,7 @@ export async function createGoal(
       ricorrente: input.ricorrente,
       frequenza_mesi: input.frequenzaMesi,
       stato: 'aperto',
+      accantona_da: input.accantonaDa ?? null,
       household_id: scopeHouseholdId(scope),
     })
     .select(GOAL_COLUMNS)

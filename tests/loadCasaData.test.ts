@@ -105,6 +105,21 @@ describe('loadCasaData', () => {
   });
 });
 
+describe('loadCasaData speso collegato', () => {
+  it('legge lo speso collegato con una sola query', async () => {
+    const db = createFakeDb(seed(), { userId: 'A', membri: MEMBRI });
+    const letture: string[] = [];
+    const from = db.client.from.bind(db.client);
+    db.client.from = (t: string) => {
+      letture.push(t);
+      return from(t);
+    };
+    await loadCasaData(db.client, casaA, TODAY);
+    // transazioni: una per i registri e una sola per lo speso collegato
+    expect(letture.filter((t) => t === 'transactions')).toHaveLength(2);
+  });
+});
+
 describe('loadCasaData registri', () => {
   it('righe e debiti rispecchiano i registri con tre membri', async () => {
     const casa3: CasaCorrente = {

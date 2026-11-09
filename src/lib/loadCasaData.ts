@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAccounts } from '@/lib/data/accounts';
 import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals } from '@/lib/data/goals';
-import { getSpecoCollegato } from '@/lib/data/goalSpending';
+import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import type { CasaCorrente } from '@/lib/data/households';
 import { casa as scopeCasa } from '@/lib/data/scope';
 import { getTransactions } from '@/lib/data/transactions';
@@ -11,7 +11,7 @@ import { getTransfers } from '@/lib/data/transfers';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
-import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import type { Account, BudgetGoal, Category, Transaction, Transfer } from '@/lib/types';
@@ -61,8 +61,9 @@ export async function loadCasaAggiunta(
 export async function loadCasaData(
   supabase: SupabaseClient,
   casa: CasaCorrente,
-  today: Date = new Date()
+  adesso: Date = new Date()
 ): Promise<CasaData> {
+  const today = oggiRomaData(adesso);
   const [aggiunta, transazioni, trasferimenti, piani] = await Promise.all([
     loadCasaAggiunta(supabase, casa),
     getTransactions(supabase, scopeCasa(casa.household.id)),
@@ -74,12 +75,17 @@ export async function loadCasaData(
     trasferimenti,
     spese: transazioni,
     membri: casa.members,
-    oggi: oggiRomaISO(today),
+    oggi: oggiRomaISO(adesso),
   });
   const totaleCrediti = Object.values(crediti).reduce((s, v) => s + v, 0);
 
-  const speso = await Promise.all(aggiunta.obiettivi.map((g) => getSpecoCollegato(supabase, g, today)));
-  const obiettiviConSpeso = aggiunta.obiettivi.map((g, i) => ({ ...g, specoCollegato: speso[i] }));
+  const speso = await getSpecoCollegatoPerObiettivi(
+    supabase,
+    aggiunta.obiettivi,
+    today,
+    scopeCasa(casa.household.id)
+  );
+  const obiettiviConSpeso = aggiunta.obiettivi.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
   const obiettiviConAccantonato = obiettiviConSpeso.map(({ specoCollegato, ...g }) => ({
     ...g,

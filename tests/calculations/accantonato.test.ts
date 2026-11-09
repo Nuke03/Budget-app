@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { format } from 'date-fns';
 import {
   computeAccantonatoFinora,
   computeQuotaMensile,
@@ -333,5 +334,105 @@ describe('nextOccurrence', () => {
   it('avanza di frequenzaMesi finché la data non è nel futuro', () => {
     const result = nextOccurrence(new Date(2024, 6, 1), 12, new Date(2026, 5, 1));
     expect(result).toEqual(new Date(2026, 6, 1));
+  });
+});
+
+// Il test di regressione TZ sopra lascia il processo in un altro fuso: le prove
+// che seguono ragionano in giorni locali, quindi fissano il fuso di Roma.
+const fissaFusoRoma = () => beforeAll(() => { process.env.TZ = 'Europe/Rome'; });
+
+describe('valori di oggi per obiettivi personali (senza accantonaDa)', () => {
+  fissaFusoRoma();
+  const base = { stato: 'aperto' as const, createdAt: '2026-01-01' };
+  const tari: GoalForCalc = { ...base, importoTarget: 300, modalita: 'dilazionato', ricorrente: true, frequenzaMesi: 12, scadenza: '2027-03-31' };
+  const trimestrale: GoalForCalc = { ...base, importoTarget: 120, modalita: 'dilazionato', ricorrente: true, frequenzaMesi: 3, scadenza: '2026-02-15' };
+  const singolo: GoalForCalc = { ...base, importoTarget: 500, modalita: 'dilazionato', ricorrente: false, frequenzaMesi: null, scadenza: '2027-01-20' };
+  const mensile: GoalForCalc = { ...base, importoTarget: 90, modalita: 'bloccato', ricorrente: true, frequenzaMesi: 1, scadenza: '2026-11-20' };
+  const unico: GoalForCalc = { ...base, importoTarget: 60, modalita: 'bloccato', ricorrente: false, frequenzaMesi: null, scadenza: null };
+
+  it.each([
+    [tari, new Date(2026, 10, 9), 200, 25],
+    [tari, new Date(2026, 11, 20), 225, 25],
+    [tari, new Date(2027, 0, 15), 250, 25],
+    [tari, new Date(2027, 3, 1), 25, 25],
+    [trimestrale, new Date(2026, 10, 9), 120, 40],
+    [trimestrale, new Date(2026, 11, 20), 40, 40],
+    [trimestrale, new Date(2027, 0, 15), 80, 40],
+    [trimestrale, new Date(2027, 3, 1), 80, 40],
+    [singolo, new Date(2026, 10, 9), 416.66666666666663, 41.666666666666664],
+    [singolo, new Date(2027, 0, 15), 500, 41.666666666666664],
+    [mensile, new Date(2026, 11, 20), 90, 90],
+    [unico, new Date(2027, 3, 1), 60, null],
+  ])('accantonato e quota invariati (%#)', (goal, today, atteso, quota) => {
+    expect(computeAccantonatoFinora(goal, today)).toBeCloseTo(atteso, 9);
+    const q = computeQuotaMensile(goal, today);
+    if (quota === null) expect(q).toBeNull();
+    else expect(q).toBeCloseTo(quota, 9);
+  });
+
+  it('con speso collegato 10 sottrae 10 dal teorico', () => {
+    expect(computeAccantonatoFinora(tari, new Date(2026, 10, 9), 10)).toBe(190);
+    expect(computeAccantonatoFinora(mensile, new Date(2026, 10, 9), 10)).toBe(80);
+  });
+});
+
+describe('accantonaDa', () => {
+  fissaFusoRoma();
+  const tari: GoalForCalc = {
+    importoTarget: 300,
+    modalita: 'dilazionato',
+    stato: 'aperto',
+    scadenza: '2027-03-31',
+    createdAt: '2026-01-01',
+    ricorrente: true,
+    frequenzaMesi: 12,
+  };
+
+  it('con accantonaDa nullo i risultati sono quelli di oggi', () => {
+    expect(computeAccantonatoFinora({ ...tari, accantonaDa: null }, new Date(2026, 10, 9))).toBe(200);
+  });
+
+  it('con accantonaDa a metà ciclo i mesi si contano da lì', () => {
+    const g = { ...tari, accantonaDa: '2026-11-09' };
+    expect(computeAccantonatoFinora(g, new Date(2026, 10, 9))).toBe(0);
+    expect(computeAccantonatoFinora(g, new Date(2027, 0, 15))).toBe(50);
+    expect(computeAccantonatoFinora(g, new Date(2027, 2, 31))).toBe(100);
+  });
+
+  it('dopo la prima scadenza il ciclo è completo', () => {
+    const g = { ...tari, accantonaDa: '2026-11-09' };
+    expect(computeAccantonatoFinora(g, new Date(2027, 3, 1))).toBe(25);
+  });
+
+  it('un accantonaDa nel futuro non dà mai negativo', () => {
+    const g = { ...tari, accantonaDa: '2027-02-01' };
+    expect(computeAccantonatoFinora(g, new Date(2026, 10, 9))).toBe(0);
+  });
+
+  it('quota mensile invariata', () => {
+    expect(computeQuotaMensile({ ...tari, accantonaDa: '2026-11-09' }, new Date(2026, 10, 9))).toBe(25);
+  });
+});
+
+describe('scadenze a fine mese', () => {
+  fissaFusoRoma();
+  it('freq 3 from 2026-11-30 expects 2027-05-31', () => {
+    expect(format(nextOccurrence(new Date(2026, 10, 30), 3, new Date(2027, 1, 1)), 'yyyy-MM-dd')).toBe('2027-02-28');
+    expect(format(nextOccurrence(new Date(2026, 10, 30), 3, new Date(2027, 2, 2)), 'yyyy-MM-dd')).toBe('2027-05-31');
+  });
+
+  it('la finestra parte dal fine mese precedente', () => {
+    const g: GoalForCalc = {
+      importoTarget: 90, modalita: 'dilazionato', stato: 'aperto', scadenza: '2026-11-30',
+      createdAt: '2026-01-01', ricorrente: true, frequenzaMesi: 3,
+    };
+    const w = computeFinestraGoal(g, new Date(2027, 4, 1));
+    expect(format(w.windowStart, 'yyyy-MM-dd')).toBe('2027-02-28');
+    expect(format(w.windowEnd!, 'yyyy-MM-dd')).toBe('2027-05-31');
+  });
+
+  it('una scadenza che non è a fine mese non cambia', () => {
+    expect(format(nextOccurrence(new Date(2026, 0, 28), 1, new Date(2026, 2, 1)), 'yyyy-MM-dd')).toBe('2026-03-28');
+    expect(format(nextOccurrence(new Date(2026, 0, 30), 1, new Date(2026, 2, 1)), 'yyyy-MM-dd')).toBe('2026-03-28');
   });
 });
