@@ -94,6 +94,11 @@ diventa effettiva. Per le eliminazioni più pesanti, prima del tocco, un avviso
 di conferma con l'opzione "Non avvisarmi più", che si può riattivare dalle
 impostazioni. Da applicare in modo uniforme in tutta l'app, Casa compresa.
 
+**Semplicità d'uso** (Fabio, 9 novembre): oggi il piano della quota e i
+flussi simili risultano meccanici e difficili da gestire. Nell'audit vanno
+trattati come difetti: meno passaggi, valori di partenza sensati, una decisione
+per schermata, parole semplici. Si mette in conto di ristrutturare questi flussi.
+
 **Velocità** (segnalazione di Fabio, 9 novembre: "l'app sta rallentando un
 botto"). Prima di toccare la grafica, misurare i tempi reali di Home, Casa e
 Storico sul telefono e correggere le cause. Sospetti già noti dalle revisioni:
