@@ -30,7 +30,8 @@ export function RimborsoForm({
   });
   const [conto, setConto] = useState(contiCasa[0]?.id ?? '');
   const [riflesso, setRiflesso] = useState(false);
-  const valido = importo !== null && conto !== '';
+  // Se è già nei saldi nessun conto viene toccato: il conto comune non serve.
+  const valido = importo !== null && (riflesso || conto !== '');
 
   async function invia(e: React.FormEvent) {
     e.preventDefault();
@@ -40,7 +41,7 @@ export function RimborsoForm({
       causale: 'rimborso',
       importo,
       data: oggiRomaISO(),
-      daAccountId: conto,
+      daAccountId: conto || null,
       beneficiarioUserId: creditore.userId,
       soloRegistrazione: riflesso,
     });

@@ -17,13 +17,20 @@ import {
   Spunta,
 } from './CampiMovimento';
 
-// Gli ultimi sei mesi e il prossimo, a partire dal mese di default.
-function mesiProponibili(meseDefault: string): { valore: string; etichetta: string }[] {
+// Gli ultimi sei mesi e il prossimo, a partire dal mese di default, più ogni mese più vecchio
+// che ha ancora una quota da registrare (così anche gli arretrati si possono sistemare).
+export function mesiProponibili(
+  meseDefault: string,
+  mesiArretrati: string[] = []
+): { valore: string; etichetta: string }[] {
   const base = parseISO(meseDefault);
-  return Array.from({ length: 8 }, (_, i) => {
-    const d = addMonths(base, i - 6);
-    return { valore: format(d, 'yyyy-MM-01'), etichetta: format(d, 'LLLL yyyy', { locale: it }) };
-  });
+  const mesi = new Set(
+    Array.from({ length: 8 }, (_, i) => format(addMonths(base, i - 6), 'yyyy-MM-01'))
+  );
+  for (const m of mesiArretrati) mesi.add(`${m.slice(0, 7)}-01`);
+  return Array.from(mesi)
+    .sort()
+    .map((valore) => ({ valore, etichetta: format(parseISO(valore), 'LLLL yyyy', { locale: it }) }));
 }
 
 export function VersamentoForm({
@@ -33,6 +40,7 @@ export function VersamentoForm({
   contiPersonali,
   contiCasa,
   meseDefault,
+  mesiArretrati,
   onDone,
   onClose,
 }: {
@@ -42,6 +50,8 @@ export function VersamentoForm({
   contiPersonali: Account[];
   contiCasa: Account[];
   meseDefault: string;
+  // Mesi con una quota ancora da registrare per chi scrive (dai registri).
+  mesiArretrati?: string[];
   onDone: () => void;
   onClose: () => void;
 }) {
@@ -83,7 +93,7 @@ export function VersamentoForm({
       </Campo>
       <Campo etichetta="Per il mese di">
         <select value={mese} onChange={(e) => setMese(e.target.value)} className={CLASSE_CAMPO}>
-          {mesiProponibili(meseDefault).map((m) => (
+          {mesiProponibili(meseDefault, mesiArretrati).map((m) => (
             <option key={m.valore} value={m.valore}>
               {m.etichetta}
             </option>

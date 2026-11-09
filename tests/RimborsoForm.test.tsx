@@ -12,14 +12,14 @@ import { recordTransfer } from '@/lib/data/transfers';
 
 const contiCasa = [{ id: 'c1', nome: 'Conto comune', saldoAttuale: 900, contaInDisponibile: true, targetSaldo: null }];
 
-function monta() {
+function monta(conti = contiCasa) {
   const onDone = vi.fn();
   const utente = render(
     <RimborsoForm
       householdId="h1"
       creditore={{ userId: 'u2', nome: 'Anna' }}
       importoIniziale={45}
-      contiCasa={contiCasa}
+      contiCasa={conti}
       onDone={onDone}
       onClose={vi.fn()}
     />
@@ -33,6 +33,16 @@ beforeEach(() => {
 });
 
 describe('RimborsoForm', () => {
+  it('senza conto comune non si può registrare, a meno che sia già riflesso nei saldi', async () => {
+    const { onDone } = monta([]);
+    expect(screen.getByRole('button', { name: 'Registra' })).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Già riflesso nei saldi'));
+    expect(screen.getByRole('button', { name: 'Registra' })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Registra' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(vi.mocked(recordTransfer).mock.calls[0][1]).toMatchObject({ daAccountId: null, soloRegistrazione: true });
+  });
+
   it('importo preimpostato a 45 e chiama record_transfer rimborso con beneficiario', async () => {
     const { onDone } = monta();
     expect(screen.getByLabelText('Importo')).toHaveValue('45');

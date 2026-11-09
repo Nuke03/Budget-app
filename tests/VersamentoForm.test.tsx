@@ -46,6 +46,20 @@ beforeEach(() => {
 });
 
 describe('VersamentoForm', () => {
+  it('offre ultimi sei mesi e il prossimo, e in più ogni arretrato più vecchio, in ordine', () => {
+    monta({ mesiArretrati: ['2025-12-01', '2026-03-01'] });
+    const mesi = Array.from(screen.getByLabelText('Per il mese di').querySelectorAll('option')).map((o) => o.value);
+    expect(mesi).toEqual([
+      '2025-12-01', '2026-03-01', '2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01',
+      '2026-09-01', '2026-10-01', '2026-11-01', '2026-12-01',
+    ]);
+  });
+
+  it('senza arretrati restano otto mesi', () => {
+    monta();
+    expect(screen.getByLabelText('Per il mese di').querySelectorAll('option')).toHaveLength(8);
+  });
+
   it('registra un versamento con importo 776,5 e mese di novembre', async () => {
     const { onDone } = monta();
     fireEvent.change(screen.getByLabelText('Da'), { target: { value: 'p2' } });

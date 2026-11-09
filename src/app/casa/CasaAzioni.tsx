@@ -112,6 +112,7 @@ export function CasaAzioni({
   contiPersonali,
   contiCasa,
   meseDefault,
+  mesiArretrati,
   children,
 }: {
   householdId: string;
@@ -120,6 +121,7 @@ export function CasaAzioni({
   contiPersonali: Account[];
   contiCasa: Account[];
   meseDefault: string;
+  mesiArretrati?: string[];
   children?: ReactNode;
 }) {
   const router = useRouter();
@@ -143,6 +145,7 @@ export function CasaAzioni({
         contiPersonali={contiPersonali}
         contiCasa={contiCasa}
         meseDefault={meseDefault}
+        mesiArretrati={mesiArretrati}
         onDone={fatto}
         onClose={chiudi}
       />

@@ -83,6 +83,7 @@ export function CasaHome({
             contiPersonali={finanze.contiPersonali ?? []}
             contiCasa={finanze.conti}
             meseDefault={meseVersamenti}
+            mesiArretrati={(finanze.righe?.[casa.me.userId] ?? []).filter((r) => r.mancano > 0).map((r) => r.mese)}
           >
             <StrisciaPromemoriaCasa
               promemoria={promemoria}
