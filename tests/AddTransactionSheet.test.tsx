@@ -235,6 +235,52 @@ describe('AddTransactionSheet', () => {
     expect(vi.mocked(createTransaction).mock.calls[0][1]).not.toHaveProperty('pagataDaUserId');
   });
 
+  it('in Casa una bolletta preseleziona l obiettivo della sua categoria', async () => {
+    const obiettivoBollette = {
+      id: 'g-bol',
+      nome: 'Bollette da parte',
+      importoTarget: 200,
+      modalita: 'bloccato' as const,
+      scadenza: null,
+      categoriaId: 'cc',
+      ricorrente: false,
+      frequenzaMesi: null,
+      stato: 'aperto' as const,
+      createdAt: '2026-01-01T00:00:00Z',
+    };
+    apri({ modoIniziale: 'casa', casa: { ...casa, obiettivi: [obiettivoBollette] } });
+    compila('12.5');
+    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ categoriaId: 'cc', goalId: 'g-bol' });
+  });
+
+  it('in Personale non preseleziona obiettivi dalla categoria', async () => {
+    apri({
+      modoIniziale: 'personale',
+      personale: {
+        ...personale,
+        goals: [
+          {
+            id: 'g-pers',
+            nome: 'Vacanza',
+            importoTarget: 500,
+            modalita: 'bloccato' as const,
+            scadenza: null,
+            categoriaId: 'cp',
+            ricorrente: false,
+            frequenzaMesi: null,
+            stato: 'aperto' as const,
+            createdAt: '2026-01-01T00:00:00Z',
+            accantonato: 0,
+          },
+        ],
+      },
+    });
+    compila('10');
+    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ goalId: null });
+  });
+
   it('nessuna parola vietata', () => {
     const { container } = apri({ modoIniziale: 'casa' });
     assertNessunaParolaVietata(container);

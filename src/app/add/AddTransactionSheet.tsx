@@ -199,6 +199,7 @@ export function AddTransactionSheet({
           obiettivoEtichetta="Da parte (opzionale)"
           nascondiGestisciCategorie
           contoDaScegliere={casa.conti.length === 0 && contiPersonali.length > 0}
+          preselezionaObiettivo
           nota={notaCasa}
           onSubmit={handleSubmit}
         />

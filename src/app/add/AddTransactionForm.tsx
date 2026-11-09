@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Account, BudgetGoal, Category, TransactionTipo } from '@/lib/types';
+import { obiettivoDaCategoria } from '@/lib/calculations/casa/preselezioneObiettivo';
 
 interface SubmitPayload {
   tipo: TransactionTipo;
@@ -52,6 +53,7 @@ export function AddTransactionForm({
   nota,
   idContiSoloSpesa = NESSUN_ID,
   contoDaScegliere = false,
+  preselezionaObiettivo = false,
 }: {
   categories: Category[];
   accounts: Account[];
@@ -68,6 +70,8 @@ export function AddTransactionForm({
   idContiSoloSpesa?: string[];
   // Nessun conto preselezionato: chi salva deve sceglierlo (es. "Chi ha pagato" senza conto comune).
   contoDaScegliere?: boolean;
+  // Propone l'obiettivo aperto della categoria scelta; è solo un default, chi salva può cambiarlo.
+  preselezionaObiettivo?: boolean;
 }) {
   const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? 'expense');
   const [importo, setImporto] = useState(initial ? String(initial.importo) : '');
@@ -79,6 +83,9 @@ export function AddTransactionForm({
     initial?.accountId ?? (contoDaScegliere ? null : (accounts[0]?.id ?? null))
   );
   const [goalId, setGoalId] = useState<string | null>(initial?.goalId ?? null);
+  // Diventa vero al primo tocco manuale sull'obiettivo: da lì in poi la preselezione non lo cambia più.
+  // In modifica (initial) il valore salvato vale come scelta: non viene sovrascritto.
+  const [goalToccato, setGoalToccato] = useState(initial != null);
   const [goalsDisponibili, setGoalsDisponibili] = useState<BudgetGoal[]>(goals);
   const [isCreatingGoal, setIsCreatingGoal] = useState(false);
   const [nuovoGoalNome, setNuovoGoalNome] = useState('');
@@ -121,6 +128,14 @@ export function AddTransactionForm({
     }
   }, [tipo]);
 
+  // Finché l'utente non ha scelto a mano, l'obiettivo è quello aperto della categoria (se ce n'è uno solo).
+  const goalIdEffettivo =
+    preselezionaObiettivo && !goalToccato
+      ? tipo === 'expense'
+        ? obiettivoDaCategoria(goalsDisponibili, categoriaId)
+        : null
+      : goalId;
+
   const importoNumerico = Number(importo);
   const contoMancante = contoDaScegliere && contiVisibili.length > 0 && accountId === null;
   const isValid =
@@ -143,6 +158,7 @@ export function AddTransactionForm({
     });
 
     setGoalsDisponibili((prev) => [...prev, nuovoGoal]);
+    setGoalToccato(true);
     setGoalId(nuovoGoal.id);
     setIsCreatingGoal(false);
     setNuovoGoalNome('');
@@ -158,7 +174,7 @@ export function AddTransactionForm({
       importo: importoNumerico,
       categoriaId,
       accountId,
-      goalId: tipo === 'expense' ? goalId : null,
+      goalId: tipo === 'expense' ? goalIdEffettivo : null,
       descrizione,
     };
 
@@ -282,12 +298,16 @@ export function AddTransactionForm({
           {obiettivoEtichetta}
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
             {goalsDisponibili.map((g) => {
-              const isSelected = goalId === g.id;
+              const isSelected = goalIdEffettivo === g.id;
               return (
                 <button
                   key={g.id}
                   type="button"
-                  onClick={() => setGoalId(isSelected ? null : g.id)}
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setGoalToccato(true);
+                    setGoalId(isSelected ? null : g.id);
+                  }}
                   className={`shrink-0 rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
                     isSelected
                       ? 'border-brand bg-brand text-white'

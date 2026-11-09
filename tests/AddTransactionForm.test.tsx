@@ -250,3 +250,104 @@ describe('AddTransactionForm', () => {
     expect(screen.getByText('Conto corrente')).toBeInTheDocument();
   });
 });
+
+describe('AddTransactionForm - obiettivo scelto dalla categoria', () => {
+  const categorieCasa = [
+    { id: 'cat-affitto', nome: 'Affitto', tipo: 'expense' as const, colore: null, archiviata: false },
+    { id: 'cat-luce', nome: 'Luce', tipo: 'expense' as const, colore: null, archiviata: false },
+  ];
+  const contoCasa = [
+    { id: 'acc-casa', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+  ];
+  const obiettivoLuce = {
+    id: 'g-luce',
+    nome: 'Bolletta luce',
+    importoTarget: 300,
+    modalita: 'bloccato' as const,
+    scadenza: null,
+    categoriaId: 'cat-luce',
+    ricorrente: false,
+    frequenzaMesi: null,
+    stato: 'aperto' as const,
+    createdAt: '2026-01-01T00:00:00Z',
+  };
+
+  function compilaEInvia() {
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '26' } });
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Bolletta' } });
+    fireEvent.click(screen.getByText('Salva'));
+  }
+
+  it('scegliere Luce con la preselezione collega l obiettivo della categoria', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AddTransactionForm
+        categories={categorieCasa}
+        accounts={contoCasa}
+        goals={[obiettivoLuce]}
+        preselezionaObiettivo
+        onSubmit={onSubmit}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Luce' }));
+    compilaEInvia();
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ categoriaId: 'cat-luce', goalId: 'g-luce' }))
+    );
+  });
+
+  it('scegliere Affitto non collega nessun obiettivo', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AddTransactionForm
+        categories={categorieCasa}
+        accounts={contoCasa}
+        goals={[obiettivoLuce]}
+        preselezionaObiettivo
+        onSubmit={onSubmit}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Luce' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Affitto' }));
+    compilaEInvia();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: null })));
+  });
+
+  it('una scelta manuale vince: deselezionare il chip e cambiare categoria non lo ripreseleziona', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AddTransactionForm
+        categories={[categorieCasa[1], categorieCasa[0]]}
+        accounts={contoCasa}
+        goals={[obiettivoLuce]}
+        preselezionaObiettivo
+        onSubmit={onSubmit}
+      />
+    );
+    const chip = screen.getByRole('button', { name: 'Bolletta luce' });
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Affitto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Luce' }));
+    compilaEInvia();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: null })));
+  });
+
+  it('senza la prop il comportamento è quello di prima: nessuna preselezione', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AddTransactionForm categories={categorieCasa} accounts={contoCasa} goals={[obiettivoLuce]} onSubmit={onSubmit} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Luce' }));
+    compilaEInvia();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: null })));
+  });
+
+  it('i chip degli obiettivi espongono aria-pressed', () => {
+    render(
+      <AddTransactionForm categories={categorieCasa} accounts={contoCasa} goals={[obiettivoLuce]} onSubmit={vi.fn()} />
+    );
+    expect(screen.getByRole('button', { name: 'Bolletta luce' })).toHaveAttribute('aria-pressed', 'false');
+  });
+});
