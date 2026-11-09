@@ -140,13 +140,18 @@ export function buildPlanVersions(draft: PianoDraft): PlanVersionInput[] {
 
   const date = dateConUscenti(draft);
   // Il periodo iniziale riguarda solo chi entra dopo la partenza, non chi esce.
-  const conIngressi = dateVersioni(draft.persone, partenza).length > 1;
+  const dateIngressi = dateVersioni(draft.persone, partenza);
+  const conIngressi = dateIngressi.length > 1;
   const versioni: PlanVersionInput[] = [];
 
-  date.forEach((data, indice) => {
+  date.forEach((data) => {
+    // Una versione inserita per l'uscita di qualcuno continua il periodo in cui cade: stessi partecipanti
+    // e stesso modo di dividere, cambia solo la riga di chi esce.
+    const base = dateIngressi.filter((d) => d <= data).pop() ?? partenza;
+    const indice = dateIngressi.indexOf(base);
     // Chi esce versa la sua quota fissa fino al mese prima; gli altri si dividono il resto.
     const totale = Math.max(0, totaleCasa - quotaFissaUscenti(draft.uscenti ?? [], data));
-    const presenti = draft.persone.filter((p) => quotaDal(p, partenza) <= data);
+    const presenti = draft.persone.filter((p) => quotaDal(p, partenza) <= base);
     let calcolata: Calcolata;
 
     if (indice === 0 && conIngressi && draft.periodoIniziale.tipo !== 'normale') {

@@ -236,4 +236,48 @@ describe('buildPlanVersions con uscenti', () => {
     expect(uscentiOltreTotale(d)).toBe(true);
     expect(uscentiOltreTotale(draft())).toBe(false);
   });
+
+  describe('uscita che cade prima dell ingresso di un altra persona', () => {
+    // Giulia esce dal 2027-02-01; Marco entra dal 2027-03-01 (versione dal 2027-04-01).
+    const base = () => ({
+      persone: [fabio, marco('2027-03-01')],
+      uscenti: [{ ...uscito, esceDal: '2027-02-01' }],
+    });
+    const diSlot = (x: { quote: { slot: number; quotaMensile: number }[] }, slot: number) =>
+      x.quote.find((q) => q.slot === slot)?.quotaMensile;
+
+    it('periodo normale: Marco paga dall inizio e la versione dell uscita non lo azzera', () => {
+      const v = buildPlanVersions(draft(base()));
+      expect(v.map((x) => x.validoDal)).toEqual(['2026-12-01', '2027-02-01']);
+      expect(diSlot(v[0], 2)).toBe(603);
+      expect(diSlot(v[0], 3)).toBeGreaterThan(0);
+      expect(diSlot(v[1], 2)).toBe(0);
+      expect(diSlot(v[1], 3)).toBeGreaterThan(0);
+      expect(diSlot(v[1], 1)! + diSlot(v[1], 3)!).toBe(1380);
+      for (const x of v) expect(somma(x)).toBe(x.totaleMensile);
+    });
+
+    it('tutto a chi abita già: dopo l uscita resta tutto a Fabio fino all ingresso di Marco', () => {
+      const v = buildPlanVersions(draft({ ...base(), periodoIniziale: { tipo: 'tutto_a_chi_abita' } }));
+      expect(v.map((x) => x.validoDal)).toEqual(['2026-12-01', '2027-02-01', '2027-04-01']);
+      expect(diSlot(v[0], 1)).toBe(1380 - 603);
+      expect(diSlot(v[0], 3)).toBe(0);
+      expect(diSlot(v[1], 1)).toBe(1380);
+      expect(diSlot(v[1], 2)).toBe(0);
+      expect(diSlot(v[1], 3)).toBe(0);
+      expect(diSlot(v[2], 3)).toBeGreaterThan(0);
+      for (const x of v) expect(somma(x)).toBe(x.totaleMensile);
+    });
+
+    it('percentuali a scelta: le percentuali valgono anche nella versione dell uscita', () => {
+      const v = buildPlanVersions(
+        draft({ ...base(), periodoIniziale: { tipo: 'percentuali', percentuali: { 1: 70, 3: 30 } } }),
+      );
+      expect(v.map((x) => x.validoDal)).toEqual(['2026-12-01', '2027-02-01', '2027-04-01']);
+      expect(diSlot(v[0], 1)! + diSlot(v[0], 3)!).toBe(1380 - 603);
+      expect(diSlot(v[1], 1)).toBe(966);
+      expect(diSlot(v[1], 3)).toBe(414);
+      for (const x of v) expect(somma(x)).toBe(x.totaleMensile);
+    });
+  });
 });
