@@ -150,11 +150,9 @@ describe('spiegaCuscinetto', () => {
     expect(s.valore).toBe(59);
     expect(s.formula).toContain('Soldi della casa per gli imprevisti');
     expect(s.formula).toContain('circa 22 mesi');
-    expect(s.ingredienti).toEqual([
-      { etichetta: 'Messo da parte finora', valore: 59 },
-      { etichetta: 'Obiettivo', valore: 1321 },
-      { etichetta: 'Versato ogni mese per il cuscinetto', valore: 59 },
-    ]);
+    expect(s.formula).toContain('1.321');
+    expect(s.ingredienti).toEqual([{ etichetta: 'Trattenuto dal disponibile', valore: 59 }]);
+    expect(somma(s.ingredienti)).toBe(s.valore);
   });
   it('senza parole vietate', () => {
     const s = spiegaCuscinetto({ attuale: 59, obiettivo: 1321, quotaMensile: 59 });
@@ -188,10 +186,16 @@ describe('spiegaDaParte', () => {
     ]);
     expect(somma(s.ingredienti)).toBeCloseTo(s.valore, 8);
   });
-  it('speso oltre il messo da parte: valore 0 e gli ingredienti sommano a 0', () => {
+  it('speso oltre il messo da parte: riga di differenza, somma 0', () => {
     const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 80 });
     expect(s.valore).toBe(0);
+    expect(s.ingredienti).toEqual([
+      { etichetta: 'Messo da parte finora', valore: 50 },
+      { etichetta: 'Già speso su questa bolletta', valore: -80 },
+      { etichetta: 'Speso oltre quanto messo da parte', valore: 30 },
+    ]);
     expect(somma(s.ingredienti)).toBeCloseTo(0, 8);
+    expect(s.formula).toContain('speso più di quanto');
   });
   it('senza parole vietate', () => {
     const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 20 });

@@ -11,7 +11,6 @@ import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
-import { spiegaCuscinetto } from '@/lib/calculations/casa/spiegazioni';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Account, Transaction } from '@/lib/types';
 import { ComeSiCalcola } from './ComeSiCalcola';
@@ -101,12 +100,9 @@ export function CasaHome({
               </p>
               <ComeSiCalcola spiegazione={finanze.disponibile.spiegazione} className="mt-4" />
               {finanze.cuscinetto ? (
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-brand-foreground/20 pt-4">
-                  <p className="text-sm font-medium text-brand-foreground/75">
-                    Cuscinetto {formatNumero(finanze.cuscinetto.attuale)} di {formatNumero(finanze.cuscinetto.obiettivo)} €
-                  </p>
-                  <ComeSiCalcola spiegazione={spiegaCuscinetto(finanze.cuscinetto)} />
-                </div>
+                <p className="mt-4 border-t border-brand-foreground/20 pt-4 text-sm font-medium text-brand-foreground/75">
+                  Cuscinetto {formatNumero(finanze.cuscinetto.attuale)} di {formatNumero(finanze.cuscinetto.obiettivo)} €
+                </p>
               ) : null}
             </section>
 

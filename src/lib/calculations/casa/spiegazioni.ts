@@ -173,7 +173,7 @@ export function spiegaRiserva(input: { righe: RigaMese[]; debitoDaRestituire: nu
   };
 }
 
-// Il cuscinetto: i soldi della casa per gli imprevisti, messi da parte un po' alla volta.
+// Il cuscinetto: i soldi della casa per gli imprevisti, trattenuti dal disponibile un po' alla volta.
 export function spiegaCuscinetto(input: { attuale: number; obiettivo: number; quotaMensile: number }): Spiegazione {
   const { attuale, obiettivo, quotaMensile } = input;
   const mancano = Math.max(0, obiettivo - attuale);
@@ -186,12 +186,8 @@ export function spiegaCuscinetto(input: { attuale: number; obiettivo: number; qu
         : `Versando ${formatNumero(quotaMensile)} euro al mese sarà pieno tra circa ${mesi} mesi.`;
   return {
     valore: attuale,
-    formula: `Soldi della casa per gli imprevisti: ne avete messi da parte ${formatNumero(attuale)} euro su ${formatNumero(obiettivo)}. ${tempo}`,
-    ingredienti: [
-      { etichetta: 'Messo da parte finora', valore: attuale },
-      { etichetta: 'Obiettivo', valore: obiettivo },
-      { etichetta: 'Versato ogni mese per il cuscinetto', valore: quotaMensile },
-    ],
+    formula: `Soldi della casa per gli imprevisti: l'obiettivo è ${formatNumero(obiettivo)} euro e ogni mese se ne versano ${formatNumero(quotaMensile)}. ${tempo}`,
+    ingredienti: [{ etichetta: 'Trattenuto dal disponibile', valore: attuale }],
   };
 }
 
@@ -199,7 +195,7 @@ export function spiegaCuscinetto(input: { attuale: number; obiettivo: number; qu
 export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoCollegato: number }): Spiegazione {
   const { goal, today } = input;
   const messo = arrotonda2(computeAccantonatoFinora(goal, today, 0));
-  const speso = Math.min(Math.max(input.spesoCollegato, 0), messo);
+  const spesoReale = Math.max(input.spesoCollegato, 0);
   const valore = arrotonda2(computeAccantonatoFinora(goal, today, input.spesoCollegato));
 
   let formula: string;
@@ -216,6 +212,10 @@ export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoColl
   }
 
   const ingredienti = [{ etichetta: 'Messo da parte finora', valore: messo }];
-  if (speso > 0) ingredienti.push({ etichetta: 'Già speso su questa bolletta', valore: -speso });
+  if (spesoReale > 0) ingredienti.push({ etichetta: 'Già speso su questa bolletta', valore: -spesoReale });
+  if (spesoReale > messo) {
+    ingredienti.push({ etichetta: 'Speso oltre quanto messo da parte', valore: arrotonda2(spesoReale - messo) });
+    formula += ' Avete speso più di quanto era messo da parte, quindi qui non resta niente.';
+  }
   return { valore, formula, ingredienti };
 }

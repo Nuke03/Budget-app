@@ -161,10 +161,7 @@ describe('CasaHome', () => {
         />
       );
       expect(screen.getByText('Cuscinetto 59 di 1.321 €')).toBeInTheDocument();
-      const pulsanti = screen.getAllByRole('button', { name: 'Come si calcola?' });
-      expect(pulsanti).toHaveLength(2);
-      fireEvent.click(pulsanti[1]);
-      expect(screen.getByText(/Soldi della casa per gli imprevisti/)).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Come si calcola?' })).toHaveLength(1);
       assertNessunaParolaVietata(container);
     });
 

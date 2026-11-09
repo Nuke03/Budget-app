@@ -117,8 +117,30 @@ describe('computeDaPagareMese', () => {
     expect(computeDaPagareMese({ voci: [voci[2]], spese: [], mese })).toBe(0);
   });
 
+  it('le voci legate a un obiettivo non contano (sono già in B)', () => {
+    const v = [{ categoriaId: 'aff', importoMensile: 750, frequenzaMesi: 1, goalId: 'g1' }, voci[1]];
+    expect(computeDaPagareMese({ voci: v, spese: [], mese })).toBe(300);
+  });
+
+  it('due voci nella stessa categoria dividono la spesa una volta sola', () => {
+    const v = [
+      { categoriaId: 'spesa', importoMensile: 300, frequenzaMesi: 1 },
+      { categoriaId: 'spesa', importoMensile: 100, frequenzaMesi: 1 },
+    ];
+    expect(computeDaPagareMese({ voci: v, spese: [spesa('spesa', 150, '2026-11-08')], mese })).toBe(250);
+  });
+
   it('le entrate non contano', () => {
     const spese = [spesa('aff', 750, '2026-11-03', 'income')];
     expect(computeDaPagareMese({ voci: [voci[0]], spese, mese })).toBe(750);
+  });
+});
+
+describe('computeDisponibileCasa con cuscinetto', () => {
+  it('la formula dice a che punto è il cuscinetto', () => {
+    const r = computeDisponibileCasa({
+      conti: [conto(1000)], obiettivi: [], today: TODAY, cuscinettoObiettivo: 1321, cuscinettoQuotaMensile: 59,
+    });
+    expect(r.spiegazione.formula).toContain('Cuscinetto 1.000 di 1.321 €, pieno tra circa 6 mesi.');
   });
 });

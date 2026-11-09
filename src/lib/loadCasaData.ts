@@ -107,6 +107,7 @@ export async function loadCasaData(
     crediti: totaleCrediti,
     daPagareMese,
     cuscinettoObiettivo: pianoOra?.plan.cuscinettoObiettivo ?? 0,
+    cuscinettoQuotaMensile: pianoOra?.plan.cuscinettoQuotaMensile ?? 0,
   });
   const cuscinetto = pianoOra
     ? {

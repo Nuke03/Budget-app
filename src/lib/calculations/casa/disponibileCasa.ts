@@ -1,6 +1,8 @@
 import { computeAccantonatoFinora } from '../accantonato';
 import type { AccountBalance, GoalForCalc } from '../types';
 import type { PlanItem, Transaction } from '@/lib/types';
+import { formatNumero } from '@/lib/format';
+import { mesiAlPieno } from './cuscinetto';
 import type { Spiegazione } from './spiegazioni';
 
 export interface DisponibileCasa {
@@ -19,19 +21,25 @@ const arrotonda2 = (n: number) => Math.round(n * 100) / 100;
 // Le spese del mese ancora da pagare: per ogni voce mensile, quanto manca al previsto
 // dopo quello già speso nel mese in quella categoria (mai sotto zero).
 export function computeDaPagareMese(input: {
-  voci: Pick<PlanItem, 'categoriaId' | 'importoMensile' | 'frequenzaMesi'>[];
+  voci: (Pick<PlanItem, 'categoriaId' | 'importoMensile' | 'frequenzaMesi'> & { goalId?: string | null })[];
   spese: Pick<Transaction, 'tipo' | 'importo' | 'data' | 'categoriaId'>[];
   mese: string;
 }): number {
   const meseChiave = input.mese.slice(0, 7);
-  const totale = input.voci
-    .filter((v) => v.frequenzaMesi === 1 && v.categoriaId)
-    .reduce((s, v) => {
-      const speso = input.spese
-        .filter((t) => t.tipo === 'expense' && t.categoriaId === v.categoriaId && t.data.slice(0, 7) === meseChiave)
-        .reduce((x, t) => x + t.importo, 0);
-      return s + Math.max(0, v.importoMensile - speso);
-    }, 0);
+  // Le voci legate a un obiettivo sono già contate tra i soldi messi da parte.
+  // Più voci nella stessa categoria condividono la stessa spesa: si sottrae una volta sola.
+  const previstoPerCategoria = new Map<string, number>();
+  for (const v of input.voci) {
+    if (v.frequenzaMesi !== 1 || !v.categoriaId || v.goalId) continue;
+    previstoPerCategoria.set(v.categoriaId, (previstoPerCategoria.get(v.categoriaId) ?? 0) + v.importoMensile);
+  }
+  let totale = 0;
+  for (const [categoriaId, previsto] of previstoPerCategoria) {
+    const speso = input.spese
+      .filter((t) => t.tipo === 'expense' && t.categoriaId === categoriaId && t.data.slice(0, 7) === meseChiave)
+      .reduce((x, t) => x + t.importo, 0);
+    totale += Math.max(0, previsto - speso);
+  }
   return arrotonda2(totale);
 }
 
@@ -45,6 +53,7 @@ export function computeDisponibileCasa(input: {
   crediti?: number;
   daPagareMese?: number;
   cuscinettoObiettivo?: number;
+  cuscinettoQuotaMensile?: number;
 }): DisponibileCasa {
   const { conti, obiettivi, today } = input;
   const c = input.crediti ?? 0;
@@ -68,6 +77,14 @@ export function computeDisponibileCasa(input: {
   ];
   if (cuscinetto > 0) ingredienti.push({ etichetta: 'Cuscinetto', valore: -cuscinetto });
 
+  const obiettivoCusc = input.cuscinettoObiettivo ?? 0;
+  let fraseCuscinetto = '';
+  if (obiettivoCusc > 0) {
+    const mesi = mesiAlPieno(Math.max(0, obiettivoCusc - cuscinetto), input.cuscinettoQuotaMensile ?? 0);
+    const tempo = cuscinetto >= obiettivoCusc ? ', già pieno' : mesi === null ? '' : `, pieno tra circa ${mesi} mesi`;
+    fraseCuscinetto = ` Cuscinetto ${formatNumero(cuscinetto)} di ${formatNumero(obiettivoCusc)} €${tempo}.`;
+  }
+
   return {
     valore,
     a,
@@ -79,7 +96,7 @@ export function computeDisponibileCasa(input: {
     spiegazione: {
       valore,
       formula:
-        'Soldi sul conto comune, meno quelli già messi da parte, meno i rimborsi e le spese del mese ancora da pagare.',
+        'Soldi sul conto comune, meno quelli già messi da parte, meno i rimborsi e le spese del mese ancora da pagare.' + fraseCuscinetto,
       ingredienti,
     },
   };
