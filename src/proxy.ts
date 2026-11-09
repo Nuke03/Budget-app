@@ -44,8 +44,10 @@ export async function proxy(request: NextRequest) {
   const isForgotPasswordPage = request.nextUrl.pathname.startsWith('/forgot-password');
   // Chiamata dal cron di Vercel senza sessione: deve arrivare alla route.
   const isKeepAlive = request.nextUrl.pathname === '/api/keep-alive';
+  // Feed ICS letto dalle app calendario: nessuna sessione, protetto dal token nel percorso.
+  const isCalendar = request.nextUrl.pathname.startsWith('/api/calendario/');
 
-  if (!hasSession && !isKeepAlive && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
+  if (!hasSession && !isKeepAlive && !isCalendar && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
