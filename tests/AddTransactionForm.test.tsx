@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AddTransactionForm } from '@/app/add/AddTransactionForm';
+import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const categories = [
   { id: 'cat-1', nome: 'Groceries', tipo: 'expense' as const, colore: null, archiviata: false },
@@ -280,7 +281,7 @@ describe('AddTransactionForm - obiettivo scelto dalla categoria', () => {
 
   it('scegliere Luce con la preselezione collega l obiettivo della categoria', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    const { container } = render(
       <AddTransactionForm
         categories={categorieCasa}
         accounts={contoCasa}
@@ -294,11 +295,12 @@ describe('AddTransactionForm - obiettivo scelto dalla categoria', () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ categoriaId: 'cat-luce', goalId: 'g-luce' }))
     );
+    assertNessunaParolaVietata(container);
   });
 
   it('scegliere Affitto non collega nessun obiettivo', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    const { container } = render(
       <AddTransactionForm
         categories={categorieCasa}
         accounts={contoCasa}
@@ -311,11 +313,12 @@ describe('AddTransactionForm - obiettivo scelto dalla categoria', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Affitto' }));
     compilaEInvia();
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: null })));
+    assertNessunaParolaVietata(container);
   });
 
   it('una scelta manuale vince: deselezionare il chip e cambiare categoria non lo ripreseleziona', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    const { container } = render(
       <AddTransactionForm
         categories={[categorieCasa[1], categorieCasa[0]]}
         accounts={contoCasa}
@@ -332,22 +335,25 @@ describe('AddTransactionForm - obiettivo scelto dalla categoria', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Luce' }));
     compilaEInvia();
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: null })));
+    assertNessunaParolaVietata(container);
   });
 
   it('senza la prop il comportamento è quello di prima: nessuna preselezione', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    const { container } = render(
       <AddTransactionForm categories={categorieCasa} accounts={contoCasa} goals={[obiettivoLuce]} onSubmit={onSubmit} />
     );
     fireEvent.click(screen.getByRole('button', { name: 'Luce' }));
     compilaEInvia();
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: null })));
+    assertNessunaParolaVietata(container);
   });
 
   it('i chip degli obiettivi espongono aria-pressed', () => {
-    render(
+    const { container } = render(
       <AddTransactionForm categories={categorieCasa} accounts={contoCasa} goals={[obiettivoLuce]} onSubmit={vi.fn()} />
     );
     expect(screen.getByRole('button', { name: 'Bolletta luce' })).toHaveAttribute('aria-pressed', 'false');
+    assertNessunaParolaVietata(container);
   });
 });
