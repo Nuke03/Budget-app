@@ -35,6 +35,7 @@ const CATEGORY_FALLBACK_COLOR = 'var(--cat-slate)';
 // ad ogni render quando il chiamante non passa `goals`, facendo scattare
 // l'effect di sincronizzazione qui sotto ad ogni render (loop infinito).
 const NESSUN_GOAL: BudgetGoal[] = [];
+const NESSUN_ID: string[] = [];
 
 export function AddTransactionForm({
   categories,
@@ -45,6 +46,11 @@ export function AddTransactionForm({
   onCancel,
   onCreateGoal,
   onSubmit,
+  contoEtichetta = 'Conto',
+  nascondiGestisciCategorie = false,
+  obiettivoEtichetta = 'Obiettivo (opzionale)',
+  nota,
+  idContiSoloSpesa = NESSUN_ID,
 }: {
   categories: Category[];
   accounts: Account[];
@@ -54,6 +60,11 @@ export function AddTransactionForm({
   onCancel?: () => void;
   onCreateGoal?: (payload: NuovoGoalPayload) => Promise<BudgetGoal>;
   onSubmit: (payload: SubmitPayload) => Promise<void>;
+  contoEtichetta?: string;
+  nascondiGestisciCategorie?: boolean;
+  obiettivoEtichetta?: string;
+  nota?: string;
+  idContiSoloSpesa?: string[];
 }) {
   const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? 'expense');
   const [importo, setImporto] = useState(initial ? String(initial.importo) : '');
@@ -71,6 +82,9 @@ export function AddTransactionForm({
   const [nuovoGoalImporto, setNuovoGoalImporto] = useState('');
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
+  // I conti "solo spesa" (es. un conto di casa che non riceve entrate) non compaiono per le entrate.
+  const contiVisibili = accounts.filter((a) => tipo === 'expense' || !idContiSoloSpesa.includes(a.id));
+
   const categorieDisponibili = categories.filter((c) => !c.archiviata && c.tipo === tipo);
 
   useEffect(() => {
@@ -82,12 +96,12 @@ export function AddTransactionForm({
   }, [tipo, categories]);
 
   useEffect(() => {
-    if (accountId !== null && accounts.some((a) => a.id === accountId)) {
+    if (accountId !== null && contiVisibili.some((a) => a.id === accountId)) {
       return;
     }
-    setAccountId(accounts[0]?.id ?? null);
+    setAccountId(contiVisibili[0]?.id ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts]);
+  }, [accounts, tipo, idContiSoloSpesa]);
 
   useEffect(() => {
     setGoalsDisponibili(goals);
@@ -152,6 +166,8 @@ export function AddTransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 pb-5">
+      {nota && <p className="text-xs text-muted">{nota}</p>}
+
       <div className="flex gap-1.5 rounded-full bg-surface-muted p-1">
         {(['expense', 'income'] as const).map((t) => (
           <button
@@ -224,15 +240,17 @@ export function AddTransactionForm({
         </div>
       )}
 
-      <Link href="/categories" className="-mt-2 self-start text-xs font-semibold text-brand-dark">
-        Gestisci categorie
-      </Link>
+      {!nascondiGestisciCategorie && (
+        <Link href="/categories" className="-mt-2 self-start text-xs font-semibold text-brand-dark">
+          Gestisci categorie
+        </Link>
+      )}
 
-      {accounts.length > 0 && (
+      {contiVisibili.length > 0 && (
         <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
-          Conto
+          {contoEtichetta}
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
-            {accounts.map((a) => {
+            {contiVisibili.map((a) => {
               const isSelected = accountId === a.id;
               return (
                 <button
@@ -255,7 +273,7 @@ export function AddTransactionForm({
 
       {tipo === 'expense' && (goalsDisponibili.length > 0 || onCreateGoal) && (
         <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
-          Obiettivo (opzionale)
+          {obiettivoEtichetta}
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
             {goalsDisponibili.map((g) => {
               const isSelected = goalId === g.id;

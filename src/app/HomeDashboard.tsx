@@ -2,16 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { ChevronDown, Plus, X } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
-import { createClient } from '@/lib/supabase/client';
-import { createTransaction } from '@/lib/data/transactions';
-import { createGoal } from '@/lib/data/goals';
-import { updateAccountBalance } from '@/lib/data/accounts';
-import { computeNuovoSaldoConto } from '@/lib/calculations/accountBalance';
-import { AddTransactionForm } from './add/AddTransactionForm';
-import type { Account, BudgetGoal, Category, TransactionTipo } from '@/lib/types';
+import { AddTransactionSheet } from './add/AddTransactionSheet';
+import type { CasaAggiunta } from '@/lib/loadCasaData';
+import type { Account, BudgetGoal, Category } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
 // (computeAccantonatoFinora): per gli obiettivi "bloccato" coincide con importoTarget,
@@ -34,6 +29,8 @@ export function HomeDashboard({
   accounts,
   categories,
   goals,
+  casa = null,
+  meUserId,
 }: {
   disponibileLibero: number;
   margineGiornaliero: number;
@@ -41,6 +38,8 @@ export function HomeDashboard({
   accounts: Account[];
   categories: Category[];
   goals: GoalWithAccantonato[];
+  casa?: CasaAggiunta | null;
+  meUserId?: string;
 }) {
   const router = useRouter();
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -48,50 +47,6 @@ export function HomeDashboard({
 
   const accountsDisponibili = accounts.filter((a) => a.contaInDisponibile);
   const accountsEsclusi = accounts.filter((a) => !a.contaInDisponibile);
-
-  async function handleAddTransaction(payload: {
-    tipo: TransactionTipo;
-    importo: number;
-    categoriaId: string | null;
-    accountId: string | null;
-    goalId: string | null;
-    descrizione: string;
-  }) {
-    const supabase = createClient();
-    await createTransaction(supabase, {
-      ...payload,
-      data: format(new Date(), 'yyyy-MM-dd'),
-      nota: null,
-    });
-
-    const account = payload.accountId
-      ? accounts.find((a) => a.id === payload.accountId)
-      : undefined;
-    if (account) {
-      const nuovoSaldo = computeNuovoSaldoConto(account.saldoAttuale, payload.tipo, payload.importo);
-      await updateAccountBalance(supabase, account.id, nuovoSaldo);
-    }
-
-    router.refresh();
-    setIsAddOpen(false);
-  }
-
-  async function handleCreateGoal(payload: {
-    nome: string;
-    importoTarget: number;
-    categoriaId: string | null;
-  }) {
-    const supabase = createClient();
-    return createGoal(supabase, {
-      nome: payload.nome,
-      importoTarget: payload.importoTarget,
-      modalita: 'bloccato',
-      scadenza: null,
-      categoriaId: payload.categoriaId,
-      ricorrente: false,
-      frequenzaMesi: null,
-    });
-  }
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
@@ -157,39 +112,14 @@ export function HomeDashboard({
         <Plus size={26} strokeWidth={2.5} />
       </button>
 
-      {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <button
-            type="button"
-            aria-label="Chiudi"
-            onClick={() => setIsAddOpen(false)}
-            className="animate-backdrop-in absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <div className="animate-sheet-in relative w-full max-w-md rounded-t-[var(--radius-lg)] bg-surface pt-3 shadow-2xl">
-            <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-black/10" />
-            <div className="flex items-center justify-between px-5 pb-2">
-              <h2 className="text-lg font-bold">Nuova transazione</h2>
-              <button
-                type="button"
-                aria-label="Chiudi"
-                onClick={() => setIsAddOpen(false)}
-                className="rounded-full p-1.5 text-muted hover:bg-surface-muted"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="max-h-[75vh] overflow-y-auto">
-              <AddTransactionForm
-                categories={categories}
-                accounts={accounts}
-                goals={goals}
-                onCreateGoal={handleCreateGoal}
-                onSubmit={handleAddTransaction}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <AddTransactionSheet
+        aperto={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        personale={{ categories, accounts, goals }}
+        casa={casa}
+        meUserId={meUserId}
+        onSaved={() => router.refresh()}
+      />
     </main>
   );
 }

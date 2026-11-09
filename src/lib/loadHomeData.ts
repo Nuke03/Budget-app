@@ -22,21 +22,34 @@ export interface HomeData {
   casa: CasaAggiunta | null;
 }
 
+// La parte di casa non deve mai rompere la home personale: se non si riesce a
+// leggerla, la home si apre senza il selettore Casa.
+async function casaOpzionale(
+  supabase: SupabaseClient,
+  userId: string | null
+): Promise<CasaAggiunta | null> {
+  if (!userId) return null;
+  try {
+    const corrente = await getMyHousehold(supabase, userId);
+    return corrente ? await loadCasaAggiunta(supabase, corrente) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Tutto ciò che la home mostra: solo dati personali (scope di default).
 export async function loadHomeData(
   supabase: SupabaseClient,
   today: Date = new Date(),
   userId: string | null = null
 ): Promise<HomeData> {
-  const [accounts, categories, goals, ultimaEntrata, casaCorrente] = await Promise.all([
+  const [accounts, categories, goals, ultimaEntrata, casa] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     getOpenGoals(supabase),
     getLastIncomeDate(supabase),
-    userId ? getMyHousehold(supabase, userId) : Promise.resolve(null),
+    casaOpzionale(supabase, userId),
   ]);
-
-  const casa = casaCorrente ? await loadCasaAggiunta(supabase, casaCorrente) : null;
 
   // Quanto di ogni obiettivo è già stato speso (transazioni esplicitamente
   // collegate): va sottratto da quanto resta riservato, altrimenti quei soldi

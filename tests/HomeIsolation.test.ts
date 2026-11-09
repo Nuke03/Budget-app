@@ -130,4 +130,37 @@ describe('isolamento della home', () => {
     const senzaCasa = { ...righePersonali('A'), households: [], household_members: [], household_invites: [] };
     expect((await home('A', senzaCasa, true)).casa).toBeNull();
   });
+
+  it('se la lettura della casa fallisce la home personale si apre e casa è null', async () => {
+    const seed = { ...righePersonali('A'), ...STRUTTURA_CASA };
+    const db = createFakeDb(seed, { userId: 'A', membri: MEMBRI });
+    const from = db.client.from;
+    db.client.from = (nome: string) => {
+      if (nome === 'households' || nome === 'household_members') throw new Error('giù');
+      return from(nome);
+    };
+    const dati = await loadHomeData(db.client, TODAY, 'A');
+    expect(dati.casa).toBeNull();
+    expect(dati.disponibileLibero).toBe(870);
+  });
+
+  it('se solo il caricamento dei conti di casa fallisce casa è null', async () => {
+    const seed = { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA };
+    const db = createFakeDb(seed, { userId: 'A', membri: MEMBRI });
+    const from = db.client.from;
+    db.client.from = (nome: string) => {
+      const b = from(nome);
+      if (nome === 'accounts') {
+        const eq = b.eq;
+        b.eq = (c: string, v: unknown) => {
+          if (c === 'household_id') throw new Error('giù');
+          return eq(c, v);
+        };
+      }
+      return b;
+    };
+    const dati = await loadHomeData(db.client, TODAY, 'A');
+    expect(dati.casa).toBeNull();
+    expect(dati.disponibileLibero).toBe(870);
+  });
 });

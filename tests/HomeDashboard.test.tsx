@@ -139,4 +139,32 @@ describe('HomeDashboard', () => {
       expect(updateAccountBalance).toHaveBeenCalledWith(expect.anything(), '1', 844);
     });
   });
+
+  it('con una casa passata mostra il selettore nel foglio', () => {
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+        meUserId="u1"
+        casa={{
+          householdId: 'h1',
+          meUserId: 'u1',
+          nomi: [
+            { userId: 'u1', nome: 'Fabio' },
+            { userId: 'u2', nome: 'Anna' },
+          ],
+          conti: [],
+          categorie: [],
+          obiettivi: [],
+        }}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
+    expect(screen.getByRole('button', { name: 'Personale' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Casa' })).toBeInTheDocument();
+  });
 });

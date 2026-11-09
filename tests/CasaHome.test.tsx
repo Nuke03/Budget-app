@@ -1,6 +1,20 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CasaHome } from '@/app/casa/CasaHome';
+import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
+import type { CasaAggiunta } from '@/lib/loadCasaData';
+import type { Account } from '@/lib/types';
+
+const refresh = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh, push: vi.fn() }),
+}));
+vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+vi.mock('@/lib/data/transactions', () => ({ createTransaction: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/lib/data/accounts', () => ({ adjustAccountBalance: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/lib/data/casaSetup', () => ({ creaContoComune: vi.fn().mockResolvedValue({}) }));
+
+import { creaContoComune } from '@/lib/data/casaSetup';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { PlanBundle } from '@/lib/data/householdPlans';
@@ -91,5 +105,73 @@ describe('CasaHome', () => {
   it('non contiene parole vietate', () => {
     const { container } = render(<CasaHome casa={casa} piano={piano(false)} />);
     assertNessunaParolaVietata(container);
+  });
+
+  describe('con le finanze', () => {
+    const conto: Account = {
+      id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null,
+    };
+    function aggiunta(conti: Account[]): CasaAggiunta {
+      return {
+        householdId: 'h1',
+        meUserId: 'u1',
+        nomi: [
+          { userId: 'u1', nome: 'Fabio' },
+          { userId: 'u2', nome: 'Anna' },
+        ],
+        conti,
+        categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false }],
+        obiettivi: [],
+      };
+    }
+    function finanze(conti: Account[]) {
+      return {
+        disponibile: computeDisponibileCasa({ conti, obiettivi: [], today: new Date('2026-11-09T10:00:00Z') }),
+        conti,
+        ultimeSpese: [
+          {
+            id: 't1', tipo: 'expense' as const, importo: 64.2, data: '2026-11-05', categoriaId: 'cc',
+            accountId: 'ac', goalId: null, descrizione: 'Luce', nota: null, createdAt: '', pagataDaUserId: 'u2',
+          },
+        ],
+        nomi: { u1: 'Fabio', u2: 'Anna' },
+        aggiunta: aggiunta(conti),
+      };
+    }
+
+    it('con finanze mostra il disponibile casa 870,00 e il pannello Come si calcola', () => {
+      const { container } = render(<CasaHome casa={casa} finanze={finanze([conto])} />);
+      expect(screen.getByText('Disponibile casa')).toBeInTheDocument();
+      expect(screen.getAllByText(/870,00/).length).toBeGreaterThan(0);
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
+      expect(screen.getByRole('button', { name: 'Come si calcola?' })).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Luce')).toBeInTheDocument();
+      expect(screen.getAllByText('Anna').length).toBeGreaterThan(1);
+      expect(screen.getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', '/casa/movimenti');
+      assertNessunaParolaVietata(container);
+    });
+
+    it('senza conto comune mostra il modulo e crea il conto', async () => {
+      render(<CasaHome casa={casa} finanze={finanze([])} />);
+      expect(screen.getByText('Aprite il conto comune qui')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Conto comune')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Saldo attuale'), { target: { value: '120,50' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Apri il conto' }));
+      await waitFor(() =>
+        expect(creaContoComune).toHaveBeenCalledWith(expect.anything(), 'h1', {
+          nome: 'Conto comune',
+          saldoAttuale: 120.5,
+        })
+      );
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+    });
+
+    it('il pulsante + apre il foglio in modalità Casa senza selettore', () => {
+      render(<CasaHome casa={casa} finanze={finanze([conto])} />);
+      fireEvent.click(screen.getByLabelText('Aggiungi spesa di casa'));
+      expect(screen.getByText('Chi ha pagato')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Personale' })).not.toBeInTheDocument();
+      expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
+    });
   });
 });

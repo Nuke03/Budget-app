@@ -215,4 +215,38 @@ describe('AddTransactionForm', () => {
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ goalId: 'goal-2' }));
     });
   });
+
+  it('contoEtichetta e obiettivoEtichetta cambiano i titoli', () => {
+    render(
+      <AddTransactionForm
+        categories={categories}
+        accounts={accounts}
+        goals={goals}
+        contoEtichetta="Chi ha pagato"
+        obiettivoEtichetta="Da parte (opzionale)"
+        nascondiGestisciCategorie
+        nota="Lo vedrà anche Anna"
+        onSubmit={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Chi ha pagato')).toBeInTheDocument();
+    expect(screen.getByText('Da parte (opzionale)')).toBeInTheDocument();
+    expect(screen.queryByText('Gestisci categorie')).not.toBeInTheDocument();
+    expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
+    expect(screen.queryByText('Obiettivo (opzionale)')).not.toBeInTheDocument();
+  });
+
+  it('idContiSoloSpesa nasconde quei conti per le entrate', () => {
+    const due = [
+      ...accounts,
+      { id: 'acc-2', nome: 'Carta casa', saldoAttuale: 0, contaInDisponibile: true, targetSaldo: null },
+    ];
+    render(
+      <AddTransactionForm categories={categories} accounts={due} idContiSoloSpesa={['acc-2']} onSubmit={vi.fn()} />
+    );
+    expect(screen.getByText('Carta casa')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Entrata'));
+    expect(screen.queryByText('Carta casa')).not.toBeInTheDocument();
+    expect(screen.getByText('Conto corrente')).toBeInTheDocument();
+  });
 });
