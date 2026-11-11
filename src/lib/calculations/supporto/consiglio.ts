@@ -1,8 +1,8 @@
-import { differenceInCalendarMonths, parseISO } from 'date-fns';
+import { differenceInCalendarMonths } from 'date-fns';
 import { formatEuro } from '@/lib/format';
 import type { BudgetGoal } from '@/lib/types';
 import type { Andamento } from './andamento';
-import { computeFinestraGoal } from '../accantonato';
+import { computeAccantonatoFinora, computeFinestraGoal, computeQuotaMensile } from '../accantonato';
 
 export type TipoConsiglio = 'senza_dettaglio' | 'categoria_sopra' | 'obiettivo_corto' | 'in_linea';
 
@@ -130,10 +130,9 @@ export function scegliConsiglio(input: {
   };
 }
 
-// Obiettivi dilazionati aperti con scadenza che, col proprio piano (inizio =
-// accantonaDa se più tardi dell'inizio del ciclo), non arrivano alla cifra:
-// quota x mesi rimasti < importoTarget - accantonato. Succede per spese
-// collegate che erodono l'accantonato o per una finestra residua troppo corta.
+// Obiettivi dilazionati aperti con scadenza per cui quota mensile x mesi
+// rimasti < importoTarget - accantonato, con quota e accantonato presi da
+// accantonato.ts (stessi numeri della Home, accantonaDa compreso).
 // Saltati: scaduti non ricorrenti, e chi lancia errori sui dati.
 // `saldoDisponibile` non serve a questa regola: resta in firma, la UI lo passa.
 export function obiettiviCorti(
@@ -147,16 +146,12 @@ export function obiettiviCorti(
   for (const g of goals) {
     if (g.modalita !== 'dilazionato' || g.stato !== 'aperto' || !g.scadenza) continue;
     try {
-      const { windowStart, windowEnd } = computeFinestraGoal(g, oggi);
+      const { windowEnd } = computeFinestraGoal(g, oggi);
       if (windowEnd === null || windowEnd < oggiGiorno) continue;
-      const accantonaDa = g.accantonaDa ? parseISO(g.accantonaDa) : null;
-      const inizio = accantonaDa && accantonaDa > windowStart ? accantonaDa : windowStart;
-      const mesiTotali = Math.max(1, differenceInCalendarMonths(windowEnd, inizio));
-      const trascorsi = Math.min(Math.max(differenceInCalendarMonths(oggi, inizio), 0), mesiTotali);
+      const quota = computeQuotaMensile(g, oggi);
+      if (quota === null) continue;
       const mesiRimasti = Math.max(0, differenceInCalendarMonths(windowEnd, oggi));
-      const quota = g.importoTarget / mesiTotali;
-      const accantonato = Math.max(0, quota * trascorsi - g.specoCollegato);
-      const mancano = Math.round((g.importoTarget - accantonato) * 100) / 100;
+      const mancano = g.importoTarget - computeAccantonatoFinora(g, oggi, g.specoCollegato);
       if (quota * mesiRimasti < mancano - 0.005) {
         risultato.push({ goalId: g.id, nome: g.nome, mancano });
       }

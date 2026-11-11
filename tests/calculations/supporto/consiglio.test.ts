@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { scegliConsiglio, obiettiviCorti } from '@/lib/calculations/supporto/consiglio';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { BudgetGoal } from '@/lib/types';
+import { differenceInCalendarMonths } from 'date-fns';
+import { computeAccantonatoFinora, computeFinestraGoal, computeQuotaMensile } from '@/lib/calculations/accantonato';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 
 const andamento = (over: Partial<Andamento> = {}): Andamento => ({
@@ -178,8 +180,15 @@ describe('obiettiviCorti', () => {
     expect(obiettiviCorti(g, 0, oggi)).toEqual([]);
   });
 
-  it('accantonaDa piu tardi -> non corto', () => {
-    expect(obiettiviCorti([goal({ accantonaDa: '2026-09-11' })], 0, oggi)).toEqual([]);
+  it('accantonaDa piu tardi -> stessi numeri di accantonato.ts', () => {
+    const g = goal({ accantonaDa: '2026-09-11' });
+    const quota = computeQuotaMensile(g, oggi)!;
+    const mancano = g.importoTarget - computeAccantonatoFinora(g, oggi, g.specoCollegato);
+    const { windowEnd } = computeFinestraGoal(g, oggi);
+    const atteso = quota * differenceInCalendarMonths(windowEnd!, oggi) < mancano;
+    const r = obiettiviCorti([g], 0, oggi);
+    expect(r).toEqual(atteso ? [{ goalId: 'g1', nome: 'Vacanza', mancano }] : []);
+    expect(atteso).toBe(true);
   });
 
   it('scaduto non ricorrente -> saltato', () => {
