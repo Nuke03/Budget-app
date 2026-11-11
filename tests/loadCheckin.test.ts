@@ -94,6 +94,34 @@ describe('loadCheckin', () => {
     expect(r.householdId).toBe('H1');
   });
 
+  it('le stime: una proposta dalle spese già lette, con piano, fondo e mese di partenza', async () => {
+    const luce = { ...voce('i1', 55, 2), nome: 'Luce', categoria_id: 'c1', origine_stima: 'suggerita', goal_id: 'g2', importo_ricorrenza: 110 };
+    const r = await carica(
+      base({
+        household_plan_items: [luce],
+        transactions: [spesa('s1', 1161, '2026-10-12'), { ...spesa('s2', 142, '2026-10-05'), categoria_id: 'c1' }],
+      }),
+    );
+    expect(r.proposte).toHaveLength(1);
+    expect(r.proposte[0]).toMatchObject({ itemId: 'i1', nome: 'Luce', n: 1, nuovoMensile: 71 });
+    expect(r.fondiPerVoce.i1.id).toBe('g2');
+    expect(r.pianoAttuale?.plan.validoDal).toBe('2026-10-01');
+    expect(r.pianiFuturi).toEqual([]);
+    expect(r.validoDalStima).toBe('2026-12-01');
+  });
+
+  it('le stime: senza voci con categoria nessuna proposta; una versione futura è in pianiFuturi', async () => {
+    const r = await carica(base());
+    expect(r.proposte).toEqual([]);
+    expect(r.fondiPerVoce).toEqual({});
+    const piani = [
+      { ...piano('2026-10-01') },
+      { ...piano('2026-12-01'), id: 'p2' },
+    ];
+    const f = await carica(base({ household_plans: piani, household_plan_items: [voce('i1', 1288, 1), { ...voce('i9', 100, 1), plan_id: 'p2' }], household_plan_shares: [quota(1, 'A', 776), quota(2, 'B', 604), { ...quota(1, 'A', 800), plan_id: 'p2' }, { ...quota(2, 'B', 600), plan_id: 'p2' }] }));
+    expect(f.pianiFuturi.map((p) => p.plan.validoDal)).toEqual(['2026-12-01']);
+  });
+
   it('fatto con la riga salvata e il nome di chi lo ha fatto', async () => {
     const r = await carica(base({ household_checkins: [checkin('2026-10-01', 'avanzo')] }));
     expect(r.stato).toBe('fatto');

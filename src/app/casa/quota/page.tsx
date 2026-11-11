@@ -4,6 +4,7 @@ import { utenteOLogin } from '@/lib/utenteOLogin';
 import { getMyHousehold } from '@/lib/data/households';
 import { getMaxSlotUsato, getPlansFromMonth } from '@/lib/data/householdPlans';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
+import { loadProposteStime } from '@/lib/loadProposteStime';
 import { QuotaClient } from './QuotaClient';
 
 export default async function QuotaPage() {
@@ -15,6 +16,7 @@ export default async function QuotaPage() {
   const meseCorrente = meseRomaISO();
   const piani = await getPlansFromMonth(supabase, casa.household.id, meseCorrente);
   const slotUsati = await getMaxSlotUsato(supabase, casa.household.id);
+  const stime = await loadProposteStime(supabase, casa.household.id, piani);
   const slotMassimo = Math.max(slotUsati, ...casa.members.map((m) => m.slot));
 
   return (
@@ -25,6 +27,10 @@ export default async function QuotaPage() {
       membri={casa.members}
       piani={piani}
       slotMassimo={slotMassimo}
+      proposte={stime.proposte}
+      fondiPerVoce={stime.fondiPerVoce}
+      validoDalStima={stime.validoDal}
+      programmata={stime.programmata}
     />
   );
 }

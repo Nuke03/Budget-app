@@ -304,6 +304,49 @@ describe('QuotaWizard: passi 2 e 3', () => {
     expect(screen.getByText('Totale al mese: 571,33 €')).toBeInTheDocument();
   });
 
+  it('luce, gas e acqua mostrano la cifra tipica come "stima", con una riga su da dove viene', () => {
+    monta();
+    scrivi(redditi()[0], '1800');
+    avanti();
+    expect(screen.getAllByText('stima')).toHaveLength(3);
+    expect(screen.getAllByText('Cifra tipica per una casa, non la vostra bolletta: con la prima vera ve la correggiamo.')).toHaveLength(3);
+    expect(screen.getByLabelText('Importo Acqua')).toHaveValue('60');
+    expect(screen.getAllByRole('button', { name: 'Non lo so ancora' })).toHaveLength(3);
+  });
+
+  it('scrivere una cifra toglie "stima"; "Non lo so ancora" rimette quella tipica, che resta nel totale', () => {
+    const { container } = monta();
+    scrivi(redditi()[0], '1800');
+    avanti();
+    scrivi(screen.getByLabelText('Importo Luce'), '80');
+    expect(screen.getAllByText('stima')).toHaveLength(2);
+    expect(screen.getByText('Totale al mese: 556,33 €')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByLabelText('Importo Luce').closest('div')!.parentElement!).getByRole('button', { name: 'Non lo so ancora' }));
+    expect(screen.getByLabelText('Importo Luce')).toHaveValue('110');
+    expect(screen.getAllByText('stima')).toHaveLength(3);
+    expect(screen.getByText('Totale al mese: 571,33 €')).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('con la cifra svuotata "Non lo so ancora" riporta la stima tipica', () => {
+    monta();
+    scrivi(redditi()[0], '1800');
+    avanti();
+    scrivi(screen.getByLabelText('Importo Gas'), '');
+    fireEvent.click(within(screen.getByLabelText('Importo Gas').closest('div')!.parentElement!).getByRole('button', { name: 'Non lo so ancora' }));
+    expect(screen.getByLabelText('Importo Gas')).toHaveValue('110');
+  });
+
+  it('una voce già reale non ha "stima" né "Non lo so ancora"', () => {
+    const reale = bundle([share({}), share({ slot: 2, userId: 'u2', displayName: 'Giulia', redditoNettoMensile: 1400 })]);
+    reale.items = reale.items.map((i) => (i.nome === 'Luce' ? { ...i, origineStima: 'reale' as const } : i));
+    monta({ membri: [fabio, giuliaMembro], piani: [reale], slotMassimo: 2 });
+    avanti();
+    const riga = screen.getByLabelText('Importo Luce').closest('div')!.parentElement!;
+    expect(within(riga).queryByRole('button', { name: 'Non lo so ancora' })).not.toBeInTheDocument();
+    expect(within(riga).queryByText('stima')).not.toBeInTheDocument();
+  });
+
   it("l'affitto è da scrivere: senza cifra Avanti resta disabilitato", () => {
     monta();
     scrivi(redditi()[0], '1800');

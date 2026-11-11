@@ -4,6 +4,7 @@ import { CheckinMensile } from '@/app/casa/controllo/CheckinMensile';
 import type { CheckinCaricato } from '@/lib/loadCheckin';
 import { computeCheckin } from '@/lib/calculations/casa/checkin';
 import type { PlanBundle } from '@/lib/data/householdPlans';
+import type { PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
 import type { Transaction } from '@/lib/types';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
@@ -16,6 +17,7 @@ vi.mock('@/lib/data/checkins', async () => ({
   saveCheckin: vi.fn(),
   getCheckin: vi.fn(),
 }));
+vi.mock('@/lib/data/stime', () => ({ applicaStima: vi.fn(), ignoraStima: vi.fn() }));
 vi.mock('@/lib/data/balanceChecks', async () => ({
   ...(await vi.importActual<typeof import('@/lib/data/balanceChecks')>('@/lib/data/balanceChecks')),
   recordBalanceCheck: vi.fn().mockResolvedValue('b1'),
@@ -68,6 +70,11 @@ function dati(extra: Partial<CheckinCaricato> = {}): CheckinCaricato {
     nomi: { u1: 'Fabio', u2: 'Anna' },
     versamenti: scenario().versamenti,
     serveControllo: false,
+    proposte: [],
+    pianoAttuale: null,
+    pianiFuturi: [],
+    fondiPerVoce: {},
+    validoDalStima: '2026-12-01',
     ...extra,
   };
 }
@@ -89,6 +96,61 @@ beforeEach(() => {
   vi.mocked(saveCheckin).mockReset();
   vi.mocked(saveCheckin).mockResolvedValue('c1');
   vi.mocked(getCheckin).mockReset();
+});
+
+const propostaLuce: PropostaStima = {
+  itemId: 'i1', nome: 'Luce', categoriaId: 'c1', frequenzaMesi: 2, importoMensileAttuale: 55, mediaReale: 142,
+  nuovoMensile: 71, nuovoImportoRicorrenza: 142, n: 3, unita: 'bollette',
+};
+const propostaGas: PropostaStima = { ...propostaLuce, itemId: 'i2', nome: 'Gas' };
+const pianoStime: PlanBundle = {
+  plan: {
+    id: 'p1', householdId: 'h1', validoDal: '2026-10-01', giornoVersamento: 5, regola: 'parti_uguali',
+    cuscinettoObiettivo: 100, cuscinettoQuotaMensile: 10, arrotondamento: 10, totaleMensile: 1380, createdAt: '2026-09-20T10:00:00Z',
+  },
+  items: [
+    { id: 'i1', planId: 'p1', nome: 'Luce', categoriaId: 'c1', frequenzaMesi: 2, importoRicorrenza: 110, importoMensile: 55, origineStima: 'suggerita', goalId: null, stimaIgnorataConN: null, ordine: 0 },
+    { id: 'i2', planId: 'p1', nome: 'Gas', categoriaId: 'c2', frequenzaMesi: 2, importoRicorrenza: 110, importoMensile: 55, origineStima: 'suggerita', goalId: null, stimaIgnorataConN: null, ordine: 1 },
+    { id: 'i3', planId: 'p1', nome: 'Affitto', categoriaId: null, frequenzaMesi: 1, importoRicorrenza: 1000, importoMensile: 1000, origineStima: 'utente', goalId: null, stimaIgnorataConN: null, ordine: 2 },
+  ],
+  shares: [
+    { planId: 'p1', slot: 1, userId: 'u1', displayName: 'Fabio', redditoNettoMensile: 1000, redditoIrregolare: false, percentuale: null, inCasaDal: null, esceDal: null, quotaMensile: 776 },
+    { planId: 'p1', slot: 2, userId: 'u2', displayName: 'Anna', redditoNettoMensile: 1000, redditoIrregolare: false, percentuale: null, inCasaDal: null, esceDal: null, quotaMensile: 604 },
+  ],
+};
+const conStime = { proposte: [propostaLuce, propostaGas], pianoAttuale: pianoStime };
+
+describe('CheckinMensile: stima contro reale', () => {
+  it('nessuna proposta, nessuna card', () => {
+    render(<CheckinMensile dati={dati({ pianoAttuale: pianoStime })} />);
+    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+  });
+
+  it('una sola card, sotto i numeri e dopo il Fatto, che non lo blocca', async () => {
+    const { container } = render(<CheckinMensile dati={dati(conStime)} />);
+    expect(screen.getAllByRole('button', { name: 'Aggiorna la stima' })).toHaveLength(1);
+    expect(screen.getByText(/^Luce: avete previsto 55 €/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Gas: avete previsto/)).not.toBeInTheDocument();
+    const fatto = screen.getByRole('button', { name: 'Fatto, a novembre' });
+    const card = screen.getByRole('button', { name: 'Aggiorna la stima' });
+    expect(fatto.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fatto).toBeEnabled();
+    fireEvent.click(fatto);
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
+    assertNessunaParolaVietata(container);
+  });
+
+  it('con una modifica già programmata la card rimanda a Rivedi la quota', () => {
+    render(<CheckinMensile dati={dati({ ...conStime, pianiFuturi: [pianoStime] })} />);
+    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Rivedi la quota' })).toHaveAttribute('href', '/casa/quota');
+  });
+
+  it('dopo il secondo ammanco il link alle stime reali porta alla lista nella pagina quota', () => {
+    const { calcolo, versamenti } = scenario({ speso: 1370, nonRegistrate: 0, precedente: 'ammanco' });
+    render(<CheckinMensile dati={dati({ ...conStime, calcolo, versamenti })} />);
+    expect(screen.getByRole('link', { name: 'Guarda le stime reali' })).toHaveAttribute('href', '/casa/quota');
+  });
 });
 
 describe('CheckinMensile', () => {

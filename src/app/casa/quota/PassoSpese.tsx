@@ -1,8 +1,12 @@
 import { formatNumero } from '@/lib/format';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import type { BozzaQuota } from './usaBozzaQuota';
-import { nuovaChiave, parseMesi } from './quotaWizardState';
+import { VOCI_CASA_TIPICHE } from '@/lib/calculations/casa/vociTipiche';
+import { nuovaChiave, parseMesi, testoNumero } from './quotaWizardState';
 import { bottoneSecondario, carta, euro, inputClass } from './quotaWizardUi';
+
+// Le bollette che non si conoscono prima di averle in mano: si parte da una cifra tipica, marcata "stima".
+const CHIAVI_BOLLETTE = new Set(['luce', 'gas', 'acqua']);
 
 export function PassoSpese({ b }: { b: BozzaQuota }) {
   const { voci, setVoci, setVoce, infoAperta, setInfoAperta, sottotot } = b;
@@ -12,6 +16,9 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
         {voci.map((v) => {
           const freq = parseMesi(v.frequenzaText);
           const importo = parseImporto(v.importoText);
+          const bolletta = v.custom ? undefined : VOCI_CASA_TIPICHE.find((t) => t.nome === v.nome && CHIAVI_BOLLETTE.has(t.chiave));
+          // "Stima" finché la cifra è quella tipica e nessuna bolletta vera l'ha sostituita.
+          const sembraStima = bolletta !== undefined && v.origine === 'suggerita' && importo !== null;
           return (
             <div key={v.key} className={carta}>
               <div className="flex items-center justify-between gap-2">
@@ -68,10 +75,34 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                   className={`${inputClass} w-16`}
                 />
                 <span>{freq === 1 ? 'mese' : 'mesi'}</span>
+                {sembraStima ? (
+                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold text-muted">stima</span>
+                ) : null}
                 {freq !== null && freq > 1 && importo !== null ? (
                   <span className="text-muted">{`= ${formatNumero(importo / freq)} al mese`}</span>
                 ) : null}
               </div>
+              {bolletta && v.origine !== 'reale' ? (
+                <div className="flex flex-col items-start gap-1">
+                  <p className="text-sm text-muted">
+                    Cifra tipica per una casa, non la vostra bolletta: con la prima vera ve la correggiamo.
+                  </p>
+                  <button
+                    type="button"
+                    aria-pressed={sembraStima}
+                    onClick={() =>
+                      setVoce(v.key, {
+                        importoText: testoNumero(bolletta.stimaRicorrenza ?? 0),
+                        frequenzaText: String(bolletta.frequenzaMesi),
+                        origine: 'suggerita',
+                      })
+                    }
+                    className="text-sm font-semibold text-brand-dark"
+                  >
+                    Non lo so ancora
+                  </button>
+                </div>
+              ) : null}
             </div>
           );
         })}

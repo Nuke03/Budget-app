@@ -6,6 +6,9 @@ import { computeCheckin, meseDaControllare, mesePrecedente, type CheckinCalcolat
 import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
+import { proponiStime, type PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
+import { fondiDelleProposte, primoDelMeseDopo } from '@/lib/loadProposteStime';
+import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { Account, BudgetGoal, Checkin } from '@/lib/types';
 
 // Dopo più di questi giorni dall'ultimo controllo del saldo, il check-in lo propone prima.
@@ -26,6 +29,15 @@ export interface CheckinCaricato {
   versamenti: { userId: string; nome: string; atteso: number; versato: number }[];
   // Il passo del controllo del saldo si propone solo se l'ultimo ha più di 14 giorni.
   serveControllo: boolean;
+  // Le voci del piano che le spese reali smentiscono (vuote se il mese è già fatto o non c'è un piano).
+  proposte: PropostaStima[];
+  // Il piano in vigore, a cui si applica una stima, e le versioni che partono dopo il mese corrente.
+  pianoAttuale: PlanBundle | null;
+  pianiFuturi: PlanBundle[];
+  // L'obiettivo collegato a ogni voce da aggiornare, per id della voce.
+  fondiPerVoce: Record<string, BudgetGoal>;
+  // Il primo del mese dopo: da lì parte la quota nuova.
+  validoDalStima: string;
 }
 
 // Giorni di calendario fra due date YYYY-MM-DD.
@@ -62,6 +74,11 @@ export async function loadCheckin(
     nomi,
     versamenti: [],
     serveControllo,
+    proposte: [],
+    pianoAttuale: null,
+    pianiFuturi: [],
+    fondiPerVoce: {},
+    validoDalStima: primoDelMeseDopo(now),
   };
 
   // Il check-in è della casa: basta che un membro abbia la riga del mese (chi è entrato dopo non l'ha).
@@ -100,8 +117,19 @@ export async function loadCheckin(
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
+  // Le spese sono già lette: le stime si confrontano con quelle, senza altre query.
+  const meseCorrente = meseRomaISO(now);
+  const pianoAttuale = pianoInVigore(dati.piani, meseCorrente);
+  const proposte = pianoAttuale
+    ? proponiStime({ voci: pianoAttuale.items, spese: dati.transazioni, inizioPiano: pianoAttuale.plan.validoDal, oggi })
+    : [];
+
   return {
     ...vuoto,
+    proposte,
+    pianoAttuale,
+    pianiFuturi: dati.piani.filter((p) => p.plan.validoDal > meseCorrente),
+    fondiPerVoce: pianoAttuale ? fondiDelleProposte(proposte, pianoAttuale, dati.aggiunta.obiettivi) : {},
     stato: 'da_fare',
     mese,
     calcolo,

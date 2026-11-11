@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PlanBundle } from '@/lib/data/householdPlans';
-import type { HouseholdMember } from '@/lib/types';
+import type { PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
+import type { BudgetGoal, HouseholdMember } from '@/lib/types';
+import { CardStima } from '../CardStima';
 import { PianoAttuale } from './PianoAttuale';
 import { QuotaWizard } from './QuotaWizard';
 
@@ -14,6 +16,10 @@ export function QuotaClient({
   membri,
   piani,
   slotMassimo,
+  proposte = [],
+  fondiPerVoce = {},
+  validoDalStima = '',
+  programmata = false,
 }: {
   householdId: string;
   meUserId: string;
@@ -21,6 +27,11 @@ export function QuotaClient({
   membri: HouseholdMember[];
   piani: PlanBundle[];
   slotMassimo: number;
+  // Le voci che le spese reali smentiscono, con l'obiettivo collegato a ciascuna e il mese da cui parte la quota nuova.
+  proposte?: PropostaStima[];
+  fondiPerVoce?: Record<string, BudgetGoal>;
+  validoDalStima?: string;
+  programmata?: boolean;
 }) {
   const pianoAttuale = piani[0] ?? null;
   const router = useRouter();
@@ -30,7 +41,21 @@ export function QuotaClient({
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
       <h1 className="text-2xl font-bold">Calcola la nostra quota</h1>
       {pianoAttuale && !modifica ? (
-        <PianoAttuale bundle={pianoAttuale} meseCorrente={meseCorrente} onRivedi={() => setModifica(true)} />
+        <>
+          {proposte.map((p) => (
+            <CardStima
+              key={p.itemId}
+              proposta={p}
+              bundle={pianoAttuale}
+              goal={fondiPerVoce[p.itemId] ?? null}
+              householdId={householdId}
+              validoDal={validoDalStima}
+              programmata={programmata}
+              onFatto={() => router.refresh()}
+            />
+          ))}
+          <PianoAttuale bundle={pianoAttuale} meseCorrente={meseCorrente} onRivedi={() => setModifica(true)} />
+        </>
       ) : (
         <QuotaWizard
           householdId={householdId}
