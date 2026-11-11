@@ -57,6 +57,8 @@ function segnaRegistrato(id: string) {
   }
 }
 
+const MESSAGGIO_SALDO = 'Spesa registrata, il saldo del conto non si è aggiornato: riprova.';
+
 function salvaModo(modo: Modo) {
   try {
     window.localStorage.setItem(CHIAVE_MODO, modo);
@@ -104,6 +106,8 @@ export function AddTransactionSheet({
   const [modoScelto, setModoScelto] = useState<Modo | null>(null);
   // L'importo già scritto resta quando si cambia spazio (il modulo si ricrea).
   const [importoBozza, setImportoBozza] = useState('');
+  // La riga è creata ma il saldo del conto non si è aggiornato: i campi si bloccano finché non riesce.
+  const [saldoInSospeso, setSaldoInSospeso] = useState<{ id: string | null; payload: Payload } | null>(null);
 
   if (!aperto) return null;
 
@@ -119,63 +123,63 @@ export function AddTransactionSheet({
     salvaModo(m);
   }
 
-  async function salvaPersonale(payload: Payload): Promise<string | null> {
+  // Crea solo la riga; il saldo si aggiorna dopo, in un passo a parte che si può ripetere da solo.
+  async function creaPersonale(payload: Payload): Promise<string | null> {
     if (!personale) return null;
-    const supabase = createClient();
-    const creata = await createTransaction(supabase, {
+    const creata = await createTransaction(createClient(), {
       ...payload,
       data: format(new Date(), 'yyyy-MM-dd'),
       nota: null,
     });
-
-    if (payload.accountId) {
-      // Per differenza: il saldo può essere cambiato altrove (casa, rimborsi) dopo che questa pagina l'ha letto.
-      await adjustAccountBalance(
-        supabase,
-        payload.accountId,
-        payload.tipo === 'income' ? payload.importo : -payload.importo
-      );
-    }
     return creata?.id ?? null;
   }
 
-  async function salvaCasa(payload: Payload): Promise<string | null> {
+  async function creaCasa(payload: Payload): Promise<string | null> {
     if (!casa) return null;
     const supabase = createClient();
     const conPersonale =
       payload.tipo === 'expense' &&
       !!payload.accountId &&
       contiPersonali.some((a) => a.id === payload.accountId);
-    if (conPersonale && payload.accountId) {
-      // Anticipata con la propria carta: il credito verso la casa nasce dalla spesa, il saldo scalato è quello personale.
-      const anticipata = await createTransaction(
-        supabase,
-        { ...payload, data: oggiRomaISO(), nota: null, pagataDaUserId: meUserId ?? casa.meUserId },
-        scopeCasa(casa.householdId)
-      );
-      await adjustAccountBalance(supabase, payload.accountId, -payload.importo);
-      return anticipata?.id ?? null;
-    }
+    // Anticipata con la propria carta: il credito verso la casa nasce dalla spesa, il saldo scalato è quello personale.
     const creata = await createTransaction(
       supabase,
-      { ...payload, data: oggiRomaISO(), nota: null },
+      {
+        ...payload,
+        data: oggiRomaISO(),
+        nota: null,
+        ...(conPersonale ? { pagataDaUserId: meUserId ?? casa.meUserId } : {}),
+      },
       scopeCasa(casa.householdId)
     );
-    if (payload.accountId) {
-      await adjustAccountBalance(
-        supabase,
-        payload.accountId,
-        payload.tipo === 'income' ? payload.importo : -payload.importo
-      );
-    }
     return creata?.id ?? null;
   }
 
+  async function aggiornaSaldo(payload: Payload) {
+    if (!payload.accountId) return;
+    // Per differenza: il saldo può essere cambiato altrove (casa, rimborsi) dopo che questa pagina l'ha letto.
+    await adjustAccountBalance(
+      createClient(),
+      payload.accountId,
+      payload.tipo === 'income' ? payload.importo : -payload.importo
+    );
+  }
+
   async function handleSubmit(payload: Payload) {
-    const id = modo === 'casa' ? await salvaCasa(payload) : await salvaPersonale(payload);
-    salvaConto(modo, payload.accountId);
-    if (id) segnaRegistrato(id);
-    onSaved(id ?? '');
+    // Se la riga è già creata e solo il saldo è fallito, si ripete solo il saldo: niente doppioni.
+    let registrata = saldoInSospeso;
+    if (!registrata) {
+      const id = modo === 'casa' ? await creaCasa(payload) : await creaPersonale(payload);
+      registrata = { id, payload };
+      setSaldoInSospeso(registrata);
+    }
+    await aggiornaSaldo(registrata.payload);
+    setSaldoInSospeso(null);
+    salvaConto(modo, registrata.payload.accountId);
+    if (registrata.id) {
+      segnaRegistrato(registrata.id);
+      onSaved(registrata.id);
+    }
     onClose();
   }
 
@@ -235,6 +239,8 @@ export function AddTransactionSheet({
           preselezionaObiettivo
           nota={notaCasa}
           veloce
+          bloccato={!!saldoInSospeso}
+          erroreMessaggio={saldoInSospeso ? MESSAGGIO_SALDO : undefined}
           storico={storico}
           contoIniziale={leggiConto('casa')}
           spazio={spazio}
@@ -250,6 +256,8 @@ export function AddTransactionSheet({
           goals={personale.goals}
           onCreateGoal={handleCreateGoal}
           veloce
+          bloccato={!!saldoInSospeso}
+          erroreMessaggio={saldoInSospeso ? MESSAGGIO_SALDO : undefined}
           storico={storico}
           contoIniziale={leggiConto('personale')}
           spazio={spazio}

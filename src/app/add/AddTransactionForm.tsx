@@ -81,6 +81,8 @@ export function AddTransactionForm({
   spazio,
   importoIniziale = '',
   onImportoChange,
+  bloccato = false,
+  erroreMessaggio,
 }: {
   categories: Category[];
   accounts: Account[];
@@ -109,6 +111,9 @@ export function AddTransactionForm({
   spazio?: SpazioScelta;
   importoIniziale?: string;
   onImportoChange?: (importo: string) => void;
+  // Aggiunta veloce: importo e scelte non si toccano (c'è un salvataggio a metà da finire).
+  bloccato?: boolean;
+  erroreMessaggio?: string;
 }) {
   const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? 'expense');
   const [importo, setImporto] = useState(initial ? String(initial.importo) : importoIniziale);
@@ -304,6 +309,7 @@ export function AddTransactionForm({
             inputMode="decimal"
             placeholder="0"
             step="any"
+            readOnly={bloccato}
             autoFocus
             value={importo}
             onChange={(e) => cambiaImporto(e.target.value)}
@@ -319,6 +325,7 @@ export function AddTransactionForm({
               {r.attivo ? (
                 <button
                   type="button"
+                  disabled={bloccato}
                   aria-expanded={pezzoAperto === r.id}
                   onClick={() => apriPezzo(r.id)}
                   className={`min-h-11 rounded-[var(--radius-sm)] px-2.5 font-semibold underline decoration-rule decoration-2 underline-offset-4 ${
@@ -518,7 +525,7 @@ export function AddTransactionForm({
         {status === 'error' && (
           <p role="alert" className="flex items-center justify-center gap-2 text-sm font-medium text-danger">
             <AlertCircle size={18} />
-            Salvataggio fallito, controlla la connessione e riprova.
+            {erroreMessaggio ?? 'Salvataggio fallito, controlla la connessione e riprova.'}
           </p>
         )}
       </form>

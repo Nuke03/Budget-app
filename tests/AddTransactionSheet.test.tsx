@@ -445,6 +445,25 @@ describe('AddTransactionSheet', () => {
     expect(screen.getByText('Salva')).not.toBeDisabled();
   });
 
+  it('se il saldo non si aggiorna, riprovare non crea un doppione e finisce il salvataggio', async () => {
+    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+    apri({ modoIniziale: 'personale', onSaved, onClose });
+    compila('8');
+    await screen.findByText(/il saldo del conto non si è aggiornato/);
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Importo')).toHaveAttribute('readonly');
+    expect(pezzo('Conto mio')).toBeDisabled();
+    fireEvent.click(screen.getByText('Salva'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
+    expect(createTransaction).toHaveBeenCalledTimes(1);
+    expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
+    expect(adjustAccountBalance).toHaveBeenLastCalledWith(expect.anything(), 'ap', -8);
+    expect(window.sessionStorage.getItem('libretto:registrato')).toBe('t-nuova');
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('cambiando spazio l importo scritto resta', () => {
     apri({ modoIniziale: 'personale' });
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '15' } });
