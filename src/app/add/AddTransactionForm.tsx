@@ -214,7 +214,9 @@ export function AddTransactionForm({
   const importoNumerico = Number(importo);
   const contoMancante = contoDaScegliere && contiVisibili.length > 0 && accountId === null;
   const isValid = veloce
-    ? importo.trim() !== '' && !Number.isNaN(importoNumerico) && importoNumerico > 0 && !contoMancante && !inCorso
+    ? bloccato
+      ? !inCorso
+      : importo.trim() !== '' && !Number.isNaN(importoNumerico) && importoNumerico > 0 && !contoMancante && !inCorso
     : importo.trim() !== '' && !Number.isNaN(importoNumerico) && descrizione.trim() !== '' && !contoMancante;
 
   const nuovoGoalImportoNumerico = Number(nuovoGoalImporto);
@@ -458,6 +460,7 @@ export function AddTransactionForm({
         {!notaAperta ? (
           <button
             type="button"
+            disabled={bloccato}
             onClick={() => setNotaAperta(true)}
             className="min-h-11 self-center rounded-[var(--radius-sm)] px-3 text-sm font-semibold text-ink-2 underline decoration-rule decoration-2 underline-offset-4"
           >
@@ -472,6 +475,7 @@ export function AddTransactionForm({
                 type="text"
                 placeholder="Es. Spesa al supermercato"
                 value={descrizione}
+                readOnly={bloccato}
                 onChange={(e) => setDescrizione(e.target.value)}
                 className="min-h-11 rounded-[var(--radius-md)] border border-rule bg-surface px-4 py-3 text-base text-foreground outline-none focus-visible:border-brand"
               />
@@ -487,6 +491,7 @@ export function AddTransactionForm({
                       <button
                         key={g.id}
                         type="button"
+                        disabled={bloccato}
                         aria-pressed={isSelected}
                         onClick={() => {
                           setGoalToccato(true);
@@ -509,7 +514,7 @@ export function AddTransactionForm({
           disabled={!isValid}
           className="min-h-12 rounded-[var(--radius-md)] bg-brand py-3.5 text-base font-semibold text-brand-foreground disabled:opacity-40"
         >
-          {submitLabel}
+          {bloccato ? 'Riprova' : submitLabel}
         </button>
 
         {onCancel && (
@@ -522,7 +527,7 @@ export function AddTransactionForm({
           </button>
         )}
 
-        {status === 'error' && (
+        {(status === 'error' || (bloccato && !!erroreMessaggio)) && (
           <p role="alert" className="flex items-center justify-center gap-2 text-sm font-medium text-danger">
             <AlertCircle size={18} />
             {erroreMessaggio ?? 'Salvataggio fallito, controlla la connessione e riprova.'}

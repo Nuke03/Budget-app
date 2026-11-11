@@ -165,6 +165,12 @@ export function AddTransactionSheet({
     );
   }
 
+  // Chiudendo con il saldo ancora da aggiornare la riga è già salvata: la Home va aggiornata.
+  function chiudi() {
+    if (saldoInSospeso?.id) onSaved(saldoInSospeso.id);
+    onClose();
+  }
+
   async function handleSubmit(payload: Payload) {
     // Se la riga è già creata e solo il saldo è fallito, si ripete solo il saldo: niente doppioni.
     let registrata = saldoInSospeso;
@@ -224,7 +230,7 @@ export function AddTransactionSheet({
     : undefined;
 
   return (
-    <FoglioInferiore titolo="Nuova transazione" onClose={onClose}>
+    <FoglioInferiore titolo="Nuova transazione" onClose={chiudi}>
       {modo === 'casa' && casa ? (
         <AddTransactionForm
           key="casa"

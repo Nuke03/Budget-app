@@ -455,13 +455,37 @@ describe('AddTransactionSheet', () => {
     expect(onSaved).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Importo')).toHaveAttribute('readonly');
     expect(pezzo('Conto mio')).toBeDisabled();
-    fireEvent.click(screen.getByText('Salva'));
+    expect(screen.getByText('Aggiungi una nota')).toBeDisabled();
+    fireEvent.click(screen.getByText('Riprova'));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
     expect(createTransaction).toHaveBeenCalledTimes(1);
     expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
     expect(adjustAccountBalance).toHaveBeenLastCalledWith(expect.anything(), 'ap', -8);
     expect(window.sessionStorage.getItem('libretto:registrato')).toBe('t-nuova');
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('chiudendo con il saldo da aggiornare Home si aggiorna; riaprendo c è il messaggio e Riprova funziona', async () => {
+    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+    const props = { modoIniziale: 'personale' as const, onSaved, onClose };
+    const { rerender } = apri(props);
+    compila('8');
+    await screen.findByText(/il saldo del conto non si è aggiornato/);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chiudi' })[0]);
+    expect(onSaved).toHaveBeenCalledWith('t-nuova');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    const el = (aperto: boolean) => (
+      <AddTransactionSheet aperto={aperto} onClose={onClose} personale={personale} casa={casa} meUserId="u1" modoIniziale="personale" onSaved={onSaved} />
+    );
+    rerender(el(false));
+    rerender(el(true));
+    expect(screen.getByText(/il saldo del conto non si è aggiornato/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Riprova'));
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledTimes(2));
+    expect(createTransaction).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
   });
 
   it('cambiando spazio l importo scritto resta', () => {
