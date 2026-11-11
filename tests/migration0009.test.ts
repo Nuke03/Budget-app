@@ -34,7 +34,8 @@ describe('migrazione 0009 (statica)', () => {
     expect(codice).toMatch(/create table if not exists public\.promemoria_utente/);
     expect(codice).toMatch(/alter table public\.promemoria_utente enable row level security/);
     expect(codice).toMatch(/on public\.promemoria_utente[\s\S]*?user_id = \(select auth\.uid\(\)\)/);
-    for (const col of ['notifiche_attive', 'ultima_spese_il', 'ultima_checkin_il', 'ultimo_versamento_mese', 'nessuna_spesa_fino_al']) {
+    expect(codice).toMatch(/ultima_notifica_il date/);
+    for (const col of ['notifiche_attive', 'ultima_spese_il', 'ultima_checkin_il', 'ultimo_versamento_mese', 'nessuna_spesa_fino_al', 'ultima_notifica_il']) {
       expect(codice).toContain(col);
     }
   });

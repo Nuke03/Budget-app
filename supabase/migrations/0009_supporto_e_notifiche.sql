@@ -27,7 +27,8 @@ create table if not exists public.promemoria_utente (
   ultima_spese_il date,
   ultima_checkin_il date,
   ultimo_versamento_mese date,
-  nessuna_spesa_fino_al date
+  nessuna_spesa_fino_al date,
+  ultima_notifica_il date
 );
 
 create index if not exists push_iscrizioni_user_idx on public.push_iscrizioni (user_id);
