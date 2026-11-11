@@ -103,13 +103,13 @@ export function PassoDivisione({ b }: { b: BozzaQuota }) {
                     {risultato.persone.map((q) => (
                       <li key={q.slot} className="flex justify-between gap-3">
                         <span>{q.nome}</span>
-                        <span className="font-bold">{euro(q.quota)}</span>
+                        <span className="num font-bold">{euro(q.quota)}</span>
                       </li>
                     ))}
                     {quoteFisse.map((f) => (
                       <li key={`fissa-${f.slot}`} className="flex justify-between gap-3 text-muted">
                         <span>{`${f.nome}, fino a ${f.finoA}`}</span>
-                        <span className="font-bold">{euro(f.quota)}</span>
+                        <span className="num font-bold">{euro(f.quota)}</span>
                       </li>
                     ))}
                   </ul>
@@ -118,7 +118,7 @@ export function PassoDivisione({ b }: { b: BozzaQuota }) {
                     {risultato.persone.map((q) => (
                       <li key={q.slot} className="flex justify-between gap-3">
                         <span>{q.nome}</span>
-                        <span>{q.resta === null ? '—' : euro(q.resta)}</span>
+                        <span className="num">{q.resta === null ? '—' : euro(q.resta)}</span>
                       </li>
                     ))}
                   </ul>

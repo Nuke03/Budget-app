@@ -91,7 +91,7 @@ export function PianoAttuale({
       <section className={carta} data-testid="totale">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm">
-            Totale da versare ogni mese: <span className="font-bold">{formatNumero(plan.totaleMensile)} €</span>
+            Totale da versare ogni mese: <span className="num font-bold">{formatNumero(plan.totaleMensile)} €</span>
           </p>
           <ComeSiCalcola spiegazione={spiegazioneTotale} />
         </div>
@@ -107,7 +107,7 @@ export function PianoAttuale({
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">{s.displayName}</span>
                   {s.quotaMensile > 0 ? (
-                    <span className="text-sm font-bold">{formatNumero(s.quotaMensile)} € al mese</span>
+                    <span className="num text-sm font-bold">{formatNumero(s.quotaMensile)} € al mese</span>
                   ) : (
                     <span className="text-sm text-muted">Nessun versamento in questo periodo</span>
                   )}

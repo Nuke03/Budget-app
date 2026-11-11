@@ -37,7 +37,7 @@ export function ComeSiCalcola({ spiegazione, className }: { spiegazione: Spiegaz
               {spiegazione.ingredienti.map((ing) => (
                 <li key={ing.etichetta} className="flex justify-between gap-3">
                   <span className="text-muted">{ing.etichetta}</span>
-                  <span className="font-semibold">{formatIngrediente(ing.etichetta, ing.valore)}</span>
+                  <span className="num font-semibold">{formatIngrediente(ing.etichetta, ing.valore)}</span>
                 </li>
               ))}
             </ul>

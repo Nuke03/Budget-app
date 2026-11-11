@@ -142,7 +142,7 @@ export function AccountRow({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="text-sm text-muted">
+          <p className="num text-sm text-muted">
             {formatEuro(account.saldoAttuale)} / {formatEuro(account.targetSaldo!)}
           </p>
         </div>

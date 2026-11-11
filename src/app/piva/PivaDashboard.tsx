@@ -37,7 +37,7 @@ export function PivaDashboard({
         </p>
         <div className="mt-5 h-px bg-brand-foreground/15" />
         <p className="mt-5 text-sm text-brand-foreground/85">
-          Quota mensile suggerita: <span className="font-semibold">{formatEuro(quotaMensileSuggerita)}</span>
+          Quota mensile suggerita: <span className="num font-semibold">{formatEuro(quotaMensileSuggerita)}</span>
         </p>
       </section>
 

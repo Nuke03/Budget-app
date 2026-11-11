@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { testoSu, CATEGORY_COLORS } from '../src/lib/categoryColors';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(join(process.cwd(), 'src/app/globals.css'), 'utf8');
@@ -38,8 +39,8 @@ function contrasto(a: string, b: string): number {
 }
 
 type Coppia = [string, string] | [string, string, number];
-const CHIARO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['muted','background'],['brand-foreground','brand'],['brand','surface'],['stamp','surface',3]];
-const SCURO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['brand-dark','surface']];
+const CHIARO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['muted','background'],['brand-foreground','brand'],['brand','surface'],['stamp','surface',3],['on-cat','cat-sky']];
+const SCURO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['brand-dark','surface'],['stamp','surface',3],['brand-foreground','brand'],['on-cat','cat-sky']];
 
 describe('contrasto dei token', () => {
   it.each(CHIARO)('chiaro %s su %s', (fg, bg, min = 4.5) => {
@@ -61,5 +62,21 @@ describe('cifre', () => {
     expect(body).not.toContain('tabular-nums');
     const num = /\.num\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
     expect(num).toContain('tabular-nums lining-nums');
+  });
+});
+
+describe('testoSu', () => {
+  it('inchiostro sui chiari, bianco sugli scuri', () => {
+    expect(testoSu('#F5A524')).toBe('#14213d');
+    expect(testoSu('#3B9AE1')).toBe('#14213d');
+    expect(testoSu('#92400E')).toBe('#ffffff');
+    expect(testoSu('#8B5CF6')).toBe('#ffffff');
+    expect(testoSu('non-un-colore')).toBe('#ffffff');
+  });
+  it('ogni colore della palette ha almeno 4:1 col testo scelto (Viola 4,2 e il meglio possibile)', () => {
+    for (const c of CATEGORY_COLORS) {
+      const t = testoSu(c.value);
+      expect(contrasto(t, c.value), c.name).toBeGreaterThanOrEqual(4);
+    }
   });
 });

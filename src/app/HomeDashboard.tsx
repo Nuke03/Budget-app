@@ -106,7 +106,7 @@ export function HomeDashboard({
         </p>
         <div className="mt-5 h-px bg-brand-foreground/15" />
         <p className="mt-5 text-sm text-brand-foreground/85">
-          Margine sicuro: <span className="font-semibold">{formatEuro(margineGiornaliero)}</span>
+          Margine sicuro: <span className="num font-semibold">{formatEuro(margineGiornaliero)}</span>
           /giorno fino al {formatDateIt(dataTarget)}
         </p>
       </section>
