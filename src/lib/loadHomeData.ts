@@ -47,6 +47,8 @@ export interface HomeData {
   andamento: Andamento;
   consiglio: Consiglio;
   prossimo: Prossimo | null;
+  // I giorni senza niente di segnato (la pagina "in pari"); null se si è in pari.
+  inPari: { dal: string; al: string } | null;
   // null: non ha ancora risposto (o non si legge).
   notificheAttive: boolean | null;
 }
@@ -168,6 +170,7 @@ export async function loadHomeData(
     andamento,
     consiglio,
     prossimo,
+    inPari,
     notificheAttive: scelte.notificheAttive,
   };
 }
