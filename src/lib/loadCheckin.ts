@@ -61,6 +61,13 @@ export async function loadCheckin(
   const da = dati.controlli.ultimoControllo ?? riferimentoControllo(casa.me.joinedAt, conti);
   const serveControllo = conti.length > 0 && giorniTra(da, oggi) > GIORNI_CONTROLLO;
 
+  // Le spese sono già lette: le stime si confrontano con quelle, senza altre query. Valgono anche a mese fatto.
+  const meseCorrente = meseRomaISO(now);
+  const pianoAttuale = pianoInVigore(dati.piani, meseCorrente);
+  const proposte = pianoAttuale
+    ? proponiStime({ voci: pianoAttuale.items, spese: dati.transazioni, inizioPiano: pianoAttuale.plan.validoDal, oggi })
+    : [];
+
   const vuoto: CheckinCaricato = {
     stato: 'nessun_mese',
     householdId,
@@ -74,10 +81,10 @@ export async function loadCheckin(
     nomi,
     versamenti: [],
     serveControllo,
-    proposte: [],
-    pianoAttuale: null,
-    pianiFuturi: [],
-    fondiPerVoce: {},
+    proposte,
+    pianoAttuale,
+    pianiFuturi: dati.piani.filter((p) => p.plan.validoDal > meseCorrente),
+    fondiPerVoce: pianoAttuale ? fondiDelleProposte(proposte, pianoAttuale, dati.aggiunta.obiettivi) : {},
     validoDalStima: primoDelMeseDopo(now),
   };
 
@@ -117,19 +124,8 @@ export async function loadCheckin(
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
-  // Le spese sono già lette: le stime si confrontano con quelle, senza altre query.
-  const meseCorrente = meseRomaISO(now);
-  const pianoAttuale = pianoInVigore(dati.piani, meseCorrente);
-  const proposte = pianoAttuale
-    ? proponiStime({ voci: pianoAttuale.items, spese: dati.transazioni, inizioPiano: pianoAttuale.plan.validoDal, oggi })
-    : [];
-
   return {
     ...vuoto,
-    proposte,
-    pianoAttuale,
-    pianiFuturi: dati.piani.filter((p) => p.plan.validoDal > meseCorrente),
-    fondiPerVoce: pianoAttuale ? fondiDelleProposte(proposte, pianoAttuale, dati.aggiunta.obiettivi) : {},
     stato: 'da_fare',
     mese,
     calcolo,

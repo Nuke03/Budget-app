@@ -311,7 +311,8 @@ describe('QuotaWizard: passi 2 e 3', () => {
     expect(screen.getAllByText('stima')).toHaveLength(3);
     expect(screen.getAllByText('Cifra tipica per una casa, non la vostra bolletta: con la prima vera ve la correggiamo.')).toHaveLength(3);
     expect(screen.getByLabelText('Importo Acqua')).toHaveValue('60');
-    expect(screen.getAllByRole('button', { name: 'Non lo so ancora' })).toHaveLength(3);
+    // Già una stima: l'opzione non serve.
+    expect(screen.queryByRole('button', { name: 'Non lo so ancora' })).not.toBeInTheDocument();
   });
 
   it('scrivere una cifra toglie "stima"; "Non lo so ancora" rimette quella tipica, che resta nel totale', () => {

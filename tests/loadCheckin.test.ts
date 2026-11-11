@@ -130,6 +130,21 @@ describe('loadCheckin', () => {
     expect(r.chi).toBe('Anna');
   });
 
+  it('le stime ci sono anche a check-in fatto', async () => {
+    const luce = { ...voce('i1', 55, 2), nome: 'Luce', categoria_id: 'c1', origine_stima: 'suggerita', goal_id: 'g2', importo_ricorrenza: 110 };
+    const r = await carica(
+      base({
+        household_plan_items: [luce],
+        transactions: [spesa('s1', 1161, '2026-10-12'), { ...spesa('s2', 142, '2026-10-05'), categoria_id: 'c1' }],
+        household_checkins: [checkin('2026-10-01', 'avanzo')],
+      }),
+    );
+    expect(r.stato).toBe('fatto');
+    expect(r.proposte).toHaveLength(1);
+    expect(r.pianoAttuale?.plan.validoDal).toBe('2026-10-01');
+    expect(r.fondiPerVoce.i1.id).toBe('g2');
+  });
+
   it('un membro senza riga del mese vede comunque "Fatto da ..." se il check-in esiste', async () => {
     const db = createFakeDb(base({ household_checkins: [checkin('2026-10-01', 'avanzo')] }), { userId: 'C', membri: { H1: ['A', 'B', 'C'] } });
     const C = { ...membro('C', 'Carla', 3), joinedAt: '2026-11-03T00:00:00Z' };

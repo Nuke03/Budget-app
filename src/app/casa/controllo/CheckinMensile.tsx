@@ -93,6 +93,7 @@ export function CheckinMensile({ dati }: { dati: CheckinCaricato }) {
           </p>
           <p className="text-sm font-semibold">{fraseEsito(f)}</p>
         </section>
+        <CardStimaCheckin dati={dati} />
         <Link href="/casa" className={CLASSE_LINK}>
           Torna alla casa
         </Link>
@@ -116,6 +117,24 @@ export function CheckinMensile({ dati }: { dati: CheckinCaricato }) {
   return <Passo dati={dati} mese={dati.mese} nomeDelMese={nomeDelMese} />;
 }
 
+// Una sola card per volta, a check-in fatto: le altre arrivano alla prossima.
+function CardStimaCheckin({ dati }: { dati: CheckinCaricato }) {
+  const router = useRouter();
+  const proposta = dati.proposte[0] ?? null;
+  if (!proposta || !dati.pianoAttuale) return null;
+  return (
+    <CardStima
+      proposta={proposta}
+      bundle={dati.pianoAttuale}
+      goal={dati.fondiPerVoce[proposta.itemId] ?? null}
+      householdId={dati.householdId}
+      validoDal={dati.validoDalStima}
+      programmata={dati.pianiFuturi.length > 0}
+      onFatto={() => router.refresh()}
+    />
+  );
+}
+
 function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: string; nomeDelMese: string }) {
   const router = useRouter();
   const calcolo = dati.calcolo!;
@@ -128,8 +147,6 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
   // Il doppio tocco arriva prima che React ridisegni: lo blocca un ref, non lo stato.
   const occupato = useRef(false);
 
-  // Una sola card per volta, dopo il Fatto: le altre arrivano alla prossima.
-  const proposta = dati.proposte[0] ?? null;
   const conAvanzo = calcolo.esito === 'avanzo';
   const valido = !conAvanzo || scelta !== 'nuova' || nuovaCosa.trim() !== '';
   const fondoValido = scelta !== 'fondo' || goalId !== '';
@@ -251,18 +268,6 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
       <button type="submit" disabled={!valido || !fondoValido || inCorso} className={CLASSE_PRIMARIO}>
         {`Fatto, a ${nomeMese(meseSuccessivo(mese))}`}
       </button>
-
-      {proposta && dati.pianoAttuale ? (
-        <CardStima
-          proposta={proposta}
-          bundle={dati.pianoAttuale}
-          goal={dati.fondiPerVoce[proposta.itemId] ?? null}
-          householdId={dati.householdId}
-          validoDal={dati.validoDalStima}
-          programmata={dati.pianiFuturi.length > 0}
-          onFatto={() => router.refresh()}
-        />
-      ) : null}
 
       {calcolo.secondoAmmanco ? (
         <section className={CLASSE_SCHEDA}>

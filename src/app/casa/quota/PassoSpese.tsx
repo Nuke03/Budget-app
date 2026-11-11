@@ -87,9 +87,9 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                   <p className="text-sm text-muted">
                     Cifra tipica per una casa, non la vostra bolletta: con la prima vera ve la correggiamo.
                   </p>
+                  {!sembraStima ? (
                   <button
                     type="button"
-                    aria-pressed={sembraStima}
                     onClick={() =>
                       setVoce(v.key, {
                         importoText: testoNumero(bolletta.stimaRicorrenza ?? 0),
@@ -101,6 +101,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                   >
                     Non lo so ancora
                   </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>

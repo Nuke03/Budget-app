@@ -118,35 +118,53 @@ const pianoStime: PlanBundle = {
     { planId: 'p1', slot: 2, userId: 'u2', displayName: 'Anna', redditoNettoMensile: 1000, redditoIrregolare: false, percentuale: null, inCasaDal: null, esceDal: null, quotaMensile: 604 },
   ],
 };
+const fattoDa: Partial<CheckinCaricato> = {
+  stato: 'fatto', calcolo: null, chi: 'Anna',
+  fatto: {
+    id: 'c1', householdId: 'h1', mese: '2026-10-01', userId: 'u2', createdAt: '2026-11-02T09:00:00Z',
+    attesoTotale: 1380, versatoTotale: 1380, previstoMensili: 1288, spesoMensili: 1161, nonRegistrate: 80,
+    avanzo: 47, esito: 'avanzo', destinazioneAvanzo: 'cuscinetto', goalId: null,
+  },
+};
 const conStime = { proposte: [propostaLuce, propostaGas], pianoAttuale: pianoStime };
 
 describe('CheckinMensile: stima contro reale', () => {
   it('nessuna proposta, nessuna card', () => {
     render(<CheckinMensile dati={dati({ pianoAttuale: pianoStime })} />);
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
   });
 
-  it('una sola card, sotto i numeri e dopo il Fatto, che non lo blocca', async () => {
-    const { container } = render(<CheckinMensile dati={dati(conStime)} />);
-    expect(screen.getAllByRole('button', { name: 'Aggiorna la stima' })).toHaveLength(1);
+  it('da fare: nessuna card, il Fatto resta libero', async () => {
+    render(<CheckinMensile dati={dati(conStime)} />);
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
+  });
+
+  it('a check-in fatto: una sola card sotto "Fatto da ..."', () => {
+    const { container } = render(<CheckinMensile dati={dati({ ...conStime, ...fattoDa })} />);
+    expect(screen.getByText('Fatto da Anna il 2 novembre.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Usa 71 € al mese' })).toHaveLength(1);
     expect(screen.getByText(/^Luce: avete previsto 55 €/)).toBeInTheDocument();
     expect(screen.queryByText(/^Gas: avete previsto/)).not.toBeInTheDocument();
-    const fatto = screen.getByRole('button', { name: 'Fatto, a novembre' });
-    const card = screen.getByRole('button', { name: 'Aggiorna la stima' });
+    const fatto = screen.getByText('Fatto da Anna il 2 novembre.');
+    const card = screen.getByRole('button', { name: 'Usa 71 € al mese' });
     expect(fatto.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(fatto).toBeEnabled();
-    fireEvent.click(fatto);
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
     assertNessunaParolaVietata(container);
   });
 
+  it('a check-in fatto senza proposte: nessuna card', () => {
+    render(<CheckinMensile dati={dati({ pianoAttuale: pianoStime, ...fattoDa })} />);
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
+  });
+
   it('con una modifica già programmata la card rimanda a Rivedi la quota', () => {
-    render(<CheckinMensile dati={dati({ ...conStime, pianiFuturi: [pianoStime] })} />);
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    render(<CheckinMensile dati={dati({ ...conStime, ...fattoDa, pianiFuturi: [pianoStime] })} />);
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Rivedi la quota' })).toHaveAttribute('href', '/casa/quota');
   });
 
-  it('dopo il secondo ammanco il link alle stime reali porta alla lista nella pagina quota', () => {
+  it('dopo il secondo ammanco il link alle stime reali porta alla pagina quota', () => {
     const { calcolo, versamenti } = scenario({ speso: 1370, nonRegistrate: 0, precedente: 'ammanco' });
     render(<CheckinMensile dati={dati({ ...conStime, calcolo, versamenti })} />);
     expect(screen.getByRole('link', { name: 'Guarda le stime reali' })).toHaveAttribute('href', '/casa/quota');

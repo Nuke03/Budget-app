@@ -36,13 +36,14 @@ export function QuotaClient({
   const pianoAttuale = piani[0] ?? null;
   const router = useRouter();
   const [modifica, setModifica] = useState(false);
+  const [altre, setAltre] = useState(false);
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
       <h1 className="text-2xl font-bold">Calcola la nostra quota</h1>
       {pianoAttuale && !modifica ? (
         <>
-          {proposte.map((p) => (
+          {(altre ? proposte : proposte.slice(0, 1)).map((p) => (
             <CardStima
               key={p.itemId}
               proposta={p}
@@ -54,6 +55,11 @@ export function QuotaClient({
               onFatto={() => router.refresh()}
             />
           ))}
+          {!altre && proposte.length > 1 ? (
+            <button type="button" onClick={() => setAltre(true)} className="self-start text-sm font-semibold text-brand-dark">
+              {`Altre ${proposte.length - 1} ${proposte.length - 1 === 1 ? 'stima' : 'stime'} da rivedere`}
+            </button>
+          ) : null}
           <PianoAttuale bundle={pianoAttuale} meseCorrente={meseCorrente} onRivedi={() => setModifica(true)} />
         </>
       ) : (

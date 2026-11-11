@@ -65,7 +65,7 @@ function spiegazione(p: PropostaStima): Spiegazione {
   };
 }
 
-// Una voce del piano che le spese vere smentiscono: due azioni, "Aggiorna la stima" e "Non ora".
+// Una voce del piano che le spese vere smentiscono: due azioni, "Usa X al mese" e "Non ora".
 export function CardStima({
   proposta,
   bundle,
@@ -152,7 +152,7 @@ export function CardStima({
             }
             className={CLASSE_PRIMARIO}
           >
-            Aggiorna la stima
+            {`Usa ${euro(proposta.nuovoMensile)} al mese`}
           </button>
         ) : null}
         <button

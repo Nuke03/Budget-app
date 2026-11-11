@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QuotaClient } from '@/app/casa/quota/QuotaClient';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
@@ -51,32 +51,40 @@ function pagina(extra: Partial<React.ComponentProps<typeof QuotaClient>> = {}) {
 }
 
 describe('QuotaClient: stima contro reale', () => {
-  it('le card stanno sopra il piano attuale, una per voce', () => {
+  it('una sola card sopra il piano attuale; le altre dietro "Altre N stime da rivedere"', () => {
     const { container } = pagina({ proposte: [proposta('i1', 'Luce'), proposta('i2', 'Gas')] });
-    expect(screen.getAllByRole('button', { name: 'Aggiorna la stima' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Usa 71 € al mese' })).toHaveLength(1);
     expect(screen.getByText(/^Luce: avete previsto/)).toBeInTheDocument();
-    expect(screen.getByText(/^Gas: avete previsto/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Gas: avete previsto/)).not.toBeInTheDocument();
     const rivedi = screen.getByRole('button', { name: 'Rivedi la quota' });
-    for (const card of screen.getAllByRole('button', { name: 'Aggiorna la stima' })) {
-      expect(card.compareDocumentPosition(rivedi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    }
+    const card = screen.getByRole('button', { name: 'Usa 71 € al mese' });
+    expect(card.compareDocumentPosition(rivedi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Altre 1 stima da rivedere' }));
+    expect(screen.getAllByRole('button', { name: 'Usa 71 € al mese' })).toHaveLength(2);
+    expect(screen.getByText(/^Gas: avete previsto/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Altre/ })).not.toBeInTheDocument();
     assertNessunaParolaVietata(container);
+  });
+
+  it('con una sola proposta non ci sono le altre', () => {
+    pagina({ proposte: [proposta('i1', 'Luce')] });
+    expect(screen.queryByRole('button', { name: /^Altre/ })).not.toBeInTheDocument();
   });
 
   it('senza proposte non ci sono card', () => {
     pagina();
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rivedi la quota' })).toBeInTheDocument();
   });
 
   it('con una modifica già programmata le card rimandano a Rivedi la quota', () => {
     pagina({ proposte: [proposta('i1', 'Luce')], programmata: true });
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Rivedi la quota' })).toHaveAttribute('href', '/casa/quota');
   });
 
   it('senza piano parte la procedura guidata, senza card', () => {
     pagina({ piani: [], proposte: [proposta('i1', 'Luce')] });
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
   });
 });

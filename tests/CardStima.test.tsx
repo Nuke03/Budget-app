@@ -109,9 +109,9 @@ describe('CardStima', () => {
     expect(screen.getByText('Ogni 2 mesi: 142 € / 2 = 71 € al mese')).toBeInTheDocument();
   });
 
-  it('"Aggiorna la stima" applica una volta sola, anche con il doppio click, poi onFatto', async () => {
+  it('"Usa 71 € al mese" applica una volta sola, anche con il doppio click, poi onFatto', async () => {
     const { onFatto } = card();
-    const b = screen.getByRole('button', { name: 'Aggiorna la stima' });
+    const b = screen.getByRole('button', { name: 'Usa 71 € al mese' });
     fireEvent.click(b);
     fireEvent.click(b);
     await waitFor(() => expect(onFatto).toHaveBeenCalledTimes(1));
@@ -136,10 +136,10 @@ describe('CardStima', () => {
   it('errore: messaggio e la card resta', async () => {
     vi.mocked(applicaStima).mockRejectedValue(new Error('boom'));
     const { onFatto } = card();
-    fireEvent.click(screen.getByRole('button', { name: 'Aggiorna la stima' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Usa 71 € al mese' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Salvataggio fallito, controlla la connessione e riprova.');
     expect(onFatto).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Aggiorna la stima' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Usa 71 € al mese' })).toBeEnabled();
   });
 
   it('errore su "Non ora": messaggio e la card resta', async () => {
@@ -150,9 +150,9 @@ describe('CardStima', () => {
     expect(screen.getByRole('button', { name: 'Non ora' })).toBeInTheDocument();
   });
 
-  it('con una modifica già programmata: niente Aggiorna, il rimando a Rivedi la quota', () => {
+  it('con una modifica già programmata: niente "Usa", il rimando a Rivedi la quota', () => {
     const { container } = card({ programmata: true });
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
     expect(container.textContent).toContain("C'è già una modifica programmata: la trovate in Rivedi la quota.");
     expect(screen.getByRole('link', { name: 'Rivedi la quota' })).toHaveAttribute('href', '/casa/quota');
     assertNessunaParolaVietata(container);
@@ -160,7 +160,7 @@ describe('CardStima', () => {
 
   it('con qualcuno in uscita il piano non si ricalcola: stessa via di uscita', () => {
     const { container } = card({ bundle: bundle('2027-01-01') });
-    expect(screen.queryByRole('button', { name: 'Aggiorna la stima' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
     expect(container.textContent).toContain("C'è già una modifica programmata: la trovate in Rivedi la quota.");
     expect(screen.queryByText(/^Con 71 €/)).not.toBeInTheDocument();
   });
