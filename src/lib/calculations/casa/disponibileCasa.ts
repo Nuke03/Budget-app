@@ -22,7 +22,7 @@ const arrotonda2 = (n: number) => Math.round(n * 100) / 100;
 // dopo quello già speso nel mese in quella categoria (mai sotto zero).
 export function computeDaPagareMese(input: {
   voci: (Pick<PlanItem, 'categoriaId' | 'importoMensile' | 'frequenzaMesi'> & { goalId?: string | null })[];
-  spese: Pick<Transaction, 'tipo' | 'importo' | 'data' | 'categoriaId'>[];
+  spese: (Pick<Transaction, 'tipo' | 'importo' | 'data' | 'categoriaId'> & { goalId?: string | null })[];
   mese: string;
   // Obiettivi aperti: sono già contati tra i soldi messi da parte (B).
   obiettiviApertiIds: string[];
@@ -40,7 +40,8 @@ export function computeDaPagareMese(input: {
   let totale = 0;
   for (const [categoriaId, previsto] of previstoPerCategoria) {
     const speso = input.spese
-      .filter((t) => t.tipo === 'expense' && t.categoriaId === categoriaId && t.data.slice(0, 7) === meseChiave)
+      // Le spese collegate a un obiettivo sono già contate tra i soldi messi da parte (B).
+      .filter((t) => t.tipo === 'expense' && !t.goalId && t.categoriaId === categoriaId && t.data.slice(0, 7) === meseChiave)
       .reduce((x, t) => x + t.importo, 0);
     totale += Math.max(0, previsto - speso);
   }

@@ -182,6 +182,13 @@ describe('spiegaDaParte', () => {
     const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
     for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
   });
+  it('un fondo una tantum non si chiama bolletta', () => {
+    const deposito = { ...tari, ricorrente: false, frequenzaMesi: null };
+    const s = spiegaDaParte({ goal: deposito, today, spesoCollegato: 0 });
+    expect(s.formula).not.toContain('Bolletta');
+    expect(s.formula).toContain('Da mettere da parte: 300 euro');
+    expect(tari.ricorrente && spiegaDaParte({ goal: tari, today, spesoCollegato: 0 }).formula).toContain('Bolletta di 300 euro');
+  });
   it('senza parole vietate', () => {
     const s = spiegaDaParte({ goal: tari, today, spesoCollegato: 20 });
     const testo = [s.formula, ...s.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();

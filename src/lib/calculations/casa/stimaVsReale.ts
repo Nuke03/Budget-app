@@ -1,4 +1,4 @@
-import type { PlanItem, Transaction } from '@/lib/types';
+import type { PlanItem, PlanShare, Transaction } from '@/lib/types';
 import type { PlanBundle, PlanQuotaInput, PlanVersionInput, PlanVoceInput } from '@/lib/data/householdPlans';
 import { calcolaQuota, calcolaTotale } from './quota';
 import { mensilizza, totaleVociMensili } from './mensilizza';
@@ -105,13 +105,16 @@ export function proponiStime(input: {
 }
 
 // La versione del piano con la voce sostituita dal valore reale; stessa regola, redditi e cuscinetto.
-// Null se qualcuno sta per uscire (le quote non si ricalcolano a freddo) o se la voce non c'è più.
+// Null se qualcuno esce dopo `validoDal` (le quote non si ricalcolano a freddo) o se la voce non c'è più.
+// Chi è già uscito prima di `validoDal` resta come riga a 0 e non entra nella divisione.
+const giaUscito = (s: PlanShare, validoDal: string): boolean => s.esceDal !== null && s.esceDal <= validoDal;
+
 export function pianoConStimaAggiornata(
   bundle: PlanBundle,
   proposta: PropostaStima,
   validoDal: string,
 ): PlanVersionInput | null {
-  if (bundle.shares.some((s) => s.esceDal !== null)) return null;
+  if (bundle.shares.some((s) => s.esceDal !== null && s.esceDal > validoDal)) return null;
   if (!bundle.items.some((i) => i.id === proposta.itemId)) return null;
 
   const voci: PlanVoceInput[] = bundle.items.map((i) => {
@@ -135,7 +138,7 @@ export function pianoConStimaAggiornata(
   const sottotot = totaleVociMensili(voci);
   const totaleMensile = calcolaTotale(sottotot, plan.cuscinettoQuotaMensile, plan.arrotondamento);
   const risultato = calcolaQuota({
-    persone: bundle.shares.map((s) => ({
+    persone: bundle.shares.filter((s) => !giaUscito(s, validoDal)).map((s) => ({
       slot: s.slot,
       nome: s.displayName,
       redditoNetto: s.redditoNettoMensile,
@@ -154,7 +157,7 @@ export function pianoConStimaAggiornata(
     redditoIrregolare: s.redditoIrregolare,
     percentuale: s.percentuale,
     inCasaDal: s.inCasaDal,
-    esceDal: null,
+    esceDal: s.esceDal,
     quotaMensile: perSlot.get(s.slot) ?? 0,
   }));
 
@@ -180,6 +183,12 @@ export function quoteDelConfronto(
     prima: s.quotaMensile,
     dopo: nuovo.quote.find((q) => q.slot === s.slot)?.quotaMensile ?? 0,
   }));
+}
+
+// Da quando contano le spese come prova di una stima: dalla prima versione del piano, non da quella in vigore.
+// Accettare una stima crea una versione nuova: se la prova ripartisse da lì, le altre stime sparirebbero.
+export function inizioProveStime(piani: PlanBundle[], fallback: string): string {
+  return piani.reduce((min, p) => (p.plan.validoDal < min ? p.plan.validoDal : min), piani[0]?.plan.validoDal ?? fallback);
 }
 
 // Il piano si aggiorna solo se non c'è già una versione che parte dopo il mese corrente.

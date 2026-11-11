@@ -118,12 +118,25 @@ describe('computeCheckin', () => {
     expect(c.spesoMensili).toBe(40);
   });
 
-  it('un obiettivo una tantum non toglie la spesa dal mensile', () => {
+  it('il primo mese in casa: la spesa del deposito, collegata al suo fondo, non dà un ammanco finto', () => {
+    const c = computeCheckin({
+      mese: MESE,
+      righePerMembro: membri([500, 500], [500, 500]),
+      piano: piano([voce('Affitto', 1000)]),
+      spese: [spesa(1000), spesa(2000, { goalId: 'DEPOSITO' }), spesa(300, { goalId: 'ARREDO' })],
+      precedente: null,
+    });
+    expect(c.spesoMensili).toBe(1000);
+    expect(c.avanzo).toBe(0);
+    expect(c.esito).toBe('in_pari');
+  });
+
+  it("un obiettivo di una voce mensile conta tra le spese del mese", () => {
     const c = computeCheckin({
       mese: MESE,
       righePerMembro: {},
-      piano: piano([voce('Affitto', 100)]),
-      spese: [spesa(70, { goalId: 'VACANZA' })],
+      piano: piano([voce('Spesa', 100, 1, 'CAT-S', 'G-SPESA')]),
+      spese: [spesa(70, { goalId: 'G-SPESA' })],
       precedente: null,
     });
     expect(c.spesoMensili).toBe(70);

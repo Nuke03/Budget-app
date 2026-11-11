@@ -136,9 +136,8 @@ ${
                     : "Se in banca c'è più di quanto registrato, la differenza è un'entrata non registrata."
                 }`,
                 ingredienti: [
-                  { etichetta: "Saldo nell'app", valore: conto.saldoAttuale },
-                  { etichetta: 'Saldo in banca', valore: dichiarato },
-                  { etichetta: 'Differenza', valore: esito.differenza },
+                  { etichetta: 'In banca', valore: dichiarato },
+                  { etichetta: "Nell'app", valore: -conto.saldoAttuale },
                 ],
               }}
             />

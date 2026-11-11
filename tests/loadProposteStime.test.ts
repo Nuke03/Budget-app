@@ -72,6 +72,16 @@ describe('loadProposteStime', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it('dopo una stima accettata (versione nuova in vigore) le altre restano proposte', async () => {
+    const { d } = db([spesa('s1', 142, '2026-10-05', 'c1'), spesa('s2', 90, '2026-10-06', 'c2')]);
+    const piani = [
+      piano('2026-01-01', [voce({}), voce({ id: 'i2', nome: 'Gas', categoriaId: 'c2', goalId: null })]),
+      piano('2026-11-01', [voce({ origineStima: 'reale' }), voce({ id: 'i2', nome: 'Gas', categoriaId: 'c2', goalId: null })]),
+    ];
+    const r = await loadProposteStime(d.client, 'H1', piani, NOW);
+    expect(r.proposte.map((p) => p.itemId)).toEqual(['i2']);
+  });
+
   it('segnala la modifica già programmata', async () => {
     const { d } = db([spesa('s1', 142, '2026-10-05', 'c1')]);
     const r = await loadProposteStime(

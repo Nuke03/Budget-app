@@ -56,8 +56,9 @@ export function computeCheckin(input: {
 
   const voci = piano?.items ?? [];
   const previstoMensili = arrotonda(voci.filter((v) => v.frequenzaMesi === 1).reduce((s, v) => s + v.importoMensile, 0));
-  // Le spese collegate a un fondo "da parte" (voce non mensile con obiettivo) non contano qui.
-  const obiettiviDaParte = new Set(voci.filter((v) => v.frequenzaMesi > 1 && v.goalId).map((v) => v.goalId));
+  // Le spese collegate a un obiettivo contano qui solo se è quello di una voce mensile: i fondi
+  // di una tantum (deposito, registro, arredo...) e quelli delle bollette non mensili sono già messi da parte.
+  const obiettiviMensili = new Set(voci.filter((v) => v.frequenzaMesi === 1 && v.goalId).map((v) => v.goalId));
 
   let speso = 0;
   let nonRegistrate = 0;
@@ -67,7 +68,7 @@ export function computeCheckin(input: {
       nonRegistrate += s.importo;
       continue;
     }
-    if (s.goalId && obiettiviDaParte.has(s.goalId)) continue;
+    if (s.goalId && !obiettiviMensili.has(s.goalId)) continue;
     speso += s.importo;
   }
   const spesoMensili = arrotonda(speso);

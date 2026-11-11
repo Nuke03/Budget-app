@@ -130,6 +130,20 @@ describe('loadCheckin', () => {
     expect(r.chi).toBe('Anna');
   });
 
+  it('le stime: dopo una stima accettata, la prova parte dalla prima versione del piano', async () => {
+    const gas = { ...voce('i2', 40, 1), nome: 'Gas', categoria_id: 'c2', origine_stima: 'suggerita', importo_ricorrenza: 40 };
+    const piani = [{ ...piano('2026-01-01'), id: 'p0' }, { ...piano('2026-11-01'), id: 'p1' }];
+    const r = await carica(
+      base({
+        household_plans: piani,
+        household_plan_items: [{ ...gas, plan_id: 'p0' }, { ...gas, plan_id: 'p1' }],
+        household_plan_shares: [quota(1, 'A', 776), quota(2, 'B', 604), { ...quota(1, 'A', 776), plan_id: 'p0' }, { ...quota(2, 'B', 604), plan_id: 'p0' }],
+        transactions: [{ ...spesa('s2', 90, '2026-10-05'), categoria_id: 'c2' }],
+      }),
+    );
+    expect(r.proposte.map((p) => p.itemId)).toEqual(['i2']);
+  });
+
   it('le stime ci sono anche a check-in fatto', async () => {
     const luce = { ...voce('i1', 55, 2), nome: 'Luce', categoria_id: 'c1', origine_stima: 'suggerita', goal_id: 'g2', importo_ricorrenza: 110 };
     const r = await carica(

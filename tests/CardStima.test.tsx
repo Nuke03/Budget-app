@@ -161,7 +161,26 @@ describe('CardStima', () => {
   it('con qualcuno in uscita il piano non si ricalcola: stessa via di uscita', () => {
     const { container } = card({ bundle: bundle('2027-01-01') });
     expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
-    expect(container.textContent).toContain("C'è già una modifica programmata: la trovate in Rivedi la quota.");
+    // Nessuna versione futura esiste: non si dice che c'è una modifica programmata.
+    expect(container.textContent).not.toContain("C'è già una modifica programmata");
+    expect(container.textContent).toContain('Per ora non si può aggiornare: rivedi la quota.');
     expect(screen.queryByText(/^Con 71 €/)).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('chi è già uscito prima del mese nuovo non impedisce la stima', () => {
+    card({ bundle: bundle('2026-11-01') });
+    expect(screen.getByRole('button', { name: 'Usa 71 € al mese' })).toBeInTheDocument();
+  });
+
+  it('"Come si calcola?": gli ingredienti sommano al valore', () => {
+    card();
+    fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
+    expect(screen.getByText('Stima di prima, al mese')).toBeInTheDocument();
+    expect(screen.getByText('Cambia di')).toBeInTheDocument();
+    expect(55 + (luce.nuovoMensile - 55)).toBeCloseTo(luce.nuovoMensile, 8);
+    const [prima, cambia] = screen.getAllByRole('listitem').map((li) => li.textContent ?? '');
+    expect(prima).toContain('55');
+    expect(cambia).toContain('16');
   });
 });

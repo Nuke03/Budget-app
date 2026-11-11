@@ -104,7 +104,13 @@ describe('ControlloSaldo', () => {
     expect(screen.getByRole('link', { name: 'Ho dimenticato di registrare qualcosa' })).toHaveAttribute('href', '/casa');
     fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
     expect(screen.getByText("In banca meno quello che risulta nell'app.")).toBeInTheDocument();
-    expect(screen.getByText('Differenza')).toBeInTheDocument();
+    expect(screen.getByText('In banca')).toBeInTheDocument();
+    expect(screen.getByText("Nell'app")).toBeInTheDocument();
+    // 940 in banca, 1.020 nell'app: gli ingredienti sommano alla differenza (-80).
+    const voci = screen.getAllByRole('listitem').map((li) => li.textContent ?? '');
+    expect(voci.some((t) => t.startsWith('In banca') && t.includes('940'))).toBe(true);
+    expect(voci.some((t) => t.startsWith("Nell'app") && t.includes('1.020'))).toBe(true);
+    expect(940 - 1020).toBe(-80);
   });
 
   it('vuoto, abc e -5 non permettono di registrare, zero sì; mai NaN', () => {

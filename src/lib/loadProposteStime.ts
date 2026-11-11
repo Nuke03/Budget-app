@@ -5,7 +5,7 @@ import { getSpeseCasaPerCategorie } from '@/lib/data/transactions';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
-import { proponiStime, puoAggiornarePiano, type PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
+import { inizioProveStime, proponiStime, puoAggiornarePiano, type PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
 import type { BudgetGoal } from '@/lib/types';
 
 export interface ProposteStime {
@@ -42,7 +42,7 @@ export function fondiDelleProposte(
   return fondi;
 }
 
-// Per la pagina quota: legge solo le spese delle categorie delle voci ancora stimate, dall'inizio del piano.
+// Per la pagina quota: legge solo le spese delle categorie delle voci ancora stimate, dalla prima versione del piano.
 export async function loadProposteStime(
   supabase: SupabaseClient,
   householdId: string,
@@ -67,11 +67,12 @@ export async function loadProposteStime(
   ];
   if (categorie.length === 0) return { ...base, proposte: [], fondiPerVoce: {} };
 
-  const spese = await getSpeseCasaPerCategorie(supabase, householdId, categorie, pianoAttuale.plan.validoDal);
+  const inizioPiano = inizioProveStime(piani, pianoAttuale.plan.validoDal);
+  const spese = await getSpeseCasaPerCategorie(supabase, householdId, categorie, inizioPiano);
   const proposte = proponiStime({
     voci: pianoAttuale.items,
     spese,
-    inizioPiano: pianoAttuale.plan.validoDal,
+    inizioPiano,
     oggi: oggiRomaISO(now),
   });
   if (proposte.length === 0) return { ...base, proposte, fondiPerVoce: {} };

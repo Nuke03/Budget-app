@@ -37,6 +37,8 @@ export function QuotaClient({
   const router = useRouter();
   const [modifica, setModifica] = useState(false);
   const [altre, setAltre] = useState(false);
+  // Dopo un salvataggio le altre card non possono più applicare la loro stima: partirebbero dalla versione vecchia.
+  const [salvata, setSalvata] = useState(false);
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
@@ -51,8 +53,11 @@ export function QuotaClient({
               goal={fondiPerVoce[p.itemId] ?? null}
               householdId={householdId}
               validoDal={validoDalStima}
-              programmata={programmata}
-              onFatto={() => router.refresh()}
+              programmata={programmata || salvata}
+              onFatto={() => {
+                setSalvata(true);
+                router.refresh();
+              }}
             />
           ))}
           {!altre && proposte.length > 1 ? (

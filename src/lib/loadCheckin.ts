@@ -6,7 +6,7 @@ import { computeCheckin, meseDaControllare, mesePrecedente, type CheckinCalcolat
 import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { meseRomaISO, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
-import { proponiStime, type PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
+import { inizioProveStime, proponiStime, type PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
 import { fondiDelleProposte, primoDelMeseDopo } from '@/lib/loadProposteStime';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { Account, BudgetGoal, Checkin } from '@/lib/types';
@@ -65,7 +65,7 @@ export async function loadCheckin(
   const meseCorrente = meseRomaISO(now);
   const pianoAttuale = pianoInVigore(dati.piani, meseCorrente);
   const proposte = pianoAttuale
-    ? proponiStime({ voci: pianoAttuale.items, spese: dati.transazioni, inizioPiano: pianoAttuale.plan.validoDal, oggi })
+    ? proponiStime({ voci: pianoAttuale.items, spese: dati.transazioni, inizioPiano: inizioProveStime(dati.piani, pianoAttuale.plan.validoDal), oggi })
     : [];
 
   const vuoto: CheckinCaricato = {

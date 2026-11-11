@@ -189,7 +189,8 @@ export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoColl
       goal.accantonaDa && parseISO(goal.accantonaDa) > windowStart ? parseISO(goal.accantonaDa) : windowStart;
     const mesiMessi = Math.min(Math.max(differenceInCalendarMonths(today, inizio), 0), mesiCiclo);
     const alMese = arrotonda2(goal.importoTarget / mesiCiclo);
-    formula = `Bolletta di ${formatNumero(goal.importoTarget)} euro in ${mesiCiclo} mesi: ${formatNumero(alMese)} euro al mese, per ${mesiMessi} ${mesiMessi === 1 ? 'mese' : 'mesi'} già messi da parte.`;
+    const cosa = goal.ricorrente ? 'Bolletta di' : 'Da mettere da parte:';
+    formula = `${cosa} ${formatNumero(goal.importoTarget)} euro in ${mesiCiclo} mesi: ${formatNumero(alMese)} euro al mese, per ${mesiMessi} ${mesiMessi === 1 ? 'mese' : 'mesi'} già messi da parte.`;
   }
 
   const ingredienti = [{ etichetta: 'Messo da parte finora', valore: messo }];

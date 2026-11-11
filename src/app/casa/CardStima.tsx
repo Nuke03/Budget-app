@@ -60,7 +60,7 @@ function spiegazione(p: PropostaStima): Spiegazione {
     formula: righe.join('\n'),
     ingredienti: [
       { etichetta: 'Stima di prima, al mese', valore: p.importoMensileAttuale },
-      { etichetta: 'Stima nuova, al mese', valore: p.nuovoMensile },
+      { etichetta: 'Cambia di', valore: Math.round((p.nuovoMensile - p.importoMensileAttuale) * 100) / 100 },
     ],
   };
 }
@@ -126,7 +126,7 @@ export function CardStima({
               : `La quota nuova parte da ${mese}.`}
           </p>
         </>
-      ) : (
+      ) : programmata ? (
         <p className="text-sm">
           {"C'è già una modifica programmata: la trovate in "}
           <Link href="/casa/quota" className={CLASSE_LINK}>
@@ -134,6 +134,8 @@ export function CardStima({
           </Link>
           .
         </p>
+      ) : (
+        <p className="text-sm">Per ora non si può aggiornare: rivedi la quota.</p>
       )}
 
       <ComeSiCalcola spiegazione={spiegazione(proposta)} />

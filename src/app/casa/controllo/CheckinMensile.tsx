@@ -106,6 +106,7 @@ export function CheckinMensile({ dati }: { dati: CheckinCaricato }) {
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold">{`${nomeDelMese} in casa`}</h1>
         <p className="text-sm text-muted">Prima un controllo veloce del conto comune.</p>
+        <p className="text-sm text-muted">{"Se c'è una differenza, la registriamo nel mese in corso, non in quello che state chiudendo."}</p>
         <ControlloSaldo conti={dati.conti} onFatto={() => setPasso0(false)} />
         <button type="button" onClick={() => setPasso0(false)} className={`${CLASSE_LINK} self-start`}>
           Salta

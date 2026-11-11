@@ -136,7 +136,7 @@ describe('DaParte', () => {
     expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
     expect(
-      screen.getByText(/Segna come pagato: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui. Ricordati di registrare la spesa nei movimenti della casa./)
+      screen.getByText(/Prima registra la spesa nei movimenti della casa, collegata a questo fondo/)
     ).toBeInTheDocument();
     expect(closeGoal).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Conferma' }));

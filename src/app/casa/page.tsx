@@ -18,14 +18,16 @@ export default async function CasaPage() {
   if (!casa) return <CasaSenzaCasa />;
 
   const meseCorrente = meseRomaISO();
-  const dati = await loadCasaData(supabase, casa).catch(() => null);
+  // I conti personali servono solo a "Io, con carta": se non si leggono, la casa si apre lo stesso.
+  const [dati, contiPersonali] = await Promise.all([
+    loadCasaData(supabase, casa).catch(() => null),
+    getAccounts(supabase).catch(() => []),
+  ]);
   // I piani arrivano già con i dati della casa: si legge una volta sola.
   const piano = dati
     ? pianoDelMese(dati.piani, meseCorrente)
     : await getPlanForMonth(supabase, casa.household.id, meseCorrente);
   // Se i conti e le spese non si leggono, la quota e le impostazioni restano raggiungibili.
-  // I conti personali servono solo a "Io, con carta": se non si leggono, la casa si apre lo stesso.
-  const contiPersonali = dati ? await getAccounts(supabase).catch(() => []) : [];
   const finanze = dati
     ? {
         disponibile: dati.disponibile,

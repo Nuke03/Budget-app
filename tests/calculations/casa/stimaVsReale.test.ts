@@ -4,6 +4,7 @@ import {
   pianoConStimaAggiornata,
   quoteDelConfronto,
   puoAggiornarePiano,
+  inizioProveStime,
 } from '@/lib/calculations/casa/stimaVsReale';
 import type { PlanItem } from '@/lib/types';
 import type { PlanBundle } from '@/lib/data/householdPlans';
@@ -252,9 +253,27 @@ describe('pianoConStimaAggiornata', () => {
     expect(pianoConStimaAggiornata(bundle, propostaLuce(bundleEsempio()), '2026-12-01')).toBeNull();
   });
 
+  it('chi è già uscito prima del mese nuovo non blocca la stima: resta a 0 e non entra nella divisione', () => {
+    const bundle = bundleEsempio({ esceDal: '2026-11-01' });
+    const v = pianoConStimaAggiornata(bundle, propostaLuce(bundleEsempio()), '2026-12-01')!;
+    expect(v).not.toBeNull();
+    const uscito = v.quote.find((q) => q.esceDal === '2026-11-01')!;
+    expect(uscito.quotaMensile).toBe(0);
+    const altri = v.quote.filter((q) => q !== uscito);
+    expect(altri.reduce((s, q) => s + q.quotaMensile, 0)).toBe(v.totaleMensile);
+  });
+
   it('con una voce che non c è più non propone nulla', () => {
     const bundle = bundleEsempio();
     expect(pianoConStimaAggiornata(bundle, { ...propostaLuce(bundle), itemId: 'xx' }, '2026-12-01')).toBeNull();
+  });
+});
+
+describe('inizioProveStime', () => {
+  it('è la data più vecchia fra le versioni, non quella in vigore', () => {
+    const b = (d: string) => ({ plan: { validoDal: d } }) as unknown as PlanBundle;
+    expect(inizioProveStime([b('2026-11-01'), b('2026-01-01'), b('2026-12-01')], 'x')).toBe('2026-01-01');
+    expect(inizioProveStime([], '2026-05-01')).toBe('2026-05-01');
   });
 });
 

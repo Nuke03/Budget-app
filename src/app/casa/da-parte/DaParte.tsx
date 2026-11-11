@@ -243,7 +243,7 @@ export function DaParte({
                 </button>
                 {chiedePagato === g.id ? (
                   <p className="flex flex-wrap items-center gap-2 text-xs">
-                    Segna come pagato: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui. Ricordati di registrare la spesa nei movimenti della casa.
+                    Prima registra la spesa nei movimenti della casa, collegata a questo fondo. Poi tocca &quot;L&apos;ho pagato&quot;: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui.
                     <button
                       type="button"
                       disabled={chiudendo}

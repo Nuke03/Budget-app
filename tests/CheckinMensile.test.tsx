@@ -282,6 +282,12 @@ describe('CheckinMensile', () => {
     expect(screen.getByRole('button', { name: 'Fatto, a novembre' })).toBeInTheDocument();
   });
 
+  it('passo 0: dice che la differenza si registra nel mese in corso', () => {
+    const { container } = render(<CheckinMensile dati={dati({ serveControllo: true })} />);
+    expect(screen.getByText(/la registriamo nel mese in corso/)).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
   it('passo 0: dopo il controllo si passa oltre', async () => {
     render(<CheckinMensile dati={dati({ serveControllo: true })} />);
     fireEvent.change(screen.getByLabelText("Quanto c'è davvero sul conto comune?"), { target: { value: '1000' } });

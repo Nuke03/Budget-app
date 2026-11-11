@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QuotaClient } from '@/app/casa/quota/QuotaClient';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
@@ -9,6 +9,7 @@ import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/stime', () => ({ applicaStima: vi.fn(), ignoraStima: vi.fn() }));
+import { applicaStima } from '@/lib/data/stime';
 
 const membro = (userId: string, displayName: string, slot: number): HouseholdMember => ({
   householdId: 'h1', userId, displayName, joinedAt: '2026-01-01', slot, attivo: true,
@@ -64,6 +65,19 @@ describe('QuotaClient: stima contro reale', () => {
     expect(screen.getByText(/^Gas: avete previsto/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Altre/ })).not.toBeInTheDocument();
     assertNessunaParolaVietata(container);
+  });
+
+  it('dopo un salvataggio le altre card non applicano più la loro stima', async () => {
+    vi.mocked(applicaStima).mockResolvedValue(undefined);
+    pagina({ proposte: [proposta('i1', 'Luce'), proposta('i2', 'Gas')] });
+    fireEvent.click(screen.getByRole('button', { name: 'Altre 1 stima da rivedere' }));
+    const usa = screen.getAllByRole('button', { name: 'Usa 71 € al mese' });
+    expect(usa).toHaveLength(2);
+    fireEvent.click(usa[0]);
+    await waitFor(() => expect(applicaStima).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument());
+    expect(screen.getByText(/^Gas: avete previsto/)).toBeInTheDocument();
+    expect(screen.getByText(/C'è già una modifica programmata/)).toBeInTheDocument();
   });
 
   it('con una sola proposta non ci sono le altre', () => {
