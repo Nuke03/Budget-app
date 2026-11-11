@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { format } from 'date-fns';
 import { createTransaction } from '@/lib/data/transactions';
 import { adjustAccountBalance } from '@/lib/data/accounts';
 import { casa as scopeCasa } from '@/lib/data/scope';
@@ -37,7 +36,7 @@ export async function creaSpesa(
   if (spazio.tipo === 'personale') {
     const creata = await createTransaction(supabase, {
       ...payload,
-      data: format(new Date(), 'yyyy-MM-dd'),
+      data: oggiRomaISO(),
       nota: null,
     });
     return { id: creata?.id ?? null, payload };

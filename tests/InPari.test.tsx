@@ -155,4 +155,42 @@ describe('InPari', () => {
     await screen.findByText('Fatto: sei in pari.');
     expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ importo: 35, accountId: 'k' });
   });
+
+  it('in Casa i contanti senza conto contanti vanno sul conto carta, anticipati da te', async () => {
+    window.localStorage.setItem('aggiungiModo', 'casa');
+    mostra({ casa: { householdId: 'h1', meUserId: 'u1' }, conti: [{ id: 'c', nome: 'Carta' }] });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Di casa' }).getAttribute('aria-pressed')).toBe('true'));
+    fireEvent.click(screen.getByRole('button', { name: '20 €' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+    await screen.findByText('Fatto: sei in pari.');
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ accountId: 'c', pagataDaUserId: 'u1' });
+    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'c', -20);
+  });
+
+  it('in Casa senza conti personali niente selettore e una riga di spiegazione', () => {
+    mostra({ casa: { householdId: 'h1', meUserId: 'u1' }, conti: [] });
+    expect(screen.queryByRole('button', { name: 'Di casa' })).toBeNull();
+    expect(screen.getByText('Per le spese di casa serve almeno un tuo conto.')).toBeTruthy();
+  });
+
+  it('se la prima creazione fallisce, le modifiche successive valgono', async () => {
+    vi.mocked(createTransaction).mockRejectedValueOnce(new Error('rete'));
+    mostra();
+    fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+    const avviso = await screen.findByRole('alert');
+    expect(avviso.textContent).toBe('Non sono riuscito a salvare: riprova.');
+    fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '55' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+    await screen.findByText('Fatto: sei in pari.');
+    expect(vi.mocked(createTransaction).mock.calls[1][1]).toMatchObject({ importo: 55 });
+  });
+
+  it('se il saldo fallisce il messaggio parla di spese registrate', async () => {
+    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+    mostra();
+    fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/^Spese registrate/);
+  });
 });
