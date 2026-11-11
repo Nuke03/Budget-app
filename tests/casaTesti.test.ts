@@ -4,7 +4,7 @@ import { join, relative } from 'node:path';
 import { PAROLE_VIETATE } from './helpers/paroleVietate';
 
 const RADICE = join(__dirname, '..');
-const CARTELLE = ['src/app/casa', 'src/lib/calculations/casa'];
+const CARTELLE = ['src/app/casa', 'src/lib/calculations/casa', 'src/lib/calculations/supporto'];
 
 const FRASI_VIETATE = ['hai speso troppo', 'in ritardo', 'sei indietro'];
 
