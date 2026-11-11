@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 vi.mock('@supabase/ssr', () => ({
@@ -44,5 +44,23 @@ describe('proxy: ritorno dopo il login', () => {
     const url = new URL(res.headers.get('location')!);
     expect(url.pathname).toBe('/login');
     expect(url.searchParams.has('next')).toBe(false);
+  });
+});
+
+describe('proxy: anteprima', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('in sviluppo /anteprima passa senza login', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const res = await proxy(new NextRequest('http://localhost/anteprima?vista=home'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('in produzione /anteprima reindirizza a /login come ogni altra pagina', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const res = await proxy(new NextRequest('http://localhost/anteprima'));
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get('location')!).pathname).toBe('/login');
   });
 });

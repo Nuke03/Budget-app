@@ -3,6 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { percorsoInternoSicuro } from '@/lib/percorsoSicuro';
 
 export async function proxy(request: NextRequest) {
+  // Anteprima con dati di prova: solo in sviluppo salta il login (altrove la pagina dà 404).
+  if (process.env.NODE_ENV === 'development' && request.nextUrl.pathname.startsWith('/anteprima')) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
