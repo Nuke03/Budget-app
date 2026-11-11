@@ -23,7 +23,7 @@ export async function mandaProva(iscrizione: webpush.PushSubscription): Promise<
   }
 
   if (!endpointAmmesso(iscrizione?.endpoint ?? '')) {
-    return { ok: false, messaggio: 'Indirizzo di notifica non riconosciuto: non è un servizio push noto.' };
+    return { ok: false, messaggio: 'Indirizzo di notifica non riconosciuto: non Ã¨ un servizio push noto.' };
   }
 
   try {
