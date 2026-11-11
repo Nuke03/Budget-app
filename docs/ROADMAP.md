@@ -182,6 +182,44 @@ passo del blocco.
 **Agenti:** impeccable ha agenti propri (finish-reviewer, documenter,
 asset-producer). Le modifiche ripetitive si possono delegare.
 
+**App di supporto (brainstorming dell'11 novembre 2026).** Lo spec è
+`docs/superpowers/specs/2026-11-11-app-di-supporto-design.md`. Il piano A
+(`docs/superpowers/plans/2026-11-11-app-di-supporto-logica.md`) è fatto e
+rivisto. Contiene:
+- la prova delle notifiche;
+- la migrazione 0009;
+- i calcoli: andamento, consiglio, categoria indovinata, chi gestisce, quando
+  avvisare;
+- il saldo da Tricount;
+- il controllo giornaliero `/api/promemoria`.
+
+Cosa resta, in ordine:
+1. **Fabio** lancia la `0009_supporto_e_notifiche.sql` nel SQL editor di
+   Supabase.
+2. Si pubblicano su master i commit del piano A rimasti in locale. Prima della
+   0009 romperebbero la lettura delle transazioni, perché leggono la colonna
+   `stima`.
+3. **Fabio**, su Vercel (Production), aggiunge `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (le chiavi le genera con
+   `npx web-push generate-vapid-keys`), `SUPABASE_SERVICE_ROLE_KEY` e
+   `CRON_SECRET`, poi rifà il deploy.
+4. **Fabio** prova `/prova-notifiche` sull'iPhone, con l'app aperta dalla
+   schermata Home. Se la notifica non arriva, il piano B mostra i promemoria
+   in cima alla Home invece di mandarli.
+5. Dopo la prova si cancella `src/app/prova-notifiche/`. `public/sw.js` e
+   `src/lib/pushEndpoint.ts` restano.
+6. Poi `PRODUCT.md`, audit con impeccable, `DESIGN.md`, e il **piano B**, cioè
+   le schermate.
+
+Da fare nel piano B:
+- Nel mese del passaggio da Tricount, una riga che mescola saldo di partenza e
+  versamento per conto dell'altro dice ancora "ha versato… quota". L'importo è
+  giusto, ma il saldo va mostrato in una riga sua.
+- Manca un test SQL in `supabase/tests/rls_casa.sql`: un debito da Tricount
+  deve bloccare uscita e chiusura della casa.
+- `CheckinMensile.tsx` dice ancora "Non è colpa di nessuno": va riformulato in
+  modo neutro.
+
 ### 3. Backlog già discusso
 
 - **Conferma versamento** verso obiettivi dilazionati: il riservato diventa
