@@ -178,7 +178,9 @@ export function CasaHome({
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted">Ancora nessuna spesa di casa.</p>
+              <p className="text-sm text-muted">
+                Ancora nessuna spesa di casa. Appena ne aggiungete una, la vedete qui entrambi.
+              </p>
             )}
             <Link href="/casa/movimenti" className="text-sm font-semibold text-brand-dark">
               Vedi tutte
@@ -213,7 +215,14 @@ export function CasaHome({
             </section>
           ) : null}
         </>
-      ) : null}
+      ) : (
+        <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
+          <p className="text-sm">Non riesco a leggere conti e spese della casa. Riprova tra poco.</p>
+          <Link href="/casa" className="text-sm font-semibold text-brand-dark">
+            Riprova
+          </Link>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
         <h2 className="text-base font-bold">Chi c&apos;è in casa</h2>

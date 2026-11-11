@@ -104,6 +104,15 @@ describe('CasaHome', () => {
     expect(screen.getByText('Diventa attivo quando entra anche Anna')).toBeInTheDocument();
   });
 
+  it('se conti e spese non si leggono dice di riprovare e lascia la quota e le impostazioni', () => {
+    const { container } = render(<CasaHome casa={casa} />);
+    expect(screen.getByText('Non riesco a leggere conti e spese della casa. Riprova tra poco.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Riprova' })).toHaveAttribute('href', '/casa');
+    expect(screen.getByRole('link', { name: 'Calcolate la nostra quota' })).toHaveAttribute('href', '/casa/quota');
+    expect(screen.getByRole('link', { name: 'Impostazioni' })).toHaveAttribute('href', '/casa/impostazioni');
+    assertNessunaParolaVietata(container);
+  });
+
   it('non contiene parole vietate', () => {
     const { container } = render(<CasaHome casa={casa} piano={piano(false)} />);
     assertNessunaParolaVietata(container);
@@ -150,6 +159,14 @@ describe('CasaHome', () => {
       expect(screen.getByText('Luce')).toBeInTheDocument();
       expect(screen.getAllByText('Anna').length).toBeGreaterThan(1);
       expect(screen.getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', '/casa/movimenti');
+      assertNessunaParolaVietata(container);
+    });
+
+    it('nessuna spesa: una frase che dice cosa succede dopo', () => {
+      const { container } = render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), ultimeSpese: [] }} />);
+      expect(
+        screen.getByText('Ancora nessuna spesa di casa. Appena ne aggiungete una, la vedete qui entrambi.')
+      ).toBeInTheDocument();
       assertNessunaParolaVietata(container);
     });
 

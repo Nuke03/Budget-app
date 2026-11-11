@@ -233,6 +233,13 @@ describe('MovimentiCasa', () => {
     });
   });
 
+  it('mese senza movimenti: una frase neutra, senza conteggi né colpe', () => {
+    const { container } = apri([], []);
+    expect(screen.getByText('Nessun movimento in questo mese.')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
   it('nessuna parola vietata', () => {
     const { container } = apri();
     assertNessunaParolaVietata(container);
