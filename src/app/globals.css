@@ -1,16 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf9f6;
-  --foreground: #12171a;
+  --background: #eef2f8;
+  --foreground: #14213d;
   --surface: #ffffff;
-  --surface-muted: #f1f0ec;
-  --muted: #6b7280;
+  --surface-muted: #e4eaf5;
+  --muted: #4d5a73;
+  --page: #ffffff;
+  --rule: #e3e8f1;
+  --ink-2: #4d5a73;
+  --stamp: #c8102e;
+  --on-cat: #14213d;
 
-  --brand: #0f9d6b;
-  --brand-dark: #0b7a53;
-  --brand-tint: #e3f5ec;
-  --brand-foreground: #f2fbf6;
+  --brand: #14306b;
+  --brand-dark: #0e2350;
+  --brand-tint: #e4eaf5;
+  --brand-foreground: #ffffff;
 
   --danger: #dc2626;
   --danger-tint: #fdecec;
@@ -29,8 +34,8 @@
   --radius-sm: 0.65rem;
 
   --shadow-card: 0 4px 16px -4px rgb(15 23 42 / 0.08);
-  --shadow-hero: 0 16px 40px -12px rgb(15 157 107 / 0.4);
-  --shadow-fab: 0 10px 24px -6px rgb(15 157 107 / 0.55);
+  --shadow-hero: 0 4px 16px -4px rgb(15 23 42 / 0.08);
+  --shadow-fab: 0 4px 16px -4px rgb(15 23 42 / 0.2);
 }
 
 @theme inline {
@@ -39,6 +44,11 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-muted: var(--muted);
+  --color-page: var(--page);
+  --color-rule: var(--rule);
+  --color-ink-2: var(--ink-2);
+  --color-stamp: var(--stamp);
+  --color-on-cat: var(--on-cat);
 
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
@@ -61,17 +71,23 @@
   --radius-md: var(--radius-md);
   --radius-sm: var(--radius-sm);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-work-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0d1210;
-    --foreground: #eef3f0;
-    --surface: #161d1a;
-    --surface-muted: #1d2521;
-    --muted: #8a9691;
-    --brand-tint: #10241c;
+    --background: #0c1424;
+    --foreground: #e8edf6;
+    --surface: #131d33;
+    --surface-muted: #1a2640;
+    --muted: #a3b0c6;
+    --page: #131d33;
+    --rule: #24314d;
+    --ink-2: #a3b0c6;
+    --stamp: #ff7a8c;
+    --brand-dark: #9fb6e6;
+    --brand-tint: #1a2a4d;
     --danger-tint: #2a1414;
   }
 }
@@ -84,7 +100,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 ::selection {

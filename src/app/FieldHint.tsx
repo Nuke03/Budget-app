@@ -15,7 +15,7 @@ export function FieldHint({ testo }: { testo: string }) {
           e.preventDefault();
           setAperto((v) => !v);
         }}
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-cat-sky text-white"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-cat-sky text-on-cat"
       >
         <Info size={12} strokeWidth={2.5} />
       </button>

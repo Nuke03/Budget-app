@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Account, BudgetGoal, Category, TransactionTipo } from '@/lib/types';
+import { testoSu } from '@/lib/categoryColors';
 import { obiettivoDaCategoria } from '@/lib/calculations/casa/preselezioneObiettivo';
 
 interface SubmitPayload {
@@ -246,11 +247,11 @@ export function AddTransactionForm({
                   onClick={() => setCategoriaId(c.id)}
                   style={
                     isSelected
-                      ? { backgroundColor: color, borderColor: color }
+                      ? { backgroundColor: color, borderColor: color, color: testoSu(color) }
                       : { borderColor: color, color }
                   }
                   className={`shrink-0 rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
-                    isSelected ? 'text-white' : 'bg-surface'
+                    isSelected ? '' : 'bg-surface'
                   }`}
                 >
                   {c.nome}
@@ -281,7 +282,7 @@ export function AddTransactionForm({
                   onClick={() => setAccountId(a.id)}
                   className={`shrink-0 rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
                     isSelected
-                      ? 'border-brand bg-brand text-white'
+                      ? 'border-brand bg-brand text-brand-foreground'
                       : 'border-black/10 bg-surface text-foreground'
                   }`}
                 >
@@ -310,7 +311,7 @@ export function AddTransactionForm({
                   }}
                   className={`shrink-0 rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
                     isSelected
-                      ? 'border-brand bg-brand text-white'
+                      ? 'border-brand bg-brand text-brand-foreground'
                       : 'border-black/10 bg-surface text-foreground'
                   }`}
                 >
