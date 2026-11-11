@@ -212,6 +212,20 @@ Cosa resta, in ordine:
 6. Poi `PRODUCT.md`, audit con impeccable, `DESIGN.md`, e il **piano B**, cioè
    le schermate. Passi 1-3 fatti.
 
+**Critica impeccable (11 novembre 2026):** 23 su 40. Il rapporto è in
+`.impeccable/critique/2026-11-11T16-57-29Z__src-app.md`. Problemi, in
+ordine:
+1. [P0] Aggiunta spesa oltre i 10 secondi.
+2. [P1] Casa troppo piena e senza ruoli.
+3. [P1] Disponibile difficile da capire.
+4. [P2] Cancellazioni senza annulla e bersagli piccoli.
+5. [P2] Contrasto.
+
+Decisioni di Fabio:
+- Si parte dall'aggiunta spesa.
+- Tono "calmo e affidabile": blu sobrio, molto spazio, numeri grandi.
+- Nel piano B entrano tutti e 5 i problemi.
+
 **Icona dell'app** (Fabio, 11 novembre: quella di oggi è brutta). Va rifatta
 insieme all'identità visiva in `DESIGN.md` e al cambio di palette, con
 impeccable (agente asset-producer). Va rifatta in tutti i formati:
