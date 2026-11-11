@@ -5,6 +5,7 @@ import { leggiStatiPersone, type PersonaDaAvvisare } from '@/lib/data/statoNotif
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { decidiNotifica, type Notifica } from '@/lib/calculations/supporto/notifiche';
 import { endpointAmmesso } from '@/lib/pushEndpoint';
+import { chiaviVapid } from '@/lib/chiaviVapid';
 
 // Cron giornaliero. Usa la chiave `service_role`, che salta la RLS: per questo il client admin si
 // crea qui dentro, la chiave non esce da questo modulo e non ha mai il prefisso NEXT_PUBLIC_.
@@ -34,15 +35,15 @@ export async function GET(request: Request) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const chiaveServizio = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const { VAPID_SUBJECT, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env;
-  if (!url || !chiaveServizio || !VAPID_SUBJECT || !NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  const chiavi = chiaviVapid();
+  if (!url || !chiaveServizio || !chiavi) {
     console.error('promemoria: configurazione incompleta');
     return Response.json({ errore: 'configurazione incompleta' }, { status: 500 });
   }
 
   const admin = createClient(url, chiaveServizio, { auth: { persistSession: false } });
   try {
-    webpush.setVapidDetails(VAPID_SUBJECT, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    webpush.setVapidDetails(chiavi.soggetto, chiavi.pubblica, chiavi.privata);
   } catch (e) {
     console.error('promemoria: chiavi VAPID non valide', e instanceof Error ? e.message : e);
     return Response.json({ errore: 'configurazione non valida' }, { status: 500 });

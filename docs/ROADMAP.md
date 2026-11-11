@@ -199,8 +199,9 @@ Cosa resta, in ordine:
 2. Si pubblicano su master i commit del piano A rimasti in locale. Prima della
    0009 romperebbero la lettura delle transazioni, perché leggono la colonna
    `stima`.
-3. **Fabio**, su Vercel (Production), aggiunge `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
-   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (le chiavi le genera con
+3. **Fabio**, su Vercel (Production), aggiunge `NEXT_P_VAPID_P_KEY` (chiave
+   pubblica), `VAPID_PR_KEY` (privata; Vercel rifiuta i nomi con PUBLIC e
+   PRIVATE, vedi `src/lib/chiaviVapid.ts`), `VAPID_SUBJECT` (le chiavi le genera con
    `npx web-push generate-vapid-keys`), `SUPABASE_SERVICE_ROLE_KEY` e
    `CRON_SECRET`, poi rifà il deploy.
 4. **Fabio** prova `/prova-notifiche` sull'iPhone, con l'app aperta dalla

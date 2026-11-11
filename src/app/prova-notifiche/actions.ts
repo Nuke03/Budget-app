@@ -4,6 +4,7 @@ import * as webpush from 'web-push';
 import { createClient } from '@/lib/supabase/server';
 import { utenteOLogin } from '@/lib/utenteOLogin';
 import { endpointAmmesso } from '@/lib/pushEndpoint';
+import { chiaviVapid } from '@/lib/chiaviVapid';
 
 export interface EsitoProva {
   ok: boolean;
@@ -15,12 +16,11 @@ export async function mandaProva(iscrizione: webpush.PushSubscription): Promise<
   const supabase = await createClient();
   await utenteOLogin(supabase);
 
-  const pubblica = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privata = process.env.VAPID_PRIVATE_KEY;
-  const soggetto = process.env.VAPID_SUBJECT;
-  if (!pubblica || !privata || !soggetto) {
+  const chiavi = chiaviVapid();
+  if (!chiavi) {
     return { ok: false, messaggio: 'Mancano le chiavi delle notifiche su Vercel.' };
   }
+  const { pubblica, privata, soggetto } = chiavi;
 
   if (!endpointAmmesso(iscrizione?.endpoint ?? '')) {
     return { ok: false, messaggio: 'Indirizzo di notifica non riconosciuto: non è un servizio push noto.' };
