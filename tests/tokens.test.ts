@@ -70,13 +70,13 @@ describe('testoSu', () => {
     expect(testoSu('#F5A524')).toBe('#14213d');
     expect(testoSu('#3B9AE1')).toBe('#14213d');
     expect(testoSu('#92400E')).toBe('#ffffff');
-    expect(testoSu('#8B5CF6')).toBe('#ffffff');
+    expect(testoSu('#8452F5')).toBe('#ffffff');
     expect(testoSu('non-un-colore')).toBe('#ffffff');
   });
-  it('ogni colore della palette ha almeno 4:1 col testo scelto (Viola 4,2 e il meglio possibile)', () => {
+  it('ogni colore della palette ha almeno 4,5:1 col testo scelto', () => {
     for (const c of CATEGORY_COLORS) {
       const t = testoSu(c.value);
-      expect(contrasto(t, c.value), c.name).toBeGreaterThanOrEqual(4);
+      expect(contrasto(t, c.value), c.name).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

@@ -4,7 +4,7 @@ export const CATEGORY_COLORS = [
   { name: 'Smeraldo', value: '#0F9D6B' },
   { name: 'Teal', value: '#14B8A6' },
   { name: 'Cielo', value: '#3B9AE1' },
-  { name: 'Viola', value: '#8B5CF6' },
+  { name: 'Viola', value: '#8452F5' },
   { name: 'Rosa', value: '#EC4899' },
   { name: 'Ardesia', value: '#64748B' },
   { name: 'Lime', value: '#84CC16' },
