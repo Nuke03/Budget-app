@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { Pencil, Trash2, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -8,7 +8,9 @@ import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/dat
 import { getCategories } from '@/lib/data/categories';
 import { getMyHousehold } from '@/lib/data/households';
 import { getTransfers } from '@/lib/data/transfers';
-import { casa } from '@/lib/data/scope';
+import { casa, PERSONALE } from '@/lib/data/scope';
+import { inizioStorico } from '@/lib/calculations/filterTransactionsByPeriodo';
+import { leggiSessione } from '@/lib/utenteOLogin';
 import { righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 import { getAccounts, adjustAccountBalance } from '@/lib/data/accounts';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
@@ -33,39 +35,66 @@ export default function HistoryPage() {
   const [periodo, setPeriodo] = useState<Periodo>('mese');
   const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [caricato, setCaricato] = useState(false);
+  // Da quale giorno sono lette le righe: l'ultimo anno copre tutti i periodi fissi; un periodo
+  // personalizzato più vecchio allarga la lettura ('' vuol dire tutto lo storico).
+  const [letteDal, setLetteDal] = useState(() => inizioStorico(new Date()));
+  // Solo la lettura più recente aggiorna la pagina: una risposta vecchia arrivata dopo non la sovrascrive.
+  const ultimaLettura = useRef(0);
 
-  async function refresh() {
+  async function refresh(da: string = letteDal) {
+    const lettura = ++ultimaLettura.current;
     const supabase = createClient();
+    // La parte di casa è solo un di più: se non si legge, lo storico personale resta intero.
+    // Parte insieme a quella personale, senza aspettarla.
+    const casaInCorso = caricaRigheCasa(supabase, da).catch(() => [] as RigaNeutra[]);
     const [tx, cats, accs, openGoals] = await Promise.all([
-      getTransactions(supabase),
+      getTransactions(supabase, PERSONALE, { da }),
       getCategories(supabase),
       getAccounts(supabase),
       getOpenGoals(supabase),
     ]);
+    if (lettura !== ultimaLettura.current) return;
     setTransactions(tx);
     setCategories(cats);
     setAccounts(accs);
     setGoals(openGoals);
+    setLetteDal(da);
+    setCaricato(true);
+    const righeCasa = await casaInCorso;
+    if (lettura === ultimaLettura.current) setRigheNeutre(righeCasa);
+  }
 
-    // La parte di casa è solo un di più: se non si legge, lo storico personale resta intero.
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData.user?.id;
-      const casaCorrente = userId ? await getMyHousehold(supabase, userId) : null;
-      if (userId && casaCorrente) {
-        const scope = casa(casaCorrente.household.id);
-        const [txCasa, trasferimenti] = await Promise.all([
-          getTransactions(supabase, scope),
-          getTransfers(supabase, scope),
-        ]);
-        const nomi = Object.fromEntries(casaCorrente.members.map((m) => [m.userId, m.displayName]));
-        setRigheNeutre(righeNeutreStorico({ userId, transazioni: txCasa, trasferimenti, nomi }));
-      } else {
-        setRigheNeutre([]);
-      }
-    } catch {
-      setRigheNeutre([]);
-    }
+  async function caricaRigheCasa(supabase: ReturnType<typeof createClient>, da: string): Promise<RigaNeutra[]> {
+    const { userId } = await leggiSessione(supabase);
+    const casaCorrente = userId ? await getMyHousehold(supabase, userId) : null;
+    if (!userId || !casaCorrente) return [];
+    const scope = casa(casaCorrente.household.id);
+    const [txCasa, trasferimenti] = await Promise.all([
+      getTransactions(supabase, scope, { da }),
+      getTransfers(supabase, scope),
+    ]);
+    const nomi = Object.fromEntries(casaCorrente.members.map((m) => [m.userId, m.displayName]));
+    return righeNeutreStorico({ userId, transazioni: txCasa, trasferimenti, nomi });
+  }
+
+  // Un periodo personalizzato che parte prima delle righe lette allarga la lettura. Finché il
+  // periodo non ha entrambe le date si mostra tutto, come prima: serve tutto lo storico.
+  function allargaSeServe(p: Periodo, range: { da: string; a: string }) {
+    if (p !== 'personalizzato') return;
+    const serveDal = range.da && range.a ? range.da : '';
+    if (serveDal >= letteDal) return;
+    refresh(serveDal).catch(fail);
+  }
+
+  function cambiaPeriodo(p: Periodo) {
+    setPeriodo(p);
+    allargaSeServe(p, rangePersonalizzato);
+  }
+
+  function cambiaRange(range: { da: string; a: string }) {
+    setRangePersonalizzato(range);
+    allargaSeServe(periodo, range);
   }
 
   async function handleCreateGoal(payload: {
@@ -157,9 +186,9 @@ export default function HistoryPage() {
 
       <PeriodoFilter
         periodo={periodo}
-        onChangePeriodo={setPeriodo}
+        onChangePeriodo={cambiaPeriodo}
         rangePersonalizzato={rangePersonalizzato}
-        onChangeRangePersonalizzato={setRangePersonalizzato}
+        onChangeRangePersonalizzato={cambiaRange}
       />
 
       <HistoryChartCard chartData={chartData} colorByCategoryName={colorByCategoryName} />
@@ -211,7 +240,7 @@ export default function HistoryPage() {
             </li>
           );
         })}
-        {transactionsFiltrate.length === 0 && (
+        {caricato && transactionsFiltrate.length === 0 && (
           <p className="rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted shadow-[var(--shadow-card)]">
             {transactions.length === 0
               ? 'Nessuna transazione ancora.'

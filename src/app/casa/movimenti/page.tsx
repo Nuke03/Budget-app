@@ -1,14 +1,12 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { utenteOLogin } from '@/lib/utenteOLogin';
-import { getMyHousehold } from '@/lib/data/households';
+import { utenteECasa } from '@/lib/utenteOLogin';
 import { loadCasaData } from '@/lib/loadCasaData';
 import { MovimentiCasa } from './MovimentiCasa';
 
 export default async function MovimentiCasaPage() {
   const supabase = await createClient();
-  const user = await utenteOLogin(supabase);
-  const casa = await getMyHousehold(supabase, user.id);
+  const { user, casa } = await utenteECasa(supabase);
   if (!casa) redirect('/casa');
 
   const dati = await loadCasaData(supabase, casa);

@@ -68,6 +68,10 @@ export async function loadProposteStime(
   if (categorie.length === 0) return { ...base, proposte: [], fondiPerVoce: {} };
 
   const inizioPiano = inizioProveStime(piani, pianoAttuale.plan.validoDal);
+  // I fondi servono solo se una voce stimata è legata a un obiettivo: in quel caso si leggono insieme alle spese.
+  const vociConFondo = pianoAttuale.items.some((i) => i.origineStima !== 'reale' && i.goalId);
+  const fondiInCorso = vociConFondo ? getOpenGoals(supabase, scopeCasa(householdId)) : Promise.resolve([]);
+  fondiInCorso.catch(() => {});
   const spese = await getSpeseCasaPerCategorie(supabase, householdId, categorie, inizioPiano);
   const proposte = proponiStime({
     voci: pianoAttuale.items,
@@ -78,6 +82,6 @@ export async function loadProposteStime(
   if (proposte.length === 0) return { ...base, proposte, fondiPerVoce: {} };
 
   const haFondi = proposte.some((p) => pianoAttuale.items.find((i) => i.id === p.itemId)?.goalId);
-  const obiettivi = haFondi ? await getOpenGoals(supabase, scopeCasa(householdId)) : [];
+  const obiettivi = haFondi ? await fondiInCorso : [];
   return { ...base, proposte, fondiPerVoce: fondiDelleProposte(proposte, pianoAttuale, obiettivi) };
 }

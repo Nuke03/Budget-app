@@ -2,9 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import CasaPage from '@/app/casa/page';
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }));
-vi.mock('@/lib/utenteOLogin', () => ({ utenteOLogin: async () => ({ id: 'u1' }) }));
-vi.mock('@/lib/data/households', () => ({
-  getMyHousehold: async () => ({ household: { id: 'h1' }, members: [], invite: null, me: { userId: 'u1' } }),
+vi.mock('@/lib/utenteOLogin', () => ({
+  utenteECasa: async () => ({
+    user: { id: 'u1' },
+    casa: { household: { id: 'h1' }, members: [], invite: null, me: { userId: 'u1' } },
+  }),
 }));
 vi.mock('@/lib/data/accounts', () => ({ getAccounts: vi.fn() }));
 vi.mock('@/lib/data/householdPlans', () => ({ getPlanForMonth: vi.fn().mockResolvedValue(null) }));

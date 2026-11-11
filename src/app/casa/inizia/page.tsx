@@ -1,8 +1,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { utenteOLogin } from '@/lib/utenteOLogin';
-import { getMyHousehold } from '@/lib/data/households';
+import { utenteECasa } from '@/lib/utenteOLogin';
 import { origineSito } from '@/lib/siteOrigin';
 import { normalizzaCodice } from '@/lib/invito';
 import { InizioCasa } from './InizioCasa';
@@ -13,8 +12,7 @@ export default async function InizioCasaPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const supabase = await createClient();
-  const user = await utenteOLogin(supabase);
-  const casa = await getMyHousehold(supabase, user.id);
+  const { user, casa } = await utenteECasa(supabase);
   if (casa) redirect('/casa');
 
   const { modo, codice } = await searchParams;

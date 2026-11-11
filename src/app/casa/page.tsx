@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { utenteOLogin } from '@/lib/utenteOLogin';
-import { getMyHousehold } from '@/lib/data/households';
+import { utenteECasa } from '@/lib/utenteOLogin';
 import { getAccounts } from '@/lib/data/accounts';
 import { getPlanForMonth } from '@/lib/data/householdPlans';
 import { loadCasaData } from '@/lib/loadCasaData';
@@ -13,16 +12,14 @@ import { CasaSenzaCasa } from './CasaSenzaCasa';
 
 export default async function CasaPage() {
   const supabase = await createClient();
-  const user = await utenteOLogin(supabase);
-  const casa = await getMyHousehold(supabase, user.id);
+  // I conti personali servono solo a "Io, con carta": se non si leggono, la casa si apre lo stesso.
+  // Partono subito, insieme alla verifica dell'utente e alla lettura della casa.
+  const contiInCorso = getAccounts(supabase).catch(() => []);
+  const { casa } = await utenteECasa(supabase);
   if (!casa) return <CasaSenzaCasa />;
 
   const meseCorrente = meseRomaISO();
-  // I conti personali servono solo a "Io, con carta": se non si leggono, la casa si apre lo stesso.
-  const [dati, contiPersonali] = await Promise.all([
-    loadCasaData(supabase, casa).catch(() => null),
-    getAccounts(supabase).catch(() => []),
-  ]);
+  const [dati, contiPersonali] = await Promise.all([loadCasaData(supabase, casa).catch(() => null), contiInCorso]);
   // I piani arrivano già con i dati della casa: si legge una volta sola.
   const piano = dati
     ? pianoDelMese(dati.piani, meseCorrente)

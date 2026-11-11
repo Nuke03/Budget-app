@@ -3,7 +3,8 @@ import { getAccounts } from '@/lib/data/accounts';
 import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getLastIncomeDate } from '@/lib/data/transactions';
-import { getSpecoCollegato } from '@/lib/data/goalSpending';
+import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
+import { PERSONALE } from '@/lib/data/scope';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
@@ -59,21 +60,21 @@ export async function loadHomeData(
   today: Date = new Date(),
   userId: string | null = null
 ): Promise<HomeData> {
-  const [accounts, categories, goals, ultimaEntrata, casa] = await Promise.all([
+  // Tutto parte insieme; lo speso collegato agli obiettivi segue subito la lettura degli obiettivi
+  // (una sola query per tutti), senza aspettare la parte di casa.
+  const obiettivi = getOpenGoals(supabase);
+  const [accounts, categories, goals, speso, ultimaEntrata, casa] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
-    getOpenGoals(supabase),
+    obiettivi,
+    // Quanto di ogni obiettivo è già stato speso (transazioni esplicitamente
+    // collegate): va sottratto da quanto resta riservato, altrimenti quei soldi
+    // verrebbero contati sia come spesi dal conto sia come ancora bloccati.
+    obiettivi.then((g) => getSpecoCollegatoPerObiettivi(supabase, g, today, PERSONALE)),
     getLastIncomeDate(supabase),
     casaOpzionale(supabase, userId, today),
   ]);
-
-  // Quanto di ogni obiettivo è già stato speso (transazioni esplicitamente
-  // collegate): va sottratto da quanto resta riservato, altrimenti quei soldi
-  // verrebbero contati sia come spesi dal conto sia come ancora bloccati.
-  const speseCollegate = await Promise.all(
-    goals.map((g) => getSpecoCollegato(supabase, g, today))
-  );
-  const goalsConSpeso = goals.map((g, i) => ({ ...g, specoCollegato: speseCollegate[i] }));
+  const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
   const disponibileLibero = computeDisponibileLibero(
     accounts,

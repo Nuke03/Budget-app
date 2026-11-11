@@ -1,13 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
-import { utenteOLogin } from '@/lib/utenteOLogin';
+import { conUtente } from '@/lib/utenteOLogin';
 import { loadHomeData } from '@/lib/loadHomeData';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { HomeDashboard } from './HomeDashboard';
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const user = await utenteOLogin(supabase);
-  const data = await loadHomeData(supabase, new Date(), user.id);
+  // I dati partono insieme alla verifica dell'utente, non dopo.
+  const adesso = new Date();
+  const { user, dati: data } = await conUtente(supabase, (id) => loadHomeData(supabase, adesso, id));
 
   return (
     <HomeDashboard

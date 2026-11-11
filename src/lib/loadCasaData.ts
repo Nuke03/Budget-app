@@ -69,8 +69,13 @@ export async function loadCasaData(
   adesso: Date = new Date()
 ): Promise<CasaData> {
   const today = oggiRomaData(adesso);
-  const [aggiunta, transazioni, trasferimenti, piani, controlli] = await Promise.all([
-    loadCasaAggiunta(supabase, casa),
+  // Lo speso collegato ai fondi segue subito la lettura degli obiettivi, in parallelo con il resto.
+  const aggiuntaInCorso = loadCasaAggiunta(supabase, casa);
+  const [aggiunta, speso, transazioni, trasferimenti, piani, controlli] = await Promise.all([
+    aggiuntaInCorso,
+    aggiuntaInCorso.then((a) =>
+      getSpecoCollegatoPerObiettivi(supabase, a.obiettivi, today, scopeCasa(casa.household.id))
+    ),
     getTransactions(supabase, scopeCasa(casa.household.id)),
     getTransfers(supabase, scopeCasa(casa.household.id)),
     getPlanVersions(supabase, casa.household.id),
@@ -85,12 +90,6 @@ export async function loadCasaData(
   });
   const totaleCrediti = Object.values(crediti).reduce((s, v) => s + v, 0);
 
-  const speso = await getSpecoCollegatoPerObiettivi(
-    supabase,
-    aggiunta.obiettivi,
-    today,
-    scopeCasa(casa.household.id)
-  );
   const obiettiviConSpeso = aggiunta.obiettivi.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
   const obiettiviConAccantonato = obiettiviConSpeso.map(({ specoCollegato, ...g }) => ({

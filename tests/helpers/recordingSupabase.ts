@@ -6,7 +6,7 @@ export interface RecordedCall {
 
 const METHODS = [
   'select', 'insert', 'update', 'delete', 'eq', 'neq', 'is', 'in', 'gt', 'gte', 'lt', 'lte',
-  'ilike', 'order', 'limit',
+  'ilike', 'order', 'limit', 'range', 'not',
 ];
 
 // Client finto che registra ogni catena di chiamate (una per `from`) e risolve

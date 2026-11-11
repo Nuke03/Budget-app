@@ -2,7 +2,9 @@
 export function fakeSelectClient(rows: unknown[]) {
   const builder: any = {
     select: () => builder,
-    order: () => Promise.resolve({ data: rows, error: null }),
+    order: () => builder,
+    range: () => builder,
+    not: () => builder,
     eq: () => builder,
     is: () => builder,
     in: () => builder,

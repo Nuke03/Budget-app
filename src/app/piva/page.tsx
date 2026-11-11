@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getPivaSettings, createPivaSettings, updatePivaSettings } from '@/lib/data/pivaSettings';
 import { getCategories } from '@/lib/data/categories';
 import { getTransactions } from '@/lib/data/transactions';
+import { PERSONALE } from '@/lib/data/scope';
 import {
   computeFatturatoAnnuo,
   computeAliquotaSostitutiva,
@@ -33,7 +34,8 @@ export default function PivaPage() {
     const [s, cats, txs] = await Promise.all([
       getPivaSettings(supabase),
       getCategories(supabase),
-      getTransactions(supabase),
+      // Il fatturato è dell'anno in corso: bastano le entrate da gennaio, non tutto lo storico.
+      getTransactions(supabase, PERSONALE, { tipo: 'income', da: `${new Date().getFullYear()}-01-01` }),
     ]);
     setSettings(s);
     setCategories(cats);

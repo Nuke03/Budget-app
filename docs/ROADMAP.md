@@ -143,6 +143,38 @@ Storico sul telefono e correggere le cause. Sospetti già noti dalle revisioni:
   spostati su letture per mese quando si risolve il limite di circa 1000 righe,
   altrimenti con le righe troncate i loro numeri sarebbero sbagliati.
 
+**Velocità, fatto (11 novembre 2026).** Misura: ogni pagina replicata con le
+stesse richieste in fila verso il progetto Supabase reale (dall'Italia, chiave
+anonima: conta la rete e PostgREST, non il volume dei dati), mediana di 11 prove.
+
+| Pagina | Prima | Dopo | Richieste in fila |
+|---|---|---|---|
+| Home | 769 ms | 264 ms | 8 → 3 |
+| Casa | 689 ms | 254 ms | 8 → 3 |
+| Quota | 1177 ms | 354 ms | 13 → 4 |
+| Storico | 514 ms | 176 ms | 6 → 2 |
+| P.IVA | 87 ms | 87 ms | 1 (ora solo le entrate dell'anno) |
+
+Cause e correzioni:
+- verifica dell'utente, poi casa (3 letture in fila), poi dati, poi piani (2
+  letture per versione), poi speso per obiettivo: ora le letture partono insieme
+  alla verifica (`conUtente`, `utenteECasa` in `src/lib/utenteOLogin.ts`), la
+  casa si legge in una sola andata, i piani in due qualunque sia il numero di
+  versioni, lo speso collegato in una query;
+- Supabase è in Irlanda (eu-west-1); Vercel, se nessuno ha cambiato la regione,
+  esegue le funzioni a Washington (`iad1`), e allora ogni richiesta del server
+  attraversa l'oceano (non verificato: serve l'indirizzo di produzione).
+  `vercel.json` ora fissa `dub1`. Per controllare: nella risposta di una pagina,
+  l'header `x-vercel-id` deve finire con `dub1`;
+- nessuna schermata di caricamento: ora `src/app/loading.tsx` appare subito;
+- limite di 1000 righe: `getTransactions` e `getTransfers` leggono a pagine
+  (`src/lib/data/leggiTutte.ts`), quindi registri, D, stima e check-in restano
+  giusti anche oltre; la home legge solo le spese anticipate per i crediti,
+  `getLastIncomeDate` una riga, Storico l'ultimo anno (di più solo con un periodo
+  personalizzato), P.IVA solo le entrate dell'anno. Nessuna migrazione serve.
+- Resta: `/casa`, movimenti e check-in leggono ancora tutto lo storico della
+  casa (giusto, ma cresce col tempo); quando pesa, passare a letture per mese.
+
 **Cambio palette** (dal verde a blu "corporate", più rassicuranti per l'occhio):
 deciso con Fabio di farlo **dopo** la co-gestione. Va fatto qui, come ultimo
 passo del blocco.

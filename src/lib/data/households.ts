@@ -55,29 +55,26 @@ function mapInvite(r: InviteRow): HouseholdInvite {
   };
 }
 
+// Le tre letture partono insieme (una sola andata e ritorno): la RLS mostra solo le case di cui si è
+// membri, e la casa giusta si sceglie qui dalla riga di membro dell'utente.
 export async function getMyHousehold(supabase: SupabaseClient, userId: string): Promise<CasaCorrente | null> {
-  const { data: membri, error: membriError } = await supabase
-    .from('household_members')
-    .select('household_id, user_id, display_name, joined_at, slot, attivo');
-  if (membriError) throw membriError;
+  const [membriRes, caseRes, invitiRes] = await Promise.all([
+    supabase.from('household_members').select('household_id, user_id, display_name, joined_at, slot, attivo'),
+    supabase.from('households').select('id, nome, created_at, archiviata_il'),
+    supabase.from('household_invites').select('id, household_id, codice, created_at, scade_il, revocato_il'),
+  ]);
+  if (membriRes.error) throw membriRes.error;
 
-  const righe = (membri ?? []) as MemberRow[];
+  const righe = (membriRes.data ?? []) as MemberRow[];
   const mia = righe.find((r) => r.user_id === userId && r.attivo);
   if (!mia) return null;
 
-  const { data: caseRows, error: casaError } = await supabase
-    .from('households')
-    .select('id, nome, created_at, archiviata_il')
-    .eq('id', mia.household_id);
-  if (casaError) throw casaError;
-  const casaRow = ((caseRows ?? []) as HouseholdRow[])[0];
+  if (caseRes.error) throw caseRes.error;
+  const casaRow = ((caseRes.data ?? []) as HouseholdRow[]).find((c) => c.id === mia.household_id);
   if (!casaRow || casaRow.archiviata_il !== null) return null;
 
-  const { data: inviti, error: invitiError } = await supabase
-    .from('household_invites')
-    .select('id, household_id, codice, created_at, scade_il, revocato_il')
-    .eq('household_id', mia.household_id);
-  if (invitiError) throw invitiError;
+  if (invitiRes.error) throw invitiRes.error;
+  const inviti = invitiRes.data;
 
   const adesso = Date.now();
   const validi = ((inviti ?? []) as InviteRow[])

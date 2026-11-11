@@ -6,7 +6,10 @@ const chartProps = vi.hoisted(() => ({ last: null as unknown }));
 const dati = vi.hoisted(() => ({ casa: false }));
 
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } }),
+  // Token finto con sub u1: lo storico legge l'utente dalla sessione, senza chiamate di rete.
+  createClient: () => ({
+    auth: { getSession: async () => ({ data: { session: { access_token: `x.${btoa('{"sub":"u1"}')}.y` } } }) },
+  }),
 }));
 vi.mock('@/lib/useThrowToBoundary', () => ({
   useThrowToBoundary: () => (e: unknown) => {

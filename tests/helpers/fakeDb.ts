@@ -50,6 +50,7 @@ export function createFakeDb(seed: Record<string, Row[]>, opts: FakeDbOptions) {
     const filtri: ((r: Row) => boolean)[] = [];
     const ordine: { col: string; asc: boolean }[] = [];
     let limite: number | null = null;
+    let inizio = 0;
     let eseguita: Row[] | null = null;
 
     function esegui(): { data: Row[]; error: null } {
@@ -86,7 +87,7 @@ export function createFakeDb(seed: Record<string, Row[]>, opts: FakeDbOptions) {
       for (const { col, asc } of [...ordine].reverse()) {
         out = [...out].sort((a, b) => (asc ? 1 : -1) * confronta(valore(a, col), valore(b, col)));
       }
-      if (limite !== null) out = out.slice(0, limite);
+      out = out.slice(inizio, limite === null ? undefined : inizio + limite);
       eseguita = out;
       return { data: out, error: null };
     }
@@ -127,6 +128,17 @@ export function createFakeDb(seed: Record<string, Row[]>, opts: FakeDbOptions) {
       },
       limit: (n: number) => {
         limite = n;
+        return builder;
+      },
+      // Come PostgREST: estremi inclusi.
+      range: (da: number, a: number) => {
+        inizio = da;
+        limite = a - da + 1;
+        return builder;
+      },
+      not: (c: string, op: string, v: unknown) => {
+        if (op !== 'is' || v !== null) throw new Error(`fakeDb: not(${op}) non supportato`);
+        filtri.push((r) => nonNullo(r, c));
         return builder;
       },
       single: () => {

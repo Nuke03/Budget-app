@@ -1,21 +1,21 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { utenteOLogin } from '@/lib/utenteOLogin';
-import { getMyHousehold } from '@/lib/data/households';
-import { getMaxSlotUsato, getPlansFromMonth } from '@/lib/data/householdPlans';
+import { utenteECasa } from '@/lib/utenteOLogin';
+import { dalMese, getPlanVersions, maxSlotDeiPiani } from '@/lib/data/householdPlans';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { loadProposteStime } from '@/lib/loadProposteStime';
 import { QuotaClient } from './QuotaClient';
 
 export default async function QuotaPage() {
   const supabase = await createClient();
-  const user = await utenteOLogin(supabase);
-  const casa = await getMyHousehold(supabase, user.id);
+  const { casa } = await utenteECasa(supabase);
   if (!casa) redirect('/casa');
 
   const meseCorrente = meseRomaISO();
-  const piani = await getPlansFromMonth(supabase, casa.household.id, meseCorrente);
-  const slotUsati = await getMaxSlotUsato(supabase, casa.household.id);
+  // Una sola lettura delle versioni: da lì il piano del mese con i successivi e la posizione più alta usata.
+  const versioni = await getPlanVersions(supabase, casa.household.id);
+  const piani = dalMese(versioni, meseCorrente);
+  const slotUsati = maxSlotDeiPiani(versioni);
   const stime = await loadProposteStime(supabase, casa.household.id, piani);
   const slotMassimo = Math.max(slotUsati, ...casa.members.map((m) => m.slot));
 

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CasaCorrente } from '@/lib/data/households';
 import { casa as scopeCasa } from '@/lib/data/scope';
-import { getTransactions } from '@/lib/data/transactions';
+import { getSpeseAnticipateCasa } from '@/lib/data/transactions';
 import { getPlanVersions, type PlanBundle } from '@/lib/data/householdPlans';
 import { getTransfers } from '@/lib/data/transfers';
 import { getControlliRecenti } from '@/lib/data/balanceChecks';
@@ -44,7 +44,8 @@ export async function loadCasaStato(
   const [piani, trasferimenti, spese, controlli] = await Promise.all([
     getPlanVersions(supabase, casa.household.id),
     getTransfers(supabase, scope),
-    getTransactions(supabase, scope),
+    // Il credito verso la casa conta solo le spese pagate di tasca propria: non serve tutto lo storico.
+    getSpeseAnticipateCasa(supabase, casa.household.id),
     getControlliRecenti(supabase, casa.household.id),
   ]);
   const { righe: righePerMembro, crediti, debiti } = calcolaRegistriCasa({

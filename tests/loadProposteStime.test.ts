@@ -54,7 +54,8 @@ describe('loadProposteStime', () => {
     expect(r.fondiPerVoce.i1.id).toBe('g1');
     expect(r.validoDal).toBe('2026-12-01');
     expect(r.programmata).toBe(false);
-    expect(from.mock.calls.map((c) => c[0])).toEqual(['transactions', 'budget_goals']);
+    // Le due letture partono insieme: l'ordine delle chiamate non conta.
+    expect(from.mock.calls.map((c) => c[0]).sort()).toEqual(['budget_goals', 'transactions']);
   });
 
   it('senza voci con categoria non fa nessuna lettura', async () => {

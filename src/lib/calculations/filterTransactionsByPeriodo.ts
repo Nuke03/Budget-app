@@ -1,4 +1,4 @@
-import { startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, parseISO, format } from 'date-fns';
 
 export type Periodo = 'mese' | '3mesi' | '6mesi' | 'anno' | 'personalizzato';
 
@@ -41,4 +41,9 @@ export function filterTransactionsByPeriodo<T extends { data: string }>(
     const data = parseISO(t.data);
     return data >= from && data <= to;
   });
+}
+
+// Il primo giorno letto dallo storico: copre il periodo fisso più lungo ('anno', 12 mesi indietro).
+export function inizioStorico(oggi: Date): string {
+  return format(startOfMonth(subMonths(oggi, 12)), 'yyyy-MM-dd');
 }

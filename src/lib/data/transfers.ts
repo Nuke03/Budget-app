@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Transfer, TransferCausale } from '../types';
 import { applyScope, PERSONALE, type Scope } from './scope';
+import { leggiTutte } from './leggiTutte';
 
 const COLONNE =
   'id, household_id, user_id, da_account_id, a_account_id, importo, data, causale, beneficiario_user_id, per_conto_di_user_id, mese_competenza, solo_registrazione, nota, created_at';
@@ -41,12 +42,16 @@ function mapRow(r: TransferRow): Transfer {
   };
 }
 
+// Tutti i trasferimenti dello scope, a pagine (mai troncati a 1000 righe).
 export async function getTransfers(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<Transfer[]> {
-  const { data, error } = await applyScope(supabase.from('transfers').select(COLONNE), scope)
-    .order('data', { ascending: false })
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return ((data ?? []) as TransferRow[]).map(mapRow);
+  const righe = await leggiTutte<TransferRow>((da, a) =>
+    applyScope(supabase.from('transfers').select(COLONNE), scope)
+      .order('data', { ascending: false })
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(da, a)
+  );
+  return righe.map(mapRow);
 }
 
 export interface RecordTransferInput {

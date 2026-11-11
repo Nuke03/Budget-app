@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { utenteOLogin } from '@/lib/utenteOLogin';
-import { getMyHousehold } from '@/lib/data/households';
+import { utenteECasa } from '@/lib/utenteOLogin';
 import { getPlanVersions } from '@/lib/data/householdPlans';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
@@ -14,8 +13,7 @@ import { DaParte } from './DaParte';
 
 export default async function DaPartePage() {
   const supabase = await createClient();
-  const user = await utenteOLogin(supabase);
-  const casa = await getMyHousehold(supabase, user.id);
+  const { casa } = await utenteECasa(supabase);
   if (!casa) redirect('/casa');
 
   const scope = scopeCasa(casa.household.id);

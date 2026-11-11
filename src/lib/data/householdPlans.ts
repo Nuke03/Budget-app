@@ -1,3 +1,4 @@
+import { leggiTutte } from './leggiTutte';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { HouseholdPlan, OrigineStima, PlanItem, PlanShare, RegolaQuota } from '../types';
 
@@ -134,61 +135,71 @@ function mapShare(r: ShareRow): PlanShare {
 const COLONNE_PIANO =
   'id, household_id, valido_dal, giorno_versamento, regola, cuscinetto_obiettivo, cuscinetto_quota_mensile, arrotondamento, totale_mensile, created_at';
 
-// Il piano con valido_dal massimo non oltre il mese; se non ce n'è, il primo futuro; null senza piani.
+const COLONNE_VOCE =
+  'id, plan_id, nome, categoria_id, frequenza_mesi, importo_ricorrenza, importo_mensile, origine_stima, goal_id, stima_ignorata_con_n, ordine';
+const COLONNE_QUOTA =
+  'plan_id, slot, user_id, display_name, reddito_netto_mensile, reddito_irregolare, percentuale, in_casa_dal, esce_dal, quota_mensile';
+
+// Tutte le versioni del piano della casa, in ordine di valido_dal, con voci e quote. Due andate e
+// ritorno in tutto, qualunque sia il numero di versioni: prima i piani, poi voci e quote insieme.
+export async function getPlanVersions(supabase: SupabaseClient, householdId: string): Promise<PlanBundle[]> {
+  const { data, error } = await supabase
+    .from('household_plans')
+    .select(COLONNE_PIANO)
+    .eq('household_id', householdId)
+    .order('valido_dal', { ascending: true });
+  if (error) throw error;
+  const piani = (data ?? []) as PlanRow[];
+  if (piani.length === 0) return [];
+
+  const ids = piani.map((p) => p.id);
+  // A pagine: voci e quote di tutte le versioni insieme potrebbero superare le 1000 righe.
+  const [voci, quote] = await Promise.all([
+    leggiTutte<ItemRow>((da, a) =>
+      supabase
+        .from('household_plan_items')
+        .select(COLONNE_VOCE)
+        .in('plan_id', ids)
+        .order('plan_id', { ascending: true })
+        .order('ordine', { ascending: true })
+        .order('id', { ascending: true })
+        .range(da, a)
+    ),
+    leggiTutte<ShareRow>((da, a) =>
+      supabase
+        .from('household_plan_shares')
+        .select(COLONNE_QUOTA)
+        .in('plan_id', ids)
+        .order('plan_id', { ascending: true })
+        .order('slot', { ascending: true })
+        .range(da, a)
+    ),
+  ]);
+
+  return piani.map((riga) => ({
+    plan: mapPlan(riga),
+    items: voci.filter((v) => v.plan_id === riga.id).map(mapItem),
+    shares: quote.filter((q) => q.plan_id === riga.id).map(mapShare),
+  }));
+}
+
+// La versione del mese: valido_dal massimo non oltre il mese; se non ce n'è, la prima futura;
+// null senza piani. Stessa regola di pianoDelMese.
 export async function getPlanForMonth(
   supabase: SupabaseClient,
   householdId: string,
   meseISO: string,
 ): Promise<PlanBundle | null> {
-  const { data: passati, error: e1 } = await supabase
-    .from('household_plans')
-    .select(COLONNE_PIANO)
-    .eq('household_id', householdId)
-    .lte('valido_dal', meseISO)
-    .order('valido_dal', { ascending: false })
-    .limit(1);
-  if (e1) throw e1;
-  let riga = ((passati ?? []) as PlanRow[])[0];
-
-  if (!riga) {
-    const { data: futuri, error: e2 } = await supabase
-      .from('household_plans')
-      .select(COLONNE_PIANO)
-      .eq('household_id', householdId)
-      .gt('valido_dal', meseISO)
-      .order('valido_dal', { ascending: true })
-      .limit(1);
-    if (e2) throw e2;
-    riga = ((futuri ?? []) as PlanRow[])[0];
-  }
-  if (!riga) return null;
-  return leggiBundle(supabase, riga);
+  return dalMese(await getPlanVersions(supabase, householdId), meseISO)[0] ?? null;
 }
 
-async function leggiBundle(supabase: SupabaseClient, riga: PlanRow): Promise<PlanBundle> {
-  const { data: voci, error: e3 } = await supabase
-    .from('household_plan_items')
-    .select(
-      'id, plan_id, nome, categoria_id, frequenza_mesi, importo_ricorrenza, importo_mensile, origine_stima, goal_id, stima_ignorata_con_n, ordine',
-    )
-    .eq('plan_id', riga.id)
-    .order('ordine', { ascending: true });
-  if (e3) throw e3;
-
-  const { data: quote, error: e4 } = await supabase
-    .from('household_plan_shares')
-    .select(
-      'plan_id, slot, user_id, display_name, reddito_netto_mensile, reddito_irregolare, percentuale, in_casa_dal, esce_dal, quota_mensile',
-    )
-    .eq('plan_id', riga.id)
-    .order('slot', { ascending: true });
-  if (e4) throw e4;
-
-  return {
-    plan: mapPlan(riga),
-    items: ((voci ?? []) as ItemRow[]).map(mapItem),
-    shares: ((quote ?? []) as ShareRow[]).map(mapShare),
-  };
+// Da versioni in ordine di data: quella del mese (come getPlanForMonth) e tutte le successive.
+export function dalMese(versioni: PlanBundle[], meseISO: string): PlanBundle[] {
+  let inizio = 0;
+  versioni.forEach((p, i) => {
+    if (p.plan.validoDal <= meseISO) inizio = i;
+  });
+  return versioni.slice(inizio);
 }
 
 // Il piano del mese (come getPlanForMonth) e tutte le versioni successive, in ordine di data.
@@ -197,47 +208,17 @@ export async function getPlansFromMonth(
   householdId: string,
   meseISO: string,
 ): Promise<PlanBundle[]> {
-  const attuale = await getPlanForMonth(supabase, householdId, meseISO);
-  if (!attuale) return [];
-  const { data: dopo, error } = await supabase
-    .from('household_plans')
-    .select(COLONNE_PIANO)
-    .eq('household_id', householdId)
-    .gt('valido_dal', attuale.plan.validoDal)
-    .order('valido_dal', { ascending: true });
-  if (error) throw error;
-  const successivi = await Promise.all(((dopo ?? []) as PlanRow[]).map((r) => leggiBundle(supabase, r)));
-  return [attuale, ...successivi];
+  return dalMese(await getPlanVersions(supabase, householdId), meseISO);
 }
 
-// Tutte le versioni del piano della casa, in ordine di valido_dal, con voci e quote.
-export async function getPlanVersions(supabase: SupabaseClient, householdId: string): Promise<PlanBundle[]> {
-  const { data, error } = await supabase
-    .from('household_plans')
-    .select(COLONNE_PIANO)
-    .eq('household_id', householdId)
-    .order('valido_dal', { ascending: true });
-  if (error) throw error;
-  return Promise.all(((data ?? []) as PlanRow[]).map((r) => leggiBundle(supabase, r)));
+// La posizione più alta mai usata in una quota di qualunque versione (0 se nessuna).
+export function maxSlotDeiPiani(versioni: PlanBundle[]): number {
+  return versioni.reduce((m, p) => p.shares.reduce((mm, s) => Math.max(mm, s.slot), m), 0);
 }
 
 // La posizione piu alta mai usata in una quota di qualunque versione della casa (0 se nessuna).
 export async function getMaxSlotUsato(supabase: SupabaseClient, householdId: string): Promise<number> {
-  const { data: piani, error: e1 } = await supabase
-    .from('household_plans')
-    .select('id')
-    .eq('household_id', householdId);
-  if (e1) throw e1;
-  const ids = ((piani ?? []) as { id: string }[]).map((p) => p.id);
-  if (ids.length === 0) return 0;
-  const { data: quote, error: e2 } = await supabase
-    .from('household_plan_shares')
-    .select('slot')
-    .in('plan_id', ids)
-    .order('slot', { ascending: false })
-    .limit(1);
-  if (e2) throw e2;
-  return ((quote ?? []) as { slot: number }[])[0]?.slot ?? 0;
+  return maxSlotDeiPiani(await getPlanVersions(supabase, householdId));
 }
 
 // Salva una o più versioni del piano con l'unica scrittura consentita: l'RPC.
