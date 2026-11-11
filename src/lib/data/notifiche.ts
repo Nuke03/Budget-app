@@ -34,3 +34,18 @@ export async function segnaNessunaSpesa(supabase: SupabaseClient, finoAl: string
     .upsert({ nessuna_spesa_fino_al: finoAl }, { onConflict: 'user_id' });
   if (error) throw error;
 }
+
+// Le scelte dell'utente sui promemoria (RLS: solo la sua riga). Senza riga: tutto sconosciuto.
+export async function leggiPromemoriaUtente(
+  supabase: SupabaseClient
+): Promise<{ notificheAttive: boolean | null; nessunaSpesaFinoAl: string | null }> {
+  const { data, error } = await supabase
+    .from('promemoria_utente')
+    .select('notifiche_attive, nessuna_spesa_fino_al')
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    notificheAttive: data?.notifiche_attive ?? null,
+    nessunaSpesaFinoAl: data?.nessuna_spesa_fino_al ?? null,
+  };
+}

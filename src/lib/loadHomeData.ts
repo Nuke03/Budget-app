@@ -2,13 +2,25 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAccounts } from '@/lib/data/accounts';
 import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals } from '@/lib/data/goals';
-import { getLastIncomeDate } from '@/lib/data/transactions';
+import { getLastIncomeDate, getTransactions } from '@/lib/data/transactions';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { PERSONALE } from '@/lib/data/scope';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { calcolaAndamento, type Andamento } from '@/lib/calculations/supporto/andamento';
+import { scegliConsiglio, obiettiviCorti, type Consiglio } from '@/lib/calculations/supporto/consiglio';
+import { periodoDaRecuperare } from '@/lib/calculations/supporto/notifiche';
+import {
+  righeLibretto,
+  prossimaCosa,
+  promemoriaDaCasa,
+  type RigaLibretto,
+  type Prossimo,
+} from '@/lib/calculations/supporto/home';
 import { getMyHousehold } from '@/lib/data/households';
 import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
@@ -29,6 +41,18 @@ export interface HomeData {
   categories: Category[];
   goals: (BudgetGoal & { accantonato: number })[];
   casa: CasaPerHome | null;
+  righe: RigaLibretto[];
+  andamento: Andamento;
+  consiglio: Consiglio;
+  prossimo: Prossimo | null;
+  // null: non ha ancora risposto (o non si legge).
+  notificheAttive: boolean | null;
+}
+
+// Primo giorno del mese di 3 mesi fa (YYYY-MM-DD), da un giorno YYYY-MM-DD.
+function inizioFinestra(oggi: string): string {
+  const totale = Number(oggi.slice(0, 4)) * 12 + (Number(oggi.slice(5, 7)) - 1) - 3;
+  return `${Math.floor(totale / 12)}-${String((totale % 12) + 1).padStart(2, '0')}-01`;
 }
 
 // La parte di casa non deve mai rompere la home personale. Se non si legge la casa corrente
@@ -63,7 +87,8 @@ export async function loadHomeData(
   // Tutto parte insieme; lo speso collegato agli obiettivi segue subito la lettura degli obiettivi
   // (una sola query per tutti), senza aspettare la parte di casa.
   const obiettivi = getOpenGoals(supabase);
-  const [accounts, categories, goals, speso, ultimaEntrata, casa] = await Promise.all([
+  const oggi = oggiRomaISO(today);
+  const [accounts, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     obiettivi,
@@ -73,6 +98,10 @@ export async function loadHomeData(
     obiettivi.then((g) => getSpecoCollegatoPerObiettivi(supabase, g, today, PERSONALE)),
     getLastIncomeDate(supabase),
     casaOpzionale(supabase, userId, today),
+    // Una sola lettura: righe, andamento, stime e ultimo giorno segnato.
+    getTransactions(supabase, PERSONALE, { da: inizioFinestra(oggi) }),
+    // Le scelte sui promemoria non devono rompere la home.
+    leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null })),
   ]);
   const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
@@ -94,6 +123,31 @@ export async function loadHomeData(
     accantonato: computeAccantonatoFinora(g, today, g.specoCollegato),
   }));
 
+  const andamento = calcolaAndamento(transazioni, oggi);
+  const spesoStime = transazioni
+    .filter((t) => t.tipo === 'expense' && t.stima && t.data.slice(0, 7) === oggi.slice(0, 7) && t.data <= oggi)
+    .reduce((tot, t) => tot + t.importo, 0);
+  const consiglio = scegliConsiglio({
+    andamento,
+    spesoStime,
+    nomiCategorie: Object.fromEntries(categories.map((c) => [c.id, c.nome])),
+    obiettiviCorti: obiettiviCorti(goalsConSpeso, disponibileLibero, today),
+    oggi,
+  });
+  const ultimaCreazione = transazioni.reduce<string | null>(
+    (max, t) => (max === null || t.createdAt > max ? t.createdAt : max),
+    null
+  );
+  const inPari = periodoDaRecuperare(
+    ultimaCreazione ? oggiRomaISO(new Date(ultimaCreazione)) : null,
+    scelte.nessunaSpesaFinoAl,
+    oggi
+  );
+  const prossimo = prossimaCosa({
+    inPari,
+    promemoriaCasa: promemoriaDaCasa(casa, oggi).map((p) => ({ testo: p.testo, href: p.azione?.href })),
+  });
+
   return {
     disponibileLibero,
     margineGiornaliero,
@@ -102,5 +156,10 @@ export async function loadHomeData(
     categories,
     goals: goalsWithAccantonato,
     casa,
+    righe: righeLibretto(transazioni, oggi),
+    andamento,
+    consiglio,
+    prossimo,
+    notificheAttive: scelte.notificheAttive,
   };
 }

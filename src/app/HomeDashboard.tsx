@@ -7,9 +7,8 @@ import { formatEuro, formatDateIt, nomeMese } from '@/lib/format';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { ComeSiCalcola } from './casa/ComeSiCalcola';
 import { StrisciaPromemoria } from './casa/StrisciaPromemoria';
-import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { promemoriaDaCasa } from '@/lib/calculations/supporto/home';
 import { descriviOrigineDebito } from '@/lib/calculations/casa/debitiMembri';
-import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
 import type { CasaPerHome } from '@/lib/loadHomeData';
@@ -71,27 +70,7 @@ export function HomeDashboard({
   const debitiMiei = stato ? stato.debiti.filter((d) => d.debitoreId === stato.me.userId) : [];
   const debitiVersoDiMe = stato ? stato.debiti.filter((d) => d.creditoreId === stato.me.userId) : [];
   const creditoMio = stato ? (stato.crediti[stato.me.userId] ?? 0) : 0;
-  const promemoria = stato
-    ? computeReminders(
-        statoPromemoria({
-          piano: stato.piano,
-          righe: stato.righe,
-          righeCasa: stato.righeCasa,
-          oggi,
-          nomi: Object.fromEntries(stato.membri.map((m) => [m.userId, m.displayName])),
-          crediti: stato.crediti,
-          debiti: stato.debiti,
-          controllo: {
-            ultimo: stato.controlli.ultimoControllo,
-            riferimento: riferimentoControllo(stato.me.joinedAt, casa?.aggiunta?.conti ?? []),
-            haConto: (casa?.aggiunta?.conti.length ?? 0) > 0,
-          },
-          ultimoCheckinMese: stato.controlli.ultimoCheckinMese,
-        }),
-        { userId: stato.me.userId },
-        oggi
-      )
-    : [];
+  const promemoria = promemoriaDaCasa(casa, oggi);
   const statoNonLetto = !!casa && !casa.stato;
   const haRiserva = righeDaVersare.length > 0 || debitiMiei.length > 0;
 
