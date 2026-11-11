@@ -252,7 +252,8 @@ describe('CasaHome', () => {
     it('il pulsante + apre il foglio in modalità Casa senza selettore', () => {
       render(<CasaHome casa={casa} finanze={finanze([conto])} />);
       fireEvent.click(screen.getByLabelText('Aggiungi spesa di casa'));
-      expect(screen.getByText('Chi ha pagato')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: conto.nome }));
+      expect(screen.getByRole('group', { name: 'Chi ha pagato' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Personale' })).not.toBeInTheDocument();
       expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
     });

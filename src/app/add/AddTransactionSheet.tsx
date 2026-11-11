@@ -10,7 +10,7 @@ import { casa as scopeCasa } from '@/lib/data/scope';
 import { nomiAltri } from '@/lib/calculations/casa/etichette';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
-import type { Account, BudgetGoal, Category, TransactionTipo } from '@/lib/types';
+import type { Account, BudgetGoal, Category, Transaction, TransactionTipo } from '@/lib/types';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { AddTransactionForm } from './AddTransactionForm';
 
@@ -23,6 +23,37 @@ function leggiModoSalvato(): Modo {
     return window.localStorage.getItem(CHIAVE_MODO) === 'casa' ? 'casa' : 'personale';
   } catch {
     return 'personale';
+  }
+}
+
+// Il conto dell'ultima volta, per spazio. undefined: mai usato.
+function chiaveConto(modo: Modo): string {
+  return `aggiungi:conto:${modo}`;
+}
+
+function leggiConto(modo: Modo): string | null | undefined {
+  try {
+    const v = window.localStorage.getItem(chiaveConto(modo));
+    return v === null ? undefined : v === '' ? null : v;
+  } catch {
+    return undefined;
+  }
+}
+
+function salvaConto(modo: Modo, accountId: string | null) {
+  try {
+    window.localStorage.setItem(chiaveConto(modo), accountId ?? '');
+  } catch {
+    // Solo una comodità.
+  }
+}
+
+// L'id della riga appena creata: la Home lo legge per mettere il timbro.
+function segnaRegistrato(id: string) {
+  try {
+    window.sessionStorage.setItem('libretto:registrato', id);
+  } catch {
+    // Senza memoria niente timbro, il salvataggio vale comunque.
   }
 }
 
@@ -51,6 +82,7 @@ export function AddTransactionSheet({
   contiPersonali = [],
   modoIniziale = 'ricorda',
   meUserId,
+  storico,
   onSaved,
 }: {
   aperto: boolean;
@@ -65,9 +97,13 @@ export function AddTransactionSheet({
   contiPersonali?: Account[];
   modoIniziale?: 'ricorda' | 'personale' | 'casa';
   meUserId?: string;
-  onSaved: () => void;
+  // Le spese passate, da cui indovinare la categoria. Dove non c'è, nessun suggerimento.
+  storico?: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
+  onSaved: (id: string) => void;
 }) {
   const [modoScelto, setModoScelto] = useState<Modo | null>(null);
+  // L'importo già scritto resta quando si cambia spazio (il modulo si ricrea).
+  const [importoBozza, setImportoBozza] = useState('');
 
   if (!aperto) return null;
 
@@ -83,10 +119,10 @@ export function AddTransactionSheet({
     salvaModo(m);
   }
 
-  async function salvaPersonale(payload: Payload) {
-    if (!personale) return;
+  async function salvaPersonale(payload: Payload): Promise<string | null> {
+    if (!personale) return null;
     const supabase = createClient();
-    await createTransaction(supabase, {
+    const creata = await createTransaction(supabase, {
       ...payload,
       data: format(new Date(), 'yyyy-MM-dd'),
       nota: null,
@@ -100,10 +136,11 @@ export function AddTransactionSheet({
         payload.tipo === 'income' ? payload.importo : -payload.importo
       );
     }
+    return creata?.id ?? null;
   }
 
-  async function salvaCasa(payload: Payload) {
-    if (!casa) return;
+  async function salvaCasa(payload: Payload): Promise<string | null> {
+    if (!casa) return null;
     const supabase = createClient();
     const conPersonale =
       payload.tipo === 'expense' &&
@@ -111,15 +148,15 @@ export function AddTransactionSheet({
       contiPersonali.some((a) => a.id === payload.accountId);
     if (conPersonale && payload.accountId) {
       // Anticipata con la propria carta: il credito verso la casa nasce dalla spesa, il saldo scalato è quello personale.
-      await createTransaction(
+      const anticipata = await createTransaction(
         supabase,
         { ...payload, data: oggiRomaISO(), nota: null, pagataDaUserId: meUserId ?? casa.meUserId },
         scopeCasa(casa.householdId)
       );
       await adjustAccountBalance(supabase, payload.accountId, -payload.importo);
-      return;
+      return anticipata?.id ?? null;
     }
-    await createTransaction(
+    const creata = await createTransaction(
       supabase,
       { ...payload, data: oggiRomaISO(), nota: null },
       scopeCasa(casa.householdId)
@@ -131,12 +168,14 @@ export function AddTransactionSheet({
         payload.tipo === 'income' ? payload.importo : -payload.importo
       );
     }
+    return creata?.id ?? null;
   }
 
   async function handleSubmit(payload: Payload) {
-    if (modo === 'casa') await salvaCasa(payload);
-    else await salvaPersonale(payload);
-    onSaved();
+    const id = modo === 'casa' ? await salvaCasa(payload) : await salvaPersonale(payload);
+    salvaConto(modo, payload.accountId);
+    if (id) segnaRegistrato(id);
+    onSaved(id ?? '');
     onClose();
   }
 
@@ -157,6 +196,17 @@ export function AddTransactionSheet({
     });
   }
 
+  const spazio = {
+    etichetta: modo === 'casa' ? 'Casa' : 'Personale',
+    opzioni: haSelettore
+      ? [
+          { valore: 'personale', etichetta: 'Personale' },
+          { valore: 'casa', etichetta: 'Casa' },
+        ]
+      : undefined,
+    onScegli: (v: string) => scegli(v === 'casa' ? 'casa' : 'personale'),
+  };
+
   const contiCasaEPersonali = [
     ...(casa?.conti ?? []),
     ...contiPersonali.map((a) => ({ ...a, nome: `Io, con ${a.nome}` })),
@@ -171,23 +221,6 @@ export function AddTransactionSheet({
 
   return (
     <FoglioInferiore titolo="Nuova transazione" onClose={onClose}>
-      {haSelettore && (
-        <div className="mx-5 mb-4 flex gap-1.5 rounded-full bg-surface-muted p-1">
-          {(['personale', 'casa'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              aria-pressed={modo === m}
-              onClick={() => scegli(m)}
-              className={`flex-1 rounded-full py-2.5 text-sm font-semibold transition-colors duration-150 ${
-                modo === m ? 'bg-surface text-foreground shadow-[var(--shadow-card)]' : 'text-muted'
-              }`}
-            >
-              {m === 'personale' ? 'Personale' : 'Casa'}
-            </button>
-          ))}
-        </div>
-      )}
       {modo === 'casa' && casa ? (
         <AddTransactionForm
           key="casa"
@@ -201,6 +234,12 @@ export function AddTransactionSheet({
           contoDaScegliere={casa.conti.length === 0 && contiPersonali.length > 0}
           preselezionaObiettivo
           nota={notaCasa}
+          veloce
+          storico={storico}
+          contoIniziale={leggiConto('casa')}
+          spazio={spazio}
+          importoIniziale={importoBozza}
+          onImportoChange={setImportoBozza}
           onSubmit={handleSubmit}
         />
       ) : personale ? (
@@ -210,6 +249,12 @@ export function AddTransactionSheet({
           accounts={personale.accounts}
           goals={personale.goals}
           onCreateGoal={handleCreateGoal}
+          veloce
+          storico={storico}
+          contoIniziale={leggiConto('personale')}
+          spazio={spazio}
+          importoIniziale={importoBozza}
+          onImportoChange={setImportoBozza}
           onSubmit={handleSubmit}
         />
       ) : null}

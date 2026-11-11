@@ -24,7 +24,7 @@ import {
 import { getMyHousehold } from '@/lib/data/households';
 import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
-import type { Account, BudgetGoal, Category } from '@/lib/types';
+import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 
 // Le due parti si leggono a parte: se manca lo stato, la casa esiste ma il disponibile
 // personale non tiene conto della quota (la home lo dice).
@@ -42,6 +42,8 @@ export interface HomeData {
   goals: (BudgetGoal & { accantonato: number })[];
   casa: CasaPerHome | null;
   righe: RigaLibretto[];
+  // Le transazioni dei 3 mesi già lette per la Home: da qui si indovina la categoria di una nuova spesa.
+  storico: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
   andamento: Andamento;
   consiglio: Consiglio;
   prossimo: Prossimo | null;
@@ -157,6 +159,12 @@ export async function loadHomeData(
     goals: goalsWithAccantonato,
     casa,
     righe: righeLibretto(transazioni, oggi),
+    storico: transazioni.map((t) => ({
+      descrizione: t.descrizione,
+      categoriaId: t.categoriaId,
+      data: t.data,
+      tipo: t.tipo,
+    })),
     andamento,
     consiglio,
     prossimo,

@@ -184,7 +184,6 @@ describe('HomeDashboard', () => {
 
     fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '26' } });
-    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Spesa' } });
     fireEvent.click(screen.getByText('Salva'));
 
     await waitFor(() => {
@@ -207,8 +206,9 @@ describe('HomeDashboard', () => {
       />
     );
     fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
-    expect(screen.getByRole('button', { name: 'Personale' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Casa' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Personale' }));
+    expect(screen.getByRole('button', { name: 'Personale', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Casa', pressed: false })).toBeInTheDocument();
   });
 
   describe('riserva della casa nel dettaglio', () => {

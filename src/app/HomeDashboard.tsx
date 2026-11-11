@@ -16,7 +16,7 @@ import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
 import type { CasaPerHome } from '@/lib/loadHomeData';
-import type { Account, BudgetGoal, Category } from '@/lib/types';
+import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
 // (computeAccantonatoFinora): per gli obiettivi "bloccato" coincide con importoTarget,
@@ -51,6 +51,7 @@ export function HomeDashboard({
   meUserId,
   oggi = oggiRomaISO(),
   righe,
+  storico,
   andamento,
   consiglio,
   prossimo,
@@ -65,6 +66,7 @@ export function HomeDashboard({
   meUserId?: string;
   oggi?: string;
   righe: RigaLibretto[];
+  storico?: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
   andamento: Andamento;
   consiglio: Consiglio;
   prossimo: Prossimo | null;
@@ -173,6 +175,7 @@ export function HomeDashboard({
         casa={casa?.aggiunta ?? null}
         contiPersonali={accounts}
         meUserId={meUserId}
+        storico={storico}
         onSaved={() => router.refresh()}
       />
     </>

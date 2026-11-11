@@ -50,6 +50,31 @@ describe('AddTransactionForm', () => {
     });
   });
 
+  it('in modifica mostra tutti i campi di sempre e non sposta il fuoco sull importo', () => {
+    render(
+      <AddTransactionForm
+        categories={categories}
+        accounts={accounts}
+        initial={{ tipo: 'expense', importo: 42, categoriaId: 'cat-1', accountId: 'acc-1', descrizione: 'Vecchia spesa' }}
+        submitLabel="Salva modifiche"
+        onSubmit={vi.fn()}
+      />
+    );
+    expect(screen.getByLabelText('Importo')).not.toHaveFocus();
+    expect(screen.getByLabelText('Descrizione')).toHaveValue('Vecchia spesa');
+    expect(screen.getByText('Groceries')).toBeInTheDocument();
+    expect(screen.getByText('Conto corrente')).toBeInTheDocument();
+  });
+
+  it('in aggiunta veloce con importo vuoto o zero Salva resta disattivo', () => {
+    render(<AddTransactionForm categories={categories} accounts={accounts} veloce onSubmit={vi.fn()} />);
+    expect(screen.getByText('Salva')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '0' } });
+    expect(screen.getByText('Salva')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '3' } });
+    expect(screen.getByText('Salva')).not.toBeDisabled();
+  });
+
   it('disabilita il pulsante se importo o descrizione sono vuoti', () => {
     const onSubmit = vi.fn();
     render(

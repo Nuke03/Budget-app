@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { AddTransactionSheet } from '@/app/add/AddTransactionSheet';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
@@ -13,7 +14,7 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 
 vi.mock('@/lib/data/transactions', () => ({
-  createTransaction: vi.fn().mockResolvedValue(undefined),
+  createTransaction: vi.fn(),
 }));
 
 vi.mock('@/lib/data/accounts', () => ({
@@ -58,15 +59,35 @@ function apri(props: Partial<React.ComponentProps<typeof AddTransactionSheet>> =
   );
 }
 
+// Basta l'importo: tutto il resto ha un valore di partenza.
 function compila(importo: string) {
   fireEvent.change(screen.getByLabelText('Importo'), { target: { value: importo } });
-  fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Prova' } });
   fireEvent.click(screen.getByText('Salva'));
 }
 
+const pezzo = (nome: string | RegExp) => screen.getByRole('button', { name: nome });
+
+function scegliEntrata() {
+  fireEvent.click(pezzo('Spesa'));
+  fireEvent.click(pezzo('Entrata'));
+}
+
+const storicoCasa = [{ descrizione: 'Luce', categoriaId: 'cc', data: oggiRomaISO(), tipo: 'expense' as const }];
+const storicoPersonale = [{ descrizione: 'Pane', categoriaId: 'cp', data: oggiRomaISO(), tipo: 'expense' as const }];
+
+const contiDue = {
+  ...personale,
+  accounts: [
+    ...personale.accounts,
+    { id: 'ap2', nome: 'Carta', saldoAttuale: 5, contaInDisponibile: true, targetSaldo: null },
+  ],
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(createTransaction).mockResolvedValue({ id: 't-nuova' } as never);
   window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 afterEach(() => {
@@ -75,35 +96,40 @@ afterEach(() => {
 });
 
 describe('AddTransactionSheet', () => {
-  it('senza casa non mostra il selettore', () => {
+  it('senza casa non offre lo spazio Casa', () => {
     apri({ casa: null });
+    expect(screen.getByText('Personale')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Personale' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Casa' })).not.toBeInTheDocument();
-    expect(screen.getByText('Conto mio')).toBeInTheDocument();
+    expect(pezzo('Conto mio')).toBeInTheDocument();
   });
 
-  it('con casa mostra Personale e Casa e parte da Personale senza memoria', () => {
+  it('con casa offre Personale e Casa e parte da Personale senza memoria', () => {
     apri();
-    expect(screen.getByRole('button', { name: 'Personale' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText('Conto mio')).toBeInTheDocument();
+    fireEvent.click(pezzo('Personale'));
+    expect(screen.getByRole('button', { name: 'Personale', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Casa', pressed: false })).toBeInTheDocument();
+    expect(pezzo('Conto mio')).toBeInTheDocument();
   });
 
   it('ricorda l ultima scelta in localStorage', () => {
     const { unmount } = apri();
+    fireEvent.click(pezzo('Personale'));
     fireEvent.click(screen.getByRole('button', { name: 'Casa' }));
     expect(window.localStorage.getItem('aggiungiModo')).toBe('casa');
     unmount();
     apri();
-    expect(screen.getByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'true');
+    expect(pezzo('Casa')).toBeInTheDocument();
+    expect(pezzo('Conto comune')).toBeInTheDocument();
   });
 
   it('modoIniziale casa ignora la memoria', () => {
     window.localStorage.setItem('aggiungiModo', 'personale');
     apri({ modoIniziale: 'casa' });
-    expect(screen.getByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'true');
+    expect(pezzo('Casa')).toBeInTheDocument();
   });
 
-  it('con localStorage che lancia il selettore funziona comunque', () => {
+  it('con localStorage che lancia lo spazio funziona comunque', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('negato');
     });
@@ -111,16 +137,17 @@ describe('AddTransactionSheet', () => {
       throw new Error('negato');
     });
     apri();
-    expect(screen.getByRole('button', { name: 'Personale' })).toHaveAttribute('aria-pressed', 'true');
+    expect(pezzo('Personale')).toBeInTheDocument();
+    fireEvent.click(pezzo('Personale'));
     fireEvent.click(screen.getByRole('button', { name: 'Casa' }));
-    expect(screen.getByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'true');
+    expect(pezzo('Casa')).toBeInTheDocument();
   });
 
-  it('in modalità Casa mostra categorie e conti di casa, "Chi ha pagato" e "Lo vedrà anche Anna"', () => {
-    apri({ modoIniziale: 'casa' });
-    expect(screen.getByText('Bollette')).toBeInTheDocument();
-    expect(screen.getByText('Conto comune')).toBeInTheDocument();
-    expect(screen.getByText('Chi ha pagato')).toBeInTheDocument();
+  it('in modalità Casa mostra categoria e conto di casa, "Chi ha pagato" e "Lo vedrà anche Anna"', () => {
+    apri({ modoIniziale: 'casa', storico: storicoCasa });
+    expect(pezzo('Bollette')).toBeInTheDocument();
+    fireEvent.click(pezzo('Conto comune'));
+    expect(screen.getByRole('group', { name: 'Chi ha pagato' })).toBeInTheDocument();
     expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
     expect(screen.queryByText('Conto mio')).not.toBeInTheDocument();
     expect(screen.queryByText('Gestisci categorie')).not.toBeInTheDocument();
@@ -135,7 +162,7 @@ describe('AddTransactionSheet', () => {
   });
 
   it('salvare in Casa crea la transazione con scope casa e chiama adjustAccountBalance con -12.5', async () => {
-    apri({ modoIniziale: 'casa' });
+    apri({ modoIniziale: 'casa', storico: storicoCasa });
     compila('12.5');
     await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', -12.5));
     expect(createTransaction).toHaveBeenCalledWith(
@@ -148,7 +175,7 @@ describe('AddTransactionSheet', () => {
 
   it('una entrata di casa aumenta il conto', async () => {
     apri({ modoIniziale: 'casa', casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false }] } });
-    fireEvent.click(screen.getByText('Entrata'));
+    scegliEntrata();
     compila('40');
     await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', 40));
   });
@@ -173,12 +200,15 @@ describe('AddTransactionSheet', () => {
 
   it('in Casa offre il conto comune e "Io, con <conto>"', () => {
     apri({ modoIniziale: 'casa', contiPersonali: personale.accounts });
-    expect(screen.getByRole('button', { name: 'Conto comune' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Io, con Conto mio' })).toBeInTheDocument();
+    fireEvent.click(pezzo('Conto comune'));
+    const scelta = within(screen.getByRole('group', { name: 'Chi ha pagato' }));
+    expect(scelta.getByRole('button', { name: 'Conto comune' })).toBeInTheDocument();
+    expect(scelta.getByRole('button', { name: 'Io, con Conto mio' })).toBeInTheDocument();
   });
 
   it('scegliere Io, con carta crea la spesa con pagataDaUserId e scala il conto personale con delta -30', async () => {
     apri({ modoIniziale: 'casa', contiPersonali: personale.accounts });
+    fireEvent.click(pezzo('Conto comune'));
     fireEvent.click(screen.getByRole('button', { name: 'Io, con Conto mio' }));
     compila('30');
     await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -30));
@@ -200,7 +230,7 @@ describe('AddTransactionSheet', () => {
         categories: [...personale.categories, { id: 'ci', nome: 'Stipendio', tipo: 'income', colore: null, archiviata: false }],
       },
     });
-    fireEvent.click(screen.getByText('Entrata'));
+    scegliEntrata();
     compila('40');
     await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', 40));
   });
@@ -208,8 +238,8 @@ describe('AddTransactionSheet', () => {
   it('senza conto comune "Chi ha pagato" non sceglie da solo la prima carta personale', async () => {
     apri({ modoIniziale: 'casa', casa: { ...casa, conti: [] }, contiPersonali: personale.accounts });
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '9' } });
-    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Prova' } });
     expect(screen.getByText('Salva')).toBeDisabled();
+    fireEvent.click(pezzo('Scegli chi ha pagato'));
     expect(screen.getByText('Scegline uno per salvare')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Io, con Conto mio' }));
     expect(screen.getByText('Salva')).not.toBeDisabled();
@@ -223,13 +253,15 @@ describe('AddTransactionSheet', () => {
       contiPersonali: personale.accounts,
       casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false }] },
     });
-    fireEvent.click(screen.getByText('Entrata'));
-    expect(screen.queryByRole('button', { name: 'Io, con Conto mio' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Conto comune' })).toBeInTheDocument();
+    scegliEntrata();
+    fireEvent.click(pezzo('Conto comune'));
+    const scelta = within(screen.getByRole('group', { name: 'Chi ha pagato' }));
+    expect(scelta.queryByRole('button', { name: 'Io, con Conto mio' })).not.toBeInTheDocument();
+    expect(scelta.getByRole('button', { name: 'Conto comune' })).toBeInTheDocument();
   });
 
   it('una spesa di casa con conto comune non imposta pagataDaUserId', async () => {
-    apri({ modoIniziale: 'casa', contiPersonali: personale.accounts });
+    apri({ modoIniziale: 'casa', contiPersonali: personale.accounts, storico: storicoCasa });
     compila('12');
     await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', -12));
     expect(vi.mocked(createTransaction).mock.calls[0][1]).not.toHaveProperty('pagataDaUserId');
@@ -248,7 +280,7 @@ describe('AddTransactionSheet', () => {
       stato: 'aperto' as const,
       createdAt: '2026-01-01T00:00:00Z',
     };
-    apri({ modoIniziale: 'casa', casa: { ...casa, obiettivi: [obiettivoBollette] } });
+    apri({ modoIniziale: 'casa', casa: { ...casa, obiettivi: [obiettivoBollette] }, storico: storicoCasa });
     compila('12.5');
     await waitFor(() => expect(createTransaction).toHaveBeenCalled());
     expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ categoriaId: 'cc', goalId: 'g-bol' });
@@ -257,6 +289,7 @@ describe('AddTransactionSheet', () => {
   it('in Personale non preseleziona obiettivi dalla categoria', async () => {
     apri({
       modoIniziale: 'personale',
+      storico: storicoPersonale,
       personale: {
         ...personale,
         goals: [
@@ -279,6 +312,145 @@ describe('AddTransactionSheet', () => {
     compila('10');
     await waitFor(() => expect(createTransaction).toHaveBeenCalled());
     expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ goalId: null });
+  });
+
+  it('il fuoco parte sull importo', () => {
+    apri({ modoIniziale: 'personale' });
+    expect(screen.getByLabelText('Importo')).toHaveFocus();
+    expect(screen.getByLabelText('Importo')).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('si salva con il solo importo: descrizione vuota e categoria indovinata', async () => {
+    apri({ modoIniziale: 'personale', storico: storicoPersonale });
+    expect(screen.getByText('Salva')).toBeDisabled();
+    compila('7');
+    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({
+      tipo: 'expense',
+      importo: 7,
+      descrizione: '',
+      categoriaId: 'cp',
+      accountId: 'ap',
+      goalId: null,
+    });
+  });
+
+  it('senza storico la categoria è "Senza categoria" e si salva senza', async () => {
+    apri({ modoIniziale: 'personale' });
+    expect(pezzo('Senza categoria')).toBeInTheDocument();
+    compila('7');
+    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ categoriaId: null });
+  });
+
+  it('il riepilogo cambia toccando un pezzo e apre solo la scelta di quel pezzo', () => {
+    apri({ modoIniziale: 'personale', personale: contiDue, casa: null });
+    fireEvent.click(pezzo('Conto mio'));
+    expect(screen.getByRole('group', { name: 'Conto' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Categoria' })).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('group', { name: 'Conto' })).getByRole('button', { name: 'Carta' }));
+    expect(pezzo('Carta')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Conto' })).not.toBeInTheDocument();
+  });
+
+  it('descrizione e obiettivo stanno dietro "Aggiungi una nota"', async () => {
+    apri({ modoIniziale: 'personale' });
+    expect(screen.queryByLabelText('Descrizione')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Aggiungi una nota'));
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Pane' } });
+    compila('3');
+    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ descrizione: 'Pane' });
+  });
+
+  it('la categoria segue la descrizione finché non la scegli a mano', () => {
+    const conDue = {
+      ...personale,
+      categories: [
+        ...personale.categories,
+        { id: 'cp2', nome: 'Caffè', tipo: 'expense' as const, colore: null, archiviata: false },
+      ],
+    };
+    const storico = [
+      { descrizione: 'Pane', categoriaId: 'cp', data: oggiRomaISO(), tipo: 'expense' as const },
+      { descrizione: 'Bar', categoriaId: 'cp2', data: oggiRomaISO(), tipo: 'expense' as const },
+    ];
+    apri({ modoIniziale: 'personale', personale: conDue, casa: null, storico });
+    fireEvent.click(screen.getByText('Aggiungi una nota'));
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Bar' } });
+    expect(pezzo('Caffè')).toBeInTheDocument();
+    fireEvent.click(pezzo('Caffè'));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Categoria' })).getByRole('button', { name: 'Personale cat' }));
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Bar ' } });
+    expect(pezzo('Personale cat')).toBeInTheDocument();
+  });
+
+  it('riaprendo il foglio il conto è l ultimo usato per quello spazio', async () => {
+    const { unmount } = apri({ modoIniziale: 'personale', personale: contiDue, casa: null });
+    fireEvent.click(pezzo('Conto mio'));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Conto' })).getByRole('button', { name: 'Carta' }));
+    compila('4');
+    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap2', -4));
+    expect(window.localStorage.getItem('aggiungi:conto:personale')).toBe('ap2');
+    unmount();
+    apri({ modoIniziale: 'personale', personale: contiDue, casa: null });
+    expect(pezzo('Carta')).toBeInTheDocument();
+  });
+
+  it('se l ultimo conto usato non esiste più, nessun conto: Contanti', async () => {
+    window.localStorage.setItem('aggiungi:conto:personale', 'sparito');
+    apri({ modoIniziale: 'personale', casa: null });
+    expect(pezzo('Contanti')).toBeInTheDocument();
+    compila('4');
+    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ accountId: null });
+    expect(adjustAccountBalance).not.toHaveBeenCalled();
+  });
+
+  it('dopo il salvataggio scrive l id in sessionStorage, chiama onSaved(id) e chiude', async () => {
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+    apri({ modoIniziale: 'personale', onSaved, onClose });
+    compila('8');
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
+    expect(window.sessionStorage.getItem('libretto:registrato')).toBe('t-nuova');
+    expect(onClose).toHaveBeenCalled();
+    expect(screen.queryByText('Salvata ✓')).not.toBeInTheDocument();
+  });
+
+  it('con sessionStorage che lancia salva e chiude comunque', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('negato');
+    });
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+    apri({ modoIniziale: 'personale', onSaved, onClose });
+    compila('8');
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('dopo un errore i campi restano e compare il messaggio', async () => {
+    vi.mocked(createTransaction).mockRejectedValue(new Error('rete'));
+    const onSaved = vi.fn();
+    apri({ modoIniziale: 'personale', onSaved });
+    fireEvent.click(screen.getByText('Aggiungi una nota'));
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Pane' } });
+    compila('8');
+    await screen.findByText(/Salvataggio fallito/);
+    expect(screen.getByLabelText('Importo')).toHaveValue(8);
+    expect(screen.getByLabelText('Descrizione')).toHaveValue('Pane');
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem('libretto:registrato')).toBeNull();
+    expect(screen.getByText('Salva')).not.toBeDisabled();
+  });
+
+  it('cambiando spazio l importo scritto resta', () => {
+    apri({ modoIniziale: 'personale' });
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '15' } });
+    fireEvent.click(pezzo('Personale'));
+    fireEvent.click(screen.getByRole('button', { name: 'Casa' }));
+    expect(screen.getByLabelText('Importo')).toHaveValue(15);
   });
 
   it('nessuna parola vietata', () => {

@@ -20,6 +20,7 @@ export default async function HomePage() {
       goals={data.goals}
       casa={data.casa}
       righe={data.righe}
+      storico={data.storico}
       andamento={data.andamento}
       consiglio={data.consiglio}
       prossimo={data.prossimo}
