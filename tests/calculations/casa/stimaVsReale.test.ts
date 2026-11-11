@@ -230,6 +230,23 @@ describe('pianoConStimaAggiornata', () => {
     expect(v.voci.map((x) => x.ordine)).toEqual(bundle.items.map((i) => i.ordine));
   });
 
+  it('le voci con categoria non rinominano la categoria; la voce senza categoria tiene il nome', () => {
+    const bundle = bundleEsempio();
+    const senza = bundle.items.find((i) => i.nome === 'Luce')!;
+    const bundleSenza: PlanBundle = {
+      ...bundle,
+      items: bundle.items.map((i) => (i.id === senza.id ? { ...i, categoriaId: null } : i)),
+    };
+    const proposta = propostaLuce(bundle);
+    const v = pianoConStimaAggiornata(bundleSenza, proposta, '2026-12-01')!;
+    for (const voce of v.voci) {
+      if (voce.categoriaId !== null) expect(voce.categoriaNome).toBe('');
+    }
+    const nullVoce = v.voci.find((x) => x.categoriaId === null)!;
+    expect(nullVoce.categoriaNome).toBe(nullVoce.nome);
+    expect(v.voci.filter((x) => x.categoriaId !== null).length).toBeGreaterThan(0);
+  });
+
   it('con una quota che esce dal piano non propone nulla', () => {
     const bundle = bundleEsempio({ esceDal: '2027-01-01' });
     expect(pianoConStimaAggiornata(bundle, propostaLuce(bundleEsempio()), '2026-12-01')).toBeNull();

@@ -117,7 +117,7 @@ export function pianoConStimaAggiornata(
   const voci: PlanVoceInput[] = bundle.items.map((i) => {
     const base: PlanVoceInput = {
       nome: i.nome,
-      categoriaNome: i.nome,
+      categoriaNome: i.categoriaId === null ? i.nome : '',
       categoriaId: i.categoriaId,
       frequenzaMesi: i.frequenzaMesi,
       importoRicorrenza: i.importoRicorrenza,
