@@ -240,7 +240,7 @@ export function CasaHome({
           <>
             <p className="text-sm">
               {etichetta}: totale da versare ogni mese{' '}
-              <span className="font-bold">{formatNumero(piano.plan.totaleMensile)} €</span>
+              <span className="num font-bold">{formatNumero(piano.plan.totaleMensile)} €</span>
             </p>
             {stato.frase ? <p className="text-sm text-muted">{stato.frase}</p> : null}
             <Link href="/casa/quota" className="text-sm font-semibold text-brand-dark">

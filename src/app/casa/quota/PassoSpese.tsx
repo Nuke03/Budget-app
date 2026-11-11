@@ -79,7 +79,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                   <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold text-muted">stima</span>
                 ) : null}
                 {freq !== null && freq > 1 && importo !== null ? (
-                  <span className="text-muted">{`= ${formatNumero(importo / freq)} al mese`}</span>
+                  <span className="num text-muted">{`= ${formatNumero(importo / freq)} al mese`}</span>
                 ) : null}
               </div>
               {bolletta && v.origine !== 'reale' ? (
@@ -132,7 +132,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
       >
         Aggiungi una voce
       </button>
-      <p className="text-base font-bold">{`Totale al mese: ${euro(sottotot)}`}</p>
+      <p className="num text-base font-bold">{`Totale al mese: ${euro(sottotot)}`}</p>
       <p className="text-sm text-muted">Le cifre sono stime: si cambiano.</p>
     </>
   );

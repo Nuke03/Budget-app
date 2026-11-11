@@ -229,8 +229,8 @@ export function DaParte({
                 key={g.id}
                 className="flex flex-col gap-1 rounded-[var(--radius-md)] bg-surface p-3 shadow-[var(--shadow-card)]"
               >
-                <p className="text-sm font-semibold">{`${g.nome}: ${formatNumero(g.importoTarget)} €`}</p>
-                <p className="text-xs text-muted">
+                <p className="num text-sm font-semibold">{`${g.nome}: ${formatNumero(g.importoTarget)} €`}</p>
+                <p className="num text-xs text-muted">
                   {`Messi da parte ${formatNumero(g.accantonato)} €${g.scadenza ? `, entro il ${formatDateIt(g.scadenza)}` : ''}.`}
                 </p>
                 <ComeSiCalcola spiegazione={g.spiegazione} />

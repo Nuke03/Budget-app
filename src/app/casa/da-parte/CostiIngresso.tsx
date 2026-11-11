@@ -150,7 +150,7 @@ export function CostiIngresso({
               );
             })}
           </ul>
-          <p className="text-base font-bold">{`Totale: ${formatNumero(totale)} €`}</p>
+          <p className="num text-base font-bold">{`Totale: ${formatNumero(totale)} €`}</p>
         </>
       ) : (
         <p className="text-sm text-muted">Scrivete il canone e l&apos;eventuale arredo come numeri, per vedere i costi.</p>
