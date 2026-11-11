@@ -6,12 +6,15 @@ let pathname = '/';
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
 
 describe('NavBar', () => {
-  it('ha sei voci con Casa e senza Categorie', () => {
+  it('ha quattro schede: Home, Storico, Casa, Altro', () => {
     pathname = '/';
     render(<NavBar />);
-    expect(screen.getAllByRole('link')).toHaveLength(6);
+    const link = screen.getAllByRole('link');
+    expect(link).toHaveLength(4);
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Storico' })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: 'Casa' })).toHaveAttribute('href', '/casa');
-    expect(screen.queryByRole('link', { name: 'Categorie' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Altro' })).toHaveAttribute('href', '/altro');
   });
 
   it('Casa è attiva su /casa e su /casa/quota', () => {
@@ -23,17 +26,24 @@ describe('NavBar', () => {
     }
   });
 
-  it('le altre voci restano attive solo sul percorso esatto', () => {
-    pathname = '/goals';
-    render(<NavBar />);
-    expect(screen.getByRole('link', { name: 'Obiettivi' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
-    expect(screen.getByRole('link', { name: 'Casa' })).not.toHaveAttribute('aria-current');
+  it('Altro è attiva su /altro, /goals, /accounts, /categories e /piva', () => {
+    for (const p of ['/altro', '/goals', '/accounts', '/categories', '/piva']) {
+      pathname = p;
+      const { unmount } = render(<NavBar />);
+      expect(screen.getByRole('link', { name: 'Altro' })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
+      unmount();
+    }
   });
 
-  it('le altre voci non sono attive su un sotto-percorso', () => {
-    pathname = '/goals/nuovo';
+  it('Home è attiva solo sul percorso esatto', () => {
+    pathname = '/goals';
+    const { unmount } = render(<NavBar />);
+    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
+    unmount();
+
+    pathname = '/';
     render(<NavBar />);
-    expect(screen.getByRole('link', { name: 'Obiettivi' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
   });
 });

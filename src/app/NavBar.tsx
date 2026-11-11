@@ -2,15 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Target, BarChart3, Wallet, Building2, Receipt } from 'lucide-react';
+import { Home, BarChart3, Building2, MoreHorizontal } from 'lucide-react';
 
-const links = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/goals', label: 'Obiettivi', icon: Target },
-  { href: '/history', label: 'Storico', icon: BarChart3 },
-  { href: '/accounts', label: 'Conti', icon: Wallet },
-  { href: '/casa', label: 'Casa', icon: Building2 },
-  { href: '/piva', label: 'P.IVA', icon: Receipt },
+// "Altro" resta attiva anche sulle pagine raggiungibili dalla sua lista.
+const PERCORSI_ALTRO = ['/altro', '/goals', '/accounts', '/categories', '/piva'];
+
+const schede = [
+  { href: '/', label: 'Home', icon: Home, attiva: (p: string) => p === '/' },
+  { href: '/history', label: 'Storico', icon: BarChart3, attiva: (p: string) => p === '/history' },
+  { href: '/casa', label: 'Casa', icon: Building2, attiva: (p: string) => p.startsWith('/casa') },
+  {
+    href: '/altro',
+    label: 'Altro',
+    icon: MoreHorizontal,
+    attiva: (p: string) => PERCORSI_ALTRO.some((r) => p === r || p.startsWith(`${r}/`)),
+  },
 ];
 
 export function NavBar() {
@@ -22,24 +28,24 @@ export function NavBar() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-surface pb-[env(safe-area-inset-bottom)]"
       aria-label="Navigazione principale"
     >
-      <div className="flex items-center gap-1 rounded-[var(--radius-lg)] border border-black/5 bg-surface/95 p-1.5 shadow-[var(--shadow-card)] backdrop-blur-sm">
-        {links.map((l) => {
-          const isActive = pathname === l.href || (l.href === '/casa' && pathname.startsWith('/casa'));
-          const Icon = l.icon;
+      <div className="mx-auto flex max-w-xl">
+        {schede.map((s) => {
+          const isActive = s.attiva(pathname);
+          const Icon = s.icon;
           return (
             <Link
-              key={l.href}
-              href={l.href}
+              key={s.href}
+              href={s.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex flex-col items-center gap-0.5 rounded-[var(--radius-md)] px-3.5 py-2 text-[11px] font-medium transition-colors duration-150 ${
-                isActive ? 'bg-brand-tint text-brand-dark' : 'text-muted hover:text-foreground'
+              className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs transition-colors duration-150 ${
+                isActive ? 'font-bold text-brand' : 'font-medium text-ink-2'
               }`}
             >
               <Icon size={20} strokeWidth={isActive ? 2.4 : 2} />
-              {l.label}
+              {s.label}
             </Link>
           );
         })}
