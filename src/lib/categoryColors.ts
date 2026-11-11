@@ -8,7 +8,7 @@ export const CATEGORY_COLORS = [
   { name: 'Rosa', value: '#EC4899' },
   { name: 'Ardesia', value: '#64748B' },
   { name: 'Lime', value: '#84CC16' },
-  { name: 'Indaco', value: '#6366F1' },
+  { name: 'Indaco', value: '#6063F1' },
   { name: 'Fucsia', value: '#D946EF' },
   { name: 'Ciano', value: '#06B6D4' },
   { name: 'Rosso', value: '#EF4444' },
