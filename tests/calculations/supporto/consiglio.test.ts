@@ -103,6 +103,21 @@ describe('scegliConsiglio', () => {
     expect(testi.size).toBe(4);
   });
 
+  it('in_linea senza solito: dice che manca il confronto', () => {
+    const c = scegliConsiglio({ ...base, andamento: andamento({ solito: null, mesiConfronto: 0 }) });
+    expect(c.testo).toContain("Per ora non c'è un mese di prima con cui confrontare.");
+    expect(c.testo).not.toContain('come al solito');
+    expect(c.perche).not.toContain('sopra il solito');
+  });
+
+  it('in_linea con totale sopra il solito: non dice come al solito, cita i due numeri', () => {
+    const c = scegliConsiglio({ ...base, andamento: andamento({ spesoFinora: 520, solito: 500 }) });
+    expect(c.tipo).toBe('in_linea');
+    expect(c.testo).not.toContain('come al solito');
+    expect(c.testo).toContain('520 €');
+    expect(c.testo).toContain('500 €');
+  });
+
   it('nessun testo contiene parole vietate', () => {
     const vietate = [...PAROLE_VIETATE, 'hai speso troppo', 'in ritardo', 'sei indietro'];
     const casi = [
@@ -111,6 +126,8 @@ describe('scegliConsiglio', () => {
         ...base,
         andamento: andamento({ perCategoria: [{ categoriaId: 'cibo', mese: 150, solito: 100 }] }),
       }),
+      scegliConsiglio({ ...base, andamento: andamento({ solito: null }) }),
+      scegliConsiglio({ ...base, andamento: andamento({ spesoFinora: 520, solito: 500 }) }),
       scegliConsiglio({ ...base, andamento: andamento(), obiettiviCorti: [{ goalId: 'g', nome: 'X', mancano: 10 }] }),
       ...Array.from({ length: 12 }, (_, i) =>
         scegliConsiglio({ ...base, andamento: andamento(), oggi: `2026-${String(i + 1).padStart(2, '0')}-10` })
@@ -159,5 +176,17 @@ describe('obiettiviCorti', () => {
       goal({ id: 'g3', scadenza: null, specoCollegato: 500 }),
     ];
     expect(obiettiviCorti(g, 0, oggi)).toEqual([]);
+  });
+
+  it('accantonaDa piu tardi -> non corto', () => {
+    expect(obiettiviCorti([goal({ accantonaDa: '2026-09-11' })], 0, oggi)).toEqual([]);
+  });
+
+  it('scaduto non ricorrente -> saltato', () => {
+    expect(obiettiviCorti([goal({ scadenza: '2026-10-01', specoCollegato: 500 })], 0, oggi)).toEqual([]);
+  });
+
+  it('dati che fanno lanciare errore -> saltato', () => {
+    expect(obiettiviCorti([goal({ ricorrente: true, frequenzaMesi: null })], 0, oggi)).toEqual([]);
   });
 });

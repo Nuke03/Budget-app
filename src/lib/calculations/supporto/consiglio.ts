@@ -1,8 +1,8 @@
-import { differenceInCalendarMonths } from 'date-fns';
+import { differenceInCalendarMonths, parseISO } from 'date-fns';
 import { formatEuro } from '@/lib/format';
 import type { BudgetGoal } from '@/lib/types';
 import type { Andamento } from './andamento';
-import { computeAccantonatoFinora, computeFinestraGoal, computeQuotaMensile } from '../accantonato';
+import { computeFinestraGoal } from '../accantonato';
 
 export type TipoConsiglio = 'senza_dettaglio' | 'categoria_sopra' | 'obiettivo_corto' | 'in_linea';
 
@@ -28,20 +28,20 @@ const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 // (mese % 4), così cambiano senza caso.
 const FRASI_IN_LINEA: { testo: string; perche: string }[] = [
   {
-    testo: 'Una spesa annuale si spezza in quote mensili: 300 € di TARI sono 25 € al mese.',
+    testo: 'Per esempio, una spesa annuale si spezza in quote mensili: 300 € di TARI fanno 25 € al mese.',
     perche: 'Mettere da parte poco ogni mese pesa meno che trovare tutto insieme quando arriva la rata.',
   },
   {
-    testo: 'Le regole come 50/30/20 sono un punto di partenza, non un verdetto.',
-    perche: 'Servono a capire se sei vicino o lontano da un ordine di grandezza, poi conta la tua situazione.',
+    testo: 'Regole come 50/30/20 (metà per le cose necessarie, 30% per i desideri, 20% da parte) sono un punto di partenza, non un verdetto.',
+    perche: 'Servono a farsi un’idea, poi conta la tua situazione.',
   },
   {
-    testo: 'Se un mese manca qualcosa due volte di fila, di solito la quota è troppo bassa. Si ricalcola.',
+    testo: 'Se per due mesi di fila i soldi messi da parte non bastano, la quota è troppo bassa: non è colpa di nessuno.',
     perche: 'Un numero che non torna dice che il piano va aggiustato, non che qualcuno ha sbagliato.',
   },
   {
     testo: 'Mettere in comune quello che serve davvero, come la casa, e farlo in modo trasparente conta più della formula.',
-    perche: 'Vedere tutti la stessa cifra toglie il bisogno di rifare i conti a voce.',
+    perche: 'Avere i numeri davanti, uguali per tutti quelli coinvolti, evita di rifare i conti a mente.',
   },
 ];
 
@@ -108,6 +108,21 @@ export function scegliConsiglio(input: {
 
   const mese = Number(oggi.slice(5, 7));
   const frase = FRASI_IN_LINEA[mese % FRASI_IN_LINEA.length];
+  const { solito, spesoFinora } = andamento;
+  if (solito === null) {
+    return {
+      tipo: 'in_linea',
+      testo: `Per ora non c'è un mese di prima con cui confrontare. ${frase.testo}`,
+      perche: `Il solito si calcola sui mesi scorsi allo stesso giorno, e ancora non ce ne sono. ${frase.perche}`,
+    };
+  }
+  if (spesoFinora > solito) {
+    return {
+      tipo: 'in_linea',
+      testo: `Finora hai speso ${euroInFrase(spesoFinora)}, un po' sopra il solito di ${euroInFrase(solito)}, ma nessuna voce spicca da sola. ${frase.testo}`,
+      perche: `Il solito è la media dei mesi scorsi allo stesso giorno. Il totale è sopra, ma nessuna categoria lo è molto da sola. ${frase.perche}`,
+    };
+  }
   return {
     tipo: 'in_linea',
     testo: `Il mese va come al solito. ${frase.testo}`,
@@ -115,8 +130,11 @@ export function scegliConsiglio(input: {
   };
 }
 
-// Obiettivi dilazionati aperti con scadenza per cui quota mensile x mesi
-// rimasti non copre importoTarget - accantonato (es. dopo una spesa collegata).
+// Obiettivi dilazionati aperti con scadenza che, col proprio piano (inizio =
+// accantonaDa se più tardi dell'inizio del ciclo), non arrivano alla cifra:
+// quota x mesi rimasti < importoTarget - accantonato. Succede per spese
+// collegate che erodono l'accantonato o per una finestra residua troppo corta.
+// Saltati: scaduti non ricorrenti, e chi lancia errori sui dati.
 // `saldoDisponibile` non serve a questa regola: resta in firma, la UI lo passa.
 export function obiettiviCorti(
   goals: GoalConSpeso[],
@@ -125,16 +143,25 @@ export function obiettiviCorti(
 ): ObiettivoCorto[] {
   void saldoDisponibile;
   const risultato: ObiettivoCorto[] = [];
+  const oggiGiorno = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
   for (const g of goals) {
     if (g.modalita !== 'dilazionato' || g.stato !== 'aperto' || !g.scadenza) continue;
-    const quota = computeQuotaMensile(g, oggi);
-    if (quota === null) continue;
-    const { windowEnd } = computeFinestraGoal(g, oggi);
-    const mesiRimasti = Math.max(0, differenceInCalendarMonths(windowEnd!, oggi));
-    const accantonato = computeAccantonatoFinora(g, oggi, g.specoCollegato);
-    const mancano = Math.round((g.importoTarget - accantonato) * 100) / 100;
-    if (quota * mesiRimasti < mancano - 0.005) {
-      risultato.push({ goalId: g.id, nome: g.nome, mancano });
+    try {
+      const { windowStart, windowEnd } = computeFinestraGoal(g, oggi);
+      if (windowEnd === null || windowEnd < oggiGiorno) continue;
+      const accantonaDa = g.accantonaDa ? parseISO(g.accantonaDa) : null;
+      const inizio = accantonaDa && accantonaDa > windowStart ? accantonaDa : windowStart;
+      const mesiTotali = Math.max(1, differenceInCalendarMonths(windowEnd, inizio));
+      const trascorsi = Math.min(Math.max(differenceInCalendarMonths(oggi, inizio), 0), mesiTotali);
+      const mesiRimasti = Math.max(0, differenceInCalendarMonths(windowEnd, oggi));
+      const quota = g.importoTarget / mesiTotali;
+      const accantonato = Math.max(0, quota * trascorsi - g.specoCollegato);
+      const mancano = Math.round((g.importoTarget - accantonato) * 100) / 100;
+      if (quota * mesiRimasti < mancano - 0.005) {
+        risultato.push({ goalId: g.id, nome: g.nome, mancano });
+      }
+    } catch {
+      continue;
     }
   }
   return risultato;
