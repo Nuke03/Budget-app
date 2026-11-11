@@ -26,9 +26,12 @@ function Gruppo({ titolo, subtotale, children }: { titolo: string; subtotale: nu
   );
 }
 
-const Riga = ({ nome, valore }: { nome: string; valore: string }) => (
-  <div className="flex justify-between py-1 text-sm">
-    <span>{nome}</span>
+const Riga = ({ nome, valore, nota }: { nome: string; valore: string; nota?: string }) => (
+  <div className="flex justify-between gap-3 py-1 text-sm">
+    <span>
+      {nome}
+      {nota ? <span className="block text-xs text-ink-2">{nota}</span> : null}
+    </span>
     <span className="num">{valore}</span>
   </div>
 );
@@ -57,7 +60,8 @@ export function DettaglioDisponibile({
 
   const totaleConti = conti.reduce((t, a) => t + a.saldoAttuale, 0);
   const totaleObiettivi = goals.reduce((t, g) => t + g.accantonato, 0);
-  const totaleCasa = righeDaVersare.reduce((t, r) => t + r.mancano, 0) + debitiMiei.reduce((t, d) => t + d.importo, 0);
+  // Stesse due cifre che il disponibile sottrae: così i tre subtotali tornano con la cifra grande.
+  const totaleCasa = stato ? stato.riservaVersamento + stato.debitoDaRestituire : 0;
 
   return (
     <div className="flex flex-col gap-4 rounded-[var(--radius-sm)] bg-surface-muted p-4">
@@ -76,7 +80,12 @@ export function DettaglioDisponibile({
       {goals.length > 0 ? (
         <Gruppo titolo="Già messi da parte" subtotale={-totaleObiettivi}>
           {goals.map((g) => (
-            <Riga key={g.id} nome={g.nome} valore={`-${formatEuro(g.accantonato)}`} />
+            <Riga
+              key={g.id}
+              nome={g.nome}
+              nota={g.modalita === 'bloccato' ? 'tutto messo da parte' : 'messo da parte finora'}
+              valore={`-${formatEuro(g.accantonato)}`}
+            />
           ))}
         </Gruppo>
       ) : null}
@@ -101,7 +110,7 @@ export function DettaglioDisponibile({
             <p className="text-xs text-ink-2">Non riesco a leggere la casa: il disponibile non tiene conto della quota.</p>
           ) : null}
           {haRiserva && stato ? (
-            <ComeSiCalcola spiegazione={spiegaRiserva({ righe: stato.righe, debitoDaRestituire: stato.debitoDaRestituire })} />
+            <ComeSiCalcola etichetta="Come si calcola la parte di casa" spiegazione={spiegaRiserva({ righe: stato.righe, debitoDaRestituire: stato.debitoDaRestituire })} />
           ) : null}
           {haInfoCasa ? (
             <div className="flex flex-col gap-1 text-xs text-ink-2">

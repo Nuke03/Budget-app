@@ -89,6 +89,7 @@ export function HomeDashboard({
 
   const saldoConti = accounts.filter((a) => a.contaInDisponibile).reduce((t, a) => t + a.saldoAttuale, 0);
   const riservato = Math.round((saldoConti - disponibileLibero) * 100) / 100;
+  const contaCasa = (casa?.stato?.riservaVersamento ?? 0) + (casa?.stato?.debitoDaRestituire ?? 0) > 0;
   const { intero, resto } = dividiCifra(disponibileLibero);
 
   return (
@@ -96,7 +97,7 @@ export function HomeDashboard({
       <header className="bg-brand pt-[env(safe-area-inset-top)] text-brand-foreground">
         <div className="mx-auto flex min-h-24 max-w-md items-end justify-between px-5 pb-4">
           <h1 className="font-serif text-[22px] font-semibold tracking-[0.02em]">Il mio libretto</h1>
-          <p className="text-[13px] text-brand-foreground/80">
+          <p className="text-[13px] text-brand-foreground">
             {nomeMese(oggi)} {oggi.slice(0, 4)}
           </p>
         </div>
@@ -115,7 +116,9 @@ export function HomeDashboard({
           </p>
           <p className="mt-1 text-[15px] text-ink-2">
             Hai {euroInFrase(saldoConti)} sui conti
-            {riservato > 0 ? `, ${euroInFrase(riservato)} sono già messi da parte` : ''}
+            {riservato > 0
+              ? `, ${euroInFrase(riservato)} ${contaCasa ? 'sono messi da parte o da versare' : 'sono già messi da parte'}`
+              : ''}
           </p>
           <button
             type="button"

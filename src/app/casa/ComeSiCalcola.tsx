@@ -11,7 +11,15 @@ function formatIngrediente(etichetta: string, valore: number): string {
   return formatEuro(valore);
 }
 
-export function ComeSiCalcola({ spiegazione, className }: { spiegazione: Spiegazione; className?: string }) {
+export function ComeSiCalcola({
+  spiegazione,
+  className,
+  etichetta = 'Come si calcola?',
+}: {
+  spiegazione: Spiegazione;
+  className?: string;
+  etichetta?: string;
+}) {
   const [aperto, setAperto] = useState(false);
   const pannelloId = useId();
 
@@ -19,7 +27,7 @@ export function ComeSiCalcola({ spiegazione, className }: { spiegazione: Spiegaz
     <div className={className}>
       <button
         type="button"
-        aria-label="Come si calcola?"
+        aria-label={etichetta}
         aria-expanded={aperto}
         aria-controls={pannelloId}
         onClick={() => setAperto((a) => !a)}

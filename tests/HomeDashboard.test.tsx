@@ -23,6 +23,8 @@ vi.mock('@/lib/data/accounts', () => ({
 import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { CasaStato } from '@/lib/loadCasaStato';
+import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
+import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const T0 = '2026-01-01T00:00:00Z';
@@ -316,7 +318,7 @@ describe('HomeDashboard', () => {
         />
       );
       fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
-      fireEvent.click(screen.getByLabelText('Come si calcola?'));
+      fireEvent.click(screen.getByLabelText('Come si calcola la parte di casa'));
       assertNessunaParolaVietata(container);
     });
   });
@@ -412,6 +414,64 @@ describe('il libretto', () => {
     expect(within(messi).getByText('Telepass')).toBeInTheDocument();
     const casaGruppo = screen.getByRole('region', { name: 'Casa' });
     expect(casaGruppo).toHaveTextContent('-100,00 €');
+  });
+
+  it('i tre subtotali tornano con la cifra grande e ogni obiettivo dice se è tutto o finora', () => {
+    const oggiData = new Date('2026-11-11T12:00:00Z');
+    const bloccato = { ...goals[0], id: 'g1', nome: 'Telepass', importoTarget: 130 };
+    const dilazionato = {
+      ...goals[0],
+      id: 'g2',
+      nome: 'Vacanza',
+      modalita: 'dilazionato' as const,
+      importoTarget: 300,
+      scadenza: '2027-03-01',
+      createdAt: '2026-09-01T00:00:00Z',
+    };
+    const obiettivi = [bloccato, dilazionato].map((g) => ({ ...g, accantonato: computeAccantonatoFinora(g, oggiData, 0) }));
+    const conti = [
+      { id: '1', nome: 'Conto corrente', saldoAttuale: 1500, contaInDisponibile: true, targetSaldo: null },
+      { id: '2', nome: 'Fondo', saldoAttuale: 400, contaInDisponibile: false, targetSaldo: null },
+    ];
+    const casa = casaPerHome({
+      righe: [{ mese: '2026-11-01', atteso: 100, versato: 0, mancano: 100 }],
+      riservaVersamento: 100,
+      debiti: [
+        { debitoreId: 'u1', creditoreId: 'u2', importo: 60, mesi: [{ mese: '2026-11-01', importo: 60, versato: 60 }] },
+      ],
+      debitoDaRestituire: 60,
+    });
+    const disponibile = computeDisponibileLibero(
+      conti,
+      obiettivi.map((g) => ({ ...g, specoCollegato: 0 })),
+      oggiData,
+      100,
+      60
+    );
+    render(
+      <HomeDashboard
+        disponibileLibero={disponibile}
+        margineGiornaliero={10}
+        dataTarget="2026-11-27T00:00:00Z"
+        accounts={conti}
+        categories={[]}
+        goals={obiettivi}
+        casa={casa}
+        meUserId="u1"
+        oggi="2026-11-11"
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
+    const subtotale = (nome: string): number => {
+      const h = within(screen.getByRole('region', { name: nome })).getByRole('heading');
+      const testo = (h.lastElementChild as HTMLElement).textContent ?? '';
+      return Number(testo.replace(/[^\d,-]/g, '').replace(',', '.'));
+    };
+    const somma = subtotale('Soldi tuoi') + subtotale('Già messi da parte') + subtotale('Casa');
+    expect(somma).toBeCloseTo(disponibile, 2);
+    expect(screen.getByText('tutto messo da parte')).toBeInTheDocument();
+    expect(screen.getByText('messo da parte finora')).toBeInTheDocument();
+    expect(screen.getByTestId('disponibile').parentElement).toHaveTextContent('messi da parte o da versare');
   });
 
   it('con l id registrato fra le righe mostra il timbro e l annuncio e cancella la chiave', () => {
