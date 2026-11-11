@@ -2,7 +2,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { leggiTutte } from './leggiTutte';
 import { getPlanVersions } from './householdPlans';
 import { getTransfers } from './transfers';
-import { getSpeseAnticipateCasa } from './transactions';
 import { getControlliRecenti } from './balanceChecks';
 import { casa as scopeCasa } from './scope';
 import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
@@ -78,13 +77,13 @@ async function datiDellaCasa(
   membri: HouseholdMember[],
   oggi: string,
 ): Promise<Map<string, DatiCasa>> {
-  const [piani, trasferimenti, spese, controlli] = await Promise.all([
+  const [piani, trasferimenti, controlli] = await Promise.all([
     getPlanVersions(admin, household.id),
     getTransfers(admin, scopeCasa(household.id)),
-    getSpeseAnticipateCasa(admin, household.id),
     getControlliRecenti(admin, household.id),
   ]);
-  const { righe } = calcolaRegistriCasa({ piani, trasferimenti, spese, membri, oggi });
+  // Le spese servono solo ai crediti, che qui non si usano: nessun importo di spesa viene letto.
+  const { righe } = calcolaRegistriCasa({ piani, trasferimenti, spese: [], membri, oggi });
   const mese = meseRomaISO(new Date(`${oggi}T12:00:00Z`));
   const piano = pianoDelMese(piani, mese);
   const gestore = chiGestisce(household, membri);
@@ -108,6 +107,20 @@ async function datiDellaCasa(
     });
   }
   return out;
+}
+
+// Quando è stata creata l'ultima transazione della persona, di qualunque spazio. Il cron legge per
+// persona e non per casa: solo created_at, mai importi o descrizioni.
+async function ultimaCreazioneDi(admin: SupabaseClient, userId: string): Promise<string | null> {
+  // household: per id
+  const { data, error } = await admin
+    .from('transactions')
+    .select('created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return ((data ?? [])[0] as { created_at: string } | undefined)?.created_at ?? null;
 }
 
 // Per ogni persona con almeno un dispositivo iscritto: lo stato che serve a decidiNotifica e le sue
@@ -141,22 +154,8 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
   });
   const promemoria = new Map(righePromemoria.map((r) => [r.user_id, r]));
 
-  const ultimaCreazione = new Map<string, string>();
-  for (const blocco of blocchi(utenti)) {
-    const tx = await leggiTutte<{ user_id: string; created_at: string }>((da, a) =>
-      admin
-        .from('transactions')
-        .select('user_id, created_at')
-        .in('user_id', blocco)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: true })
-        .range(da, a),
-    );
-    for (const t of tx) {
-      const prima = ultimaCreazione.get(t.user_id);
-      if (!prima || Date.parse(t.created_at) > Date.parse(prima)) ultimaCreazione.set(t.user_id, t.created_at);
-    }
-  }
+  const ultime = await Promise.all(utenti.map((id) => ultimaCreazioneDi(admin, id)));
+  const ultimaCreazione = new Map(utenti.map((id, i) => [id, ultime[i]] as const));
 
   // Le case attive degli iscritti, con tutti i loro membri attivi (serve a sapere chi gestisce).
   const datiPerUtente = new Map<string, DatiCasa>();
@@ -223,7 +222,7 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
 
   return utenti.map((userId) => {
     const p = promemoria.get(userId);
-    const creata = ultimaCreazione.get(userId);
+    const creata = ultimaCreazione.get(userId) ?? null;
     return {
       stato: {
         userId,

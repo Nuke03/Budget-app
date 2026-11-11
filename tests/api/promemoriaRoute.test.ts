@@ -195,11 +195,42 @@ describe('GET /api/promemoria', () => {
     expect(console.error).toHaveBeenCalled();
   });
 
-  it('la query sulle transazioni seleziona solo user_id e created_at', async () => {
+  it('la query sulle transazioni seleziona solo created_at', async () => {
     await chiama();
     const tx = selects.filter((s) => s.tabella === 'transactions');
     expect(tx.length).toBeGreaterThan(0);
-    for (const s of tx) expect(s.colonne).toBe('user_id, created_at');
+    for (const s of tx) expect(s.colonne).toBe('created_at');
+  });
+
+  it('con una casa (percorso casa eseguito) le transazioni restano lette solo per created_at', async () => {
+    seed({
+      transactions: [{ id: 't1', user_id: 'U1', created_at: '2026-11-10T10:00:00Z', importo: 99.99, pagata_da_user_id: 'U1' }],
+      households: [{ id: 'H1', nome: 'Casa', created_at: '2026-01-01T00:00:00Z', archiviata_il: null, created_by: 'U1' }],
+      household_members: [
+        { household_id: 'H1', user_id: 'U1', display_name: 'A', joined_at: '2026-01-01T00:00:00Z', slot: 1, attivo: true },
+        { household_id: 'H1', user_id: 'U2', display_name: 'B', joined_at: '2026-01-02T00:00:00Z', slot: 2, attivo: true },
+      ],
+      household_plans: [
+        {
+          id: 'P1', household_id: 'H1', valido_dal: '2026-01-01', giorno_versamento: 12, regola: 'proporzionale',
+          cuscinetto_obiettivo: 0, cuscinetto_quota_mensile: 0, arrotondamento: 0, totale_mensile: 700,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      household_plan_shares: [
+        { plan_id: 'P1', slot: 1, user_id: 'U1', display_name: 'A', reddito_netto_mensile: 1, reddito_irregolare: false, percentuale: null, in_casa_dal: null, esce_dal: null, quota_mensile: 400 },
+        { plan_id: 'P1', slot: 2, user_id: 'U2', display_name: 'B', reddito_netto_mensile: 1, reddito_irregolare: false, percentuale: null, in_casa_dal: null, esce_dal: null, quota_mensile: 300 },
+      ],
+    });
+    const r = await chiama();
+    expect(await r.json()).toEqual({ inviate: 2, rimosse: 0 });
+    expect(selects.some((s) => s.tabella === 'household_plans')).toBe(true);
+    const tx = selects.filter((s) => s.tabella === 'transactions');
+    expect(tx.length).toBeGreaterThan(0);
+    for (const s of tx) expect(s.colonne).toBe('created_at');
+    const dati = JSON.parse(sendNotification.mock.calls[0][1]);
+    expect(dati.url).toBe('/casa');
+    expect(dati.testo).not.toContain('99');
   });
 
   it('il payload della notifica spese non contiene importi personali', async () => {
