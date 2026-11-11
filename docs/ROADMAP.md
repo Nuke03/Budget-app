@@ -204,13 +204,20 @@ Cosa resta, in ordine:
    PRIVATE, vedi `src/lib/chiaviVapid.ts`), `VAPID_SUBJECT` (le chiavi le genera con
    `npx web-push generate-vapid-keys`), `SUPABASE_SERVICE_ROLE_KEY` e
    `CRON_SECRET`, poi rifà il deploy.
-4. **Fabio** prova `/prova-notifiche` sull'iPhone, con l'app aperta dalla
-   schermata Home. Se la notifica non arriva, il piano B mostra i promemoria
-   in cima alla Home invece di mandarli.
-5. Dopo la prova si cancella `src/app/prova-notifiche/`. `public/sw.js` e
-   `src/lib/pushEndpoint.ts` restano.
+4. **Fatto (11 novembre 2026):** la notifica di prova arriva sull'iPhone di
+   Fabio, con l'app installata in Italia. Il piano B quindi manda i
+   promemoria come notifiche.
+5. **Fatto:** pagina `src/app/prova-notifiche/` cancellata. `public/sw.js`,
+   `src/lib/pushEndpoint.ts` e `src/lib/chiaviVapid.ts` restano.
 6. Poi `PRODUCT.md`, audit con impeccable, `DESIGN.md`, e il **piano B**, cioè
-   le schermate.
+   le schermate. Passi 1-3 fatti.
+
+**Icona dell'app** (Fabio, 11 novembre: quella di oggi è brutta). Va rifatta
+insieme all'identità visiva in `DESIGN.md` e al cambio di palette, con
+impeccable (agente asset-producer). Va rifatta in tutti i formati:
+`public/icons/icon-192.png` e `icon-512.png`, la versione per iPhone
+(apple-touch-icon, 180×180, senza trasparenza), il favicon e il colore di
+`manifest.json`. È la stessa icona che compare nelle notifiche.
 
 Da fare nel piano B:
 - Nel mese del passaggio da Tricount, una riga che mescola saldo di partenza e
