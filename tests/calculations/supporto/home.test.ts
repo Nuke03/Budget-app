@@ -40,7 +40,10 @@ describe('prossimaCosa', () => {
     const p = prossimaCosa({ inPari: { dal: '2026-11-08', al: '2026-11-10' }, promemoriaCasa: casa });
     expect(p?.tipo).toBe('in_pari');
     expect(p?.href).toBe('/in-pari');
-    expect(p?.testo).toMatch(/^Rimettiti in pari: dal .+ non hai segnato spese$/);
+    expect(p?.testo).toBe('Rimettiti in pari: dal 8 novembre non hai segnato spese');
+    expect(prossimaCosa({ inPari: { dal: '2025-12-30', al: '2026-01-02' }, promemoriaCasa: [] })?.testo).toBe(
+      'Rimettiti in pari: dal 30 dicembre 2025 non hai segnato spese'
+    );
   });
   it('ripiega sul primo promemoria di casa, con /casa di ripiego', () => {
     expect(prossimaCosa({ inPari: null, promemoriaCasa: casa })).toEqual({ testo: 'Versa la quota', href: '/casa/versa', tipo: 'casa' });

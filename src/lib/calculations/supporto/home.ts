@@ -1,6 +1,6 @@
 import { computeReminders, statoPromemoria } from '../casa/promemoria';
 import { riferimentoControllo } from '../casa/controlloSaldo';
-import { formatDateIt } from '@/lib/format';
+import { nomeMese } from '@/lib/format';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { Transaction } from '@/lib/types';
 
@@ -52,13 +52,19 @@ export function righeLibretto(transazioni: Transaction[], oggi: string, quante =
     }));
 }
 
+// "9 novembre", con l'anno solo se non è quello di riferimento.
+function giornoEMese(giorno: string, riferimento: string): string {
+  const base = `${Number(giorno.slice(8, 10))} ${nomeMese(giorno)}`;
+  return giorno.slice(0, 4) === riferimento.slice(0, 4) ? base : `${base} ${giorno.slice(0, 4)}`;
+}
+
 export function prossimaCosa(input: {
   inPari: { dal: string; al: string } | null;
   promemoriaCasa: { testo: string; href?: string }[];
 }): Prossimo | null {
   if (input.inPari) {
     return {
-      testo: `Rimettiti in pari: dal ${formatDateIt(input.inPari.dal)} non hai segnato spese`,
+      testo: `Rimettiti in pari: dal ${giornoEMese(input.inPari.dal, input.inPari.al)} non hai segnato spese`,
       href: '/in-pari',
       tipo: 'in_pari',
     };
