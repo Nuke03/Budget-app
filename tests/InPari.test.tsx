@@ -139,10 +139,11 @@ describe('InPari', () => {
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
     fireEvent.click(screen.getByRole('button', { name: '50 €' }));
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
-    await screen.findByRole('alert');
+    expect((await screen.findByRole('alert')).textContent).toBe("Una spesa è registrata, l'altra no: riprova.");
     fireEvent.click(screen.getByRole('button', { name: 'Riprova' }));
     await screen.findByText('Fatto: sei in pari.');
     expect(createTransaction).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(createTransaction).mock.calls[2][1]).toMatchObject({ importo: 50 });
     expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
     expect(vi.mocked(adjustAccountBalance).mock.calls.filter((c) => c[1] === 'c')).toHaveLength(1);
   });

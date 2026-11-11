@@ -25,6 +25,7 @@ function leggi(chiave: string): string | null {
 
 const MESSAGGIO_ERRORE = 'Non sono riuscito a salvare: riprova.';
 const MESSAGGIO_SALDO = 'Spese registrate, il saldo del conto non si è aggiornato: riprova.';
+const MESSAGGIO_PARZIALE = "Una spesa è registrata, l'altra no: riprova.";
 const SCELTE_CONTANTI = [20, 50];
 
 // Un numero positivo da un campo, o null.
@@ -159,8 +160,9 @@ export function InPari({
       router.refresh();
     } catch {
       // Se non è stato scritto niente, le modifiche successive valgono di nuovo.
-      if (!createRef.current.some(Boolean)) righeRef.current = null;
-      setErrore(fallitoSaldo ? MESSAGGIO_SALDO : MESSAGGIO_ERRORE);
+      const qualcosaCreato = createRef.current.some(Boolean);
+      if (!qualcosaCreato) righeRef.current = null;
+      setErrore(fallitoSaldo ? MESSAGGIO_SALDO : qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
     } finally {
       setOccupato(false);
     }
