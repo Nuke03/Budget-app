@@ -42,6 +42,7 @@ const transactions = [
     descrizione: 'Fattura 1',
     nota: null,
     createdAt: `${annoCorrente}-02-10T00:00:00Z`,
+    stima: false,
   },
   {
     id: 't2',
@@ -54,6 +55,7 @@ const transactions = [
     descrizione: 'Fattura 2',
     nota: null,
     createdAt: `${annoCorrente}-05-20T00:00:00Z`,
+    stima: false,
   },
 ];
 

@@ -79,7 +79,7 @@ describe('righeNeutreStorico', () => {
       goalId: null,
       descrizione: 'Bolletta',
       nota: null,
-      createdAt: '',
+      createdAt: '', stima: false,
       pagataDaUserId: 'u1',
     };
     expect(righe([], [t])).toEqual([

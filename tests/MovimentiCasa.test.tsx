@@ -25,7 +25,7 @@ import { deleteTransfer } from '@/lib/data/transfers';
 const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: '2026-01-01', slot: 1, attivo: true };
 const anna = { householdId: 'h1', userId: 'u2', displayName: 'Anna', joinedAt: '2026-01-02', slot: 2, attivo: true };
 const casa: CasaCorrente = {
-  household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null },
+  household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null, createdBy: 'u1' },
   members: [fabio, anna],
   invite: null,
   me: fabio,
@@ -45,7 +45,7 @@ const aggiunta: CasaAggiunta = {
 function tx(over: Partial<Transaction>): Transaction {
   return {
     id: 't', tipo: 'expense', importo: 10, data: '2026-11-05', categoriaId: 'cc', accountId: 'ac',
-    goalId: null, descrizione: 'Voce', nota: null, createdAt: '', userId: 'u1', ...over,
+    goalId: null, descrizione: 'Voce', nota: null, createdAt: '', stima: false, userId: 'u1', ...over,
   };
 }
 

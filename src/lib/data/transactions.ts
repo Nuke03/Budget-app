@@ -5,7 +5,7 @@ import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
 import { leggiTutte } from './leggiTutte';
 
 const TRANSACTION_COLUMNS =
-  'id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at, pagata_da_user_id, origine, user_id';
+  'id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione, nota, created_at, pagata_da_user_id, origine, user_id, stima';
 
 // Tetto di sicurezza alla lettura: bastano le spese recenti per una stima.
 const LIMITE_SPESE_STIME = 1000;
@@ -24,6 +24,7 @@ interface TransactionRow {
   pagata_da_user_id: string | null;
   origine: 'riconciliazione' | null;
   user_id: string;
+  stima: boolean;
 }
 
 function mapRow(row: TransactionRow): Transaction {
@@ -41,6 +42,7 @@ function mapRow(row: TransactionRow): Transaction {
     pagataDaUserId: row.pagata_da_user_id,
     origine: row.origine,
     userId: row.user_id,
+    stima: row.stima,
   };
 }
 
@@ -103,6 +105,8 @@ export async function createTransaction(
     nota: string | null;
     // Solo con scope casa: chi ha pagato di tasca sua (il vincolo SQL vuole l'autore e il suo conto personale).
     pagataDaUserId?: string | null;
+    // Importo stimato: la categoria arriva dopo, a spesa reale nota.
+    stima?: boolean;
   },
   scope: Scope = PERSONALE
 ): Promise<Transaction> {
@@ -118,6 +122,7 @@ export async function createTransaction(
       descrizione: input.descrizione,
       nota: input.nota,
       household_id: scopeHouseholdId(scope),
+      stima: input.stima ?? false,
       ...(scopeHouseholdId(scope) && input.pagataDaUserId ? { pagata_da_user_id: input.pagataDaUserId } : {}),
     })
     .select(TRANSACTION_COLUMNS)
@@ -153,6 +158,8 @@ export async function updateTransaction(
       goal_id: input.goalId,
       descrizione: input.descrizione,
       nota: input.nota,
+      // Una spesa con categoria non e piu una stima; senza categoria la colonna resta com'e.
+      ...(input.categoriaId !== null ? { stima: false } : {}),
     })
     .eq('id', id)
     .select(TRANSACTION_COLUMNS)

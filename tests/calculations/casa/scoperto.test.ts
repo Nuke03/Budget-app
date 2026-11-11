@@ -5,7 +5,7 @@ import type { Transaction, Transfer } from '@/lib/types';
 function spesa(over: Partial<Transaction>): Transaction {
   return {
     id: 's1', tipo: 'expense', importo: 100, data: '2026-11-05', categoriaId: null, accountId: 'ap',
-    goalId: null, descrizione: 'Spesa', nota: null, createdAt: '', pagataDaUserId: 'u1', ...over,
+    goalId: null, descrizione: 'Spesa', nota: null, createdAt: '', stima: false, pagataDaUserId: 'u1', ...over,
   };
 }
 function tr(over: Partial<Transfer>): Transfer {

@@ -25,7 +25,7 @@ const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt:
 const anna = { householdId: 'h1', userId: 'u2', displayName: 'Anna', joinedAt: '2026-01-02', slot: 2, attivo: true };
 
 const casa: CasaCorrente = {
-  household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null },
+  household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null, createdBy: 'u1' },
   members: [fabio, anna],
   invite: null,
   me: fabio,
@@ -142,7 +142,7 @@ describe('CasaHome', () => {
         ultimeSpese: [
           {
             id: 't1', tipo: 'expense' as const, importo: 64.2, data: '2026-11-05', categoriaId: 'cc',
-            accountId: 'ac', goalId: null, descrizione: 'Luce', nota: null, createdAt: '', pagataDaUserId: 'u2',
+            accountId: 'ac', goalId: null, descrizione: 'Luce', nota: null, createdAt: '', stima: false, pagataDaUserId: 'u2',
           },
         ],
         nomi: { u1: 'Fabio', u2: 'Anna' },

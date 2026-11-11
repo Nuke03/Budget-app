@@ -36,7 +36,7 @@ const spesa = (importo: number, extra: Partial<Transaction> = {}): Transaction =
   goalId: null,
   descrizione: '',
   nota: null,
-  createdAt: '',
+  createdAt: '', stima: false,
   ...extra,
 });
 const membri = (atteso: [number, number], versato: [number, number]): Record<string, RigaMese[]> => ({

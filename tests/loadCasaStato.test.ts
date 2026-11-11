@@ -15,7 +15,7 @@ const B = membro('B', 'Bruno', 2);
 const C = membro('C', 'Carla', 3);
 
 const casaDi = (me: HouseholdMember, members: HouseholdMember[]): CasaCorrente => ({
-  household: { id: 'H1', nome: 'Casa', createdAt: T0, archiviataIl: null },
+  household: { id: 'H1', nome: 'Casa', createdAt: T0, archiviataIl: null, createdBy: 'u1' },
   members,
   invite: null,
   me,

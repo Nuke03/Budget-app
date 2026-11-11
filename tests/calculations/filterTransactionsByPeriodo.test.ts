@@ -13,7 +13,7 @@ function tx(data: string): Transaction {
     goalId: null,
     descrizione: '',
     nota: null,
-    createdAt: `${data}T00:00:00Z`,
+    createdAt: `${data}T00:00:00Z`, stima: false,
   };
 }
 

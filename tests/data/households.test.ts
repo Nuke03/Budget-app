@@ -21,7 +21,7 @@ function seed(extra: { members?: object[]; invites?: object[]; households?: obje
   return createFakeDb(
     {
       households: (extra.households as Record<string, unknown>[]) ?? [
-        { id: H, nome: 'Casa mia', created_at: passato, archiviata_il: null },
+        { id: H, nome: 'Casa mia', created_at: passato, archiviata_il: null, created_by: 'u1' },
       ],
       household_members: (extra.members as Record<string, unknown>[]) ?? [
         { household_id: H, user_id: 'u2', display_name: 'Anna', joined_at: passato, slot: 2, attivo: true },
@@ -42,7 +42,7 @@ describe('getMyHousehold', () => {
 
   it('ritorna null per un membro con attivo false (casa chiusa)', async () => {
     const db = seed({
-      households: [{ id: H, nome: 'Casa mia', created_at: passato, archiviata_il: passato }],
+      households: [{ id: H, nome: 'Casa mia', created_at: passato, archiviata_il: passato, created_by: 'u1' }],
       members: [{ household_id: H, user_id: 'u1', display_name: 'Fabio', joined_at: passato, slot: 1, attivo: false }],
     });
     expect(await getMyHousehold(db.client, 'u1')).toBeNull();
@@ -51,7 +51,7 @@ describe('getMyHousehold', () => {
   it('ritorna casa, solo i membri attivi ordinati per slot e il membro corrente', async () => {
     const db = seed();
     const casa = await getMyHousehold(db.client, 'u1');
-    expect(casa?.household).toEqual({ id: H, nome: 'Casa mia', createdAt: passato, archiviataIl: null });
+    expect(casa?.household).toEqual({ id: H, nome: 'Casa mia', createdAt: passato, archiviataIl: null, createdBy: 'u1' });
     expect(casa?.members.map((m) => m.displayName)).toEqual(['Fabio', 'Anna']);
     expect(casa?.me.userId).toBe('u1');
     expect(casa?.invite).toBeNull();

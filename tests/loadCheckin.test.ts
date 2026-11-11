@@ -14,7 +14,7 @@ const membro = (userId: string, nome: string, slot: number): HouseholdMember => 
 const A = membro('A', 'Fabio', 1);
 const B = membro('B', 'Anna', 2);
 const casa: CasaCorrente = {
-  household: { id: 'H1', nome: 'Casa', createdAt: T0, archiviataIl: null },
+  household: { id: 'H1', nome: 'Casa', createdAt: T0, archiviataIl: null, createdBy: 'u1' },
   members: [A, B],
   invite: null,
   me: A,

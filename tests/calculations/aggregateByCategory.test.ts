@@ -19,6 +19,7 @@ function tx(overrides: Partial<Transaction>): Transaction {
     descrizione: '',
     nota: null,
     createdAt: '2026-02-01T00:00:00Z',
+    stima: false,
     ...overrides,
   };
 }

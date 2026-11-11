@@ -25,6 +25,7 @@ const row = {
   nota: null,
   created_at: '2026-02-14T10:00:00Z',
   user_id: 'u-1',
+  stima: false,
 };
 
 describe('getTransactions', () => {
@@ -44,6 +45,7 @@ describe('getTransactions', () => {
         descrizione: 'Spesa',
         nota: null,
         createdAt: '2026-02-14T10:00:00Z',
+        stima: false,
         userId: 'u-1',
       },
     ]);
@@ -112,6 +114,43 @@ describe('updateTransaction', () => {
     });
 
     expect(result.id).toBe('1');
+  });
+});
+
+describe('stima', () => {
+  const base = {
+    tipo: 'expense' as const,
+    importo: 30,
+    data: '2026-11-05',
+    categoriaId: null as string | null,
+    accountId: 'acc-1',
+    goalId: null,
+    descrizione: 'Spesa',
+    nota: null,
+  };
+
+  it('createTransaction con stima true la scrive', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await createTransaction(client, { ...base, stima: true });
+    expect(callsOf(calls[0], 'insert')[0][0]).toMatchObject({ stima: true });
+  });
+
+  it('createTransaction senza stima scrive false', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await createTransaction(client, base);
+    expect(callsOf(calls[0], 'insert')[0][0]).toMatchObject({ stima: false });
+  });
+
+  it('updateTransaction con categoria toglie la stima', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await updateTransaction(client, '1', { ...base, categoriaId: 'cat-1' });
+    expect(callsOf(calls[0], 'update')[0][0]).toMatchObject({ stima: false });
+  });
+
+  it('updateTransaction senza categoria non manda stima', async () => {
+    const { client, calls } = createRecordingClient([row]);
+    await updateTransaction(client, '1', base);
+    expect(callsOf(calls[0], 'update')[0][0]).not.toHaveProperty('stima');
   });
 });
 

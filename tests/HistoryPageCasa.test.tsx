@@ -40,18 +40,18 @@ vi.mock('@/lib/data/transactions', () => ({
       return [
         {
           id: 'h1', tipo: 'expense', importo: 200, data: '2026-11-05', categoriaId: 'c1', accountId: null,
-          goalId: null, descrizione: 'Bolletta', nota: null, createdAt: '', pagataDaUserId: 'u1',
+          goalId: null, descrizione: 'Bolletta', nota: null, createdAt: '', stima: false, pagataDaUserId: 'u1',
         },
       ] satisfies Transaction[];
     }
     return [
       {
         id: 't1', tipo: 'expense', importo: 50, data: '2026-11-04', categoriaId: 'c1', accountId: null,
-        goalId: null, descrizione: 'Pane', nota: null, createdAt: '',
+        goalId: null, descrizione: 'Pane', nota: null, createdAt: '', stima: false,
       },
       {
         id: 't2', tipo: 'income', importo: 1000, data: '2026-11-01', categoriaId: null, accountId: null,
-        goalId: null, descrizione: 'Stipendio', nota: null, createdAt: '',
+        goalId: null, descrizione: 'Stipendio', nota: null, createdAt: '', stima: false,
       },
     ] satisfies Transaction[];
   },

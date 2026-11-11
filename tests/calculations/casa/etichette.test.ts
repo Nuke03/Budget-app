@@ -31,7 +31,7 @@ const mappa = { u1: 'Fabio', u2: 'Anna' };
 function tx(over: Partial<Transaction>): Transaction {
   return {
     id: 't', tipo: 'expense', importo: 1, data: '2026-11-01', categoriaId: null, accountId: null,
-    goalId: null, descrizione: 'x', nota: null, createdAt: '', ...over,
+    goalId: null, descrizione: 'x', nota: null, createdAt: '', stima: false, ...over,
   };
 }
 

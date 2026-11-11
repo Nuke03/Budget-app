@@ -48,6 +48,7 @@ export interface Transaction {
   pagataDaUserId?: string | null;
   origine?: 'riconciliazione' | null;
   userId?: string;
+  stima: boolean;
 }
 
 export interface PivaSettings {
@@ -70,6 +71,7 @@ export interface Household {
   nome: string;
   createdAt: string;
   archiviataIl: string | null;
+  createdBy: string;
 }
 
 export interface HouseholdMember {
@@ -132,7 +134,7 @@ export interface PlanShare {
   quotaMensile: number;
 }
 
-export type TransferCausale = 'versamento' | 'rimborso' | 'restituzione' | 'altro';
+export type TransferCausale = 'versamento' | 'rimborso' | 'restituzione' | 'altro' | 'saldo_iniziale';
 
 export interface Transfer {
   id: string;

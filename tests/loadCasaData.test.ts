@@ -8,7 +8,7 @@ const MEMBRI = { H1: ['A', 'B'] };
 const T0 = '2026-01-01T00:00:00Z';
 
 const casaA: CasaCorrente = {
-  household: { id: 'H1', nome: 'Casa', createdAt: T0, archiviataIl: null },
+  household: { id: 'H1', nome: 'Casa', createdAt: T0, archiviataIl: null, createdBy: 'u1' },
   members: [
     { householdId: 'H1', userId: 'A', displayName: 'Anna', joinedAt: T0, slot: 1, attivo: true },
     { householdId: 'H1', userId: 'B', displayName: 'Bruno', joinedAt: T0, slot: 2, attivo: true },

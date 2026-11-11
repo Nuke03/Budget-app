@@ -22,6 +22,7 @@ interface HouseholdRow {
   nome: string;
   created_at: string;
   archiviata_il: string | null;
+  created_by: string;
 }
 
 interface InviteRow {
@@ -60,7 +61,7 @@ function mapInvite(r: InviteRow): HouseholdInvite {
 export async function getMyHousehold(supabase: SupabaseClient, userId: string): Promise<CasaCorrente | null> {
   const [membriRes, caseRes, invitiRes] = await Promise.all([
     supabase.from('household_members').select('household_id, user_id, display_name, joined_at, slot, attivo'),
-    supabase.from('households').select('id, nome, created_at, archiviata_il'),
+    supabase.from('households').select('id, nome, created_at, archiviata_il, created_by'),
     supabase.from('household_invites').select('id, household_id, codice, created_at, scade_il, revocato_il'),
   ]);
   if (membriRes.error) throw membriRes.error;
@@ -92,6 +93,7 @@ export async function getMyHousehold(supabase: SupabaseClient, userId: string): 
       nome: casaRow.nome,
       createdAt: casaRow.created_at,
       archiviataIl: casaRow.archiviata_il,
+      createdBy: casaRow.created_by,
     },
     members,
     invite: validi[0] ? mapInvite(validi[0]) : null,

@@ -22,7 +22,7 @@ function tx(overrides: Partial<Transaction>): Transaction {
     goalId: null,
     descrizione: '',
     nota: null,
-    createdAt: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z', stima: false,
     ...overrides,
   };
 }

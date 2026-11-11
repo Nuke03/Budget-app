@@ -39,7 +39,7 @@ const invito = {
 
 function casa(over: Partial<CasaCorrente> = {}): CasaCorrente {
   return {
-    household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null },
+    household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null, createdBy: 'u1' },
     members: [fabio, anna],
     invite: invito,
     me: fabio,
