@@ -42,6 +42,15 @@ describe('indovinaCategoria', () => {
     expect(indovinaCategoria('Cinema', storico, OGGI)).toBe('recente');
   });
 
+  it('descrizione vuota → la più usata negli ultimi 30 giorni, non la più recente senza descrizione', () => {
+    const storico = [
+      spesa('', 'rara', '2026-11-10'),
+      spesa('Bar', 'svago', '2026-11-01'),
+      spesa('Pizza', 'svago', '2026-11-02'),
+    ];
+    expect(indovinaCategoria('  ', storico, OGGI)).toBe('svago');
+  });
+
   it('nessuna spesa → null', () => {
     expect(indovinaCategoria('Cinema', [], OGGI)).toBeNull();
   });

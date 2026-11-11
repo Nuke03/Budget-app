@@ -20,8 +20,9 @@ export function indovinaCategoria(
   const spese = storico.filter((r) => r.tipo === 'expense' && r.categoriaId !== null);
 
   // Stessa descrizione: vale la categoria della spesa più recente.
+  // Con descrizione vuota non c'è niente da confrontare: si passa alla categoria più usata.
   let piuRecente: Riga | null = null;
-  for (const r of spese) {
+  for (const r of chiave === '' ? [] : spese) {
     if (r.descrizione.trim().toLowerCase() !== chiave) continue;
     if (piuRecente === null || r.data > piuRecente.data) piuRecente = r;
   }

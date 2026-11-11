@@ -26,6 +26,12 @@ describe('computeReminders', () => {
     expect(r[0].azione).toEqual({ tipo: 'versamento', etichetta: 'Registra', importo: 776 });
   });
 
+  it('un debito da Tricount parla di saldo di partenza, non di quota', () => {
+    const d = { ...debito('u1', 'u2'), mesi: [{ mese: '2026-11-01', importo: 603, versato: 603, origine: 'tricount' as const }] };
+    const r = computeReminders({ ...base, giornoVersamento: null, debiti: [d] }, me, '2026-11-03');
+    expect(r[0].testo).toBe('Resta da restituire a Anna: 603 € (saldo di partenza da Tricount). Anche a rate, quando puoi.');
+  });
+
   it('prima di quella data non compare', () => {
     expect(computeReminders(base, me, '2026-11-01')).toEqual([]);
   });

@@ -36,7 +36,7 @@ const FRASI_IN_LINEA: { testo: string; perche: string }[] = [
     perche: 'Servono a farsi un’idea, poi conta la tua situazione.',
   },
   {
-    testo: 'Se per due mesi di fila i soldi messi da parte non bastano, la quota è troppo bassa: non è colpa di nessuno.',
+    testo: 'Se per due mesi di fila i soldi messi da parte non bastano, la quota è troppo bassa. Si alza dal piano della quota.',
     perche: 'Un numero che non torna dice che il piano va aggiustato, non che qualcuno ha sbagliato.',
   },
   {

@@ -75,7 +75,9 @@ export function PannelliVersamenti({
               <li key={`${d.creditoreId}-${d.debitoreId}`} className="flex flex-col gap-1 text-sm">
                 {d.mesi.map((m) => (
                   <span key={m.mese}>
-                    {`${etichettaMese(m.mese)}: ${nome(d.creditoreId)} ha versato ${formatNumero(m.versato)} € per ${nome(d.debitoreId)}. ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} € (quota di ${etichettaMese(m.mese)}).`}
+                    {m.origine === 'tricount'
+                      ? `Saldo di partenza da Tricount: ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} €.`
+                      : `${etichettaMese(m.mese)}: ${nome(d.creditoreId)} ha versato ${formatNumero(m.versato)} € per ${nome(d.debitoreId)}. ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} € (quota di ${etichettaMese(m.mese)}).`}
                   </span>
                 ))}
                 {d.debitoreId === meUserId ? (

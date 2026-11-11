@@ -238,6 +238,17 @@ describe('HomeDashboard', () => {
       expect(screen.queryByText(/Versamento alla casa/)).not.toBeInTheDocument();
     });
 
+    it('un debito da Tricount nel dettaglio dice saldo di partenza', () => {
+      const stato = casaPerHome({
+        debiti: [
+          { debitoreId: 'u2', creditoreId: 'u1', importo: 43, mesi: [{ mese: '2026-11-01', importo: 43, versato: 43, origine: 'tricount' }] },
+        ],
+      });
+      render(<HomeDashboard {...base} casa={stato} />);
+      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      expect(screen.getByText('Anna deve a te 43 €, saldo di partenza da Tricount')).toBeInTheDocument();
+    });
+
     it('al debitore mostra Da restituire a con segno meno', () => {
       const stato = casaPerHome({
         debiti: [

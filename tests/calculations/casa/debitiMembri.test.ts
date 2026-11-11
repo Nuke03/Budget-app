@@ -87,7 +87,7 @@ describe('debitiMembri: saldo_iniziale', () => {
 
   it('saldo_iniziale crea un debito del debitore verso il creditore', () => {
     expect(debitiMembri([saldo(120)])).toEqual([
-      { debitoreId: 'u2', creditoreId: 'u1', importo: 120, mesi: [{ mese: '2026-11-01', importo: 120, versato: 120 }] },
+      { debitoreId: 'u2', creditoreId: 'u1', importo: 120, mesi: [{ mese: '2026-11-01', importo: 120, versato: 120, origine: 'tricount' }] },
     ]);
   });
 
@@ -106,5 +106,13 @@ describe('debitiMembri: saldo_iniziale', () => {
     const d = debitiMembri([prestito(603, '2026-12-01'), saldo(120), rest]);
     expect(d[0].importo).toBe(603);
     expect(d[0].mesi).toEqual([{ mese: '2026-12-01', importo: 603, versato: 603 }]);
+  });
+});
+
+describe('debitiMembri: origine tricount', () => {
+  it('un mese con saldo e versamento per conto di resta una quota, senza origine', () => {
+    const saldo = tr({ causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 50, data: '2026-11-10', soloRegistrazione: true });
+    const vers = tr({ causale: 'versamento', userId: 'u1', perContoDiUserId: 'u2', importo: 100, data: '2026-11-03' });
+    expect(debitiMembri([saldo, vers])[0].mesi[0].origine).toBeUndefined();
   });
 });

@@ -47,8 +47,10 @@ export async function proxy(request: NextRequest) {
   const isKeepAlive = request.nextUrl.pathname === '/api/keep-alive';
   // Feed ICS letto dalle app calendario: nessuna sessione, protetto dal token nel percorso.
   const isCalendar = request.nextUrl.pathname.startsWith('/api/calendario/');
+  // Cron di Vercel dei promemoria: nessuna sessione, la route controlla il proprio segreto.
+  const isPromemoria = request.nextUrl.pathname === '/api/promemoria';
 
-  if (!hasSession && !isKeepAlive && !isCalendar && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
+  if (!hasSession && !isKeepAlive && !isCalendar && !isPromemoria && !isLoginPage && !isResetPasswordPage && !isForgotPasswordPage) {
     const url = request.nextUrl.clone();
     // Dopo l'accesso si torna dove si voleva andare (per esempio al link di invito alla casa).
     const destinazione = percorsoInternoSicuro(request.nextUrl.pathname + request.nextUrl.search);

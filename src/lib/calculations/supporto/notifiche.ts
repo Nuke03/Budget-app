@@ -74,7 +74,10 @@ export function decidiNotifica(p: StatoPersona, oggi: string): Notifica | null {
       return {
         tipo: 'versamento',
         titolo: TITOLO,
-        testo: `La tua quota di ${nomeMese(v.mese)}: ${euro(v.importo)} entro il ${v.giorno}.`,
+        testo:
+          v.versato > 0
+            ? `La tua quota di ${nomeMese(v.mese)}: ti mancano ${euro(v.importo - v.versato)} entro il ${v.giorno}.`
+            : `La tua quota di ${nomeMese(v.mese)}: ${euro(v.importo)} entro il ${v.giorno}.`,
         url: '/casa',
       };
     }

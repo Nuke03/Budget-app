@@ -14,14 +14,24 @@ self.addEventListener('push', (event) => {
   );
 });
 
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((finestre) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (finestre) => {
       for (const finestra of finestre) {
         if ('focus' in finestra) {
-          if ('navigate' in finestra) finestra.navigate(url);
+          if ('navigate' in finestra) {
+            try {
+              await finestra.navigate(url);
+            } catch {
+              return self.clients.openWindow(url);
+            }
+          }
           return finestra.focus();
         }
       }

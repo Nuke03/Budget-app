@@ -79,6 +79,16 @@ describe('PannelliVersamenti', () => {
     ).toBeInTheDocument();
   });
 
+  it('un debito da Tricount dice saldo di partenza, senza versato né quota', () => {
+    const tricount: DebitoMembro = {
+      ...debito,
+      mesi: [{ mese: '2026-10-01', importo: 603, versato: 603, origine: 'tricount' }],
+    };
+    monta({ debiti: [tricount] });
+    expect(screen.getByText('Saldo di partenza da Tricount: Anna deve a Fabio 603 €.')).toBeInTheDocument();
+    expect(screen.queryByText(/ha versato/)).not.toBeInTheDocument();
+  });
+
   it('Restituisci solo al debitore e Rinuncia solo al creditore', () => {
     const { apri, unmount } = monta({ meUserId: 'u2' });
     expect(screen.getByRole('button', { name: 'Restituisci' })).toBeInTheDocument();

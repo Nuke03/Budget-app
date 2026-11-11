@@ -69,7 +69,8 @@ describe('migrazione 0009 (statica)', () => {
     expect(f).toMatch(/causale = 'saldo_iniziale'/);
     expect(f).toMatch(/solo_registrazione/);
     expect(f).toMatch(/Europe\/Rome/);
-    expect(f).toMatch(/p_importo is null or p_importo <= 0/);
+    expect(f).toMatch(/p_importo := round\(p_importo, 2\)/);
+    expect(f).toMatch(/p_importo <= 0/);
   });
 
   it('record_saldo_iniziale: revoke da public e anon, grant ad authenticated', () => {

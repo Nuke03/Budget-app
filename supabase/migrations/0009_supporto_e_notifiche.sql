@@ -125,7 +125,9 @@ begin
   if p_household is null or p_creditore is null or p_debitore is null then
     raise exception 'dati mancanti';
   end if;
-  if p_importo is null or p_importo <= 0 then raise exception 'importo non valido'; end if;
+  if p_importo is null then raise exception 'importo non valido'; end if;
+  p_importo := round(p_importo, 2);
+  if p_importo <= 0 then raise exception 'importo non valido'; end if;
   if p_creditore = p_debitore then raise exception 'persone uguali'; end if;
   if not public._casa_membro_attivo(p_household, uid) then raise exception 'casa non valida'; end if;
   if not public._casa_membro_attivo(p_household, p_creditore)

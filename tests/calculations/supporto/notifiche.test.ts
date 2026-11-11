@@ -105,6 +105,10 @@ describe('decidiNotifica: versamento', () => {
     expect(n?.testo).toBe('La tua quota di novembre: 450 € entro il 5.');
     expect(n?.url).toBe('/casa');
   });
+  it('versato in parte: dice quanto manca', () => {
+    const n = decidiNotifica(s({ versamento: vers(5, { versato: 200 }) }), '2026-11-04');
+    expect(n?.testo).toBe('La tua quota di novembre: ti mancano 250 € entro il 5.');
+  });
   it('già versato: niente', () => {
     expect(decidiNotifica(s({ versamento: vers(5, { versato: 450 }) }), '2026-11-04')).toBeNull();
   });

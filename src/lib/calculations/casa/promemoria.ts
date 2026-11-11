@@ -1,6 +1,7 @@
 import { formatNumero, nomeMese } from '../../format';
 import type { PlanBundle } from '../../data/householdPlans';
 import type { DebitoMembro } from './debitiMembri';
+import { descriviOrigineDebito } from './debitiMembri';
 import type { RigaMese } from './versamenti';
 import { meseRomaISO } from './oggi';
 import { meseDaControllare } from './checkin';
@@ -133,7 +134,7 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
       out.push({
         id: `debito:${d.creditoreId}>${me}`,
         tipo: 'debito',
-        testo: `Resta da restituire a ${nome(d.creditoreId)}: ${euro(d.importo)} (quota di ${elencoMesi(d.mesi.map((m) => m.mese))}). Anche a rate, quando puoi.`,
+        testo: `Resta da restituire a ${nome(d.creditoreId)}: ${euro(d.importo)} (${descriviOrigineDebito(d.mesi, elencoMesi)}). Anche a rate, quando puoi.`,
         azione: { tipo: 'restituisci', etichetta: 'Restituisci', importo: d.importo, altroUserId: d.creditoreId },
       });
     } else if (d.creditoreId === me) {

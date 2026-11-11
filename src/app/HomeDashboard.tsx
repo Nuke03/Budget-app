@@ -8,6 +8,7 @@ import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { ComeSiCalcola } from './casa/ComeSiCalcola';
 import { StrisciaPromemoria } from './casa/StrisciaPromemoria';
 import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { descriviOrigineDebito } from '@/lib/calculations/casa/debitiMembri';
 import { riferimentoControllo } from '@/lib/calculations/casa/controlloSaldo';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
@@ -165,7 +166,8 @@ export function HomeDashboard({
               {creditoMio > 0 && <p>Dalla casa ti spettano {euroInFrase(creditoMio)}</p>}
               {debitiVersoDiMe.map((d) => (
                 <p key={`credito-${d.debitoreId}`}>
-                  {nomeDi(d.debitoreId)} deve a te {euroInFrase(d.importo)}, quota di {elencoMesi(d.mesi.map((m) => m.mese))}
+                  {nomeDi(d.debitoreId)} deve a te {euroInFrase(d.importo)},{' '}
+                  {descriviOrigineDebito(d.mesi, elencoMesi)}
                 </p>
               ))}
               {stato?.avvisoArretrati && (

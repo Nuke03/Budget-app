@@ -17,6 +17,12 @@ describe('proxy', () => {
     expect(res.headers.get('location')).toBeNull();
   });
 
+  it('/api/promemoria passa senza redirect', async () => {
+    const res = await proxy(new NextRequest('http://localhost/api/promemoria'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
   it('/goals senza sessione reindirizza a /login', async () => {
     const res = await proxy(new NextRequest('http://localhost/goals'));
     expect(res.status).toBe(307);
