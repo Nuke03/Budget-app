@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
-import { HomeDashboard } from '@/app/HomeDashboard';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render as renderRTL, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { HomeDashboard as HomeBase } from '@/app/HomeDashboard';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
@@ -78,6 +79,16 @@ const goals = [
   },
 ];
 
+const ANDAMENTO_VUOTO = { spesoFinora: 0, solito: null, mesiConfronto: 0, curva: [], perCategoria: [] };
+const CONSIGLIO = { tipo: 'in_linea', testo: 'Segna la prima spesa.', perche: 'Il libretto parte dal primo movimento.' } as const;
+const NUOVI = { righe: [], andamento: ANDAMENTO_VUOTO, consiglio: CONSIGLIO, prossimo: null };
+
+// Le parti del libretto hanno un valore di base: ogni test cambia solo ciò che gli serve.
+function HomeDashboard(props: Omit<React.ComponentProps<typeof HomeBase>, 'righe' | 'andamento' | 'consiglio' | 'prossimo'> & Partial<Pick<React.ComponentProps<typeof HomeBase>, 'righe' | 'andamento' | 'consiglio' | 'prossimo'>>) {
+  return <HomeBase {...NUOVI} {...props} />;
+}
+const render = (ui: ReactElement) => renderRTL(ui);
+
 describe('HomeDashboard', () => {
   it('mostra il disponibile libero e il margine giornaliero', () => {
     render(
@@ -91,8 +102,8 @@ describe('HomeDashboard', () => {
       />
     );
 
-    expect(screen.getByText(/870,00/)).toBeInTheDocument();
-    expect(screen.getByText(/29,00/)).toBeInTheDocument();
+    expect(screen.getByTestId('disponibile')).toHaveTextContent('870,00 €');
+    expect(screen.getByText(/29 € al giorno/)).toBeInTheDocument();
   });
 
   it('mostra il dettaglio conti/obiettivi solo dopo il click', () => {
@@ -109,7 +120,7 @@ describe('HomeDashboard', () => {
 
     expect(screen.queryByText('Conto corrente')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Mostra dettaglio'));
+    fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
 
     expect(screen.getByText('Conto corrente')).toBeInTheDocument();
     expect(screen.getByText(/Telepass/)).toBeInTheDocument();
@@ -147,11 +158,11 @@ describe('HomeDashboard', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Mostra dettaglio'));
+    fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
 
     // Mostra la quota maturata (150), non l'intero importoTarget (300).
-    expect(screen.getByText(/150,00/)).toBeInTheDocument();
-    expect(screen.queryByText(/300,00/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/150,00/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/300,00/)).toHaveLength(0);
 
     // Il conto escluso dal disponibile è mostrato ma etichettato come tale.
     expect(screen.getByText(/Fondo emergenza \(non conta nel disponibile\)/)).toBeInTheDocument();
@@ -216,7 +227,7 @@ describe('HomeDashboard', () => {
     it('mostra Versamento alla casa, novembre con segno meno solo a dettaglio aperto', () => {
       render(<HomeDashboard {...base} casa={conRiserva} />);
       expect(screen.queryByText('Versamento alla casa, novembre')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       const riga = screen.getByText('Versamento alla casa, novembre').parentElement as HTMLElement;
       expect(riga).toHaveTextContent('-777,00 €');
     });
@@ -230,7 +241,7 @@ describe('HomeDashboard', () => {
         avvisoArretrati: true,
       });
       render(<HomeDashboard {...base} casa={stato} />);
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       expect(screen.getByText('Dalla casa ti spettano 45 €')).toBeInTheDocument();
       expect(screen.getByText('Anna deve a te 603 €, quota di novembre')).toBeInTheDocument();
       expect(screen.getByText(/Sono più di due mesi di versamenti da registrare/)).toBeInTheDocument();
@@ -245,7 +256,7 @@ describe('HomeDashboard', () => {
         ],
       });
       render(<HomeDashboard {...base} casa={stato} />);
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       expect(screen.getByText('Anna deve a te 43 €, saldo di partenza da Tricount')).toBeInTheDocument();
     });
 
@@ -257,97 +268,25 @@ describe('HomeDashboard', () => {
         debitoDaRestituire: 603,
       });
       render(<HomeDashboard {...base} casa={stato} />);
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       expect(screen.getByText('Da restituire a Anna').parentElement).toHaveTextContent('-603,00 €');
     });
 
     it('senza casa il dettaglio è identico a prima', () => {
       const { container: senza } = render(<HomeDashboard {...base} />);
-      fireEvent.click(within(senza).getByText('Mostra dettaglio'));
+      fireEvent.click(within(senza).getByText('Come si calcola?'));
       const { container: vuota } = render(<HomeDashboard {...base} casa={casaPerHome()} />);
-      fireEvent.click(within(vuota).getByText('Mostra dettaglio'));
-      expect(vuota.innerHTML).toBe(senza.innerHTML);
+      fireEvent.click(within(vuota).getByText('Come si calcola?'));
+      const senzaId = (html: string) => html.replace(/aria-controls="[^"]*"/g, '');
+      expect(senzaId(vuota.innerHTML)).toBe(senzaId(senza.innerHTML));
       expect(senza).not.toHaveTextContent('Versamento alla casa');
-    });
-
-    it('in home compare una sola riga compatta che porta a /casa', () => {
-      const piano = { plan: { giornoVersamento: 5 } } as unknown as CasaStato['piano'];
-      const stato = casaPerHome({
-        piano,
-        righe: [{ mese: '2026-11-01', atteso: 776, versato: 0, mancano: 776 }],
-        crediti: { u1: 45, u2: 0 },
-      });
-      const { container } = render(<HomeDashboard {...base} casa={stato} oggi="2026-11-03" />);
-      const link = screen.getByRole('link', { name: 'Il tuo versamento di 776 € è da fare entro il 5.' });
-      expect(link).toHaveAttribute('href', '/casa');
-      expect(screen.queryByText(/In attesa del rimborso/)).not.toBeInTheDocument();
-      assertNessunaParolaVietata(container);
-    });
-
-    it('con l ultimo controllo di 15 giorni fa la riga compatta porta il controllo del conto', () => {
-      const stato = casaPerHome({ controlli: { ultimoControllo: '2026-10-19', ultimoCheckinMese: null } });
-      const conConto = {
-        ...stato,
-        aggiunta: {
-          ...stato.aggiunta!,
-          conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null }],
-        },
-      };
-      const { container } = render(<HomeDashboard {...base} casa={conConto} oggi="2026-11-03" />);
-      expect(screen.getByRole('link', { name: /controllo veloce del conto comune/ })).toHaveAttribute('href', '/casa/controllo/conto');
-      assertNessunaParolaVietata(container);
-    });
-
-    it('membro di vecchia data, conto creato oggi, mai controllato: nessun promemoria del controllo', () => {
-      const stato = casaPerHome({ controlli: { ultimoControllo: null, ultimoCheckinMese: null } });
-      const conConto = {
-        ...stato,
-        aggiunta: {
-          ...stato.aggiunta!,
-          conti: [
-            { id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, createdAt: '2026-11-03T08:00:00Z' },
-          ],
-        },
-      };
-      render(<HomeDashboard {...base} casa={conConto} oggi="2026-11-03" />);
-      expect(screen.queryByRole('link', { name: /controllo veloce del conto comune/ })).not.toBeInTheDocument();
-    });
-
-    it('il check-in guarda le righe di tutta la casa, non solo le mie', () => {
-      const stato = casaPerHome({
-        righe: [{ mese: '2026-11-01', atteso: 776, versato: 776, mancano: 0 }],
-        righeCasa: [
-          { mese: '2026-10-01', atteso: 604, versato: 604, mancano: 0 },
-          { mese: '2026-11-01', atteso: 776, versato: 776, mancano: 0 },
-        ],
-        controlli: { ultimoControllo: null, ultimoCheckinMese: '2026-09-01' },
-      });
-      render(<HomeDashboard {...base} casa={stato} oggi="2026-11-01" />);
-      expect(screen.getByRole('link', { name: /check-in di ottobre/ })).toHaveAttribute('href', '/casa/controllo');
-    });
-
-    it('il primo del mese dopo la riga compatta porta il check-in', () => {
-      const stato = casaPerHome({
-        righe: [
-          { mese: '2026-10-01', atteso: 776, versato: 776, mancano: 0 },
-          { mese: '2026-11-01', atteso: 776, versato: 776, mancano: 0 },
-        ],
-        controlli: { ultimoControllo: null, ultimoCheckinMese: '2026-09-01' },
-      });
-      render(<HomeDashboard {...base} casa={stato} oggi="2026-11-01" />);
-      expect(screen.getByRole('link', { name: /check-in di ottobre/ })).toHaveAttribute('href', '/casa/controllo');
-    });
-
-    it('senza promemoria la riga compatta non compare', () => {
-      render(<HomeDashboard {...base} casa={casaPerHome()} oggi="2026-11-03" />);
-      expect(screen.queryByRole('link', { name: /versamento|rimborso|restituire/ })).not.toBeInTheDocument();
     });
 
     it('con la casa ma senza stato il dettaglio dice che la quota non è inclusa', () => {
       const casa = { ...casaPerHome(), stato: null };
       const { container } = render(<HomeDashboard {...base} casa={casa} />);
       expect(screen.queryByText(/Non riesco a leggere la casa/)).not.toBeInTheDocument();
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       expect(
         screen.getByText('Non riesco a leggere la casa: il disponibile non tiene conto della quota.')
       ).toBeInTheDocument();
@@ -356,11 +295,11 @@ describe('HomeDashboard', () => {
 
     it('senza casa e con lo stato letto la riga non compare', () => {
       render(<HomeDashboard {...base} casa={null} />);
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       expect(screen.queryByText(/Non riesco a leggere la casa/)).not.toBeInTheDocument();
       cleanup();
       render(<HomeDashboard {...base} casa={casaPerHome()} />);
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       expect(screen.queryByText(/Non riesco a leggere la casa/)).not.toBeInTheDocument();
     });
 
@@ -376,9 +315,131 @@ describe('HomeDashboard', () => {
           })}
         />
       );
-      fireEvent.click(screen.getByText('Mostra dettaglio'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
       fireEvent.click(screen.getByLabelText('Come si calcola?'));
       assertNessunaParolaVietata(container);
     });
+  });
+});
+
+describe('il libretto', () => {
+  const base = {
+    disponibileLibero: 1240.5,
+    margineGiornaliero: 62,
+    dataTarget: '2026-11-27T00:00:00Z',
+    accounts: [{ id: '1', nome: 'Conto corrente', saldoAttuale: 1500, contaInDisponibile: true, targetSaldo: null }],
+    categories: [],
+    goals: [{ ...goals[0], accantonato: 259.5 }],
+    oggi: '2026-11-11',
+  };
+  const righe = [
+    { id: 'a', data: '2026-11-11', descrizione: 'Esselunga', importo: 38.2, tipo: 'expense' as const, stima: false, nelMese: 1240.5 },
+    { id: 'b', data: '2026-11-10', descrizione: '', importo: 50, tipo: 'expense' as const, stima: true, nelMese: 1202.3 },
+    { id: 'c', data: '2026-11-08', descrizione: 'Rimborso Fabio', importo: 25, tipo: 'income' as const, stima: false, nelMese: 1152.3 },
+  ];
+  const andamento = {
+    spesoFinora: 312,
+    solito: 280,
+    mesiConfronto: 3,
+    curva: [
+      { giorno: 1, mese: 10, solito: 12 },
+      { giorno: 2, mese: 40, solito: 30 },
+      { giorno: 3, mese: 312, solito: 280 },
+    ],
+    perCategoria: [],
+  };
+  const prossimo = { testo: 'Quota casa 650 € entro il 5 dicembre', href: '/casa', tipo: 'casa' as const };
+
+  beforeEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it('con dati pieni mostra le sette parti', () => {
+    const { container } = render(<HomeDashboard {...base} righe={righe} andamento={andamento} prossimo={prossimo} />);
+    expect(screen.getByText('Il mio libretto')).toBeInTheDocument();
+    expect(screen.getByText('novembre 2026')).toBeInTheDocument();
+    expect(screen.getByText('Disponibile libero')).toBeInTheDocument();
+    expect(screen.getByTestId('disponibile')).toHaveTextContent('1.240,50 €');
+    expect(screen.getByText(/62 € al giorno/)).toHaveTextContent('62 € al giorno');
+    expect(container).toHaveTextContent('fino al 27 novembre');
+    expect(container).toHaveTextContent('Hai 1.500 € sui conti, 259,50 € sono già messi da parte');
+    expect(container).toHaveTextContent("Questo mese hai speso 312 €, di solito a quest'ora 280 €");
+    expect(screen.getByRole('img', { name: /a confronto con il solito/ })).toBeInTheDocument();
+    for (const t of ['Data', 'Movimento', 'Importo', 'Nel mese']) expect(screen.getByText(t)).toBeInTheDocument();
+    expect(screen.getByText('Esselunga')).toBeInTheDocument();
+    expect(screen.getByText('−38,20')).toBeInTheDocument();
+    expect(screen.getByText('+25,00')).toBeInTheDocument();
+    expect(screen.getAllByText('stima')).toHaveLength(1);
+    expect(screen.getByText('Spesa')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tutti i movimenti' })).toHaveAttribute('href', '/history');
+    expect(screen.getByRole('link', { name: /Prossimo/ })).toHaveAttribute('href', '/casa');
+    expect(screen.getByText('Segna la prima spesa.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Aggiungi transazione')).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('il Perché apre la spiegazione del consiglio', () => {
+    render(<HomeDashboard {...base} />);
+    expect(screen.queryByText('Il libretto parte dal primo movimento.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Perché?' }));
+    expect(screen.getByText('Il libretto parte dal primo movimento.')).toBeInTheDocument();
+  });
+
+  it('il registro vuoto dice che è vuoto, senza prossimo non c è la card', () => {
+    render(<HomeDashboard {...base} />);
+    expect(screen.getByText('Il libretto è vuoto: la prima spesa che segni compare qui.')).toBeInTheDocument();
+    expect(screen.queryByText('Prossimo')).not.toBeInTheDocument();
+  });
+
+  it('senza il solito dice quando arriverà il confronto', () => {
+    render(<HomeDashboard {...base} />);
+    expect(screen.getByText('Dal prossimo mese ti mostro come stai andando rispetto al solito.')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /a confronto con il solito/ })).not.toBeInTheDocument();
+  });
+
+  it('Come si calcola? mostra i tre gruppi con i subtotali', () => {
+    const casa = casaPerHome({
+      righe: [{ mese: '2026-11-01', atteso: 100, versato: 0, mancano: 100 }],
+      riservaVersamento: 100,
+    });
+    render(<HomeDashboard {...base} casa={casa} meUserId="u1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
+    const soldi = screen.getByRole('region', { name: 'Soldi tuoi' });
+    expect(soldi).toHaveTextContent('1.500,00 €');
+    expect(within(soldi).getByText('Conto corrente')).toBeInTheDocument();
+    const messi = screen.getByRole('region', { name: 'Già messi da parte' });
+    expect(messi).toHaveTextContent('-259,50 €');
+    expect(within(messi).getByText('Telepass')).toBeInTheDocument();
+    const casaGruppo = screen.getByRole('region', { name: 'Casa' });
+    expect(casaGruppo).toHaveTextContent('-100,00 €');
+  });
+
+  it('con l id registrato fra le righe mostra il timbro e l annuncio e cancella la chiave', () => {
+    window.sessionStorage.setItem('libretto:registrato', 'a');
+    render(<HomeDashboard {...base} righe={righe} />);
+    expect(screen.getByText(/REGISTRATO/)).toHaveTextContent('11 NOV');
+    const annuncio = document.querySelector('[aria-live="polite"]');
+    expect(annuncio).toHaveTextContent('Registrato. Disponibile ora 1.240,50 €');
+    expect(window.sessionStorage.getItem('libretto:registrato')).toBeNull();
+  });
+
+  it('senza chiave, o con un id che non c è, niente timbro', () => {
+    render(<HomeDashboard {...base} righe={righe} />);
+    expect(screen.queryByText(/REGISTRATO/)).not.toBeInTheDocument();
+    cleanup();
+    window.sessionStorage.setItem('libretto:registrato', 'zzz');
+    render(<HomeDashboard {...base} righe={righe} />);
+    expect(screen.queryByText(/REGISTRATO/)).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem('libretto:registrato')).toBeNull();
+  });
+
+  it('nessun verde nei className', () => {
+    window.sessionStorage.setItem('libretto:registrato', 'a');
+    const { container } = render(<HomeDashboard {...base} righe={righe} andamento={andamento} prossimo={prossimo} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
+    const classi = Array.from(container.querySelectorAll('[class]'))
+      .map((e) => e.getAttribute('class'))
+      .join(' ');
+    expect(classi).not.toMatch(/green|emerald|teal|lime/);
   });
 });

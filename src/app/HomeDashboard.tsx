@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Plus } from 'lucide-react';
-import { formatEuro, formatDateIt, nomeMese } from '@/lib/format';
+import { Plus } from 'lucide-react';
+import { formatEuro, nomeMese } from '@/lib/format';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
-import { ComeSiCalcola } from './casa/ComeSiCalcola';
-import { StrisciaPromemoria } from './casa/StrisciaPromemoria';
-import { promemoriaDaCasa } from '@/lib/calculations/supporto/home';
-import { descriviOrigineDebito } from '@/lib/calculations/casa/debitiMembri';
+import { AndamentoCard } from './home/AndamentoCard';
+import { ConsiglioCard } from './home/ConsiglioCard';
+import { DettaglioDisponibile } from './home/DettaglioDisponibile';
+import { Registro } from './home/Registro';
+import { giornoEMese } from './home/formati';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
-import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
+import type { Andamento } from '@/lib/calculations/supporto/andamento';
+import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
+import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { Account, BudgetGoal, Category } from '@/lib/types';
 
@@ -23,17 +27,17 @@ export interface GoalWithAccantonato extends BudgetGoal {
   accantonato: number;
 }
 
-const GOAL_MODALITA_LABEL: Record<BudgetGoal['modalita'], string> = {
-  bloccato: 'Bloccato',
-  dilazionato: 'Dilazionato',
-};
+// Scritta dal foglio di aggiunta dopo un salvataggio: l'id della riga appena creata.
+const CHIAVE_REGISTRATO = 'libretto:registrato';
 
 // Nelle frasi gli importi tondi si scrivono senza decimali: "45 €".
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 
-function elencoMesi(mesi: string[]): string {
-  const nomi = mesi.map(nomeMese);
-  return nomi.length <= 1 ? (nomi[0] ?? '') : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`;
+// "1.240,50 €" in due pezzi: la cifra e i centesimi, più piccoli.
+function dividiCifra(n: number): { intero: string; resto: string } {
+  const testo = formatEuro(n);
+  const i = testo.lastIndexOf(',');
+  return i < 0 ? { intero: testo, resto: '' } : { intero: testo.slice(0, i), resto: testo.slice(i) };
 }
 
 export function HomeDashboard({
@@ -46,6 +50,10 @@ export function HomeDashboard({
   casa = null,
   meUserId,
   oggi = oggiRomaISO(),
+  righe,
+  andamento,
+  consiglio,
+  prossimo,
 }: {
   disponibileLibero: number;
   margineGiornaliero: number;
@@ -56,127 +64,103 @@ export function HomeDashboard({
   casa?: CasaPerHome | null;
   meUserId?: string;
   oggi?: string;
+  righe: RigaLibretto[];
+  andamento: Andamento;
+  consiglio: Consiglio;
+  prossimo: Prossimo | null;
+  notificheAttive?: boolean | null;
 }) {
   const router = useRouter();
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [registratoId, setRegistratoId] = useState<string | null>(null);
 
-  const accountsDisponibili = accounts.filter((a) => a.contaInDisponibile);
-  const accountsEsclusi = accounts.filter((a) => !a.contaInDisponibile);
+  // Il timbro: se il foglio ha appena registrato una riga che è fra quelle mostrate.
+  useEffect(() => {
+    let id: string | null = null;
+    try {
+      id = window.sessionStorage.getItem(CHIAVE_REGISTRATO);
+      if (id !== null) window.sessionStorage.removeItem(CHIAVE_REGISTRATO);
+    } catch {
+      return;
+    }
+    if (id !== null && righe.some((r) => r.id === id)) setRegistratoId(id);
+  }, [righe]);
 
-  const stato = casa?.stato ?? null;
-  const nomeDi = (userId: string): string => stato?.membri.find((m) => m.userId === userId)?.displayName ?? 'un altro membro';
-  const righeDaVersare = stato ? stato.righe.filter((r) => r.mancano > 0) : [];
-  const debitiMiei = stato ? stato.debiti.filter((d) => d.debitoreId === stato.me.userId) : [];
-  const debitiVersoDiMe = stato ? stato.debiti.filter((d) => d.creditoreId === stato.me.userId) : [];
-  const creditoMio = stato ? (stato.crediti[stato.me.userId] ?? 0) : 0;
-  const promemoria = promemoriaDaCasa(casa, oggi);
-  const statoNonLetto = !!casa && !casa.stato;
-  const haRiserva = righeDaVersare.length > 0 || debitiMiei.length > 0;
+  const saldoConti = accounts.filter((a) => a.contaInDisponibile).reduce((t, a) => t + a.saldoAttuale, 0);
+  const riservato = Math.round((saldoConti - disponibileLibero) * 100) / 100;
+  const { intero, resto } = dividiCifra(disponibileLibero);
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <StrisciaPromemoria promemoria={promemoria} oggi={oggi} compatta />
+    <>
+      <header className="bg-brand pt-[env(safe-area-inset-top)] text-brand-foreground">
+        <div className="mx-auto flex min-h-24 max-w-md items-end justify-between px-5 pb-4">
+          <h1 className="font-serif text-[22px] font-semibold tracking-[0.02em]">Il mio libretto</h1>
+          <p className="text-[13px] text-brand-foreground/80">
+            {nomeMese(oggi)} {oggi.slice(0, 4)}
+          </p>
+        </div>
+      </header>
 
-      <section className="rounded-[var(--radius-lg)] bg-brand p-7 text-brand-foreground shadow-[var(--shadow-hero)]">
-        <p className="text-sm font-medium text-brand-foreground/75">Disponibile libero</p>
-        <p className="mt-1 text-5xl font-bold tabular-nums tracking-tight">
-          {formatEuro(disponibileLibero)}
-        </p>
-        <div className="mt-5 h-px bg-brand-foreground/15" />
-        <p className="mt-5 text-sm text-brand-foreground/85">
-          Margine sicuro: <span className="num font-semibold">{formatEuro(margineGiornaliero)}</span>
-          /giorno fino al {formatDateIt(dataTarget)}
-        </p>
-      </section>
-
-      <button
-        type="button"
-        className="flex items-center justify-center gap-1.5 text-sm font-semibold text-muted"
-        onClick={() => setShowBreakdown((v) => !v)}
-      >
-        {showBreakdown ? 'Nascondi dettaglio' : 'Mostra dettaglio'}
-        <ChevronDown
-          size={16}
-          className={`transition-transform duration-200 ${showBreakdown ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {showBreakdown && (
-        <section className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 text-sm shadow-[var(--shadow-card)]">
-          {accountsDisponibili.map((a) => (
-            <div key={a.id} className="flex justify-between py-1">
-              <span className="font-medium">{a.nome}</span>
-              <span className="tabular-nums">{formatEuro(a.saldoAttuale)}</span>
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
+        <section className="rounded-b-[var(--radius-md)] bg-page px-[18px] pb-4 pt-5 shadow-[var(--shadow-card)]">
+          <p className="text-xs uppercase tracking-[0.12em] text-ink-2">Disponibile libero</p>
+          <p data-testid="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
+            {intero}
+            {resto ? <span className="text-[28px]">{resto}</span> : null}
+          </p>
+          <p className="mt-2 text-[15px] text-ink-2">
+            Puoi spendere <b className="num font-semibold text-foreground">{euroInFrase(margineGiornaliero)} al giorno</b> fino al{' '}
+            {giornoEMese(dataTarget.slice(0, 10))}
+          </p>
+          <p className="mt-1 text-[15px] text-ink-2">
+            Hai {euroInFrase(saldoConti)} sui conti
+            {riservato > 0 ? `, ${euroInFrase(riservato)} sono già messi da parte` : ''}
+          </p>
+          <button
+            type="button"
+            aria-expanded={showBreakdown}
+            onClick={() => setShowBreakdown((v) => !v)}
+            className="-mx-2 mt-1 inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand-dark"
+          >
+            Come si calcola?
+          </button>
+          {showBreakdown ? (
+            <div className="mt-1">
+              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} />
             </div>
-          ))}
-          {goals.map((g) => (
-            <div key={g.id} className="flex justify-between py-1 text-muted">
-              <span>
-                {g.nome} ({GOAL_MODALITA_LABEL[g.modalita]})
-              </span>
-              <span className="tabular-nums">-{formatEuro(g.accantonato)}</span>
-            </div>
-          ))}
-          {righeDaVersare.map((r) => (
-            <div key={`versamento-${r.mese}`} className="flex justify-between py-1 text-muted">
-              <span>Versamento alla casa, {nomeMese(r.mese)}</span>
-              <span className="tabular-nums">-{formatEuro(r.mancano)}</span>
-            </div>
-          ))}
-          {debitiMiei.map((d) => (
-            <div key={`debito-${d.creditoreId}`} className="flex justify-between py-1 text-muted">
-              <span>Da restituire a {nomeDi(d.creditoreId)}</span>
-              <span className="tabular-nums">-{formatEuro(d.importo)}</span>
-            </div>
-          ))}
-          {statoNonLetto && (
-            <p className="mt-1 border-t border-black/5 pt-2 text-xs text-muted">
-              Non riesco a leggere la casa: il disponibile non tiene conto della quota.
-            </p>
-          )}
-          {haRiserva && stato && (
-            <ComeSiCalcola
-              spiegazione={spiegaRiserva({ righe: stato.righe, debitoDaRestituire: stato.debitoDaRestituire })}
-            />
-          )}
-          {(creditoMio > 0 || debitiVersoDiMe.length > 0 || stato?.avvisoArretrati) && (
-            <div className="mt-1 flex flex-col gap-1 border-t border-black/5 pt-2 text-xs text-muted">
-              {creditoMio > 0 && <p>Dalla casa ti spettano {euroInFrase(creditoMio)}</p>}
-              {debitiVersoDiMe.map((d) => (
-                <p key={`credito-${d.debitoreId}`}>
-                  {nomeDi(d.debitoreId)} deve a te {euroInFrase(d.importo)},{' '}
-                  {descriviOrigineDebito(d.mesi, elencoMesi)}
-                </p>
-              ))}
-              {stato?.avvisoArretrati && (
-                <p>
-                  Sono più di due mesi di versamenti da registrare. Se li hai già fatti, registrali con &quot;Già riflesso nei
-                  saldi&quot;.
-                </p>
-              )}
-            </div>
-          )}
-          {accountsEsclusi.length > 0 && (
-            <div className="mt-1 flex flex-col gap-1 border-t border-black/5 pt-2">
-              {accountsEsclusi.map((a) => (
-                <div key={a.id} className="flex justify-between py-1 text-muted">
-                  <span className="text-xs">{a.nome} (non conta nel disponibile)</span>
-                  <span className="text-xs tabular-nums">{formatEuro(a.saldoAttuale)}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          ) : null}
         </section>
-      )}
+
+        <AndamentoCard andamento={andamento} />
+
+        <Registro righe={righe} registratoId={registratoId} />
+        <p aria-live="polite" className="sr-only">
+          {registratoId ? `Registrato. Disponibile ora ${euroInFrase(disponibileLibero)}` : ''}
+        </p>
+
+        {prossimo ? (
+          <Link
+            href={prossimo.href}
+            className="block min-h-11 rounded-[var(--radius-md)] bg-surface-muted p-4 text-[15px]"
+          >
+            <span className="mb-0.5 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-dark">Prossimo</span>
+            {prossimo.testo}
+          </Link>
+        ) : null}
+
+        <ConsiglioCard consiglio={consiglio} />
+
+        {/* Qui entra la scheda delle notifiche. */}
+      </main>
 
       <button
         type="button"
         onClick={() => setIsAddOpen(true)}
         aria-label="Aggiungi transazione"
-        className="fixed bottom-28 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[var(--shadow-fab)]"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-[18px] z-40 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[var(--shadow-fab)]"
       >
-        <Plus size={26} strokeWidth={2.5} />
+        <Plus size={28} strokeWidth={2.5} />
       </button>
 
       <AddTransactionSheet
@@ -188,6 +172,6 @@ export function HomeDashboard({
         meUserId={meUserId}
         onSaved={() => router.refresh()}
       />
-    </main>
+    </>
   );
 }

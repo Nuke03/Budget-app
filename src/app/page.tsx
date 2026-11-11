@@ -19,6 +19,11 @@ export default async function HomePage() {
       categories={data.categories}
       goals={data.goals}
       casa={data.casa}
+      righe={data.righe}
+      andamento={data.andamento}
+      consiglio={data.consiglio}
+      prossimo={data.prossimo}
+      notificheAttive={data.notificheAttive}
       meUserId={user.id}
       oggi={oggiRomaISO()}
     />
