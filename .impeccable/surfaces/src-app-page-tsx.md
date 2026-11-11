@@ -11,13 +11,13 @@ Audience/job: Fabio and his partner, quick glances during the day; log an expens
 
 ## Direction contract
 
-THESIS: Your money as a savings passbook: every movement is a line with the running balance beside it, so the headline number is earned line by line. Refuses the category default of a coloured balance card over a feed of icon tiles.
+THESIS: Your money as a savings passbook: every movement is a line with the month-to-date total beside it ("Nel mese"), so the headline number is earned line by line; a backward running balance would invent numbers because balances are edited by hand. Refuses the category default of a coloured balance card over a feed of icon tiles.
 
 OWN-WORLD: Passbook blue cover (#14306b) as a narrow header band, white pages on a pale blue-grey ground (#eef2f8), thin hairline rules, a serif for the headline figures and a plain grotesk for everything else, tabular lining numerals in every amount column, one red stamp (#c8102e) reserved for "registrato" confirmations only. Flat colour, no gradients, no glow shadows.
 
 STORY: The visitor reads the disponibile and its per-day margin first, sees the last movements with their running balance, sees the one next thing, taps + and enters only the amount; the new line lands in the passbook with the stamp and the balance updates.
 
-FIRST VIEWPORT: Blue cover band with "Il mio libretto" and the month; white page with "Disponibile libero" label and the figure in large serif; per-day margin line; ledger card with columns Data / Movimento / Importo / Saldo (4 latest rows); "Prossimo" card with the next obligation; + button bottom-right above a 4-tab bar (Home, Storico, Casa, Altro). Signature move: after saving an expense the new row slides into the ledger and a round red "REGISTRATO" stamp presses onto it while the saldo column updates.
+FIRST VIEWPORT: Blue cover band with "Il mio libretto" and the month; white page with "Disponibile libero" label and the figure in large serif; per-day margin line; ledger card with columns Data / Movimento / Importo / Nel mese (4 latest rows); "Prossimo" card with the next obligation; + button bottom-right above a 4-tab bar (Home, Storico, Casa, Altro). Signature move: after saving an expense the new row slides into the ledger and a round red "REGISTRATO" stamp presses onto it while the disponibile updates.
 
 FORM: Il Libretto (libretto di risparmio postale), position 1 on my ordered list (IMPECCABLE'S PICK card), seed:078ae3448a5360c2. Kept raises from declined challengers: one reserved colour (the stamp red) for one job only; flat colour; amounts always in tabular columns; done obligations stay visible, struck through, until month end.
 
