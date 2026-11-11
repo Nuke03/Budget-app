@@ -70,6 +70,7 @@ export function CasaHome({
         statoPromemoria({
           piano,
           righe: finanze.righe?.[casa.me.userId] ?? [],
+          righeCasa: Object.values(finanze.righe ?? {}).flat(),
           oggi,
           nomi: nomiMembri,
           crediti: finanze.crediti ?? {},
@@ -179,7 +180,7 @@ export function CasaHome({
               </ul>
             ) : (
               <p className="text-sm text-muted">
-                Ancora nessuna spesa di casa. Appena ne aggiungete una, la vedete qui entrambi.
+                Ancora nessuna spesa di casa. Appena ne aggiungete una, la vede tutta la casa.
               </p>
             )}
             <Link href="/casa/movimenti" className="text-sm font-semibold text-brand-dark">
@@ -218,9 +219,6 @@ export function CasaHome({
       ) : (
         <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
           <p className="text-sm">Non riesco a leggere conti e spese della casa. Riprova tra poco.</p>
-          <Link href="/casa" className="text-sm font-semibold text-brand-dark">
-            Riprova
-          </Link>
         </section>
       )}
 

@@ -4,7 +4,7 @@ Punto di partenza per le prossime chat. Ogni blocco è pensato per una chat
 nuova con contesto pulito: si apre la chat, si indica il blocco, e la chat
 legge questo file più i documenti citati.
 
-## Stato attuale (8 novembre 2026)
+## Stato attuale (8 novembre 2026; per il blocco 1 vedi sotto)
 
 - App in produzione su Vercel, database Supabase (piano gratuito).
 - **Down di novembre risolto.** Causa: Supabase mette in pausa i progetti
@@ -38,13 +38,25 @@ nessun senso di colpa e nessuna gamification. Base dei contenuti:
 
 **Stato (8 novembre 2026):** spec approvata in `docs/superpowers/specs/2026-11-08-co-gestione-casa-design.md`; consegne 1 a 3 pianificate in `docs/superpowers/plans/2026-11-08-casa-comune-consegne-1-3.md`. Le domande iniziali sono risolte nella spec. Consegna 1 (fondamenta) e consegna 2 (casa, invito, ingresso, uscita): fatte. Consegna 3 (la quota): fatta.
 
-**Stato (9 novembre 2026):** consegne 4 e 5 fatte, piano in `docs/superpowers/plans/2026-11-08-casa-comune-consegne-4-5.md`, migrazioni fino alla 0007 eseguite: spese di casa con selettore Personale|Casa, conto comune, spesa con carta personale e credito, versamenti, rimborsi, restituzioni, righe neutre nello storico, quota e debiti riservati nel disponibile personale, promemoria in app, calendario privato in abbonamento, invito con link. Prossimo passo del blocco 1: piano delle consegne 6 a 8 (fondi per le bollette, costi di ingresso, controllo del saldo, check-in mensile, stima contro reale, rifiniture).
+**Stato (9 novembre 2026):** consegne 4 e 5 fatte, piano in `docs/superpowers/plans/2026-11-08-casa-comune-consegne-4-5.md`, migrazioni fino alla 0007 eseguite: spese di casa con selettore Personale|Casa, conto comune, spesa con carta personale e credito, versamenti, rimborsi, restituzioni, righe neutre nello storico, quota e debiti riservati nel disponibile personale, promemoria in app, calendario privato in abbonamento, invito con link. 
 
-Rimandati dalle revisioni, da fare in un compito dedicato:
+**Stato (9 novembre 2026, consegne 6 a 8):** fatte, piano in `docs/superpowers/plans/2026-11-09-casa-comune-consegne-6-8.md`, migrazioni fino alla 0008 eseguite. Cosa c'è ora:
+- bollette in un tocco (voci del piano collegate a un obiettivo, "da parte" con preselezione);
+- costi di ingresso con spiegazione di ogni voce e data di ingresso;
+- disponibile casa completo, con cuscinetto e "Come si calcola?";
+- controllo del saldo del conto comune, con la riga delle spese non registrate e il promemoria;
+- check-in mensile, con destinazione dell'avanzo e avviso al secondo ammanco;
+- stima contro reale, con card nel check-in e nella pagina della quota;
+- stati vuoti e di errore della parte Casa, e un test che vieta le parole non volute nei testi.
+
+Rimandati dalle revisioni, ancora aperti, da fare in un compito dedicato:
 - una sola funzione SQL che scrive insieme la riga e il saldo, così una spesa non resta mai a metà se cade la connessione;
 - modificare una spesa di casa pagata con la carta personale (oggi si cancella e si reinserisce);
 - `id` dell'obiettivo nel feed del calendario, per eventi stabili quando si rinomina un obiettivo;
-- avviso nel percorso guidato su iOS 18 se il menu per il calendario in abbonamento ha parole diverse.
+- avviso nel percorso guidato su iOS 18 se il menu per il calendario in abbonamento ha parole diverse;
+- puntino sulla barra di navigazione quando c'è un promemoria;
+- promemoria "Rivedi la quota";
+- pulsante "Nuova cosa da mettere da parte" nel foglio di aggiunta.
 
 **Tipo:** architetturale. Cambia la premessa del prodotto: `PRODUCT.md` oggi
 dice "dati completamente isolati tra i due utenti".
@@ -120,6 +132,13 @@ Storico sul telefono e correggere le cause. Sospetti già noti dalle revisioni:
   SQL (le funzioni `_casa_*` esistono già) o filtrare le righe necessarie;
 - stati di caricamento: mostrare subito la pagina con i dati principali e il
   resto dopo.
+- Novità delle consegne 6 a 8 (9 novembre): letture aggiunte, le due `limit 1` in
+  `loadCasaData` e `loadCasaStato` (ultimo controllo e ultimo check-in); il
+  check-in, il disponibile casa (D) e la stima contro reale non leggono altro,
+  usano le transazioni già caricate. Letture tolte: la pagina Da parte faceva una
+  query per obiettivo, ora ne fa una sola. Avvertenza: D, stima e check-in vanno
+  spostati su letture per mese quando si risolve il limite di circa 1000 righe,
+  altrimenti con le righe troncate i loro numeri sarebbero sbagliati.
 
 **Cambio palette** (dal verde a blu "corporate", più rassicuranti per l'occhio):
 deciso con Fabio di farlo **dopo** la co-gestione. Va fatto qui, come ultimo

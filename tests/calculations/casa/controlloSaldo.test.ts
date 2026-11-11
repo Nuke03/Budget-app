@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { valutaControllo, speseNonRegistrate } from '@/lib/calculations/casa/controlloSaldo';
+import { riferimentoControllo, valutaControllo, speseNonRegistrate } from '@/lib/calculations/casa/controlloSaldo';
 
 describe('valutaControllo', () => {
   it('banca sotto l app: mancano soldi', () => {
@@ -55,5 +55,16 @@ describe('speseNonRegistrate: arrotondamento', () => {
       { tipo: 'expense' as const, importo: 0.2, data: '2026-11-03', origine: 'riconciliazione' as const },
     ];
     expect(speseNonRegistrate(transazioni, '2026-11-01')).toBe(0.3);
+  });
+});
+
+describe('riferimentoControllo', () => {
+  it('senza date utili non lancia e parte da oggi', () => {
+    expect(() => riferimentoControllo('', [])).not.toThrow();
+    expect(riferimentoControllo('', [])).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('il più tardi fra ingresso e apertura del conto', () => {
+    expect(riferimentoControllo('2026-01-10T10:00:00Z', [{ createdAt: '2026-03-05T10:00:00Z' }])).toBe('2026-03-05');
   });
 });

@@ -287,6 +287,34 @@ describe('HomeDashboard', () => {
       assertNessunaParolaVietata(container);
     });
 
+    it('membro di vecchia data, conto creato oggi, mai controllato: nessun promemoria del controllo', () => {
+      const stato = casaPerHome({ controlli: { ultimoControllo: null, ultimoCheckinMese: null } });
+      const conConto = {
+        ...stato,
+        aggiunta: {
+          ...stato.aggiunta!,
+          conti: [
+            { id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, createdAt: '2026-11-03T08:00:00Z' },
+          ],
+        },
+      };
+      render(<HomeDashboard {...base} casa={conConto} oggi="2026-11-03" />);
+      expect(screen.queryByRole('link', { name: /controllo veloce del conto comune/ })).not.toBeInTheDocument();
+    });
+
+    it('il check-in guarda le righe di tutta la casa, non solo le mie', () => {
+      const stato = casaPerHome({
+        righe: [{ mese: '2026-11-01', atteso: 776, versato: 776, mancano: 0 }],
+        righeCasa: [
+          { mese: '2026-10-01', atteso: 604, versato: 604, mancano: 0 },
+          { mese: '2026-11-01', atteso: 776, versato: 776, mancano: 0 },
+        ],
+        controlli: { ultimoControllo: null, ultimoCheckinMese: '2026-09-01' },
+      });
+      render(<HomeDashboard {...base} casa={stato} oggi="2026-11-01" />);
+      expect(screen.getByRole('link', { name: /check-in di ottobre/ })).toHaveAttribute('href', '/casa/controllo');
+    });
+
     it('il primo del mese dopo la riga compatta porta il check-in', () => {
       const stato = casaPerHome({
         righe: [

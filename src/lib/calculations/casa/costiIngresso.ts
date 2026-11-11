@@ -92,11 +92,7 @@ export function calcolaCostiIngresso(input: {
             formula: minimoApplicato
               ? `Imposta minima di ${formatNumero(imposta)} euro, perché il 2% su ${formatNumero(annuo)} euro di canone in un anno ne fa meno: diviso a metà, ${formatNumero(quotaInquilino)} euro.`
               : `Imposta del 2% su ${formatNumero(annuo)} euro di canone in un anno: ${formatNumero(imposta)} euro, diviso a metà: ${formatNumero(quotaInquilino)} euro.`,
-            ingredienti: [
-              { etichetta: 'Canone di un anno', valore: annuo },
-              { etichetta: minimoApplicato ? 'Imposta minima' : 'Imposta al 2%', valore: imposta },
-              { etichetta: "Quota dell'inquilino", valore: quotaInquilino },
-            ],
+            ingredienti: [{ etichetta: "Quota dell'inquilino", valore: quotaInquilino }],
           },
     },
     {

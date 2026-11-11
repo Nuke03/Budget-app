@@ -64,7 +64,7 @@ export function VersamentoForm({
   const [riflesso, setRiflesso] = useState(false);
 
   const altri = membri.filter((m) => m.userId !== meUserId);
-  // Se il bonifico è già nei saldi, nessun conto viene toccato: i conti non servono.
+  // Se il versamento è già nei saldi, nessun conto viene toccato: i conti non servono.
   const valido = importo !== null && (riflesso || (da !== '' && a !== '')) && data !== '';
 
   async function invia(e: React.FormEvent) {
@@ -112,7 +112,7 @@ export function VersamentoForm({
           </select>
         </Campo>
       ) : null}
-      <Spunta etichetta="Il bonifico l'ho già riflesso nei saldi" checked={riflesso} onChange={setRiflesso} />
+      <Spunta etichetta="Il versamento l'ho già riflesso nei saldi" checked={riflesso} onChange={setRiflesso} />
       <ErroreMovimento testo={errore} />
       <Registra disabilitato={!valido || inCorso} />
       <Annulla onClose={onClose} />

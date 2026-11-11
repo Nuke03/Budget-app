@@ -75,6 +75,7 @@ export function HomeDashboard({
         statoPromemoria({
           piano: stato.piano,
           righe: stato.righe,
+          righeCasa: stato.righeCasa,
           oggi,
           nomi: Object.fromEntries(stato.membri.map((m) => [m.userId, m.displayName])),
           crediti: stato.crediti,

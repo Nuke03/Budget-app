@@ -21,6 +21,8 @@ export interface CasaStato {
   piano: PlanBundle | null;
   // Le righe del chiamante.
   righe: RigaMese[];
+  // Le righe di tutta la casa: il check-in è della casa, non di chi guarda.
+  righeCasa?: RigaMese[];
   riservaVersamento: number;
   debiti: DebitoMembro[];
   debitoDaRestituire: number;
@@ -61,6 +63,7 @@ export async function loadCasaStato(
     membri: casa.members,
     piano: pianoDelMese(piani, meseRomaISO(now)),
     righe,
+    righeCasa: Object.values(righePerMembro).flat(),
     riservaVersamento,
     debiti,
     debitoDaRestituire: riservaDebiti,

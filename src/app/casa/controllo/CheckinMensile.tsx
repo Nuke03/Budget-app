@@ -176,10 +176,11 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
     } catch (e) {
       if (e instanceof CheckinGiaFattoError) {
         // Lo ha già fatto un altro: la pagina ricarica e mostra "Fatto da ...", senza messaggio.
+        // Il pulsante resta bloccato: la pagina nuova sostituisce questo passo.
         router.refresh();
-      } else {
-        setErrore(messaggioErroreCheckin(e));
+        return;
       }
+      setErrore(messaggioErroreCheckin(e));
       occupato.current = false;
       setInCorso(false);
     }

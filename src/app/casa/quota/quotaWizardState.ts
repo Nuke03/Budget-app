@@ -2,7 +2,6 @@ import { addMonths, format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { HouseholdMember, OrigineStima, PlanShare } from '@/lib/types';
-import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import { VOCI_CASA_TIPICHE } from '@/lib/calculations/casa/vociTipiche';
 import type { AvvisoQuota } from '@/lib/calculations/casa/quota';
 import type { UscitoDraft } from '@/lib/calculations/casa/pianoVersioni';
@@ -64,8 +63,10 @@ export const testoNumero = (n: number) => String(n).replace('.', ',');
 export const arrotonda2 = (n: number) => Math.round(n * 100) / 100;
 
 export function parseMesi(testo: string): number | null {
-  const n = parseImporto(testo);
-  return n !== null && Number.isInteger(n) && n >= 1 ? n : null;
+  const t = testo.trim();
+  if (!/^\d+$/.test(t)) return null;
+  const n = Number(t);
+  return n >= 1 ? n : null;
 }
 
 export function opzioniMesi(da: string, extra: string[] = []): { value: string; label: string }[] {

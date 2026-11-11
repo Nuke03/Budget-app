@@ -63,6 +63,8 @@ function elencoMesi(mesi: string[]): string {
 export function statoPromemoria(input: {
   piano: PlanBundle | null;
   righe: RigaMese[];
+  // Le righe di tutta la casa, per il check-in: se mancano si usano quelle di chi guarda.
+  righeCasa?: RigaMese[];
   oggi: string;
   nomi: Record<string, string>;
   crediti: Record<string, number>;
@@ -84,7 +86,7 @@ export function statoPromemoria(input: {
       input.ultimoCheckinMese === undefined
         ? undefined
         : {
-            mese: meseDaControllare({ oggi: input.oggi, righe: input.righe, ultimoCheckinMese: input.ultimoCheckinMese }),
+            mese: meseDaControllare({ oggi: input.oggi, righe: input.righeCasa ?? input.righe, ultimoCheckinMese: input.ultimoCheckinMese }),
           },
   };
 }

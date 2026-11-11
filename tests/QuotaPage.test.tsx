@@ -67,8 +67,9 @@ describe('QuotaClient: stima contro reale', () => {
   });
 
   it('con una sola proposta non ci sono le altre', () => {
-    pagina({ proposte: [proposta('i1', 'Luce')] });
+    const { container } = pagina({ proposte: [proposta('i1', 'Luce')] });
     expect(screen.queryByRole('button', { name: /^Altre/ })).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
   });
 
   it('senza proposte non ci sono card', () => {

@@ -8,7 +8,8 @@ export function riferimentoControllo(joinedAt: string, conti: Pick<Account, 'cre
   const giorni = [joinedAt, ...conti.map((c) => c.createdAt)]
     .filter((x): x is string => !!x)
     .map((x) => oggiRomaISO(new Date(x)));
-  return giorni.reduce((a, b) => (b > a ? b : a));
+  // Senza nessuna data utile si parte da oggi: nessun promemoria finché non passa del tempo.
+  return giorni.reduce((a, b) => (b > a ? b : a), giorni[0] ?? oggiRomaISO(new Date()));
 }
 
 export type EsitoControllo = 'torna' | 'mancano' | 'in_piu';

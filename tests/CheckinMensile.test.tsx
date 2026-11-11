@@ -135,8 +135,9 @@ describe('CheckinMensile: stima contro reale', () => {
   });
 
   it('da fare: nessuna card, il Fatto resta libero', async () => {
-    render(<CheckinMensile dati={dati(conStime)} />);
+    const { container } = render(<CheckinMensile dati={dati(conStime)} />);
     expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
   });
@@ -154,8 +155,9 @@ describe('CheckinMensile: stima contro reale', () => {
   });
 
   it('a check-in fatto senza proposte: nessuna card', () => {
-    render(<CheckinMensile dati={dati({ pianoAttuale: pianoStime, ...fattoDa })} />);
+    const { container } = render(<CheckinMensile dati={dati({ pianoAttuale: pianoStime, ...fattoDa })} />);
     expect(screen.queryByRole('button', { name: 'Usa 71 € al mese' })).not.toBeInTheDocument();
+    assertNessunaParolaVietata(container);
   });
 
   it('con una modifica già programmata la card rimanda a Rivedi la quota', () => {
@@ -311,6 +313,20 @@ describe('CheckinMensile', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/è già stato fatto/)).not.toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('dopo "già fatto" il pulsante resta bloccato in attesa della pagina nuova', async () => {
+    vi.mocked(saveCheckin).mockClear();
+    vi.mocked(saveCheckin).mockRejectedValue(new CheckinGiaFattoError());
+    refresh.mockReset();
+    render(<CheckinMensile dati={dati()} />);
+    const bottone = screen.getByRole('button', { name: 'Fatto, a novembre' });
+    fireEvent.click(bottone);
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(bottone).toBeDisabled();
+    fireEvent.click(bottone);
+    fireEvent.submit(bottone.closest('form')!);
+    expect(saveCheckin).toHaveBeenCalledTimes(1);
   });
 
   it('un altro errore ha la sua frase', async () => {

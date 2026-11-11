@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { uscentiDaPiani } from '@/app/casa/quota/quotaWizardState';
+import { parseMesi, uscentiDaPiani } from '@/app/casa/quota/quotaWizardState';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { PlanShare } from '@/lib/types';
 
@@ -29,5 +29,16 @@ describe('uscentiDaPiani', () => {
     expect(r).toHaveLength(1);
     // la quota è l'ultima di una versione precedente all'uscita, non lo 0 della riga più recente
     expect(r[0]).toMatchObject({ slot: 2, displayName: 'Giulia', esceDal: '2027-02-01', quotaMensile: 603 });
+  });
+});
+
+describe('parseMesi', () => {
+  it('numero intero, niente separatori delle migliaia', () => {
+    expect(parseMesi('2')).toBe(2);
+    expect(parseMesi(' 12 ')).toBe(12);
+    expect(parseMesi('2.000')).toBeNull();
+    expect(parseMesi('2,5')).toBeNull();
+    expect(parseMesi('0')).toBeNull();
+    expect(parseMesi('')).toBeNull();
   });
 });

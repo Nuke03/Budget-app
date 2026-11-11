@@ -107,7 +107,7 @@ describe('CasaHome', () => {
   it('se conti e spese non si leggono dice di riprovare e lascia la quota e le impostazioni', () => {
     const { container } = render(<CasaHome casa={casa} />);
     expect(screen.getByText('Non riesco a leggere conti e spese della casa. Riprova tra poco.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Riprova' })).toHaveAttribute('href', '/casa');
+    expect(screen.queryByRole('link', { name: 'Riprova' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Calcolate la nostra quota' })).toHaveAttribute('href', '/casa/quota');
     expect(screen.getByRole('link', { name: 'Impostazioni' })).toHaveAttribute('href', '/casa/impostazioni');
     assertNessunaParolaVietata(container);
@@ -165,7 +165,7 @@ describe('CasaHome', () => {
     it('nessuna spesa: una frase che dice cosa succede dopo', () => {
       const { container } = render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), ultimeSpese: [] }} />);
       expect(
-        screen.getByText('Ancora nessuna spesa di casa. Appena ne aggiungete una, la vedete qui entrambi.')
+        screen.getByText('Ancora nessuna spesa di casa. Appena ne aggiungete una, la vede tutta la casa.')
       ).toBeInTheDocument();
       assertNessunaParolaVietata(container);
     });

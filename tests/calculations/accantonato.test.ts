@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { format } from 'date-fns';
 import {
   computeAccantonatoFinora,
@@ -336,6 +336,10 @@ describe('nextOccurrence', () => {
     expect(result).toEqual(new Date(2026, 6, 1));
   });
 });
+
+// Il fuso del processo com'era prima delle prove: lo si rimette alla fine, perché non esca da questo file.
+const tzIniziale = process.env.TZ;
+afterAll(() => { process.env.TZ = tzIniziale ?? 'Europe/Rome'; });
 
 // Il test di regressione TZ sopra lascia il processo in un altro fuso: le prove
 // che seguono ragionano in giorni locali, quindi fissano il fuso di Roma.

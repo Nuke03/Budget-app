@@ -65,22 +65,17 @@ describe('calcolaCostiIngresso', () => {
     const registro = voce(calcolaCostiIngresso(base), 'registro');
     expect(registro.spiegazione.valore).toBe(90);
     expect(registro.spiegazione.formula).toContain('diviso a metà');
-    expect(registro.spiegazione.ingredienti).toEqual([
-      { etichetta: 'Canone di un anno', valore: 9000 },
-      { etichetta: 'Imposta al 2%', valore: 180 },
-      { etichetta: "Quota dell'inquilino", valore: 90 },
-    ]);
+    expect(registro.spiegazione.ingredienti).toEqual([{ etichetta: "Quota dell'inquilino", valore: 90 }]);
+    expect(registro.spiegazione.formula).toMatch(/9\.?000/);
   });
 
   it('registro: minimo 67 euro, quota inquilino 33,50 a canone 250', () => {
     const registro = voce(calcolaCostiIngresso({ ...base, canoneMensile: 250 }), 'registro');
     expect(registro.importo).toBe(33.5);
     expect(registro.spiegazione.valore).toBe(33.5);
-    expect(registro.spiegazione.ingredienti).toEqual([
-      { etichetta: 'Canone di un anno', valore: 3000 },
-      { etichetta: 'Imposta minima', valore: 67 },
-      { etichetta: "Quota dell'inquilino", valore: 33.5 },
-    ]);
+    expect(registro.spiegazione.ingredienti).toEqual([{ etichetta: "Quota dell'inquilino", valore: 33.5 }]);
+    const somma = registro.spiegazione.ingredienti.reduce((s, i) => s + i.valore, 0);
+    expect(somma).toBe(registro.spiegazione.valore);
   });
 
   it('registro: canone 0 dà 0, senza minimo', () => {

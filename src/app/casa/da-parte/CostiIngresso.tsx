@@ -208,7 +208,7 @@ export function CostiIngresso({
       >
         Metti da parte i costi per entrare
       </button>
-      {fatto ? <p className="text-sm">{'Fatto: trovate i fondi qui sopra, in "Da pagare una volta".'}</p> : null}
+      {fatto ? <p className="text-sm">{'Fatto: trovate le voci qui sopra, in "Da pagare una volta".'}</p> : null}
       {errore ? (
         <p role="alert" className="text-sm text-danger">
           {errore}

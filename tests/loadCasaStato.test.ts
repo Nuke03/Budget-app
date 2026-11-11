@@ -75,6 +75,8 @@ describe('loadCasaStato', () => {
     const s = await stato(B, seed, { now: new Date('2026-10-31T23:30:00Z') });
     expect(s.righe.map((r) => r.mese)).toEqual(['2026-10-01', '2026-11-01']);
     expect(s.riservaVersamento).toBe(1554);
+    // Le righe di tutta la casa: una per ogni membro e mese.
+    expect(s.righeCasa).toHaveLength(4);
     const prima = await stato(B, seed, { now: new Date('2026-10-31T21:30:00Z') });
     expect(prima.riservaVersamento).toBe(777);
   });
