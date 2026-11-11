@@ -134,3 +134,11 @@ describe('righeNeutreStorico', () => {
     expect(r.map((x) => x.id)).toEqual(['tr-b', 'tr-c', 'tr-a']);
   });
 });
+
+describe('saldo_iniziale', () => {
+  it('non compare nello storico (non e un movimento di soldi)', () => {
+    const s = tr({ id: 's', causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', soloRegistrazione: true });
+    expect(righe([s])).toEqual([]);
+    expect(righeNeutreStorico({ userId: 'u2', transazioni: [], trasferimenti: [s], nomi: {} })).toEqual([]);
+  });
+});

@@ -151,6 +151,42 @@ end $$;
 revoke execute on function public.record_saldo_iniziale(uuid, uuid, uuid, numeric) from public, anon, authenticated;
 grant execute on function public.record_saldo_iniziale(uuid, uuid, uuid, numeric) to authenticated;
 
+-- =====================================================================
+-- 6. _casa_debiti_aperti: il saldo iniziale conta come prestato
+-- Stessa firma, stessa sicurezza e stessi grant di 0004 (create or replace li mantiene).
+-- saldo_iniziale: prestato dal beneficiario (creditore) a per_conto_di (debitore), come in debitiMembri.
+-- Cosi un membro non puo uscire o chiudere la casa con un debito di Tricount aperto.
+-- =====================================================================
+
+create or replace function public._casa_debiti_aperti(h uuid, u uuid)
+returns numeric language sql security definer stable set search_path = public as $$
+  select coalesce(sum(greatest(0, q.prestato - q.restituito)), 0)
+  from (
+    select p.c, p.d,
+      (select coalesce(sum(t.importo), 0) from public.transfers t
+        where t.household_id = h and (
+              (t.causale = 'versamento' and t.user_id = p.c and t.per_conto_di_user_id = p.d)
+           or (t.causale = 'saldo_iniziale' and t.beneficiario_user_id = p.c and t.per_conto_di_user_id = p.d))) as prestato,
+      (select coalesce(sum(t.importo), 0) from public.transfers t
+        where t.household_id = h and (
+              (t.causale = 'restituzione' and t.user_id = p.d and t.beneficiario_user_id = p.c
+                 and t.per_conto_di_user_id is null)
+           or (t.causale = 'versamento' and t.user_id = p.d and t.beneficiario_user_id = p.c)
+           or (t.causale = 'restituzione' and t.user_id = p.c and t.beneficiario_user_id = p.c
+                 and t.per_conto_di_user_id = p.d))) as restituito
+    from (
+      select user_id as c, per_conto_di_user_id as d
+      from public.transfers
+      where household_id = h and causale = 'versamento' and per_conto_di_user_id is not null
+      union
+      select beneficiario_user_id, per_conto_di_user_id
+      from public.transfers
+      where household_id = h and causale = 'saldo_iniziale'
+    ) p
+    where p.c = u or p.d = u
+  ) q;
+$$;
+
 commit;
 
 -- ROLLBACK (solo se serve; prima eliminare eventuali righe transfers con causale 'saldo_iniziale'):

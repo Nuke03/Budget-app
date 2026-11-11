@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getTransfers,
   recordTransfer,
+  registraSaldoIniziale,
   deleteTransfer,
   messaggioErroreTrasferimento,
 } from '@/lib/data/transfers';
@@ -105,6 +106,24 @@ describe('recordTransfer', () => {
     await expect(
       recordTransfer(client, { householdId: null, causale: 'altro', importo: 0, data: '2026-10-05' }),
     ).rejects.toMatchObject({ message: 'importo non valido' });
+  });
+});
+
+describe('registraSaldoIniziale', () => {
+  it('registraSaldoIniziale chiama la rpc con i nomi dei parametri', async () => {
+    const { client, calls } = fakeRpcClient({ record_saldo_iniziale: { data: 'sid' } });
+    const id = await registraSaldoIniziale(client, { householdId: 'h1', creditoreId: 'u1', debitoreId: 'u2', importo: 120 });
+    expect(id).toBe('sid');
+    expect(calls).toEqual([
+      { name: 'record_saldo_iniziale', args: { p_household: 'h1', p_creditore: 'u1', p_debitore: 'u2', p_importo: 120 } },
+    ]);
+  });
+
+  it('lancia l errore della RPC', async () => {
+    const { client } = fakeRpcClient({ record_saldo_iniziale: { error: { message: 'saldo iniziale gia registrato' } } });
+    await expect(
+      registraSaldoIniziale(client, { householdId: 'h1', creditoreId: 'u1', debitoreId: 'u2', importo: 120 }),
+    ).rejects.toMatchObject({ message: 'saldo iniziale gia registrato' });
   });
 });
 

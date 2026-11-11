@@ -83,3 +83,25 @@ describe('migrazione 0009 (statica)', () => {
     expect(sql).toMatch(/-- drop table if exists public\.push_iscrizioni/);
   });
 });
+
+describe('migrazione 0009: _casa_debiti_aperti con saldo_iniziale', () => {
+  it('ridefinisce _casa_debiti_aperti con la stessa firma, definer, stable, search_path', () => {
+    expect(codice).toMatch(
+      /create or replace function public\._casa_debiti_aperti\(h uuid, u uuid\)\s+returns numeric language sql security definer stable set search_path = public/);
+  });
+
+  it('il saldo_iniziale e prestato dal beneficiario a per_conto_di, coppia compresa', () => {
+    const inizio = codice.indexOf('create or replace function public._casa_debiti_aperti(');
+    expect(inizio).toBeGreaterThan(-1);
+    const f = codice.slice(inizio, codice.indexOf('commit;', inizio));
+    expect(f).toMatch(/t\.causale = 'saldo_iniziale' and t\.beneficiario_user_id = p\.c and t\.per_conto_di_user_id = p\.d/);
+    expect(f).toMatch(/select beneficiario_user_id, per_conto_di_user_id\s+from public\.transfers\s+where household_id = h and causale = 'saldo_iniziale'/);
+    expect(f).toContain('union');
+    // il restituito resta quello di 0004
+    expect(f).toMatch(/t\.causale = 'restituzione' and t\.user_id = p\.d and t\.beneficiario_user_id = p\.c/);
+  });
+
+  it('non rifa revoke/grant (create or replace li mantiene)', () => {
+    expect(codice).not.toMatch(/(revoke|grant)[^;]*_casa_debiti_aperti/);
+  });
+});

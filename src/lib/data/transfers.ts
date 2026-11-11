@@ -86,6 +86,21 @@ export async function recordTransfer(supabase: SupabaseClient, input: RecordTran
   return data as string;
 }
 
+// Il debito che i due portano da Tricount: il debitore deve `importo` al creditore. Una sola volta per casa.
+export async function registraSaldoIniziale(
+  supabase: SupabaseClient,
+  input: { householdId: string; creditoreId: string; debitoreId: string; importo: number },
+): Promise<string> {
+  const { data, error } = await supabase.rpc('record_saldo_iniziale', {
+    p_household: input.householdId,
+    p_creditore: input.creditoreId,
+    p_debitore: input.debitoreId,
+    p_importo: input.importo,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 export async function deleteTransfer(supabase: SupabaseClient, id: string): Promise<void> {
   const { error } = await supabase.rpc('delete_transfer', { p_id: id });
   if (error) throw error;

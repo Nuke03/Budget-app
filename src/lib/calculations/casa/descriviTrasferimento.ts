@@ -40,5 +40,12 @@ export function descriviTrasferimento(
     return { titolo: `Restituzione di ${autore} a ${nome(t.beneficiarioUserId)}`, dettaglio: null };
   }
 
+  if (t.causale === 'saldo_iniziale') {
+    return {
+      titolo: 'Saldo di partenza da Tricount',
+      dettaglio: `${nome(t.perContoDiUserId)} deve a ${nome(t.beneficiarioUserId)}`,
+    };
+  }
+
   return { titolo: 'Movimento fra membri', dettaglio: null };
 }

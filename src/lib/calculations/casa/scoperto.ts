@@ -68,7 +68,12 @@ export function scopertoAnnullandoVersamento(m: Transfer, transfers: Transfer[])
   const creditoreId = m.userId;
   const debitoreId = m.perContoDiUserId;
   const prestato = transfers
-    .filter((t) => t.causale === 'versamento' && t.userId === creditoreId && t.perContoDiUserId === debitoreId)
+    .filter(
+      (t) =>
+        (t.causale === 'versamento' && t.userId === creditoreId && t.perContoDiUserId === debitoreId) ||
+        // il saldo di Tricount e prestato da beneficiario a per_conto_di, come in debitiMembri
+        (t.causale === 'saldo_iniziale' && t.beneficiarioUserId === creditoreId && t.perContoDiUserId === debitoreId),
+    )
     .reduce((s, t) => s + t.importo, 0);
   const restituito = restituitoDalDebitore(creditoreId, debitoreId, transfers);
   const prima = arrotonda(prestato - restituito);

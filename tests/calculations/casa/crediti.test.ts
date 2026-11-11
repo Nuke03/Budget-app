@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { creditoMembro, creditiPerMembro } from '@/lib/calculations/casa/crediti';
+import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import type { Transfer } from '@/lib/types';
 
 const tr = (extra: Partial<Transfer>): Transfer => ({
@@ -62,5 +63,16 @@ describe('creditiPerMembro', () => {
       [tr({ importo: 20, beneficiarioUserId: 'u1' })],
     );
     expect(r).toEqual({ u1: 25, u2: 30, u3: 0 });
+  });
+});
+
+describe('saldo_iniziale', () => {
+  it('non cambia i crediti verso la casa ne il disponibile casa', () => {
+    const saldo = tr({ causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 120, soloRegistrazione: true });
+    const spese = [spesa(50, 'u1')];
+    expect(creditiPerMembro(['u1', 'u2'], spese, [saldo])).toEqual(creditiPerMembro(['u1', 'u2'], spese, []));
+    const base = { conti: [{ saldoAttuale: 1000, contaInDisponibile: true }], obiettivi: [], today: new Date('2026-11-15T12:00:00Z') };
+    const tot = (t: typeof saldo[]) => Object.values(creditiPerMembro(['u1', 'u2'], spese, t)).reduce((s, v) => s + v, 0);
+    expect(computeDisponibileCasa({ ...base, crediti: tot([saldo]) }).valore).toBe(computeDisponibileCasa({ ...base, crediti: tot([]) }).valore);
   });
 });

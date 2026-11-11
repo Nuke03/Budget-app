@@ -80,3 +80,31 @@ describe('debitiMembri', () => {
     expect(debitoVersoMembri('u1', d)).toBe(0);
   });
 });
+
+describe('debitiMembri: saldo_iniziale', () => {
+  const saldo = (importo: number, creditore = 'u1', debitore = 'u2', autore = 'u1') =>
+    tr({ causale: 'saldo_iniziale', userId: autore, beneficiarioUserId: creditore, perContoDiUserId: debitore, importo, data: '2026-11-10', soloRegistrazione: true });
+
+  it('saldo_iniziale crea un debito del debitore verso il creditore', () => {
+    expect(debitiMembri([saldo(120)])).toEqual([
+      { debitoreId: 'u2', creditoreId: 'u1', importo: 120, mesi: [{ mese: '2026-11-01', importo: 120, versato: 120 }] },
+    ]);
+  });
+
+  it('conta anche se a registrarlo e il debitore', () => {
+    expect(debitiMembri([saldo(120, 'u1', 'u2', 'u2')])[0]).toMatchObject({ debitoreId: 'u2', creditoreId: 'u1', importo: 120 });
+  });
+
+  it('una restituzione successiva lo copre', () => {
+    const rest = tr({ causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo: 70 });
+    expect(debitiMembri([saldo(120), rest])[0].importo).toBe(50);
+    expect(debitiMembri([saldo(120), { ...rest, importo: 120 }])).toEqual([]);
+  });
+
+  it('si somma ai prestiti dello stesso verso, il restituito copre il mese piu vecchio', () => {
+    const rest = tr({ causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo: 120 });
+    const d = debitiMembri([prestito(603, '2026-12-01'), saldo(120), rest]);
+    expect(d[0].importo).toBe(603);
+    expect(d[0].mesi).toEqual([{ mese: '2026-12-01', importo: 603, versato: 603 }]);
+  });
+});

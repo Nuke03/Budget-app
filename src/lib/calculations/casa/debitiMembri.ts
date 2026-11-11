@@ -35,6 +35,13 @@ export function debitiMembri(transfers: Transfer[]): DebitoMembro[] {
       } else if (t.beneficiarioUserId && t.beneficiarioUserId !== t.userId) {
         coppia(t.beneficiarioUserId, t.userId).restituito += t.importo;
       }
+    } else if (t.causale === 'saldo_iniziale') {
+      // il debito che i due portano da Tricount: prestato dal creditore (beneficiario) al debitore, nel mese di data
+      if (t.beneficiarioUserId && t.perContoDiUserId) {
+        const c = coppia(t.beneficiarioUserId, t.perContoDiUserId);
+        const mese = primoDelMese(t.data);
+        c.prestato.set(mese, (c.prestato.get(mese) ?? 0) + t.importo);
+      }
     } else if (t.causale === 'restituzione' && t.beneficiarioUserId) {
       if (!t.perContoDiUserId) {
         if (t.beneficiarioUserId !== t.userId) coppia(t.beneficiarioUserId, t.userId).restituito += t.importo;

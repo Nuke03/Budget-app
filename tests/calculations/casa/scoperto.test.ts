@@ -51,3 +51,13 @@ describe('scopertoAnnullandoVersamento', () => {
     expect(scopertoAnnullandoVersamento(tr({}), [tr({})])).toBeNull();
   });
 });
+
+describe('scopertoAnnullandoVersamento con saldo_iniziale', () => {
+  it('il debito di Tricount conta come prestato: la restituzione non e uno scoperto', () => {
+    const saldo = tr({ id: 's', causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 300, soloRegistrazione: true });
+    const prestito = tr({ id: 'p', userId: 'u1', perContoDiUserId: 'u2', importo: 200 });
+    const rest = tr({ id: 'r', causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo: 300, meseCompetenza: null });
+    expect(scopertoAnnullandoVersamento(prestito, [saldo, prestito, rest])).toBeNull();
+    expect(scopertoAnnullandoVersamento(prestito, [prestito, rest])?.importo).toBe(200);
+  });
+});

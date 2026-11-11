@@ -139,3 +139,11 @@ describe('righeVersamento', () => {
     expect(run('u1', [], [])).toEqual([]);
   });
 });
+
+describe('righeVersamento: saldo_iniziale', () => {
+  it('non entra nei versamenti del mese (ne per il debitore ne per il creditore)', () => {
+    const s = vers({ causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 500, soloRegistrazione: true, meseCompetenza: null });
+    expect(run('u2', [s])).toEqual(run('u2', []));
+    expect(run('u1', [s])).toEqual(run('u1', []));
+  });
+});

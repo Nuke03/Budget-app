@@ -70,3 +70,13 @@ describe('descriviTrasferimento', () => {
     }
   });
 });
+
+describe('descriviTrasferimento: saldo_iniziale', () => {
+  it('racconta il saldo di partenza da Tricount', () => {
+    const t = tr({ causale: 'saldo_iniziale', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', soloRegistrazione: true });
+    expect(descriviTrasferimento(t, nomi)).toEqual({
+      titolo: 'Saldo di partenza da Tricount',
+      dettaglio: 'Anna deve a Fabio',
+    });
+  });
+});
