@@ -5,7 +5,10 @@ import { findUnscopedQueries } from '../helpers/scopeGuard';
 
 // pingDatabase legge `accounts` solo per tenere sveglio il progetto Supabase,
 // non restituisce dati a nessuno; il marcatore resta riservato alle funzioni per id.
-const FILE_ESENTI = ['keepAlive.ts'];
+// statoNotifiche.ts è il lettore del cron con la chiave di servizio: legge per tutte le persone
+// iscritte, di proposito fuori dallo scope di una sola persona o casa. Delle transazioni prende
+// solo user_id e created_at (lo verifica tests/api/promemoriaRoute.test.ts).
+const FILE_ESENTI = ['keepAlive.ts', 'statoNotifiche.ts'];
 
 describe('scope guard', () => {
   it('findUnscopedQueries segnala una funzione con from(accounts) senza scope', () => {

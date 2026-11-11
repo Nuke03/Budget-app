@@ -6,6 +6,8 @@ export interface FakeDbOptions {
   userId: string;
   // householdId -> userId dei membri
   membri?: Record<string, string[]>;
+  // Il client con la chiave di servizio non passa dalla RLS: vede tutte le righe.
+  senzaRls?: boolean;
 }
 
 // Solo queste tabelle imitano la RLS di Postgres (riga personale visibile al
@@ -38,7 +40,7 @@ export function createFakeDb(seed: Record<string, Row[]>, opts: FakeDbOptions) {
   const tabella = (nome: string) => (tables[nome] ??= []);
 
   function visibile(nome: string, row: Row): boolean {
-    if (!TABELLE_CON_RLS.has(nome)) return true;
+    if (opts.senzaRls || !TABELLE_CON_RLS.has(nome)) return true;
     const h = valore(row, 'household_id');
     if (h === null) return row.user_id === opts.userId;
     return (opts.membri?.[h as string] ?? []).includes(opts.userId);
