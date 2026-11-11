@@ -56,7 +56,10 @@ Rimandati dalle revisioni, ancora aperti, da fare in un compito dedicato:
 - avviso nel percorso guidato su iOS 18 se il menu per il calendario in abbonamento ha parole diverse;
 - puntino sulla barra di navigazione quando c'è un promemoria;
 - promemoria "Rivedi la quota";
-- pulsante "Nuova cosa da mettere da parte" nel foglio di aggiunta.
+- pulsante "Nuova cosa da mettere da parte" nel foglio di aggiunta;
+- una sola regola condivisa fra disponibile casa e check-in per le spese collegate a un fondo (oggi divergono solo se una voce mensile è legata a un obiettivo chiuso);
+- due soci che toccano "Metti da parte" nello stesso istante possono creare un fondo doppio (serve un indice unico o una funzione SQL);
+- etichetta "Già speso su questa bolletta" anche per i fondi una tantum.
 
 **Tipo:** architetturale. Cambia la premessa del prodotto: `PRODUCT.md` oggi
 dice "dati completamente isolati tra i due utenti".
