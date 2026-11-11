@@ -16,7 +16,9 @@ const voci = [
 
 export default async function AltroPage() {
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, () => leggiPromemoriaUtente(supabase));
+  const { dati } = await conUtente(supabase, () =>
+    leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null }))
+  );
   return (
     <main className="mx-auto max-w-xl px-4 pb-28 pt-8">
       <h1 className="font-serif text-2xl font-semibold text-foreground">Altro</h1>

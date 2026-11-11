@@ -38,6 +38,17 @@ describe('pagina Altro', () => {
     const { container } = render(await AltroPage());
     expect(container.querySelector('#notifiche')).toHaveTextContent('stato:true');
   });
+  it('se la lettura dei promemoria fallisce la pagina si apre lo stesso', async () => {
+    vi.resetModules();
+    vi.doMock('@/lib/data/notifiche', () => ({
+      leggiPromemoriaUtente: async () => {
+        throw new Error('db');
+      },
+    }));
+    const { default: Pagina } = await import('@/app/altro/page');
+    const { container } = render(await Pagina());
+    expect(container.querySelector('#notifiche')).toHaveTextContent('stato:null');
+  });
   it('senza sessione porta al login', async () => {
     vi.resetModules();
     vi.doMock('@/lib/supabase/server', () => ({

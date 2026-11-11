@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { rispondiNotifiche } from '@/lib/data/notifiche';
 import { ambienteNotifiche, iscriviNotifiche, type AmbienteNotifiche } from '@/lib/iscriviNotifiche';
 
-type Stato = 'pronta' | 'in_corso' | 'attive' | 'negate' | 'errore';
+type Stato = 'pronta' | 'in_corso' | 'attive' | 'negate' | 'rimandata' | 'spente' | 'errore';
 
 export const PULSANTE_PRIMARIO =
   'inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand px-4 text-[15px] font-semibold text-brand-foreground disabled:opacity-60';
@@ -33,7 +33,7 @@ export function useIscrizione(chiavePubblica: string | null) {
     setStato('in_corso');
     try {
       const esito = await iscriviNotifiche(chiavePubblica);
-      setStato(esito === 'attive' ? 'attive' : 'negate');
+      setStato(esito === 'attive' ? 'attive' : esito === 'rimandata' ? 'rimandata' : 'negate');
     } catch {
       setStato('errore');
     }
@@ -49,7 +49,17 @@ export function useIscrizione(chiavePubblica: string | null) {
     }
   }
 
-  return { ambiente, stato, attiva, rifiuta };
+  async function spegni() {
+    setStato('in_corso');
+    try {
+      await rispondiNotifiche(createClient(), false);
+      setStato('spente');
+    } catch {
+      setStato('errore');
+    }
+  }
+
+  return { ambiente, stato, attiva, rifiuta, spegni };
 }
 
 export function SchedaNotifiche({

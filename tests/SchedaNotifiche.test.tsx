@@ -81,6 +81,15 @@ describe('SchedaNotifiche in Home', () => {
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 
+  it('se il prompt viene chiuso la scheda resta', async () => {
+    iscrivi.mockResolvedValue('rimandata');
+    render(<SchedaNotifiche chiavePubblica="K" notificheAttive={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sì, avvisami' }));
+    await waitFor(() => expect(iscrivi).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: 'Sì, avvisami' })).toBeInTheDocument();
+    expect(rispondi).not.toHaveBeenCalled();
+  });
+
   it('se l iscrizione fallisce dice cosa fare', async () => {
     iscrivi.mockRejectedValue(new Error('x'));
     render(<SchedaNotifiche chiavePubblica="K" notificheAttive={null} />);
@@ -103,6 +112,20 @@ describe('Notifiche in Altro', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Attiva i promemoria' }));
     expect(iscrivi).toHaveBeenCalledWith('K');
     expect(await screen.findByText(/Promemoria attivi/)).toBeInTheDocument();
+  });
+
+  it('da attive si possono spegnere: risponde false', async () => {
+    render(<Notifiche chiavePubblica="K" notificheAttive={true} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Spegni i promemoria' }));
+    await waitFor(() => expect(rispondi).toHaveBeenCalledWith({ client: true }, false));
+    expect(await screen.findByText(/Promemoria spenti/)).toBeInTheDocument();
+  });
+
+  it('con il prompt chiuso mostra un testo neutro', async () => {
+    iscrivi.mockResolvedValue('rimandata');
+    render(<Notifiche chiavePubblica="K" notificheAttive={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Attiva i promemoria' }));
+    expect(await screen.findByText(/Non hai ancora risposto/)).toBeInTheDocument();
   });
 
   it('su iPhone in Safari spiega come installare', () => {

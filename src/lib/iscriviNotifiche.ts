@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { rispondiNotifiche, salvaIscrizione } from '@/lib/data/notifiche';
 
-export type EsitoNotifiche = 'attive' | 'negate' | 'non_supportate';
+export type EsitoNotifiche = 'attive' | 'negate' | 'rimandata' | 'non_supportate';
 export type AmbienteNotifiche = 'installata' | 'ios_da_installare' | 'browser' | 'non_supportate';
 
 // La chiave pubblica arriva in base64url: il browser la vuole in byte.
@@ -40,8 +40,14 @@ export async function iscriviNotifiche(chiavePubblica: string): Promise<EsitoNot
   if (!supportate()) return 'non_supportate';
   const supabase = createClient();
   const permesso = await Notification.requestPermission();
+  // Prompt chiuso senza rispondere: non è un no, si potrà chiedere un'altra volta.
+  if (permesso === 'default') return 'rimandata';
   if (permesso !== 'granted') {
-    await rispondiNotifiche(supabase, false);
+    try {
+      await rispondiNotifiche(supabase, false);
+    } catch {
+      // Il telefono ha già detto no: il salvataggio della risposta può rifarsi dopo.
+    }
     return 'negate';
   }
   await navigator.serviceWorker.register('/sw.js');

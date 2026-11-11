@@ -3,6 +3,7 @@
 import {
   IstruzioniInstallazione,
   PULSANTE_PRIMARIO,
+  PULSANTE_SECONDARIO,
   useIscrizione,
 } from '@/app/home/SchedaNotifiche';
 
@@ -13,8 +14,8 @@ export function Notifiche({
   chiavePubblica: string | null;
   notificheAttive: boolean | null;
 }) {
-  const { ambiente, stato, attiva } = useIscrizione(chiavePubblica);
-  const attive = stato === 'attive' || (notificheAttive === true && stato !== 'negate');
+  const { ambiente, stato, attiva, spegni } = useIscrizione(chiavePubblica);
+  const attive = stato === 'attive' || (notificheAttive === true && stato !== 'negate' && stato !== 'spente');
   const puoAttivare = (ambiente === 'installata' || ambiente === 'browser') && chiavePubblica !== null;
 
   return (
@@ -30,6 +31,7 @@ export function Notifiche({
           <p className="text-[15px]">
             Promemoria spenti.
             {stato === 'negate' ? ' Il telefono non ha dato il permesso: puoi darlo dalle impostazioni, poi riprova.' : ''}
+            {stato === 'rimandata' ? ' Non hai ancora risposto: puoi attivarli quando vuoi.' : ''}
           </p>
         )}
         {ambiente === 'ios_da_installare' ? (
@@ -44,6 +46,11 @@ export function Notifiche({
           <p role="alert" className="mt-2 text-sm text-foreground">
             Non sono riuscito ad attivare i promemoria. Riprova tra un attimo.
           </p>
+        ) : null}
+        {attive ? (
+          <button type="button" disabled={stato === 'in_corso'} onClick={spegni} className={`${PULSANTE_SECONDARIO} -mx-4 mt-1`}>
+            Spegni i promemoria
+          </button>
         ) : null}
         {!attive && puoAttivare ? (
           <button type="button" disabled={stato === 'in_corso'} onClick={attiva} className={`${PULSANTE_PRIMARIO} mt-3`}>

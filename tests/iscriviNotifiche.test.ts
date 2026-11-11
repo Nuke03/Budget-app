@@ -79,6 +79,19 @@ describe('iscriviNotifiche', () => {
     expect(salva).not.toHaveBeenCalled();
   });
 
+  it('con il prompt chiuso (default) non salva niente e rimanda', async () => {
+    const { subscribe } = preparaBrowser('default');
+    expect(await iscriviNotifiche(CHIAVE)).toBe('rimandata');
+    expect(rispondi).not.toHaveBeenCalled();
+    expect(subscribe).not.toHaveBeenCalled();
+  });
+
+  it('se salvare il no fallisce, l esito resta negate', async () => {
+    preparaBrowser('denied');
+    rispondi.mockRejectedValueOnce(new Error('rete'));
+    expect(await iscriviNotifiche(CHIAVE)).toBe('negate');
+  });
+
   it('senza supporto non chiede niente', async () => {
     preparaBrowser('assente');
     expect(await iscriviNotifiche(CHIAVE)).toBe('non_supportate');
