@@ -1,4 +1,9 @@
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { conUtente } from '@/lib/utenteOLogin';
+import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
+import { chiaviVapid } from '@/lib/chiaviVapid';
+import { Notifiche } from './Notifiche';
 import { Target, Wallet, Tags, Receipt, Bell, ChevronRight } from 'lucide-react';
 
 const voci = [
@@ -9,7 +14,9 @@ const voci = [
   { href: '/altro#notifiche', label: 'Notifiche', icon: Bell },
 ];
 
-export default function AltroPage() {
+export default async function AltroPage() {
+  const supabase = await createClient();
+  const { dati } = await conUtente(supabase, () => leggiPromemoriaUtente(supabase));
   return (
     <main className="mx-auto max-w-xl px-4 pb-28 pt-8">
       <h1 className="font-serif text-2xl font-semibold text-foreground">Altro</h1>
@@ -27,6 +34,7 @@ export default function AltroPage() {
           );
         })}
       </ul>
+      <Notifiche chiavePubblica={chiaviVapid()?.pubblica ?? null} notificheAttive={dati.notificheAttive} />
     </main>
   );
 }

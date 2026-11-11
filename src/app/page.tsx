@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
 import { loadHomeData } from '@/lib/loadHomeData';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { chiaviVapid } from '@/lib/chiaviVapid';
 import { HomeDashboard } from './HomeDashboard';
 
 export default async function HomePage() {
@@ -25,6 +26,7 @@ export default async function HomePage() {
       consiglio={data.consiglio}
       prossimo={data.prossimo}
       notificheAttive={data.notificheAttive}
+      chiavePubblica={chiaviVapid()?.pubblica ?? null}
       meUserId={user.id}
       oggi={oggiRomaISO()}
     />

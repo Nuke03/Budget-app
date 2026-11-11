@@ -10,6 +10,7 @@ import { AndamentoCard } from './home/AndamentoCard';
 import { ConsiglioCard } from './home/ConsiglioCard';
 import { DettaglioDisponibile } from './home/DettaglioDisponibile';
 import { Registro } from './home/Registro';
+import { SchedaNotifiche } from './home/SchedaNotifiche';
 import { giornoEMese } from './home/formati';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
@@ -55,6 +56,8 @@ export function HomeDashboard({
   andamento,
   consiglio,
   prossimo,
+  notificheAttive = null,
+  chiavePubblica = null,
 }: {
   disponibileLibero: number;
   margineGiornaliero: number;
@@ -71,6 +74,7 @@ export function HomeDashboard({
   consiglio: Consiglio;
   prossimo: Prossimo | null;
   notificheAttive?: boolean | null;
+  chiavePubblica?: string | null;
 }) {
   const router = useRouter();
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -156,7 +160,7 @@ export function HomeDashboard({
 
         <ConsiglioCard consiglio={consiglio} />
 
-        {/* Qui entra la scheda delle notifiche. */}
+        <SchedaNotifiche chiavePubblica={chiavePubblica} notificheAttive={notificheAttive} />
       </main>
 
       <button
