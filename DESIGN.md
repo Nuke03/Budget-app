@@ -115,6 +115,17 @@ components:
   chip-selected:
     backgroundColor: "{colors.cover-blue}"
     textColor: "{colors.page}"
+  da-fare-card:
+    backgroundColor: "{colors.cover-blue-tint}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "16px"
+    height: "48px"
+  explain-panel:
+    backgroundColor: "{colors.cover-blue-tint}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "12px"
   input-field:
     backgroundColor: "{colors.page}"
     textColor: "{colors.ink}"
@@ -142,7 +153,7 @@ The money is a savings passbook. A narrow blue cover band sits on top, white pag
 
 Density is low and glanceable, built for one thumb on an iPhone installed as a PWA: one column, about 28rem wide, cards on a quiet ground, hairlines instead of fills. Colour is flat. The system gets its identity from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp.
 
-This document describes the Home, the quick-add sheet, the "In pari" screen and the "Altro" notification block as built. The rest of the app (Casa, history, goals, accounts, P.IVA) inherits the tokens but has not been rebuilt in this world yet; see Known drift.
+This document describes the Home, the quick-add sheet, the "In pari" screen, the "Altro" notification block and the Casa section as built (Casa home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia). The rest of the app (history, goals, accounts, P.IVA) inherits the tokens but has not been rebuilt in this world yet; see Known drift.
 
 **Key Characteristics:**
 - Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.
@@ -192,9 +203,10 @@ Eight flat hues for user categories, used as chip borders and selected chip fill
 
 ### Hierarchy
 - **Figure** (serif 700, 56px, line-height 1): the "Disponibile libero" amount. Cents drop to 28px in the same face.
+- **Figure, secondary** (serif 700, 40px, line-height 1): the single big number of a Casa check-in step.
 - **Figure, entry** (serif 700, 3.75rem): the amount typed in the quick-add sheet; the euro sign beside it is serif 600, 1.875rem, soft ink.
 - **Title** (serif 600, 22px, tracking 0.02em): the cover band heading, "Il mio libretto".
-- **Section** (serif 600, 1.125rem): block headings such as "Promemoria".
+- **Section** (serif 600, 1.125rem): block headings such as "Promemoria", "Da fare", "Soldi della casa", "La nostra quota".
 - **Body** (Work Sans 400, 15px): sentences, ledger rows; buttons use 15px to 16px semibold.
 - **Body small** (Work Sans 400, 13px): captions, ledger dates, the cover side label, bar labels.
 - **Label** (Work Sans, 11px, 0.1em tracking, uppercase): the ledger column heads only (Data, Movimento, Importo, Nel mese).
@@ -245,13 +257,25 @@ After an entry is saved, the new row slides down 8px into place (0.22s) and the 
 - **Add (+):** 56px round, Passbook Blue, white plus (stroke 2.5), the middle slot of the bottom bar.
 
 ### Chips
-Fully rounded, 2px border, 44px minimum height, semibold 14px. Unselected: page white with hairline border. Selected: Passbook Blue fill and border with white text. Category chips use their own hue as border (unselected) or fill (selected).
+Fully rounded, 2px border, 44px minimum height, semibold 14px. In Casa forms a short choice (who pays, how to split, when) is a radio pill group (`SceltePill`): same pill at semibold 15px, `role="radiogroup"` with a roving tab stop and arrow keys; one pill is always the selected one. Unselected: page white with hairline border. Selected: Passbook Blue fill and border with white text. Category chips use their own hue as border (unselected) or fill (selected).
 
 ### Inputs
 1rem radius, 1px hairline border, page white, 48px minimum height. Amount fields use serif tabular numerals. Focus shows a 2px Passbook Blue outline with 2px offset (global `:focus-visible`) or a blue border on text fields.
 
 ### Comparison bars
 Two 8px full-round bars on one scale: "Questo mese" in Passbook Blue, "Di solito a quest'ora" in soft ink, tracks in Cover Tint, the figure printed beside each. They are decorative; the sentence above carries the numbers.
+
+### Casa: Da fare card
+One card, one thing at a time, under the headline page. Cover Tint fill, hairline border, 1rem radius, 16px padding, with a serif "Da fare" section heading above it. A row that opens a sheet or a page is a 48px full-width button or link, sentence left and a trailing mark; the accantonamento variant lists its lines with hairline dividers and ends in one primary "Fatto" button.
+
+### Casa: home and simple view
+The Casa home reuses the headline page (56px serif "Disponibile di casa", cents at 28px) and the ledger, with columns Data, Spesa, Chi, Importo. Chi is 13px soft ink; each spesa carries a 10px category dot (`PallinoCategoria`, aria-hidden, a blank slot when uncoloured so rows align). Entry points are full-width bordered link rows ("Dettagli"), 48px, semibold Passbook Blue Deep. The simple view for a member who does not manage the house drops the cards: one serif figure (their quota, 56px), plain sentences between hairline rules, and a single 56px primary action ("Aggiungi una spesa di casa").
+
+### Casa: Dettagli, check-in, wizard
+Dettagli is a stack of white section cards (hairline border, 1rem radius, 16px padding, 12px gap), each opened by a serif 1.125rem heading; text links inside are 44px, semibold 15px Passbook Blue Deep. The monthly check-in and the quota wizard go one question per step, the figure in serif, the choice as radio pills.
+
+### Come si calcola? (explain panel)
+A visible text action ("Come si calcola?", semibold 14px Passbook Blue Deep, 44px tall) toggles (`aria-expanded`) a Cover Tint panel with hairline border, 1rem radius and 12px padding: the formula in sentences, then ingredient rows with the label in soft ink left and a tabular semibold value right.
 
 ### Navigation
 A bottom bar, white, 1px hairline on top, safe-area padded. Four tabs (Home, Storico, Casa, Altro) with 20px icons and 12px labels; active is Passbook Blue, bold, heavier stroke, with `aria-current`. The + button sits as a central slot between Storico and Casa, raised 20px.
@@ -267,6 +291,9 @@ Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, grabber 
 - **Do** build surfaces from a 1px hairline border, a white page and 1rem radius before reaching for a shadow.
 - **Do** keep done obligations visible and struck through until month end.
 - **Do** keep touch targets at 44px or more and primary actions at 48px.
+- **Do** give each Casa screen one headline figure or status sentence, one action, and details behind a link.
+- **Do** attach "Come si calcola?" to computed Casa figures and show ingredients as tabular rows.
+- **Do** use radio pills (single selection, arrow keys) for short choices in Casa flows.
 - **Do** respect safe-area insets at the top (cover band) and bottom (tab bar) and honour reduced motion.
 
 ### Don't:
@@ -279,7 +306,9 @@ Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, grabber 
 ## Known drift (not canonical)
 
 Recorded so future work does not inherit these as rules:
-- Casa, Storico, goals, accounts and P.IVA screens inherit the tokens but have not been rebuilt in this world (plan B). Do not read their layouts as the system.
+- Storico, goals, accounts and P.IVA screens inherit the tokens but have not been rebuilt in this world (plan B3, still to do). Do not read their layouts as the system. Casa is built in the world and documented above.
+- The glyphs `›` and `‹` are still used as chevron icons (Casa "Dettagli" and Da fare rows, a few back links). They are a defect the build carries, not a vocabulary for new surfaces.
+- Type-ramp advisories remain on large cent figures: the 28px cents beside the 56px figure and the 40px check-in figure sit off a strict ramp. Recorded as built, not as a ramp to extend.
 - `SchedaNotifiche` (Home) and `altro/Notifiche.tsx` still reference `--shadow-card` (it resolves to none); `SchedaNotifiche` also omits the hairline border the other cards carry.
 - `FoglioInferiore` uses `shadow-2xl`, a `backdrop-blur-sm` scrim and a `bg-black/10` grabber; the older tabbed variant inside `AddTransactionForm` still uses `text-muted`, `shadow-[var(--shadow-card)]` and a sans 5xl amount instead of the serif entry figure.
 - The stamp's 9px text is below the 11px label floor used elsewhere; it is a decorative mark, not a reading size.

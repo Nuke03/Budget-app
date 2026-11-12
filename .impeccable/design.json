@@ -1,48 +1,296 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T00:00:00.000Z",
+  "generatedAt": "2026-11-12T14:04:14.968Z",
   "title": "Design System: Budget — Il Libretto",
   "extensions": {
     "colorMeta": {
-      "cover-blue": { "role": "primary", "displayName": "Passbook Blue", "canonical": "#14306b", "tonalRamp": ["#081535", "#0e2350", "#14306b", "#2f4a85", "#5d77a8", "#8fa4c9", "#c3cee3", "#e4eaf5"], "dark": "#6b8fe0" },
-      "cover-blue-deep": { "role": "primary", "displayName": "Passbook Blue Deep", "canonical": "#0e2350", "tonalRamp": ["#050d22", "#0a1a3c", "#0e2350", "#243b69", "#4f6590", "#8093b4", "#b9c3d8", "#e4eaf5"], "dark": "#9fb6e6" },
-      "cover-blue-tint": { "role": "neutral", "displayName": "Cover Tint", "canonical": "#e4eaf5", "tonalRamp": ["#6d7a96", "#8b97b0", "#a8b3c9", "#c1cadb", "#d3daea", "#e4eaf5", "#eef2f9", "#f7f9fc"], "dark": "#1a2a4d" },
-      "ground": { "role": "neutral", "displayName": "Pale Blue-Grey Ground", "canonical": "#eef2f8", "tonalRamp": ["#7a8396", "#979fb0", "#b2b9c8", "#c9cfdb", "#dbe0ea", "#eef2f8", "#f3f6fa", "#f9fafd"], "dark": "#0c1424" },
-      "page": { "role": "neutral", "displayName": "Page White", "canonical": "#ffffff", "tonalRamp": ["#cfd3da", "#dde0e6", "#e8eaee", "#f0f1f4", "#f6f7f9", "#fafbfc", "#fdfdfe", "#ffffff"], "dark": "#131d33" },
-      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#14213d", "tonalRamp": ["#0a1122", "#14213d", "#2b3753", "#4d5a73", "#76819a", "#a0a9bb", "#cbd0dc", "#e8edf6"], "dark": "#e8edf6" },
-      "ink-soft": { "role": "neutral", "displayName": "Soft Ink", "canonical": "#4d5a73", "tonalRamp": ["#1c2540", "#2e3a55", "#3e4b65", "#4d5a73", "#6b7790", "#8d97ab", "#b4bbc9", "#dde1ea"], "dark": "#a3b0c6" },
-      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "#e3e8f1", "tonalRamp": ["#6b7388", "#8a91a4", "#a9afbf", "#c2c8d5", "#d3d9e4", "#e3e8f1", "#edf0f6", "#f6f8fb"], "dark": "#24314d" },
-      "stamp-red": { "role": "secondary", "displayName": "Stamp Red", "canonical": "#c8102e", "tonalRamp": ["#4a0510", "#740a1c", "#9d0d26", "#c8102e", "#df4a62", "#ec808f", "#f5b3bd", "#fbe3e7"], "dark": "#ff7a8c" },
-      "alert-red": { "role": "alert", "displayName": "Alert Red", "canonical": "#dc2626", "tonalRamp": ["#450a0a", "#7f1d1d", "#b91c1c", "#dc2626", "#ef5b5b", "#f58f8f", "#fac1c1", "#fdecec"] },
-      "alert-tint": { "role": "alert", "displayName": "Alert Tint", "canonical": "#fdecec", "tonalRamp": ["#b85a5a", "#d17f7f", "#e3a3a3", "#eebfbf", "#f5d3d3", "#fae1e1", "#fdecec", "#fff6f6"], "dark": "#2a1414" },
-      "cat-coral": { "role": "category", "displayName": "Coral", "canonical": "#f97362" },
-      "cat-amber": { "role": "category", "displayName": "Amber", "canonical": "#f5a524" },
-      "cat-emerald": { "role": "category", "displayName": "Emerald", "canonical": "#0f9d6b" },
-      "cat-teal": { "role": "category", "displayName": "Teal", "canonical": "#14b8a6" },
-      "cat-sky": { "role": "category", "displayName": "Sky", "canonical": "#3b9ae1" },
-      "cat-violet": { "role": "category", "displayName": "Violet", "canonical": "#8452f5" },
-      "cat-pink": { "role": "category", "displayName": "Pink", "canonical": "#e1177b" },
-      "cat-slate": { "role": "category", "displayName": "Slate", "canonical": "#64748b" }
+      "cover-blue": {
+        "role": "primary",
+        "displayName": "Passbook Blue",
+        "canonical": "#14306b",
+        "tonalRamp": [
+          "#081535",
+          "#0e2350",
+          "#14306b",
+          "#2f4a85",
+          "#5d77a8",
+          "#8fa4c9",
+          "#c3cee3",
+          "#e4eaf5"
+        ],
+        "dark": "#6b8fe0"
+      },
+      "cover-blue-deep": {
+        "role": "primary",
+        "displayName": "Passbook Blue Deep",
+        "canonical": "#0e2350",
+        "tonalRamp": [
+          "#050d22",
+          "#0a1a3c",
+          "#0e2350",
+          "#243b69",
+          "#4f6590",
+          "#8093b4",
+          "#b9c3d8",
+          "#e4eaf5"
+        ],
+        "dark": "#9fb6e6"
+      },
+      "cover-blue-tint": {
+        "role": "neutral",
+        "displayName": "Cover Tint",
+        "canonical": "#e4eaf5",
+        "tonalRamp": [
+          "#6d7a96",
+          "#8b97b0",
+          "#a8b3c9",
+          "#c1cadb",
+          "#d3daea",
+          "#e4eaf5",
+          "#eef2f9",
+          "#f7f9fc"
+        ],
+        "dark": "#1a2a4d"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Pale Blue-Grey Ground",
+        "canonical": "#eef2f8",
+        "tonalRamp": [
+          "#7a8396",
+          "#979fb0",
+          "#b2b9c8",
+          "#c9cfdb",
+          "#dbe0ea",
+          "#eef2f8",
+          "#f3f6fa",
+          "#f9fafd"
+        ],
+        "dark": "#0c1424"
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Page White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#cfd3da",
+          "#dde0e6",
+          "#e8eaee",
+          "#f0f1f4",
+          "#f6f7f9",
+          "#fafbfc",
+          "#fdfdfe",
+          "#ffffff"
+        ],
+        "dark": "#131d33"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#14213d",
+        "tonalRamp": [
+          "#0a1122",
+          "#14213d",
+          "#2b3753",
+          "#4d5a73",
+          "#76819a",
+          "#a0a9bb",
+          "#cbd0dc",
+          "#e8edf6"
+        ],
+        "dark": "#e8edf6"
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#4d5a73",
+        "tonalRamp": [
+          "#1c2540",
+          "#2e3a55",
+          "#3e4b65",
+          "#4d5a73",
+          "#6b7790",
+          "#8d97ab",
+          "#b4bbc9",
+          "#dde1ea"
+        ],
+        "dark": "#a3b0c6"
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e3e8f1",
+        "tonalRamp": [
+          "#6b7388",
+          "#8a91a4",
+          "#a9afbf",
+          "#c2c8d5",
+          "#d3d9e4",
+          "#e3e8f1",
+          "#edf0f6",
+          "#f6f8fb"
+        ],
+        "dark": "#24314d"
+      },
+      "stamp-red": {
+        "role": "secondary",
+        "displayName": "Stamp Red",
+        "canonical": "#c8102e",
+        "tonalRamp": [
+          "#4a0510",
+          "#740a1c",
+          "#9d0d26",
+          "#c8102e",
+          "#df4a62",
+          "#ec808f",
+          "#f5b3bd",
+          "#fbe3e7"
+        ],
+        "dark": "#ff7a8c"
+      },
+      "alert-red": {
+        "role": "alert",
+        "displayName": "Alert Red",
+        "canonical": "#dc2626",
+        "tonalRamp": [
+          "#450a0a",
+          "#7f1d1d",
+          "#b91c1c",
+          "#dc2626",
+          "#ef5b5b",
+          "#f58f8f",
+          "#fac1c1",
+          "#fdecec"
+        ]
+      },
+      "alert-tint": {
+        "role": "alert",
+        "displayName": "Alert Tint",
+        "canonical": "#fdecec",
+        "tonalRamp": [
+          "#b85a5a",
+          "#d17f7f",
+          "#e3a3a3",
+          "#eebfbf",
+          "#f5d3d3",
+          "#fae1e1",
+          "#fdecec",
+          "#fff6f6"
+        ],
+        "dark": "#2a1414"
+      },
+      "cat-coral": {
+        "role": "category",
+        "displayName": "Coral",
+        "canonical": "#f97362"
+      },
+      "cat-amber": {
+        "role": "category",
+        "displayName": "Amber",
+        "canonical": "#f5a524"
+      },
+      "cat-emerald": {
+        "role": "category",
+        "displayName": "Emerald",
+        "canonical": "#0f9d6b"
+      },
+      "cat-teal": {
+        "role": "category",
+        "displayName": "Teal",
+        "canonical": "#14b8a6"
+      },
+      "cat-sky": {
+        "role": "category",
+        "displayName": "Sky",
+        "canonical": "#3b9ae1"
+      },
+      "cat-violet": {
+        "role": "category",
+        "displayName": "Violet",
+        "canonical": "#8452f5"
+      },
+      "cat-pink": {
+        "role": "category",
+        "displayName": "Pink",
+        "canonical": "#e1177b"
+      },
+      "cat-slate": {
+        "role": "category",
+        "displayName": "Slate",
+        "canonical": "#64748b"
+      }
     },
     "typographyMeta": {
-      "figure": { "displayName": "Figure", "purpose": "The Disponibile libero amount; cents drop to 28px." },
-      "figure-entry": { "displayName": "Figure, entry", "purpose": "The amount typed in the quick-add sheet." },
-      "title": { "displayName": "Title", "purpose": "Cover band heading." },
-      "section": { "displayName": "Section", "purpose": "Block headings such as Promemoria." },
-      "body": { "displayName": "Body", "purpose": "Sentences, ledger rows, buttons." },
-      "body-small": { "displayName": "Body small", "purpose": "Captions, ledger dates, bar labels, cover side label." },
-      "label": { "displayName": "Label", "purpose": "Uppercase ledger column heads only." },
-      "tab": { "displayName": "Tab", "purpose": "Bottom bar labels, bold when active." }
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "The Disponibile libero amount; cents drop to 28px."
+      },
+      "figure-entry": {
+        "displayName": "Figure, entry",
+        "purpose": "The amount typed in the quick-add sheet."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Cover band heading."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Block headings such as Promemoria, Da fare, Soldi della casa."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Sentences, ledger rows, buttons."
+      },
+      "body-small": {
+        "displayName": "Body small",
+        "purpose": "Captions, ledger dates, bar labels, cover side label."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase ledger column heads only."
+      },
+      "tab": {
+        "displayName": "Tab",
+        "purpose": "Bottom bar labels, bold when active."
+      },
+      "figure-secondary": {
+        "displayName": "Figure, secondary",
+        "purpose": "The single big number of a Casa check-in step (serif 700, 40px)."
+      }
     },
     "shadows": [
-      { "name": "shadow-card", "value": "none", "purpose": "Cards are flat; hierarchy from hairline borders." },
-      { "name": "shadow-hero", "value": "0 4px 16px -4px rgb(15 23 42 / 0.08)", "purpose": "Defined token, unused by built surfaces." },
-      { "name": "shadow-fab", "value": "0 4px 16px -4px rgb(15 23 42 / 0.2)", "purpose": "Soft lift under the quick-add save button." }
+      {
+        "name": "shadow-card",
+        "value": "none",
+        "purpose": "Cards are flat; hierarchy from hairline borders."
+      },
+      {
+        "name": "shadow-hero",
+        "value": "0 4px 16px -4px rgb(15 23 42 / 0.08)",
+        "purpose": "Defined token, unused by built surfaces."
+      },
+      {
+        "name": "shadow-fab",
+        "value": "0 4px 16px -4px rgb(15 23 42 / 0.2)",
+        "purpose": "Soft lift under the quick-add save button."
+      }
     ],
     "motion": [
-      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Button press, sheet rise (0.32s), row entry (0.22s), stamp press (0.26s)." },
-      { "name": "press", "value": "transform 0.15s, scale(0.96), brightness(0.94)", "purpose": "Every button while pressed." },
-      { "name": "stamp-fade", "value": "0.4s ease after 2.5s", "purpose": "The stamp vanishes; reduced motion keeps only this timer." }
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Button press, sheet rise (0.32s), row entry (0.22s), stamp press (0.26s)."
+      },
+      {
+        "name": "press",
+        "value": "transform 0.15s, scale(0.96), brightness(0.94)",
+        "purpose": "Every button while pressed."
+      },
+      {
+        "name": "stamp-fade",
+        "value": "0.4s ease after 2.5s",
+        "purpose": "The stamp vanishes; reduced motion keeps only this timer."
+      }
     ],
     "breakpoints": []
   },
@@ -118,11 +366,35 @@
       "description": "Two 8px bars on one scale: this month vs usual.",
       "html": "<div class=\"ds-bars\"><div><div class=\"ds-bl\"><span>Questo mese</span><b>412 €</b></div><div class=\"ds-tr\"><i style=\"width:80%;background:var(--brand,#14306b)\"></i></div></div><div><div class=\"ds-bl\"><span>Di solito a quest'ora</span><b>515 €</b></div><div class=\"ds-tr\"><i style=\"width:100%;background:var(--ink-2,#4d5a73)\"></i></div></div></div>",
       "css": ".ds-bars { display: flex; flex-direction: column; gap: 10px; color: var(--foreground, #14213d); } .ds-bl { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--ink-2, #4d5a73); } .ds-bl b { font-weight: 600; color: var(--foreground, #14213d); font-variant-numeric: tabular-nums lining-nums; } .ds-tr { margin-top: 4px; height: 8px; border-radius: 9999px; background: var(--surface-muted, #e4eaf5); } .ds-tr i { display: block; height: 8px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Da fare Card",
+      "kind": "card",
+      "refersTo": "da-fare-card",
+      "description": "Casa: one pending thing as a tappable Cover Tint row.",
+      "html": "<section class=\"ds-df\"><h2>Da fare</h2><a class=\"ds-dfr\"><span>Versa la tua quota di novembre</span><span aria-hidden=\"true\">&rsaquo;</span></a></section>",
+      "css": ".ds-df h2 { margin: 0 0 6px; font-family: 'Source Serif 4', Georgia, serif; font-size: 1.125rem; font-weight: 600; color: var(--foreground, #14213d); } .ds-dfr { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 16px; background: var(--surface-muted, #e4eaf5); border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; font-size: 15px; color: var(--foreground, #14213d); } .ds-dfr:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Radio Pills",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Casa: single-choice pill group, one always selected.",
+      "html": "<div class=\"ds-rp\" role=\"radiogroup\" aria-label=\"Chi paga\"><button role=\"radio\" aria-checked=\"true\" class=\"on\">Io</button><button role=\"radio\" aria-checked=\"false\">Metà</button></div>",
+      "css": ".ds-rp { display: flex; flex-wrap: wrap; gap: 8px; } .ds-rp button { min-height: 44px; padding: 8px 16px; border-radius: 9999px; border: 2px solid var(--rule, #e3e8f1); background: var(--surface, #fff); color: var(--foreground, #14213d); font-family: 'Work Sans', system-ui, sans-serif; font-size: 15px; font-weight: 600; } .ds-rp button.on { background: var(--brand, #14306b); border-color: var(--brand, #14306b); color: var(--brand-foreground, #fff); } .ds-rp button:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Come si calcola",
+      "kind": "custom",
+      "refersTo": "explain-panel",
+      "description": "Visible text action opening a Cover Tint explanation with ingredient rows.",
+      "html": "<div class=\"ds-cs\"><button>Come si calcola?</button><div class=\"ds-csp\"><p>La quota è la tua parte delle spese diviso le persone.</p><ul><li><span>Spese del mese</span><b>1.200 €</b></li><li><span>Numero di persone</span><b>2</b></li></ul></div></div>",
+      "css": ".ds-cs button { min-height: 44px; border: 0; background: none; font-family: 'Work Sans', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: var(--brand-dark, #0e2350); } .ds-cs button:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; } .ds-csp { margin-top: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface-muted, #e4eaf5); border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; font-size: 15px; color: var(--foreground, #14213d); } .ds-csp p { margin: 0; } .ds-csp ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; } .ds-csp li { display: flex; justify-content: space-between; gap: 12px; } .ds-csp li span { color: var(--ink-2, #4d5a73); } .ds-csp li b { font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }"
     }
   ],
   "narrative": {
     "northStar": "Il Libretto",
-    "overview": "The money is a savings passbook. A narrow blue cover band sits on top, white pages lie on a pale blue-grey ground, and everything that is a movement is a ruled line with its number in a column. The mood is calm and reliable: ink on paper, nothing glowing, nothing shouting. The headline figure is set in a serif and earns its place by being the total of the lines below it. Density is low and glanceable, built for one thumb on an iPhone installed as a PWA. Identity comes from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp.",
+    "overview": "The money is a savings passbook. A narrow blue cover band sits on top, white pages lie on a pale blue-grey ground, and everything that is a movement is a ruled line with its number in a column. The mood is calm and reliable: ink on paper, nothing glowing, nothing shouting. The headline figure is set in a serif and earns its place by being the total of the lines below it. Density is low and glanceable, built for one thumb on an iPhone installed as a PWA. Identity comes from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp. The Casa section is built in the same world: one headline figure or sentence, one action, details behind a link.",
     "keyCharacteristics": [
       "Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.",
       "Serif for figures and headings, grotesk for everything else, tabular lining numerals in every amount.",
@@ -131,12 +403,36 @@
       "Light and dark themes share one token set; dark follows the system setting."
     ],
     "rules": [
-      { "name": "The One Red Rule", "body": "Stamp red marks a movement as registered and has no other use. Errors use alert red; emphasis uses blue or weight.", "section": "colors" },
-      { "name": "The Flat Colour Rule", "body": "No gradients, no glow, no coloured balance card. A fill is one solid token.", "section": "colors" },
-      { "name": "The Darker Paper Rule", "body": "Dark mode darkens the paper (navy ground, navy page) and lightens the blue; it never switches to black with neon.", "section": "colors" },
-      { "name": "The Tabular Rule", "body": "Every amount, date and running total carries the .num class (tabular, lining numerals) so columns align. A number in a column without it is a bug.", "section": "typography" },
-      { "name": "The Serif For Counted Things Rule", "body": "Serif is for figures and headings. Prose, buttons, chips and labels are always Work Sans.", "section": "typography" },
-      { "name": "The Hairline Depth Rule", "body": "Hierarchy comes from borders, tone and spacing. A shadow is allowed only on a control that must read as pressable above content, and stays soft and low-opacity.", "section": "elevation" }
+      {
+        "name": "The One Red Rule",
+        "body": "Stamp red marks a movement as registered and has no other use. Errors use alert red; emphasis uses blue or weight.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat Colour Rule",
+        "body": "No gradients, no glow, no coloured balance card. A fill is one solid token.",
+        "section": "colors"
+      },
+      {
+        "name": "The Darker Paper Rule",
+        "body": "Dark mode darkens the paper (navy ground, navy page) and lightens the blue; it never switches to black with neon.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every amount, date and running total carries the .num class (tabular, lining numerals) so columns align. A number in a column without it is a bug.",
+        "section": "typography"
+      },
+      {
+        "name": "The Serif For Counted Things Rule",
+        "body": "Serif is for figures and headings. Prose, buttons, chips and labels are always Work Sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline Depth Rule",
+        "body": "Hierarchy comes from borders, tone and spacing. A shadow is allowed only on a control that must read as pressable above content, and stays soft and low-opacity.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do put every amount, date and running total in a .num column with tabular lining numerals.",
@@ -144,6 +440,9 @@
       "Do build surfaces from a 1px hairline border, a white page and 1rem radius before reaching for a shadow.",
       "Do keep done obligations visible and struck through until month end.",
       "Do keep touch targets at 44px or more and primary actions at 48px.",
+      "Do give each Casa screen one headline figure or status sentence, one action, and details behind a link.",
+      "Do attach \"Come si calcola?\" to computed Casa figures and show ingredients as tabular rows.",
+      "Do use radio pills (single selection, arrow keys) for short choices in Casa flows.",
       "Do respect safe-area insets at the top (cover band) and bottom (tab bar) and honour reduced motion."
     ],
     "donts": [
