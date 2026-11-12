@@ -304,7 +304,7 @@ export function AddTransactionForm({
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-5 pb-5">
         {nota && <p className="text-xs text-ink-2">{nota}</p>}
 
-        <div className="flex items-baseline justify-center gap-1.5 pt-2">
+        <div className="flex items-baseline justify-center gap-1 pt-2">
           <input
             aria-label="Importo"
             type="number"
@@ -315,15 +315,14 @@ export function AddTransactionForm({
             autoFocus
             value={importo}
             onChange={(e) => cambiaImporto(e.target.value)}
-            className="num w-44 bg-transparent text-center font-serif text-6xl font-bold text-foreground outline-none placeholder:text-ink-2/40"
+            className="num w-44 bg-transparent text-center font-serif text-6xl font-bold text-foreground outline-none [field-sizing:content] placeholder:text-ink-2 supports-[field-sizing:content]:w-auto supports-[field-sizing:content]:min-w-[1.5ch]"
           />
           <span className="font-serif text-3xl font-semibold text-ink-2">€</span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center text-sm text-ink-2">
-          {riepilogo.map((r, i) => (
+        <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm text-ink-2">
+          {riepilogo.map((r) => (
             <span key={r.id} className="flex items-center">
-              {i > 0 && <span aria-hidden="true">·</span>}
               {r.attivo ? (
                 <button
                   type="button"

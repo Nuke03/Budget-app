@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { formatEuro, nomeMese } from '@/lib/format';
+import { CoverHeader } from './CoverHeader';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { AndamentoCard } from './home/AndamentoCard';
 import { ConsiglioCard } from './home/ConsiglioCard';
@@ -100,18 +101,11 @@ export function HomeDashboard({
 
   return (
     <>
-      <header className="bg-brand pt-[env(safe-area-inset-top)] text-brand-foreground">
-        <div className="mx-auto flex min-h-24 max-w-md items-end justify-between px-5 pb-4">
-          <h1 className="font-serif text-[22px] font-semibold tracking-[0.02em]">Il mio libretto</h1>
-          <p className="text-[13px] text-brand-foreground">
-            {nomeMese(oggi)} {oggi.slice(0, 4)}
-          </p>
-        </div>
-      </header>
+      <CoverHeader titolo="Il mio libretto" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
 
-      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
-        <section className="rounded-b-[var(--radius-md)] bg-page px-[18px] pb-4 pt-5 shadow-[var(--shadow-card)]">
-          <p className="text-xs uppercase tracking-[0.12em] text-ink-2">Disponibile libero</p>
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-12">
+        <section className="rounded-b-[var(--radius-md)] border border-t-0 border-rule bg-page px-[18px] pb-4 pt-5">
+          <p className="text-[13px] text-ink-2">Disponibile libero</p>
           <p data-testid="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
             {intero}
             {resto ? <span className="text-[28px]">{resto}</span> : null}
@@ -151,10 +145,9 @@ export function HomeDashboard({
         {prossimo ? (
           <Link
             href={prossimo.href}
-            className="block min-h-11 rounded-[var(--radius-md)] bg-surface-muted p-4 text-[15px]"
+            className="block min-h-11 rounded-[var(--radius-md)] border border-rule bg-surface-muted p-4 text-[15px]"
           >
-            <span className="mb-0.5 block text-xs font-semibold uppercase tracking-[0.1em] text-brand-dark">Prossimo</span>
-            {prossimo.testo}
+            <b className="font-semibold text-brand-dark">Prossimo:</b> {prossimo.testo}
           </Link>
         ) : null}
 
@@ -167,7 +160,7 @@ export function HomeDashboard({
         type="button"
         onClick={() => setIsAddOpen(true)}
         aria-label="Aggiungi transazione"
-        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-[18px] z-40 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[var(--shadow-fab)]"
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-[18px] z-40 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[var(--shadow-fab)]"
       >
         <Plus size={28} strokeWidth={2.5} />
       </button>

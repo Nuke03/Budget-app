@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
 import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
 import { chiaviVapid } from '@/lib/chiaviVapid';
+import { CoverHeader } from '../CoverHeader';
 import { Notifiche } from './Notifiche';
 import { Target, Wallet, Tags, Receipt, Bell, ChevronRight } from 'lucide-react';
 
@@ -20,9 +21,10 @@ export default async function AltroPage() {
     leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null }))
   );
   return (
-    <main className="mx-auto max-w-xl px-4 pb-28 pt-8">
-      <h1 className="font-serif text-2xl font-semibold text-foreground">Altro</h1>
-      <ul className="mt-6 overflow-hidden rounded-[var(--radius-lg)] border border-rule bg-page shadow-[var(--shadow-card)]">
+    <>
+      <CoverHeader titolo="Altro" />
+      <main className="mx-auto max-w-xl px-4 pb-28 pt-5">
+      <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-rule bg-page">
         {voci.map((v) => {
           const Icon = v.icon;
           return (
@@ -37,6 +39,7 @@ export default async function AltroPage() {
         })}
       </ul>
       <Notifiche chiavePubblica={chiaviVapid()?.pubblica ?? null} notificheAttive={dati.notificheAttive} />
-    </main>
+      </main>
+    </>
   );
 }

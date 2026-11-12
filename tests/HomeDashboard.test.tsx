@@ -366,7 +366,9 @@ describe('il libretto', () => {
     expect(container).toHaveTextContent('fino al 27 novembre');
     expect(container).toHaveTextContent('Hai 1.500 € sui conti, 259,50 € sono già messi da parte');
     expect(container).toHaveTextContent("Questo mese hai speso 312 €, di solito a quest'ora 280 €");
-    expect(screen.getByRole('img', { name: /a confronto con il solito/ })).toBeInTheDocument();
+    expect(screen.getByText('Questo mese')).toBeInTheDocument();
+    expect(screen.getByText("Di solito a quest'ora")).toBeInTheDocument();
+    expect(container).not.toHaveTextContent('linea piena');
     for (const t of ['Data', 'Movimento', 'Importo', 'Nel mese']) expect(screen.getByText(t)).toBeInTheDocument();
     expect(screen.getByText('Esselunga')).toBeInTheDocument();
     expect(screen.getByText('−38,20')).toBeInTheDocument();

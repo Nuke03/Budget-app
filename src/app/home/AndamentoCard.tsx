@@ -3,52 +3,26 @@ import type { Andamento } from '@/lib/calculations/supporto/andamento';
 
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 
-const L = 300;
-const A = 56;
-const MARGINE = 4;
-
-function Linea({ curva }: { curva: Andamento['curva'] }) {
-  const ultimo = Math.max(...curva.map((p) => p.giorno));
-  const alto = Math.max(1, ...curva.flatMap((p) => [p.mese, p.solito ?? 0]));
-  const x = (g: number) => MARGINE + ((g - 1) / Math.max(1, ultimo - 1)) * (L - 2 * MARGINE);
-  const y = (v: number) => A - MARGINE - (v / alto) * (A - 2 * MARGINE);
-  const punti = (leggi: (p: Andamento['curva'][number]) => number | null) =>
-    curva
-      .map((p) => ({ g: p.giorno, v: leggi(p) }))
-      .filter((p): p is { g: number; v: number } => p.v !== null)
-      .map((p) => `${x(p.g).toFixed(1)},${y(p.v).toFixed(1)}`)
-      .join(' ');
-
+// Due barre sulla stessa scala, con la cifra stampata accanto.
+function Barre({ mese, solito }: { mese: number; solito: number }) {
+  const scala = Math.max(mese, solito, 1);
+  const righe = [
+    { etichetta: 'Questo mese', valore: mese, classe: 'bg-brand' },
+    { etichetta: "Di solito a quest'ora", valore: solito, classe: 'bg-ink-2' },
+  ];
   return (
-    <div className="mt-3">
-      <svg
-        viewBox={`0 0 ${L} ${A}`}
-        role="img"
-        aria-label="Speso nel mese, giorno per giorno, a confronto con il solito"
-        className="h-14 w-full"
-        preserveAspectRatio="none"
-      >
-        <polyline
-          points={punti((p) => p.solito)}
-          fill="none"
-          className="stroke-ink-2"
-          strokeWidth="1.5"
-          strokeDasharray="4 3"
-          vectorEffect="non-scaling-stroke"
-        />
-        <polyline
-          points={punti((p) => p.mese)}
-          fill="none"
-          className="stroke-brand"
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <p className="mt-1 flex gap-4 text-xs text-ink-2">
-        <span>Questo mese: linea piena</span>
-        <span>Di solito: tratteggio</span>
-      </p>
+    <div aria-hidden="true" className="mt-3 flex flex-col gap-2.5">
+      {righe.map((r) => (
+        <div key={r.etichetta}>
+          <div className="flex items-baseline justify-between text-[13px] text-ink-2">
+            <span>{r.etichetta}</span>
+            <span className="num font-semibold text-foreground">{euroInFrase(r.valore)}</span>
+          </div>
+          <div className="mt-1 h-2 rounded-full bg-surface-muted">
+            <div className={`h-2 rounded-full ${r.classe}`} style={{ width: `${Math.max(0, (r.valore / scala) * 100)}%` }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -62,12 +36,12 @@ export function AndamentoCard({ andamento }: { andamento: Andamento }) {
     );
   }
   return (
-    <section className="rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
+    <section className="rounded-[var(--radius-md)] border border-rule bg-surface p-4">
       <p className="text-[15px]">
         Questo mese hai speso <span className="num font-semibold">{euroInFrase(andamento.spesoFinora)}</span>, di solito a
         quest&apos;ora <span className="num font-semibold">{euroInFrase(andamento.solito)}</span>
       </p>
-      {andamento.curva.length > 1 ? <Linea curva={andamento.curva} /> : null}
+      <Barre mese={andamento.spesoFinora} solito={andamento.solito} />
     </section>
   );
 }

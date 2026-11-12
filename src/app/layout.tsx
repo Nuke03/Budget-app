@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="it" className={`${serif.variable} ${sans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <div className="flex-1 pb-28">{children}</div>
+        <div className="flex-1 pb-40">{children}</div>
         <NavBar />
       </body>
     </html>

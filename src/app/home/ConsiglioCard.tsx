@@ -7,9 +7,8 @@ export function ConsiglioCard({ consiglio }: { consiglio: Consiglio }) {
   const [aperto, setAperto] = useState(false);
   const id = useId();
   return (
-    <section className="rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.1em] text-brand-dark">Un consiglio</p>
-      <p className="mt-1 text-[15px]">{consiglio.testo}</p>
+    <section className="rounded-[var(--radius-md)] border border-rule bg-surface p-4">
+      <p className="text-[15px]">{consiglio.testo}</p>
       <button
         type="button"
         aria-expanded={aperto}

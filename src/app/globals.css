@@ -12,6 +12,8 @@
   --stamp: #c8102e;
   --on-cat: #14213d;
 
+  --cover: #14306b;
+  --cover-foreground: #ffffff;
   --brand: #14306b;
   --brand-dark: #0e2350;
   --brand-tint: #e4eaf5;
@@ -33,7 +35,7 @@
   --radius-md: 1rem;
   --radius-sm: 0.65rem;
 
-  --shadow-card: 0 4px 16px -4px rgb(15 23 42 / 0.08);
+  --shadow-card: none;
   --shadow-hero: 0 4px 16px -4px rgb(15 23 42 / 0.08);
   --shadow-fab: 0 4px 16px -4px rgb(15 23 42 / 0.2);
 }
@@ -50,6 +52,8 @@
   --color-stamp: var(--stamp);
   --color-on-cat: var(--on-cat);
 
+  --color-cover: var(--cover);
+  --color-cover-foreground: var(--cover-foreground);
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-tint: var(--brand-tint);
@@ -86,6 +90,8 @@
     --rule: #24314d;
     --ink-2: #a3b0c6;
     --stamp: #ff7a8c;
+    --brand: #6b8fe0;
+    --brand-foreground: #0c1424;
     --brand-dark: #9fb6e6;
     --brand-tint: #1a2a4d;
     --danger-tint: #2a1414;
@@ -198,15 +204,28 @@ button:disabled {
   animation: riga-entra 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes timbro-svanisce {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 .timbro {
   transform: rotate(-10deg);
   opacity: 0.9;
-  animation: timbro-premuto 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.22s backwards;
+  animation:
+    timbro-premuto 0.26s cubic-bezier(0.16, 1, 0.3, 1) 0.22s backwards,
+    timbro-svanisce 0.4s ease 2.5s forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .riga-entra,
-  .timbro {
+  .riga-entra {
     animation: none;
+  }
+
+  /* Niente movimento: il timbro compare fermo e sparisce dopo 2,5 s. */
+  .timbro {
+    animation: timbro-svanisce 0.01s linear 2.5s forwards;
   }
 }

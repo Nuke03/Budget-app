@@ -9,6 +9,7 @@ import { aggiornaSaldoSpesa, creaSpesa, type SpazioSpesa, type SpesaCreata } fro
 import { righeDaRiepilogo, scegliConti, type RigaStima } from '@/lib/calculations/supporto/inPari';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
+import { CoverHeader } from '../CoverHeader';
 import { AndamentoCard } from '../home/AndamentoCard';
 import { ConsiglioCard } from '../home/ConsiglioCard';
 import { giornoEMese } from '../home/formati';
@@ -80,25 +81,29 @@ export function InPari({
 
   if (fatto) {
     return (
-      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-24 pt-8">
-        <h1 className="px-2 font-serif text-2xl font-semibold">Fatto: sei in pari.</h1>
+      <>
+      <CoverHeader titolo="Fatto: sei in pari." />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-24 pt-5">
         <AndamentoCard andamento={andamento} />
         <ConsiglioCard consiglio={consiglio} />
         <Link href="/" className={classeVaiAllaHome}>
           Torna alla Home
         </Link>
       </main>
+      </>
     );
   }
 
   if (!periodo) {
     return (
-      <main className="mx-auto flex max-w-md flex-col gap-4 px-5 pb-24 pt-8">
-        <h1 className="font-serif text-2xl font-semibold">Sei in pari.</h1>
+      <>
+      <CoverHeader titolo="Sei in pari." />
+      <main className="mx-auto flex max-w-md flex-col gap-4 px-5 pb-24 pt-5">
         <Link href="/" className={classeVaiAllaHome}>
           Torna alla Home
         </Link>
       </main>
+      </>
     );
   }
 
@@ -186,13 +191,12 @@ export function InPari({
   const saldoDaRifare = inSospeso;
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pb-24 pt-8">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold">Rimettiamoci in pari</h1>
-        <p className="mt-1 text-[15px] text-ink-2">
-          Dal {giornoEMese(periodo.dal)} al {giornoEMese(periodo.al)} non hai segnato niente.
-        </p>
-      </div>
+    <>
+    <CoverHeader titolo="Rimettiamoci in pari" />
+    <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pb-24 pt-5">
+      <p className="text-[15px] text-ink-2">
+        Dal {giornoEMese(periodo.dal)} al {giornoEMese(periodo.al)} non hai segnato niente.
+      </p>
 
       <div className="flex flex-col gap-1.5">
         <span className="text-[15px] font-semibold">Con la carta</span>
@@ -309,5 +313,6 @@ export function InPari({
         )}
       </div>
     </main>
+    </>
   );
 }
