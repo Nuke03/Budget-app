@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { creaFondoBolletta } from '@/lib/data/fondiCasa';
 import {
   anteprimaDaParte,
   scadenzeProposte,
@@ -18,13 +17,7 @@ import { closeGoal } from '@/lib/data/goals';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 import { CostiIngresso } from './CostiIngresso';
 import { NuovaCosa } from './NuovaCosa';
-
-const ERRORE = 'Salvataggio fallito, controlla la connessione e riprova.';
-
-function ultimaScadenza(item: PlanItem, oggi: string): string {
-  const date = scadenzeProposte({ oggi, frequenzaMesi: item.frequenzaMesi });
-  return date[date.length - 1];
-}
+import { ERRORE_DA_PARTE as ERRORE, ultimaScadenza, useMettiDaParte } from '../useMettiDaParte';
 
 function testoFrequenza(mesi: number): string {
   return mesi === 12 ? "l'anno" : `ogni ${mesi} mesi`;
@@ -56,12 +49,7 @@ export function DaParte({
   const router = useRouter();
   const [scelte, setScelte] = useState<Record<string, string>>({});
   const [aperte, setAperte] = useState<Record<string, boolean>>({});
-  const [inCorso, setInCorso] = useState(false);
-  const [errore, setErrore] = useState<string | null>(null);
-  const [fatte, setFatte] = useState<string[]>([]);
-  // Blocca il doppio tocco prima ancora che React ridisegni il pulsante.
-  const occupato = useRef(false);
-  const fatteRef = useRef<Set<string>>(new Set());
+  const { metti: mettiVoci, inCorso, errore, fatte } = useMettiDaParte({ householdId, oggi });
   const [chiedePagato, setChiedePagato] = useState<string | null>(null);
   const [chiudendo, setChiudendo] = useState(false);
   const [errorePagato, setErrorePagato] = useState<string | null>(null);
@@ -87,33 +75,7 @@ export function DaParte({
   const daMettere = voci.filter((v) => v.stato === 'da_mettere' && !fatte.includes(v.item.id));
   const scadenzaDi = (item: PlanItem) => scelte[item.id] ?? ultimaScadenza(item, oggi);
 
-  async function metti(elenco: StatoVoceDaParte[]) {
-    if (occupato.current) return;
-    occupato.current = true;
-    setInCorso(true);
-    setErrore(null);
-    try {
-      const supabase = createClient();
-      for (const v of elenco) {
-        // Una voce già messa (anche da un tentativo precedente) non si rifà.
-        if (fatteRef.current.has(v.item.id)) continue;
-        await creaFondoBolletta(supabase, {
-          householdId,
-          item: v.item,
-          scadenza: scadenzaDi(v.item),
-          oggi,
-        });
-        fatteRef.current.add(v.item.id);
-        setFatte((f) => [...f, v.item.id]);
-      }
-    } catch {
-      setErrore(ERRORE);
-    } finally {
-      occupato.current = false;
-      setInCorso(false);
-      router.refresh();
-    }
-  }
+  const metti = (elenco: StatoVoceDaParte[]) => mettiVoci(elenco, scadenzaDi);
 
   if (!haPiano) {
     return (
