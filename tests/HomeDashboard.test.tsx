@@ -384,7 +384,7 @@ describe('HomeDashboard', () => {
         />
       );
       fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?', expanded: false }));
-      fireEvent.click(screen.getByLabelText('Come si calcola la parte di casa'));
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola la parte di casa' }));
       assertNessunaParolaVietata(container);
     });
   });

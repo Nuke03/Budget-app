@@ -27,6 +27,11 @@ export function formatNumero(value: number): string {
 }
 
 // "2026-11-01" -> "novembre"
+// "1° novembre", "5 novembre": giorno e mese di una scadenza. Solo il primo del mese porta il °.
+export function giornoEMeseScadenza(meseISO: string, giorno: number): string {
+  return `${giorno === 1 ? '1°' : giorno} ${nomeMese(meseISO)}`;
+}
+
 export function nomeMese(meseISO: string): string {
   return new Intl.DateTimeFormat('it-IT', { month: 'long', timeZone: 'UTC' }).format(
     new Date(`${meseISO.slice(0, 10)}T12:00:00Z`)

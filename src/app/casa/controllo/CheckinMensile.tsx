@@ -229,7 +229,7 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
           <ul className="flex flex-col gap-1">
             {dati.versamenti.map((v) => (
               <li key={v.userId} className="text-[15px]">
-                {`${v.nome} ${formatNumero(v.versato)} di ${formatNumero(v.atteso)}`}
+                {`${v.nome}: ${formatNumero(v.versato)} di ${euro(v.atteso)}`}
               </li>
             ))}
           </ul>
@@ -237,7 +237,7 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
             {`Spese del mese: previste ${euro(calcolo.previstoMensili)}, registrate ${euro(calcolo.spesoMensili)}, non registrate ${euro(calcolo.nonRegistrate)}`}
           </p>
           {dati.cuscinetto ? (
-            <p className="text-[15px]">{`Cuscinetto ${formatNumero(dati.cuscinetto.attuale)} di ${euro(dati.cuscinetto.obiettivo)}`}</p>
+            <p className="text-[15px]">{`Cuscinetto: ${formatNumero(dati.cuscinetto.attuale)} di ${euro(dati.cuscinetto.obiettivo)}`}</p>
           ) : null}
         </section>
 

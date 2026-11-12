@@ -179,7 +179,7 @@ export function CasaAzioni({
       />
     );
   } else if (azione?.tipo === 'rinuncia_credito') {
-    titolo = 'Rinuncia al credito';
+    titolo = 'Lascia perdere il rimborso';
     corpo = (
       <Rinuncia
         testo={`Chiudi il credito di ${formatNumero(azione.importo)} € senza rimborso. Non cambia nessun saldo. Puoi annullarla dai movimenti della casa.`}
@@ -197,7 +197,7 @@ export function CasaAzioni({
       />
     );
   } else if (azione?.tipo === 'rinuncia_debito') {
-    titolo = 'Rinuncia';
+    titolo = 'Non chiedere più';
     corpo = (
       <Rinuncia
         testo={`Chiudi i ${formatNumero(azione.debito.importo)} € che ${azione.nomeDebitore} ti deve, senza restituzione. Non cambia nessun saldo. Puoi annullarla dai movimenti della casa.`}

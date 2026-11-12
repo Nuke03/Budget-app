@@ -53,7 +53,7 @@ export function PannelliVersamenti({
             const stato = riga.mancano > 0 ? `mancano ${formatNumero(riga.mancano)} €` : 'fatto';
             return (
               <li key={m.userId} className="text-[15px]">
-                {`${m.nome} ${formatNumero(riga.versato)} di ${formatNumero(riga.atteso)} € ${stato}`}
+                {`${m.nome}: ${formatNumero(riga.versato)} di ${formatNumero(riga.atteso)} €, ${stato}`}
               </li>
             );
           })}
@@ -78,7 +78,9 @@ export function PannelliVersamenti({
                   <span key={m.mese}>
                     {m.origine === 'tricount'
                       ? `Saldo di partenza da Tricount: ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} €.`
-                      : `${etichettaMese(m.mese)}: ${nome(d.creditoreId)} ha versato ${formatNumero(m.versato)} € per ${nome(d.debitoreId)}. ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} € (quota di ${etichettaMese(m.mese)}).`}
+                      : m.versato === 0
+                        ? `${etichettaMese(m.mese)}: ${nome(d.debitoreId)} deve ancora ${formatNumero(m.importo)} € a ${nome(d.creditoreId)} (la sua quota).`
+                        : `${etichettaMese(m.mese)}: ${nome(d.creditoreId)} ha versato ${formatNumero(m.versato)} € per ${nome(d.debitoreId)}. ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} € (quota di ${etichettaMese(m.mese)}).`}
                   </span>
                 ))}
                 {d.debitoreId === meUserId ? (
@@ -96,7 +98,7 @@ export function PannelliVersamenti({
                     onClick={() => apri({ tipo: 'rinuncia_debito', debito: d, nomeDebitore: nome(d.debitoreId) })}
                     className={AZIONE + ' self-start'}
                   >
-                    Rinuncia
+                    Non chiedere più
                   </button>
                 ) : null}
               </li>
@@ -121,7 +123,7 @@ export function PannelliVersamenti({
                         onClick={() => apri({ tipo: 'rinuncia_credito', importo })}
                         className={AZIONE + ' self-start'}
                       >
-                        Rinuncia
+                        Lascia perdere il rimborso
                       </button>
                     </>
                   ) : (

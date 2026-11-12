@@ -112,7 +112,7 @@ export function VersamentoForm({
           </select>
         </Campo>
       ) : null}
-      <Spunta etichetta="Il versamento l'ho già riflesso nei saldi" checked={riflesso} onChange={setRiflesso} />
+      <Spunta etichetta="L'ho già fatto: il saldo del conto è già aggiornato" checked={riflesso} onChange={setRiflesso} />
       <ErroreMovimento testo={errore} />
       <Registra disabilitato={!valido || inCorso} />
       <Annulla onClose={onClose} />

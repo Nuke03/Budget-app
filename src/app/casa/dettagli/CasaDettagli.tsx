@@ -52,7 +52,7 @@ export function CasaDettagli({
   const corpo = finanze ? (
     <>
       <section className={SEZIONE}>
-        <h2 className={TITOLO}>Conto comune</h2>
+        <h2 className={TITOLO}>Soldi della casa</h2>
         {finanze.conti.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {finanze.conti.map((c) => (
@@ -68,7 +68,7 @@ export function CasaDettagli({
         {finanze.cuscinetto ? (
           <div className="flex items-center justify-between gap-3 border-t border-rule pt-2 text-[15px]">
             <span className="num">
-              Cuscinetto: {formatNumero(finanze.cuscinetto.attuale)} € di {formatNumero(finanze.cuscinetto.obiettivo)} €
+              Cuscinetto: {formatNumero(finanze.cuscinetto.attuale)} di {formatNumero(finanze.cuscinetto.obiettivo)} €
             </span>
             <ComeSiCalcola spiegazione={finanze.disponibile.spiegazione} />
           </div>

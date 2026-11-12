@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { CasaCorrente } from '@/lib/data/households';
-import { formatEuro, nomeMese } from '@/lib/format';
+import { formatEuro, giornoEMeseScadenza, nomeMese } from '@/lib/format';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { CasaHomeDati } from '@/lib/calculations/supporto/casaHome';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
@@ -115,9 +115,8 @@ export function VistaSemplice({
               <p data-testid="quota" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
                 {cifra?.intero}
                 {cifra?.resto ? <span className="text-[28px]">{cifra.resto}</span> : null}
-                <span className="text-[28px]"> €</span>
               </p>
-              {entroGiorno ? <p className="mt-1.5 text-[15px] text-ink-2">entro il {entroGiorno}</p> : null}
+              {entroGiorno ? <p className="mt-1.5 text-[15px] text-ink-2">entro il {giornoEMeseScadenza(oggi, entroGiorno)}</p> : null}
               {parziale ? (
                 <p className="mt-1.5 text-[15px] text-ink-2">
                   Hai già versato <span className="num">{euroInFrase(versato)}</span> di <span className="num">{euroInFrase(quota)}</span>.

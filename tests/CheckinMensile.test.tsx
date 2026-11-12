@@ -177,10 +177,10 @@ describe('CheckinMensile', () => {
   it('mostra titolo, versamenti, spese, cuscinetto e come si calcola', () => {
     const { container } = render(<CheckinMensile dati={dati()} />);
     expect(screen.getByRole('heading', { name: 'Ottobre in casa' })).toBeInTheDocument();
-    expect(screen.getByText('Fabio 776 di 776')).toBeInTheDocument();
-    expect(screen.getByText('Anna 604 di 604')).toBeInTheDocument();
+    expect(screen.getByText('Fabio: 776 di 776 €')).toBeInTheDocument();
+    expect(screen.getByText('Anna: 604 di 604 €')).toBeInTheDocument();
     expect(screen.getByText('Spese del mese: previste 1.288 €, registrate 1.161 €, non registrate 80 €')).toBeInTheDocument();
-    expect(screen.getByText('Cuscinetto 59 di 1.321 €')).toBeInTheDocument();
+    expect(screen.getByText('Cuscinetto: 59 di 1.321 €')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
     expect(screen.getByText('Versamenti ricevuti')).toBeInTheDocument();
     assertNessunaParolaVietata(container);

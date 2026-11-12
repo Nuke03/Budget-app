@@ -120,7 +120,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
       importo: t.importo,
       colore: t.categoriaId ? (coloreDi.get(t.categoriaId) ?? null) : null,
       // Anticipo in contanti: pagataDaUserId sono io e non c'è conto, quindi "tu".
-      chi: t.pagataDaUserId === meUserId ? 'tu' : t.pagataDaUserId ? (nomi[t.pagataDaUserId] ?? 'un altro membro') : 'conto comune',
+      chi: t.pagataDaUserId === meUserId ? 'tu' : t.pagataDaUserId ? (nomi[t.pagataDaUserId] ?? 'un altro membro') : 'casa',
     }));
 
   const rigaMese = righeMie.find((r) => r.mese === mese) ?? null;

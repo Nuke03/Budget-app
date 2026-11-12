@@ -92,7 +92,7 @@ describe('casaHomeDati', () => {
     expect(casaHomeDati(dati(), 'fabio', OGGI).daFare).toBeNull();
   });
 
-  it('ultime: tu, altro, conto comune, anticipo in contanti, colore, 3 più recenti', () => {
+  it('ultime: tu, altro, casa, anticipo in contanti, colore, 3 più recenti', () => {
     const d = dati({
       transazioni: [
         spesa({ id: 'a', data: '2026-11-11', pagataDaUserId: 'fabio', categoriaId: 'cat' }),
@@ -107,7 +107,7 @@ describe('casaHomeDati', () => {
     expect(u.map((x) => x.chi)).toEqual(['tu', 'tu', 'Giulia']);
     expect(u[1].colore).toBe('verde');
     expect(u[0].colore).toBeNull();
-    expect(casaHomeDati(dati({ transazioni: [spesa({})] }), 'fabio', OGGI).ultime[0].chi).toBe('conto comune');
+    expect(casaHomeDati(dati({ transazioni: [spesa({})] }), 'fabio', OGGI).ultime[0].chi).toBe('casa');
   });
 
   it('spesoMese e previstoMese', () => {

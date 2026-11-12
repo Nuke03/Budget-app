@@ -27,18 +27,12 @@ export function ComeSiCalcola({
     <div className={className}>
       <button
         type="button"
-        aria-label={etichetta}
         aria-expanded={aperto}
         aria-controls={pannelloId}
         onClick={() => setAperto((a) => !a)}
-        className="inline-flex h-11 w-11 items-center justify-center text-brand-dark"
+        className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-dark"
       >
-        <span
-          aria-hidden="true"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rule text-[13px] font-semibold"
-        >
-          ?
-        </span>
+        {etichetta}
       </button>
       {aperto ? (
         <div id={pannelloId} className="mt-2 flex flex-col gap-2 rounded-[var(--radius-md)] border border-rule bg-brand-tint p-3 text-[15px]">

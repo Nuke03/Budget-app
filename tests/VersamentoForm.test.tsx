@@ -134,7 +134,7 @@ describe('VersamentoForm', () => {
   it('con già riflesso nei saldi invia soloRegistrazione true', async () => {
     monta();
     fireEvent.change(importo(), { target: { value: '10' } });
-    fireEvent.click(screen.getByLabelText("Il versamento l'ho già riflesso nei saldi"));
+    fireEvent.click(screen.getByLabelText("L'ho già fatto: il saldo del conto è già aggiornato"));
     fireEvent.click(registra());
     await waitFor(() => expect(recordTransfer).toHaveBeenCalled());
     expect(vi.mocked(recordTransfer).mock.calls[0][1]).toMatchObject({ soloRegistrazione: true });
@@ -144,7 +144,7 @@ describe('VersamentoForm', () => {
     monta({ contiPersonali: [] });
     fireEvent.change(importo(), { target: { value: '10' } });
     expect(registra()).toBeDisabled();
-    fireEvent.click(screen.getByLabelText("Il versamento l'ho già riflesso nei saldi"));
+    fireEvent.click(screen.getByLabelText("L'ho già fatto: il saldo del conto è già aggiornato"));
     fireEvent.click(registra());
     await waitFor(() => expect(recordTransfer).toHaveBeenCalled());
     expect(vi.mocked(recordTransfer).mock.calls[0][1]).toMatchObject({

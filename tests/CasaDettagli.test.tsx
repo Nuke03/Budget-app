@@ -213,7 +213,7 @@ describe('CasaDettagli', () => {
 
     it('mostra il conto comune con il saldo e il link a Da parte', () => {
       render(<CasaDettagli casa={casa} finanze={{ ...finanze([conto]), bolletteDaMettere: 2 }} />);
-      expect(screen.getByRole('heading', { name: 'Conto comune' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Soldi della casa' })).toBeInTheDocument();
       expect(screen.getByText('870,00 €')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Vai a Da parte' })).toHaveAttribute('href', '/casa/da-parte');
     });
@@ -242,7 +242,7 @@ describe('CasaDettagli', () => {
           finanze={{ ...finanze([conto]), disponibile, cuscinetto: { attuale: 1321, obiettivo: 1321, quotaMensile: 59 } }}
         />
       );
-      expect(screen.getByText('Cuscinetto: 1.321 € di 1.321 €')).toBeInTheDocument();
+      expect(screen.getByText('Cuscinetto: 1.321 di 1.321 €')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
       expect(screen.getByText(/Cuscinetto 1\.321 di 1\.321 €, già pieno/)).toBeInTheDocument();
     });
@@ -273,8 +273,8 @@ describe('CasaDettagli', () => {
 
       it('mostra i pannelli con le quote del mese e il credito in attesa', () => {
         const { container } = monta();
-        expect(screen.getByText('Fabio 690 di 690 € fatto')).toBeInTheDocument();
-        expect(screen.getByText('Anna 300 di 690 € mancano 390 €')).toBeInTheDocument();
+        expect(screen.getByText('Fabio: 690 di 690 €, fatto')).toBeInTheDocument();
+        expect(screen.getByText('Anna: 300 di 690 €, mancano 390 €')).toBeInTheDocument();
         expect(screen.getByText('In attesa del rimborso: 45 €')).toBeInTheDocument();
         assertNessunaParolaVietata(container);
       });
@@ -292,9 +292,9 @@ describe('CasaDettagli', () => {
         await waitFor(() => expect(screen.queryByLabelText('Importo')).toBeNull());
       });
 
-      it('Rinuncia al credito chiede conferma e registra un rimborso a proprio favore', async () => {
+      it('Lascia perdere il rimborso chiede conferma e registra un rimborso a proprio favore', async () => {
         monta();
-        fireEvent.click(screen.getByRole('button', { name: 'Rinuncia' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Lascia perdere il rimborso' }));
         expect(screen.getByText(/Chiudi il credito di 45 €.*Puoi annullarla dai movimenti della casa/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Chiudi il credito' }));
         await waitFor(() =>

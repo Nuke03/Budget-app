@@ -39,8 +39,14 @@ describe('VistaSemplice', () => {
   it('mostra la quota del mese e il giorno', () => {
     vista({});
     expect(screen.getByText(/La tua quota di novembre/)).toBeInTheDocument();
-    expect(screen.getByText(/entro il 5/)).toBeInTheDocument();
+    expect(screen.getByText('entro il 5 novembre')).toBeInTheDocument();
     expect(screen.getByTestId('quota').textContent).toContain('450');
+  });
+
+  it('il simbolo € compare una volta sola, e il giorno 1 si scrive 1°', () => {
+    vista({ entroGiorno: 1 });
+    expect(screen.getByTestId('quota').textContent?.match(/€/g)).toHaveLength(1);
+    expect(screen.getByText('entro il 1° novembre')).toBeInTheDocument();
   });
 
   it('quota già versata', () => {

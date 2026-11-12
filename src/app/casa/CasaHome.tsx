@@ -16,7 +16,7 @@ import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import { CasaAzioni } from './CasaAzioni';
 import { DaFareCard } from './DaFareCard';
 
-const COLONNE = 'grid grid-cols-[2.75rem_minmax(0,1fr)_3.5rem_4.5rem] items-center gap-x-2 px-4';
+const COLONNE = 'grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-x-2 px-4';
 const LINK_RIGA =
   'flex min-h-12 items-center justify-between rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-[15px] font-semibold text-brand-dark';
 

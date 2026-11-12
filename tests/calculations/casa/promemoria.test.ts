@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeReminders, statoPromemoria, type StatoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { giornoEMeseScadenza } from '@/lib/format';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 
 const me = { userId: 'u1' };
@@ -18,11 +19,19 @@ const debito = (debitoreId: string, creditoreId: string) => ({
   mesi: [{ mese: '2026-11-01', importo: 603, versato: 603 }],
 });
 
+describe('giornoEMeseScadenza', () => {
+  it('solo il primo del mese porta il °', () => {
+    expect(giornoEMeseScadenza('2026-11-01', 1)).toBe('1° novembre');
+    expect(giornoEMeseScadenza('2026-11-01', 5)).toBe('5 novembre');
+    expect(giornoEMeseScadenza('2026-12-01', 11)).toBe('11 dicembre');
+  });
+});
+
 describe('computeReminders', () => {
   it('3 giorni prima del giorno di versamento compare il versamento con testo e azione Registra', () => {
     const r = computeReminders(base, me, '2026-11-02');
     expect(r).toHaveLength(1);
-    expect(r[0].testo).toBe('Il tuo versamento di 776 € è da fare entro il 5.');
+    expect(r[0].testo).toBe('Il tuo versamento di 776 € è da fare entro il 5 novembre.');
     expect(r[0].azione).toEqual({ tipo: 'versamento', etichetta: 'Registra', importo: 776 });
   });
 
@@ -38,7 +47,7 @@ describe('computeReminders', () => {
 
   it('dopo il giorno il tono resta neutro e senza la parola ritardo', () => {
     const r = computeReminders(base, me, '2026-11-20');
-    expect(r[0].testo).toBe('Il versamento di novembre è ancora da registrare. Già fatto? Registralo con la spunta "già riflesso".');
+    expect(r[0].testo).toBe("Il versamento di novembre non risulta ancora. L'hai già fatto? Segnalalo qui.");
     expect(r[0].testo.toLowerCase()).not.toContain('ritardo');
   });
 

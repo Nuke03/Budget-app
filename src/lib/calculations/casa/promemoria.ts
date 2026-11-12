@@ -1,4 +1,4 @@
-import { formatNumero, nomeMese } from '../../format';
+import { formatNumero, giornoEMeseScadenza, nomeMese } from '../../format';
 import type { PlanBundle } from '../../data/householdPlans';
 import type { DebitoMembro } from './debitiMembri';
 import { descriviOrigineDebito } from './debitiMembri';
@@ -104,8 +104,8 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
       const scadenza = `${mesePiano.slice(0, 7)}-${String(giornoVersamento).padStart(2, '0')}`;
       const testo =
         oggi < scadenza
-          ? `Il tuo versamento di ${euro(importo)} è da fare entro il ${giornoVersamento}.`
-          : `Il versamento di ${nomeMese(mesePiano)} è ancora da registrare. Già fatto? Registralo con la spunta "già riflesso".`;
+          ? `Il tuo versamento di ${euro(importo)} è da fare entro il ${giornoEMeseScadenza(mesePiano, giornoVersamento)}.`
+          : `Il versamento di ${nomeMese(mesePiano)} non risulta ancora. L'hai già fatto? Segnalalo qui.`;
       out.push({
         id: `versamento:${mesePiano}`,
         tipo: 'versamento',
