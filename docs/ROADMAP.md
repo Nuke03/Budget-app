@@ -212,6 +212,37 @@ Cosa resta, in ordine:
 6. Poi `PRODUCT.md`, audit con impeccable, `DESIGN.md`, e il **piano B**, cioè
    le schermate. Passi 1-3 fatti.
 
+**Piano B1 "Il Libretto", fatto (12 novembre 2026).** Riferimenti:
+- piano: `docs/superpowers/plans/2026-11-12-libretto-home-aggiunta.md`;
+- stile: `DESIGN.md`;
+- contratto di direzione: `.impeccable/surfaces/src-app-page-tsx.md`.
+
+Cosa contiene:
+- colori e caratteri del libretto, compresa la modalità scura;
+- barra in basso con il + al centro;
+- pagina Altro;
+- Home a libretto: disponibile spiegato, andamento a barre, registro con "Nel mese", prossima cosa da fare, consiglio, timbro "REGISTRATO";
+- aggiunta veloce col solo importo;
+- iscrizione ai promemoria;
+- pagina "Rimettiamoci in pari".
+
+Revisioni fatte: per ogni task, revisione finale di impeccable (verdetto: da pubblicare) e revisione opus. I due errori sui soldi trovati alla fine sono corretti.
+
+Per provare le schermate senza login: `/anteprima?vista=home|foglio|in-pari|vuota`, solo in sviluppo. Va avviata con la configurazione `dev-webpack` di `.claude/launch.json`: con Turbopack in sviluppo `next/font` non si carica. La build di produzione invece funziona.
+
+**Piano B2, da scrivere:**
+- Casa riordinata con "Da fare" e "Dettagli";
+- vista semplice per chi entra ogni tanto;
+- passaggio da Tricount;
+- eliminazioni con annullamento;
+- le altre pagine nel nuovo stile: Storico, obiettivi, conti, P.IVA, check-in, quota;
+- l'icona dell'app.
+
+Resti segnati nel piano B1:
+- il saldo del conto si aggiorna in due passi separati: andrebbe fatto in un passo solo, insieme alla spesa, da una funzione nel database;
+- un aggiornamento del saldo rimasto in sospeso si perde se si cambia pagina;
+- il testo del timbro è piccolo (9px).
+
 **Critica impeccable (11 novembre 2026):** 23 su 40. Il rapporto è in
 `.impeccable/critique/2026-11-11T16-57-29Z__src-app.md`. Problemi, in
 ordine:
