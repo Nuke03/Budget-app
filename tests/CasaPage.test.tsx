@@ -9,12 +9,13 @@ vi.mock('@/lib/utenteOLogin', () => ({
   }),
 }));
 vi.mock('@/lib/data/accounts', () => ({ getAccounts: vi.fn() }));
-vi.mock('@/lib/data/householdPlans', () => ({ getPlanForMonth: vi.fn().mockResolvedValue(null) }));
 vi.mock('@/lib/loadCasaData', () => ({ loadCasaData: vi.fn() }));
+vi.mock('@/lib/calculations/supporto/casaHome', () => ({ casaHomeDati: vi.fn() }));
 vi.mock('@/app/casa/CasaHome', () => ({ CasaHome: () => null }));
 vi.mock('@/app/casa/CasaSenzaCasa', () => ({ CasaSenzaCasa: () => null }));
 import { getAccounts } from '@/lib/data/accounts';
 import { loadCasaData } from '@/lib/loadCasaData';
+import { casaHomeDati } from '@/lib/calculations/supporto/casaHome';
 
 describe('pagina Casa', () => {
   it('legge i conti personali mentre i dati della casa sono ancora in lettura', async () => {
@@ -26,5 +27,29 @@ describe('pagina Casa', () => {
     finisci();
     await pagina;
     expect(loadCasaData).toHaveBeenCalledTimes(1);
+  });
+
+  it('se i dati della casa non si leggono la Casa si apre senza libretto', async () => {
+    vi.mocked(loadCasaData).mockRejectedValue(new Error('x'));
+    vi.mocked(getAccounts).mockResolvedValue([]);
+    const el = (await CasaPage()) as { props: { libretto?: unknown; vociDaParte: unknown[] } };
+    expect(el.props.libretto).toBeUndefined();
+    expect(el.props.vociDaParte).toEqual([]);
+  });
+
+  it('con i dati passa alla Casa il libretto, la spiegazione e le voci da mettere da parte', async () => {
+    vi.mocked(casaHomeDati).mockReturnValue({ gestisce: true, disponibile: 10 } as never);
+    vi.mocked(loadCasaData).mockResolvedValue({
+      piani: [],
+      obiettiviConAccantonato: [],
+      aggiunta: { conti: [] },
+      disponibile: { valore: 10, spiegazione: { valore: 10, formula: 'f', ingredienti: [] } },
+    } as never);
+    vi.mocked(getAccounts).mockResolvedValue([]);
+    const el = (await CasaPage()) as { props: Record<string, unknown> };
+    expect(casaHomeDati).toHaveBeenCalledWith(expect.anything(), 'u1', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+    expect(el.props.libretto).toEqual({ gestisce: true, disponibile: 10 });
+    expect(el.props.spiegazione).toEqual({ valore: 10, formula: 'f', ingredienti: [] });
+    expect(el.props.vociDaParte).toEqual([]);
   });
 });

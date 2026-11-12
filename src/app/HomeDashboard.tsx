@@ -11,7 +11,7 @@ import { ConsiglioCard } from './home/ConsiglioCard';
 import { DettaglioDisponibile } from './home/DettaglioDisponibile';
 import { Registro } from './home/Registro';
 import { SchedaNotifiche } from './home/SchedaNotifiche';
-import { giornoEMese } from './home/formati';
+import { dividiCifra, giornoEMese } from './home/formati';
 import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
@@ -34,13 +34,6 @@ const CHIAVE_REGISTRATO = 'libretto:registrato';
 
 // Nelle frasi gli importi tondi si scrivono senza decimali: "45 €".
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
-
-// "1.240,50 €" in due pezzi: la cifra e i centesimi, più piccoli.
-function dividiCifra(n: number): { intero: string; resto: string } {
-  const testo = formatEuro(n);
-  const i = testo.lastIndexOf(',');
-  return i < 0 ? { intero: testo, resto: '' } : { intero: testo.slice(0, i), resto: testo.slice(i) };
-}
 
 export function HomeDashboard({
   disponibileLibero,
@@ -119,7 +112,7 @@ export function HomeDashboard({
   const saldoConti = accounts.filter((a) => a.contaInDisponibile).reduce((t, a) => t + a.saldoAttuale, 0);
   const riservato = Math.round((saldoConti - disponibileLibero) * 100) / 100;
   const contaCasa = (casa?.stato?.riservaVersamento ?? 0) + (casa?.stato?.debitoDaRestituire ?? 0) > 0;
-  const { intero, resto } = dividiCifra(disponibileLibero);
+  const { intero, resto } = dividiCifra(formatEuro(disponibileLibero));
 
   return (
     <>

@@ -18,3 +18,9 @@ export const giornoMeseTimbro = (iso: string): string =>
 
 // "27 novembre"
 export const giornoEMese = (iso: string): string => `${Number(iso.slice(8, 10))} ${nomeMese(iso)}`;
+
+// "1.240,50 €" in due pezzi: la cifra e i centesimi, più piccoli.
+export function dividiCifra(testo: string): { intero: string; resto: string } {
+  const i = testo.lastIndexOf(',');
+  return i < 0 ? { intero: testo, resto: '' } : { intero: testo.slice(0, i), resto: testo.slice(i) };
+}

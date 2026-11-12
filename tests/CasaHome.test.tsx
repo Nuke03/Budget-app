@@ -1,29 +1,25 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { CasaHome } from '@/app/casa/CasaHome';
-import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
-import type { CasaAggiunta } from '@/lib/loadCasaData';
-import type { Account } from '@/lib/types';
+import { casaHomeDati, type CasaHomeDati } from '@/lib/calculations/supporto/casaHome';
+import type { CasaAggiunta, CasaData } from '@/lib/loadCasaData';
+import type { StatoVoceDaParte } from '@/lib/calculations/casa/fondi';
+import type { CasaCorrente } from '@/lib/data/households';
+import type { PlanItem } from '@/lib/types';
+import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh, push: vi.fn() }),
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+vi.mock('@/lib/data/fondiCasa', () => ({ creaFondoBolletta: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/data/transactions', () => ({ createTransaction: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/data/accounts', () => ({ adjustAccountBalance: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/data/transfers', () => ({ recordTransfer: vi.fn().mockResolvedValue('t1'), messaggioErroreTrasferimento: () => 'errore' }));
-vi.mock('@/lib/data/casaSetup', () => ({ creaContoComune: vi.fn().mockResolvedValue({}) }));
-
-import { creaContoComune } from '@/lib/data/casaSetup';
-import { recordTransfer } from '@/lib/data/transfers';
-import { assertNessunaParolaVietata } from './helpers/paroleVietate';
-import type { CasaCorrente } from '@/lib/data/households';
-import type { PlanBundle } from '@/lib/data/householdPlans';
+import { creaFondoBolletta } from '@/lib/data/fondiCasa';
 
 const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: '2026-01-01', slot: 1, attivo: true };
 const anna = { householdId: 'h1', userId: 'u2', displayName: 'Anna', joinedAt: '2026-01-02', slot: 2, attivo: true };
-
 const casa: CasaCorrente = {
   household: { id: 'h1', nome: 'Casa Rossi', createdAt: '2026-01-01', archiviataIl: null, createdBy: 'u1' },
   members: [fabio, anna],
@@ -31,363 +27,223 @@ const casa: CasaCorrente = {
   me: fabio,
 };
 
-function piano(legato: boolean): PlanBundle {
-  const base = {
-    planId: 'p1',
-    redditoNettoMensile: 1000,
-    redditoIrregolare: false,
-    percentuale: null,
-    inCasaDal: null,
-    esceDal: null,
-  };
-  return {
-    plan: {
-      id: 'p1',
-      householdId: 'h1',
-      validoDal: '2026-12-01',
-      giornoVersamento: 5,
-      regola: 'parti_uguali',
-      cuscinettoObiettivo: 0,
-      cuscinettoQuotaMensile: 0,
-      arrotondamento: 10,
-      totaleMensile: 1380,
-      createdAt: '2026-11-08T00:00:00Z',
-    },
-    items: [],
-    shares: [
-      { ...base, slot: 1, userId: 'u1', displayName: 'Fabio', quotaMensile: 690 },
-      { ...base, slot: 2, userId: legato ? 'u2' : null, displayName: 'Anna', quotaMensile: 690 },
-    ],
-  };
-}
+const aggiunta: CasaAggiunta = {
+  householdId: 'h1',
+  meUserId: 'u1',
+  nomi: [
+    { userId: 'u1', nome: 'Fabio' },
+    { userId: 'u2', nome: 'Anna' },
+  ],
+  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null }],
+  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#0f9d6b', archiviata: false }],
+  obiettivi: [],
+};
 
-describe('CasaHome', () => {
-  it('mostra il nome della casa e i nomi dei membri', () => {
-    render(<CasaHome casa={casa} />);
-    expect(screen.getByRole('heading', { name: 'Casa Rossi' })).toBeInTheDocument();
-    expect(screen.getByText(/Fabio/)).toBeInTheDocument();
-    expect(screen.getByText(/Anna/)).toBeInTheDocument();
+const spiegazione = {
+  valore: 870,
+  formula: 'Quello che c’è sul conto comune, meno quello già messo da parte.',
+  ingredienti: [{ etichetta: 'Saldo del conto comune', valore: 870 }],
+};
+
+const base: CasaHomeDati = {
+  gestisce: true,
+  disponibile: 870,
+  spesoMese: 320.5,
+  previstoMese: 1200,
+  daFare: null,
+  ultime: [
+    { id: 't1', data: '2026-11-05', descrizione: 'Luce', importo: 64.2, colore: '#0f9d6b', chi: 'Anna' },
+    { id: 't2', data: '2026-11-03', descrizione: 'Spesa', importo: 30, colore: null, chi: 'tu' },
+  ],
+  vistaSemplice: { quota: null, entroGiorno: null, versato: 0, stato: { tipo: 'pari' }, creditoVersoCasa: 0 },
+};
+
+const voce = (id: string, nome: string, importoMensile: number): StatoVoceDaParte => ({
+  item: { id, nome, importoMensile, importoRicorrenza: importoMensile * 6, frequenzaMesi: 6 } as unknown as PlanItem,
+  goal: null,
+  stato: 'da_mettere',
+});
+
+const monta = (libretto: CasaHomeDati | undefined, extra: Partial<Parameters<typeof CasaHome>[0]> = {}) =>
+  render(
+    <CasaHome
+      casa={casa}
+      libretto={libretto}
+      spiegazione={spiegazione}
+      aggiunta={aggiunta}
+      oggi="2026-11-12"
+      {...extra}
+    />
+  );
+
+describe('CasaHome del libretto', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('ha il link Impostazioni verso /casa/impostazioni', () => {
-    render(<CasaHome casa={casa} />);
-    expect(screen.getByRole('link', { name: 'Impostazioni' })).toHaveAttribute('href', '/casa/impostazioni');
-  });
-
-  it('senza piano invita a calcolare la quota con il link a /casa/quota', () => {
-    render(<CasaHome casa={casa} piano={null} />);
-    expect(screen.getByRole('link', { name: 'Calcolate la nostra quota' })).toHaveAttribute('href', '/casa/quota');
-  });
-
-  it('con un piano attivo mostra lo stato e il totale', () => {
-    render(<CasaHome casa={casa} piano={piano(true)} />);
-    expect(screen.getByText(/Attivo: totale da versare ogni mese/)).toHaveTextContent('1.380 €');
-    expect(screen.queryByText(/Diventa attivo/)).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Vedi la quota' })).toHaveAttribute('href', '/casa/quota');
-  });
-
-  it('un piano attivo che parte in un mese futuro dice da quando parte', () => {
-    const { container } = render(<CasaHome casa={casa} piano={piano(true)} meseCorrente="2026-11-01" />);
-    expect(screen.getByText(/Parte da dicembre 2026: totale da versare ogni mese/)).toHaveTextContent('1.380 €');
-    expect(screen.queryByText(/Attivo/)).not.toBeInTheDocument();
+  it('la copertina e la pagina bianca: titolo, mese, disponibile in serif, spese del mese', () => {
+    const { container } = monta(base);
+    expect(screen.getByRole('heading', { name: 'La casa' })).toBeInTheDocument();
+    expect(screen.getByText('novembre 2026')).toBeInTheDocument();
+    expect(screen.getByText('Disponibile di casa')).toBeInTheDocument();
+    const cifra = screen.getByTestId('disponibile');
+    expect(cifra).toHaveTextContent('870,00 €');
+    expect(cifra.className).toMatch(/font-serif/);
+    expect(cifra.className).toMatch(/\bnum\b/);
+    expect(screen.getByText(/Spese di casa questo mese/)).toHaveTextContent(
+      'Spese di casa questo mese: 320,50 € su 1.200 € previsti'
+    );
     assertNessunaParolaVietata(container);
   });
 
-  it('un piano che è già partito resta Attivo', () => {
-    render(<CasaHome casa={casa} piano={piano(true)} meseCorrente="2026-12-01" />);
-    expect(screen.getByText(/Attivo: totale da versare ogni mese/)).toBeInTheDocument();
+  it('senza piano la riga delle spese dice solo quanto è stato speso', () => {
+    monta({ ...base, previstoMese: null });
+    const riga = screen.getByText(/Spese di casa questo mese/);
+    expect(riga).toHaveTextContent('Spese di casa questo mese: 320,50 €');
+    expect(riga).not.toHaveTextContent('previsti');
   });
 
-  it('con un piano in bozza dice chi manca', () => {
-    render(<CasaHome casa={casa} piano={piano(false)} />);
-    expect(screen.getByText(/Bozza: totale da versare ogni mese/)).toBeInTheDocument();
-    expect(screen.getByText('Diventa attivo quando entra anche Anna')).toBeInTheDocument();
+  it('Come si calcola? apre la spiegazione che esiste oggi', () => {
+    monta(base);
+    const pulsante = screen.getByRole('button', { name: 'Come si calcola?' });
+    fireEvent.click(pulsante);
+    expect(pulsante).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Saldo del conto comune')).toBeInTheDocument();
+  });
+
+  it('senza niente da fare non c\'è la card', () => {
+    monta(base);
+    expect(screen.queryByRole('heading', { name: 'Da fare' })).not.toBeInTheDocument();
+  });
+
+  describe('Da fare', () => {
+    const daParte: CasaHomeDati = {
+      ...base,
+      daFare: {
+        tipo: 'da_parte',
+        testo: 'Metti da parte 150 € per TARI e Acqua',
+        importo: 150,
+        voci: [
+          { nome: 'TARI', importo: 100 },
+          { nome: 'Acqua', importo: 50 },
+        ],
+      },
+    };
+    const voci = [voce('i1', 'TARI', 100), voce('i2', 'Acqua', 50)];
+
+    it('accantonamento: le voci e Fatto, che chiama la stessa azione di Da parte', async () => {
+      monta(daParte, { vociDaParte: voci });
+      expect(screen.getByRole('heading', { name: 'Da fare' })).toBeInTheDocument();
+      expect(screen.getByText('Metti da parte 150 € per TARI e Acqua')).toBeInTheDocument();
+      expect(screen.getByText('TARI')).toBeInTheDocument();
+      expect(screen.getByText('Acqua')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+      await waitFor(() => expect(creaFondoBolletta).toHaveBeenCalledTimes(2));
+      expect(creaFondoBolletta).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ householdId: 'h1', item: voci[0].item, oggi: '2026-11-12' })
+      );
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+    });
+
+    it('se il salvataggio fallisce dice cosa fare', async () => {
+      vi.mocked(creaFondoBolletta).mockRejectedValueOnce(new Error('x'));
+      monta(daParte, { vociDaParte: voci });
+      fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Salvataggio fallito, controlla la connessione e riprova.');
+    });
+
+    it('promemoria: tutta la card è un link', () => {
+      monta({
+        ...base,
+        daFare: { tipo: 'promemoria', testo: 'Il check-in di ottobre è pronto.', href: '/casa/controllo' },
+      });
+      const link = screen.getByRole('link', { name: /Il check-in di ottobre è pronto/ });
+      expect(link).toHaveAttribute('href', '/casa/controllo');
+      expect(screen.queryByRole('button', { name: 'Fatto' })).not.toBeInTheDocument();
+    });
+
+    it('un promemoria senza pagina propria porta ai Dettagli, dove si registra', () => {
+      monta({ ...base, daFare: { tipo: 'promemoria', testo: 'Il tuo versamento di 690 € è da fare entro il 5.', href: '/casa' } });
+      expect(screen.getByRole('link', { name: /versamento di 690/ })).toHaveAttribute('href', '/casa/dettagli');
+    });
+
+    it('quota: tutta la card è un link alla quota', () => {
+      monta({ ...base, daFare: { tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' } });
+      expect(screen.getByRole('link', { name: /Calcolate la quota/ })).toHaveAttribute('href', '/casa/quota');
+    });
+  });
+
+  describe('Ultime spese', () => {
+    it('righe in stile registro con data, nome, chi e importo, e il link a tutti i movimenti', () => {
+      monta(base);
+      const luce = screen.getByText('Luce').closest('li')!;
+      expect(within(luce).getByText('05/11')).toBeInTheDocument();
+      expect(within(luce).getByText('Anna')).toBeInTheDocument();
+      expect(within(luce).getByText('−64,20')).toBeInTheDocument();
+      const dot = luce.querySelector('[data-colore]');
+      expect(dot).toHaveAttribute('data-colore', '#0f9d6b');
+      expect(screen.getByRole('link', { name: 'Tutti i movimenti' })).toHaveAttribute('href', '/casa/movimenti');
+    });
+
+    it('una spesa in contanti anticipata da me, senza conto, dice "tu"', () => {
+      const dati = {
+        casa,
+        aggiunta: { ...aggiunta, conti: [] },
+        transazioni: [
+          {
+            id: 'c1', tipo: 'expense', importo: 12, data: '2026-11-10', categoriaId: null, accountId: null,
+            goalId: null, descrizione: 'Pane', nota: null, createdAt: '2026-11-10T10:00:00Z', stima: false,
+            pagataDaUserId: 'u1',
+          },
+        ],
+        piani: [],
+        righe: {},
+        crediti: {},
+        debiti: [],
+        obiettiviConAccantonato: [],
+        controlli: { ultimoControllo: null, ultimoCheckinMese: null },
+        disponibile: { valore: 0, spiegazione },
+      } as unknown as CasaData;
+      const libretto = casaHomeDati(dati, 'u1', '2026-11-12');
+      monta(libretto);
+      const riga = screen.getByText('Pane').closest('li')!;
+      expect(within(riga).getByText('tu')).toBeInTheDocument();
+    });
+
+    it('senza spese dice cosa succede dopo', () => {
+      monta({ ...base, ultime: [] });
+      expect(screen.getByText('Ancora nessuna spesa di casa. Appena ne aggiungete una, la vede tutta la casa.')).toBeInTheDocument();
+    });
+  });
+
+  it('la riga Dettagli porta a /casa/dettagli', () => {
+    monta(base);
+    expect(screen.getByRole('link', { name: /Dettagli/ })).toHaveAttribute('href', '/casa/dettagli');
+  });
+
+  it('niente blocchi impilati né ombre', () => {
+    const { container } = monta(base);
+    expect(screen.queryByRole('heading', { name: 'Conto comune' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: "Chi c'è in casa" })).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toMatch(/shadow/);
+  });
+
+  it('il pulsante + apre il foglio in modalità Casa', () => {
+    monta(base, { contiPersonali: [] });
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Conto comune' }));
+    expect(screen.getByRole('group', { name: 'Chi ha pagato' })).toBeInTheDocument();
+    expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
   });
 
   it('se conti e spese non si leggono dice di riprovare e lascia la quota e le impostazioni', () => {
     const { container } = render(<CasaHome casa={casa} />);
     expect(screen.getByText('Non riesco a leggere conti e spese della casa. Riprova tra poco.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Riprova' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Calcolate la nostra quota' })).toHaveAttribute('href', '/casa/quota');
     expect(screen.getByRole('link', { name: 'Impostazioni' })).toHaveAttribute('href', '/casa/impostazioni');
     assertNessunaParolaVietata(container);
-  });
-
-  it('non contiene parole vietate', () => {
-    const { container } = render(<CasaHome casa={casa} piano={piano(false)} />);
-    assertNessunaParolaVietata(container);
-  });
-
-  describe('con le finanze', () => {
-    const conto: Account = {
-      id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null,
-    };
-    function aggiunta(conti: Account[]): CasaAggiunta {
-      return {
-        householdId: 'h1',
-        meUserId: 'u1',
-        nomi: [
-          { userId: 'u1', nome: 'Fabio' },
-          { userId: 'u2', nome: 'Anna' },
-        ],
-        conti,
-        categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false }],
-        obiettivi: [],
-      };
-    }
-    function finanze(conti: Account[]) {
-      return {
-        disponibile: computeDisponibileCasa({ conti, obiettivi: [], today: new Date('2026-11-09T10:00:00Z') }),
-        conti,
-        ultimeSpese: [
-          {
-            id: 't1', tipo: 'expense' as const, importo: 64.2, data: '2026-11-05', categoriaId: 'cc',
-            accountId: 'ac', goalId: null, descrizione: 'Luce', nota: null, createdAt: '', stima: false, pagataDaUserId: 'u2',
-          },
-        ],
-        nomi: { u1: 'Fabio', u2: 'Anna' },
-        aggiunta: aggiunta(conti),
-      };
-    }
-
-    it('con finanze mostra il disponibile casa 870,00 e il pannello Come si calcola', () => {
-      const { container } = render(<CasaHome casa={casa} finanze={finanze([conto])} />);
-      expect(screen.getByText('Disponibile casa')).toBeInTheDocument();
-      expect(screen.getAllByText(/870,00/).length).toBeGreaterThan(0);
-      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
-      expect(screen.getByRole('button', { name: 'Come si calcola?' })).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByText('Luce')).toBeInTheDocument();
-      expect(screen.getAllByText('Anna').length).toBeGreaterThan(1);
-      expect(screen.getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', '/casa/movimenti');
-      assertNessunaParolaVietata(container);
-    });
-
-    it('nessuna spesa: una frase che dice cosa succede dopo', () => {
-      const { container } = render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), ultimeSpese: [] }} />);
-      expect(
-        screen.getByText('Ancora nessuna spesa di casa. Appena ne aggiungete una, la vede tutta la casa.')
-      ).toBeInTheDocument();
-      assertNessunaParolaVietata(container);
-    });
-
-    it('con un piano in vigore mostra il cuscinetto sotto il numero, con la spiegazione', () => {
-      const disponibile = computeDisponibileCasa({
-        conti: [{ ...conto, saldoAttuale: 1500 }],
-        obiettivi: [],
-        today: new Date('2026-11-09T10:00:00Z'),
-        cuscinettoObiettivo: 1321,
-        cuscinettoQuotaMensile: 59,
-      });
-      const { container } = render(
-        <CasaHome
-          casa={casa}
-          finanze={{ ...finanze([conto]), disponibile, cuscinetto: { attuale: 1321, obiettivo: 1321, quotaMensile: 59 } }}
-        />
-      );
-      expect(screen.getByText('Cuscinetto 1.321 di 1.321 €')).toBeInTheDocument();
-      const pulsanti = screen.getAllByRole('button', { name: 'Come si calcola?' });
-      expect(pulsanti).toHaveLength(1);
-      fireEvent.click(pulsanti[0]);
-      expect(screen.getByText(/Cuscinetto 1\.321 di 1\.321 €, già pieno/)).toBeInTheDocument();
-      assertNessunaParolaVietata(container);
-    });
-
-    it('da parte per le bollette: i fondi aperti e quante voci mancano, con il link', () => {
-      const fondiBollette = [{ id: 'g1', nome: 'TARI', accantonato: 100, importoTarget: 300 }];
-      const { container, rerender } = render(
-        <CasaHome casa={casa} finanze={{ ...finanze([conto]), fondiBollette, bolletteDaMettere: 3 }} />
-      );
-      expect(screen.getByRole('heading', { name: 'Da parte per le bollette' })).toBeInTheDocument();
-      expect(screen.getByText('TARI')).toBeInTheDocument();
-      expect(screen.getByText('100 di 300 €')).toBeInTheDocument();
-      expect(screen.getByText('3 bollette non sono ancora messe da parte')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Vai a Da parte' })).toHaveAttribute('href', '/casa/da-parte');
-      assertNessunaParolaVietata(container);
-      rerender(<CasaHome casa={casa} finanze={{ ...finanze([conto]), fondiBollette, bolletteDaMettere: 1 }} />);
-      expect(screen.getByText('1 bolletta non è ancora messa da parte')).toBeInTheDocument();
-    });
-
-    it("senza fondi e senza voci da mettere la sezione non c'è", () => {
-      render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), fondiBollette: [], bolletteDaMettere: 0 }} />);
-      expect(screen.queryByRole('heading', { name: 'Da parte per le bollette' })).not.toBeInTheDocument();
-    });
-
-    it('senza piano in vigore niente riga del cuscinetto', () => {
-      render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), cuscinetto: null }} />);
-      expect(screen.queryByText(/Cuscinetto \d/)).not.toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: 'Come si calcola?' })).toHaveLength(1);
-    });
-
-    it('porta al controllo del conto e dice le spese non registrate solo se ci sono', () => {
-      render(<CasaHome casa={casa} finanze={finanze([conto])} />);
-      expect(screen.getByRole('link', { name: 'Controlla il conto' })).toHaveAttribute('href', '/casa/controllo/conto');
-      expect(screen.queryByText(/Spese non registrate/)).not.toBeInTheDocument();
-      cleanup();
-      const { container } = render(<CasaHome casa={casa} finanze={{ ...finanze([conto]), speseNonRegistrate: 80 }} />);
-      expect(screen.getByText('Spese non registrate questo mese: 80 €')).toBeInTheDocument();
-      assertNessunaParolaVietata(container);
-    });
-
-    it('entrato da tempo, conto aperto oggi, mai controllato: nessun promemoria del controllo', () => {
-      const contoNuovo = { ...conto, createdAt: '2026-11-09T08:00:00Z' };
-      render(<CasaHome casa={casa} oggi="2026-11-09" finanze={finanze([contoNuovo])} />);
-      expect(screen.queryByText(/controllo veloce/)).not.toBeInTheDocument();
-    });
-
-    it('senza conto comune mostra il modulo e crea il conto', async () => {
-      render(<CasaHome casa={casa} finanze={finanze([])} />);
-      expect(screen.getByText('Aprite il conto comune qui')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Conto comune')).toBeInTheDocument();
-      fireEvent.change(screen.getByLabelText('Saldo attuale'), { target: { value: '120,50' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Apri il conto' }));
-      await waitFor(() =>
-        expect(creaContoComune).toHaveBeenCalledWith(expect.anything(), 'h1', {
-          nome: 'Conto comune',
-          saldoAttuale: 120.5,
-        })
-      );
-      await waitFor(() => expect(refresh).toHaveBeenCalled());
-    });
-
-    it('il pulsante + apre il foglio in modalità Casa senza selettore', () => {
-      render(<CasaHome casa={casa} finanze={finanze([conto])} />);
-      act(() => {
-      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
-    });
-      fireEvent.click(screen.getByRole('button', { name: conto.nome }));
-      expect(screen.getByRole('group', { name: 'Chi ha pagato' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Personale' })).not.toBeInTheDocument();
-      expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
-    });
-
-    describe('promemoria', () => {
-      const registri = {
-        righe: { u1: [{ mese: '2026-11-01', atteso: 690, versato: 0, mancano: 690 }] },
-        debiti: [],
-        crediti: { u1: 0, u2: 0 },
-      };
-      const monta = (oggi: string) =>
-        render(
-          <CasaHome
-            casa={casa}
-            piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-11-01' } }}
-            meseCorrente="2026-11-01"
-            oggi={oggi}
-            finanze={{ ...finanze([conto]), ...registri, ultimoControllo: '2026-10-30' }}
-          />
-        );
-
-      it('la striscia compare in cima a /casa', () => {
-        const { container } = monta('2026-11-03');
-        const testo = screen.getByText('Il tuo versamento di 690 € è da fare entro il 5.');
-        expect(screen.getByRole('button', { name: 'Registra' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Più tardi' })).toBeInTheDocument();
-        const titolo = screen.getByRole('heading', { name: 'Casa Rossi' });
-        expect(titolo.compareDocumentPosition(testo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        const disponibile = screen.getByText('Disponibile casa');
-        expect(testo.compareDocumentPosition(disponibile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        assertNessunaParolaVietata(container);
-      });
-
-      it('il pulsante Registra apre il modulo del versamento', () => {
-        monta('2026-11-03');
-        fireEvent.click(screen.getByRole('button', { name: 'Registra' }));
-        expect(screen.getAllByText('Registra un versamento').length).toBeGreaterThan(1);
-      });
-
-      it('il primo del mese dopo compare il promemoria del check-in, con il link', () => {
-        const righe = { u1: [{ mese: '2026-10-01', atteso: 690, versato: 690, mancano: 0 }, { mese: '2026-11-01', atteso: 690, versato: 690, mancano: 0 }] };
-        const { container } = render(
-          <CasaHome
-            casa={casa}
-            piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-10-01' } }}
-            meseCorrente="2026-11-01"
-            oggi="2026-11-01"
-            finanze={{ ...finanze([conto]), ...registri, righe, ultimoControllo: '2026-10-30', ultimoCheckinMese: null }}
-          />
-        );
-        expect(screen.getByText(/Il check-in di ottobre è pronto/)).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Apri' })).toHaveAttribute('href', '/casa/controllo');
-        assertNessunaParolaVietata(container);
-      });
-
-      it('con il check-in di ottobre già fatto il promemoria non compare', () => {
-        const righe = { u1: [{ mese: '2026-10-01', atteso: 690, versato: 690, mancano: 0 }, { mese: '2026-11-01', atteso: 690, versato: 690, mancano: 0 }] };
-        render(
-          <CasaHome
-            casa={casa}
-            piano={{ ...piano(true), plan: { ...piano(true).plan, validoDal: '2026-10-01' } }}
-            meseCorrente="2026-11-01"
-            oggi="2026-11-01"
-            finanze={{ ...finanze([conto]), ...registri, righe, ultimoControllo: '2026-10-30', ultimoCheckinMese: '2026-10-01' }}
-          />
-        );
-        expect(screen.queryByText(/check-in/)).not.toBeInTheDocument();
-      });
-
-      it('prima dei tre giorni la striscia non compare', () => {
-        monta('2026-11-01');
-        expect(screen.queryByRole('button', { name: 'Più tardi' })).not.toBeInTheDocument();
-      });
-    });
-
-    describe('versamenti e crediti', () => {
-      const registri = {
-        righe: { u1: [{ mese: '2026-12-01', atteso: 690, versato: 690, mancano: 0 }], u2: [{ mese: '2026-12-01', atteso: 690, versato: 300, mancano: 390 }] },
-        debiti: [],
-        crediti: { u1: 45, u2: 0 },
-      };
-      const contiPersonali: Account[] = [
-        { id: 'pf', nome: 'Conto Fabio', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
-      ];
-      const monta = () =>
-        render(
-          <CasaHome
-            casa={casa}
-            piano={piano(true)}
-            meseCorrente="2026-12-01"
-            finanze={{ ...finanze([conto]), ...registri, contiPersonali }}
-          />
-        );
-
-      it('mostra i pannelli con le quote del mese e il credito in attesa', () => {
-        const { container } = monta();
-        expect(screen.getByText('Fabio 690 di 690 € fatto')).toBeInTheDocument();
-        expect(screen.getByText('Anna 300 di 690 € mancano 390 €')).toBeInTheDocument();
-        expect(screen.getByText('In attesa del rimborso: 45 €')).toBeInTheDocument();
-        assertNessunaParolaVietata(container);
-      });
-
-      it('Registra un versamento apre il modulo e a salvataggio riuscito ricarica e chiude', async () => {
-        monta();
-        fireEvent.click(screen.getByRole('button', { name: 'Registra un versamento' }));
-        fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '390' } });
-        fireEvent.click(screen.getByRole('button', { name: 'Registra' }));
-        await waitFor(() => expect(refresh).toHaveBeenCalled());
-        expect(recordTransfer).toHaveBeenCalledWith(
-          expect.anything(),
-          expect.objectContaining({ causale: 'versamento', importo: 390, daAccountId: 'pf', aAccountId: 'ac' })
-        );
-        await waitFor(() => expect(screen.queryByLabelText('Importo')).toBeNull());
-      });
-
-      it('Rinuncia al credito chiede conferma e registra un rimborso a proprio favore', async () => {
-        monta();
-        fireEvent.click(screen.getByRole('button', { name: 'Rinuncia' }));
-        expect(screen.getByText(/Chiudi il credito di 45 €.*Puoi annullarla dai movimenti della casa/)).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Chiudi il credito' }));
-        await waitFor(() =>
-          expect(recordTransfer).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({
-              causale: 'rimborso',
-              beneficiarioUserId: 'u1',
-              soloRegistrazione: true,
-              importo: 45,
-            })
-          )
-        );
-      });
-    });
   });
 });
