@@ -7,6 +7,16 @@ import type { Account, Category } from '@/lib/types';
 import { HomeDashboard } from '../HomeDashboard';
 import { InPari } from '../in-pari/InPari';
 import { ApriFoglio } from './ApriFoglio';
+import { pianoInVigore, pianoDelMese } from '@/lib/calculations/casa/versamenti';
+import { statoVociDaParte } from '@/lib/calculations/casa/fondi';
+import { casaHomeDati } from '@/lib/calculations/supporto/casaHome';
+import { chiGestisce } from '@/lib/calculations/supporto/gestore';
+import { CasaHome } from '../casa/CasaHome';
+import { VistaSemplice } from '../casa/VistaSemplice';
+import { CasaDettagli } from '../casa/dettagli/CasaDettagli';
+import { finanzeCasa } from '../casa/finanzeCasa';
+import { CheckinMensile } from '../casa/controllo/CheckinMensile';
+import { checkinProva, datiCasaProva } from './casaProva';
 
 // Solo in sviluppo: Home e /in-pari con dati di prova, senza login né Supabase,
 // per poterle fotografare. Fuori dallo sviluppo la pagina non esiste (404).
@@ -103,6 +113,72 @@ export default async function AnteprimaPage({
           consiglio={consiglio}
           oggi={oggi}
         />
+      </>
+    );
+  }
+
+  if (scelta === 'casa' || scelta === 'casa-semplice' || scelta === 'casa-dettagli') {
+    const dati = datiCasaProva(oggi, scelta === 'casa-semplice' ? 'altro' : 'gestore');
+    const me = dati.casa.me.userId;
+    const mese = `${oggi.slice(0, 7)}-01`;
+    const pianoOra = pianoInVigore(dati.piani, mese);
+    const libretto = casaHomeDati(dati, me, oggi);
+    const mesiArretrati = (dati.righe[me] ?? []).filter((r) => r.mancano > 0).map((r) => r.mese);
+    if (scelta === 'casa-dettagli') {
+      return (
+        <>
+          <Banner />
+          <CasaDettagli
+            casa={dati.casa}
+            piano={pianoDelMese(dati.piani, mese)}
+            meseCorrente={mese}
+            finanze={finanzeCasa(dati, [], mese)}
+            origin="http://localhost:3000"
+            mostraTricount
+            gestisce={chiGestisce(dati.casa.household, dati.casa.members) === me}
+          />
+        </>
+      );
+    }
+    if (scelta === 'casa-semplice') {
+      return (
+        <>
+          <Banner />
+          <VistaSemplice
+            casa={dati.casa}
+            vista={libretto.vistaSemplice}
+            aggiunta={dati.aggiunta}
+            contiPersonali={[]}
+            debiti={dati.debiti}
+            mesiArretrati={mesiArretrati}
+            oggi={oggi}
+          />
+        </>
+      );
+    }
+    return (
+      <>
+        <Banner />
+        <CasaHome
+          casa={dati.casa}
+          libretto={libretto}
+          spiegazione={dati.disponibile.spiegazione}
+          vociDaParte={pianoOra ? statoVociDaParte(pianoOra.items, dati.obiettiviConAccantonato).filter((v) => v.stato === 'da_mettere') : []}
+          aggiunta={dati.aggiunta}
+          contiPersonali={[]}
+          debiti={dati.debiti}
+          mesiArretrati={mesiArretrati}
+          oggi={oggi}
+        />
+      </>
+    );
+  }
+
+  if (scelta === 'checkin') {
+    return (
+      <>
+        <Banner />
+        <CheckinMensile dati={checkinProva(oggi)} />
       </>
     );
   }

@@ -32,4 +32,16 @@ describe('/anteprima', () => {
     expect(notFound).not.toHaveBeenCalled();
     expect(el).toBeTruthy();
   });
+
+  it.each(['casa', 'casa-semplice', 'casa-dettagli', 'checkin'])('in sviluppo la vista %s si costruisce', async (vista) => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const el = await AnteprimaPage({ searchParams: Promise.resolve({ vista }) });
+    expect(notFound).not.toHaveBeenCalled();
+    expect(el).toBeTruthy();
+  });
+
+  it.each(['casa', 'casa-semplice', 'casa-dettagli', 'checkin'])('in produzione la vista %s dà 404', async (vista) => {
+    vi.stubEnv('NODE_ENV', 'production');
+    await expect(AnteprimaPage({ searchParams: Promise.resolve({ vista }) })).rejects.toThrow('NEXT_NOT_FOUND');
+  });
 });
