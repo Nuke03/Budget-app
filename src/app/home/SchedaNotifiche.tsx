@@ -76,7 +76,7 @@ export function SchedaNotifiche({
 
   const occupata = stato === 'in_corso';
   return (
-    <section className="rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
+    <section className="rounded-[var(--radius-md)] border border-rule bg-surface p-4">
       {ambiente === 'ios_da_installare' ? (
         <IstruzioniInstallazione />
       ) : stato === 'attive' ? (

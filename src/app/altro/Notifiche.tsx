@@ -21,7 +21,7 @@ export function Notifiche({
   return (
     <section id="notifiche" className="mt-8 scroll-mt-4">
       <h2 className="font-serif text-lg font-semibold text-foreground">Promemoria</h2>
-      <div className="mt-3 rounded-[var(--radius-lg)] border border-rule bg-page p-4 shadow-[var(--shadow-card)]">
+      <div className="mt-3 rounded-[var(--radius-lg)] border border-rule bg-page p-4">
         {attive ? (
           <p role="status" className="text-[15px]">
             Promemoria attivi. Ti avviso se resti indietro con le spese, al massimo una volta ogni tre giorni e mai di

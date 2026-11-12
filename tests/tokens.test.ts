@@ -40,7 +40,7 @@ function contrasto(a: string, b: string): number {
 
 type Coppia = [string, string] | [string, string, number];
 const CHIARO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['muted','background'],['brand-foreground','brand'],['brand','surface'],['stamp','surface',3],['on-cat','cat-sky'],['cover-foreground','cover']];
-const SCURO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['brand-dark','surface'],['stamp','surface',3],['brand-foreground','brand'],['on-cat','cat-sky'],['brand','surface',3],['brand','background',3],['brand','surface-muted',3],['cover-foreground','cover']];
+const SCURO: Coppia[] = [['foreground','background'],['foreground','surface'],['muted','surface'],['brand-dark','surface'],['stamp','surface',3],['brand-foreground','brand'],['on-cat','cat-sky'],['brand','surface',3],['brand','background',3],['brand','surface-muted',3],['cover-foreground','cover'],['danger','surface'],['danger','background'],['danger','danger-tint']];
 
 describe('contrasto dei token', () => {
   it.each(CHIARO)('chiaro %s su %s', (fg, bg, min = 4.5) => {
