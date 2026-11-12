@@ -1,26 +1,8 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { MASSIMO_PROMEMORIA, type AzionePromemoria, type Promemoria } from '@/lib/calculations/casa/promemoria';
-
-const chiave = (id: string, oggi: string): string => `promemoria:${id}:${oggi}`;
-
-function letto(id: string, oggi: string): boolean {
-  try {
-    return window.localStorage.getItem(chiave(id, oggi)) !== null;
-  } catch {
-    return false;
-  }
-}
-
-function scrivi(id: string, oggi: string): void {
-  try {
-    window.localStorage.setItem(chiave(id, oggi), '1');
-  } catch {
-    // Senza memoria il nascondimento vale solo per la sessione.
-  }
-}
+import { usePromemoriaRimandati } from './rimandaPromemoria';
 
 // I promemoria della casa: pochi, neutri, sempre rimandabili con "Più tardi" (per la giornata).
 // compatta: una sola riga, il primo promemoria, che porta a /casa (al controllo o al check-in se è quello il promemoria).
@@ -35,14 +17,7 @@ export function StrisciaPromemoria({
   onAzione?: (azione: AzionePromemoria) => void;
   compatta?: boolean;
 }) {
-  const [daOra, setDaOra] = useState<Set<string>>(new Set());
-  // La memoria si legge solo nel browser: sul server (e nel primo render) non c'è, così l'HTML coincide.
-  const memoria = useSyncExternalStore(
-    () => () => {},
-    () => promemoria.filter((p) => letto(p.id, oggi)).map((p) => p.id).join('|'),
-    () => ''
-  );
-  const nascosti = new Set([...daOra, ...(memoria ? memoria.split('|') : [])]);
+  const { rimandati: nascosti, rimanda } = usePromemoriaRimandati(promemoria.map((p) => p.id), oggi);
 
   const visibili = promemoria.filter((p) => !nascosti.has(p.id)).slice(0, MASSIMO_PROMEMORIA);
   if (visibili.length === 0) return null;
@@ -57,11 +32,6 @@ export function StrisciaPromemoria({
       </Link>
     );
   }
-
-  const piuTardi = (id: string) => {
-    scrivi(id, oggi);
-    setDaOra((prima) => new Set(prima).add(id));
-  };
 
   return (
     <section aria-label="Promemoria" className="flex flex-col gap-2">
@@ -85,7 +55,7 @@ export function StrisciaPromemoria({
                 {p.azione.etichetta}
               </button>
             ) : null}
-            <button type="button" onClick={() => piuTardi(p.id)} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2">
+            <button type="button" onClick={() => rimanda(p.id)} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2">
               Più tardi
             </button>
           </div>

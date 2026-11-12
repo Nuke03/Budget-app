@@ -50,7 +50,7 @@ const base: CasaHomeDati = {
   disponibile: 870,
   spesoMese: 320.5,
   previstoMese: 1200,
-  daFare: null,
+  daFare: [],
   ultime: [
     { id: 't1', data: '2026-11-05', descrizione: 'Luce', importo: 64.2, colore: '#0f9d6b', chi: 'Anna' },
     { id: 't2', data: '2026-11-03', descrizione: 'Spesa', importo: 30, colore: null, chi: 'tu' },
@@ -119,15 +119,17 @@ describe('CasaHome del libretto', () => {
   describe('Da fare', () => {
     const daParte: CasaHomeDati = {
       ...base,
-      daFare: {
-        tipo: 'da_parte',
-        testo: 'Metti da parte 150 € per TARI e Acqua',
-        importo: 150,
-        voci: [
-          { nome: 'TARI', importo: 100 },
-          { nome: 'Acqua', importo: 50 },
-        ],
-      },
+      daFare: [
+        {
+          tipo: 'da_parte',
+          testo: 'Metti da parte 150 € per TARI e Acqua',
+          importo: 150,
+          voci: [
+            { nome: 'TARI', importo: 100 },
+            { nome: 'Acqua', importo: 50 },
+          ],
+        },
+      ],
     };
     const voci = [voce('i1', 'TARI', 100), voce('i2', 'Acqua', 50)];
 
@@ -156,7 +158,7 @@ describe('CasaHome del libretto', () => {
     it('promemoria: tutta la card è un link', () => {
       monta({
         ...base,
-        daFare: { tipo: 'promemoria', testo: 'Il check-in di ottobre è pronto.', href: '/casa/controllo' },
+        daFare: [{ tipo: 'promemoria', id: 'checkin', testo: 'Il check-in di ottobre è pronto.', href: '/casa/controllo' }],
       });
       const link = screen.getByRole('link', { name: /Il check-in di ottobre è pronto/ });
       expect(link).toHaveAttribute('href', '/casa/controllo');
@@ -167,12 +169,15 @@ describe('CasaHome del libretto', () => {
       monta(
         {
           ...base,
-          daFare: {
-            tipo: 'promemoria',
-            testo: 'Il tuo versamento di 690 € è da fare entro il 5.',
-            href: '/casa',
-            azione: { tipo: 'versamento', etichetta: 'Registra', importo: 690 },
-          },
+          daFare: [
+            {
+              tipo: 'promemoria',
+              id: 'versamento',
+              testo: 'Il tuo versamento di 690 € è da fare entro il 5.',
+              href: '/casa',
+              azione: { tipo: 'versamento', etichetta: 'Registra', importo: 690 },
+            },
+          ],
         },
         { contiPersonali: [] }
       );
@@ -183,12 +188,39 @@ describe('CasaHome del libretto', () => {
     });
 
     it('un promemoria senza pagina propria porta ai Dettagli, dove si registra', () => {
-      monta({ ...base, daFare: { tipo: 'promemoria', testo: 'Il tuo versamento di 690 € è da fare entro il 5.', href: '/casa' } });
+      monta({ ...base, daFare: [{ tipo: 'promemoria', id: 'versamento', testo: 'Il tuo versamento di 690 € è da fare entro il 5.', href: '/casa' }] });
       expect(screen.getByRole('link', { name: /versamento di 690/ })).toHaveAttribute('href', '/casa/dettagli');
     });
 
+    it('Più tardi nasconde il promemoria per oggi e passa al prossimo candidato', () => {
+      window.localStorage.clear();
+      monta(
+        {
+          ...base,
+          daFare: [
+            { tipo: 'promemoria', id: 'checkin', testo: 'Il check-in di ottobre è pronto.', href: '/casa/controllo' },
+            daParte.daFare[0],
+          ],
+        },
+        { vociDaParte: voci }
+      );
+      expect(screen.getByText(/Il check-in di ottobre è pronto/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Più tardi' }));
+      expect(screen.queryByText(/Il check-in di ottobre è pronto/)).not.toBeInTheDocument();
+      expect(screen.getByText('Metti da parte 150 € per TARI e Acqua')).toBeInTheDocument();
+      expect(window.localStorage.getItem('promemoria:checkin:2026-11-12')).not.toBeNull();
+      window.localStorage.clear();
+    });
+
+    it('un promemoria già rimandato oggi non compare, e se è l unico non c è la card', () => {
+      window.localStorage.setItem('promemoria:checkin:2026-11-12', '1');
+      monta({ ...base, daFare: [{ tipo: 'promemoria', id: 'checkin', testo: 'Il check-in di ottobre è pronto.', href: '/casa/controllo' }] });
+      expect(screen.queryByRole('heading', { name: 'Da fare' })).not.toBeInTheDocument();
+      window.localStorage.clear();
+    });
+
     it('quota: tutta la card è un link alla quota', () => {
-      monta({ ...base, daFare: { tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' } });
+      monta({ ...base, daFare: [{ tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' }] });
       expect(screen.getByRole('link', { name: /Calcolate la quota/ })).toHaveAttribute('href', '/casa/quota');
     });
   });

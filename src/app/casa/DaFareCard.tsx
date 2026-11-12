@@ -6,13 +6,15 @@ import type { DaFareCasa } from '@/lib/calculations/supporto/casaHome';
 import { formatEuro } from '@/lib/format';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import { azioneDaPromemoria, useCasaAzioni } from './CasaAzioni';
+import { usePromemoriaRimandati } from './rimandaPromemoria';
 import { useMettiDaParte } from './useMettiDaParte';
 
 const CARD = 'rounded-[var(--radius-md)] border border-rule bg-surface-muted p-4';
 
-// "Da fare": una sola cosa alla volta. L'accantonamento si fa qui; il resto apre la sua pagina.
+// "Da fare": una sola cosa alla volta, la prima dei candidati non rimandata con "Più tardi".
+// L'accantonamento si fa qui; il resto apre la sua pagina.
 export function DaFareCard({
-  daFare,
+  daFare: candidati,
   householdId,
   oggi,
   voci,
@@ -20,7 +22,7 @@ export function DaFareCard({
   debiti = [],
   nomi = {},
 }: {
-  daFare: DaFareCasa;
+  daFare: DaFareCasa[];
   householdId: string;
   oggi: string;
   voci: StatoVoceDaParte[];
@@ -30,6 +32,22 @@ export function DaFareCard({
 }) {
   const { metti, inCorso, errore, fatte } = useMettiDaParte({ householdId, oggi });
   const { apri } = useCasaAzioni();
+  const { rimandati, rimanda } = usePromemoriaRimandati(
+    candidati.flatMap((d) => (d.tipo === 'promemoria' ? [d.id] : [])),
+    oggi
+  );
+  const daFare = candidati.find((d) => d.tipo !== 'promemoria' || !rimandati.has(d.id));
+  if (!daFare) return null;
+  const piuTardi =
+    daFare.tipo === 'promemoria' ? (
+      <button
+        type="button"
+        onClick={() => rimanda(daFare.id)}
+        className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-ink-2"
+      >
+        Più tardi
+      </button>
+    ) : null;
 
   if (daFare.tipo !== 'da_parte') {
     // Versamento, rimborso e restituzione si registrano subito, nel foglio, senza cambiare pagina.
@@ -51,6 +69,7 @@ export function DaFareCard({
               ›
             </span>
           </button>
+          {piuTardi}
         </section>
       );
     }
@@ -67,6 +86,7 @@ export function DaFareCard({
             ›
           </span>
         </Link>
+        {piuTardi}
       </section>
     );
   }

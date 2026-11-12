@@ -1,13 +1,14 @@
 import type { CasaData } from '@/lib/loadCasaData';
 import { formatNumero } from '@/lib/format';
 import { riferimentoControllo } from '../casa/controlloSaldo';
-import { statoVociDaParte } from '../casa/fondi';
+import { speseMensiliDelMese } from '../casa/checkin';
+import { anteprimaDaParte, statoVociDaParte, ultimaScadenza } from '../casa/fondi';
 import { computeReminders, statoPromemoria, type AzionePromemoria } from '../casa/promemoria';
 import { pianoDelMese, pianoInVigore } from '../casa/versamenti';
 import { chiGestisce } from './gestore';
 
 export type DaFareCasa =
-  | { tipo: 'promemoria'; testo: string; href: string; azione?: AzionePromemoria }
+  | { tipo: 'promemoria'; id: string; testo: string; href: string; azione?: AzionePromemoria }
   | { tipo: 'da_parte'; testo: string; importo: number; voci: { nome: string; importo: number }[] }
   | { tipo: 'quota'; testo: string; href: '/casa/quota' };
 
@@ -19,12 +20,23 @@ export type StatoPari =
 export interface CasaHomeDati {
   gestisce: boolean;
   disponibile: number;
-  // Spese di casa del mese corrente e voci mensili del piano in vigore (null senza piano).
+  // Spese e voci mensili del mese corrente, calcolate come nel check-in (null il previsto senza piano).
   spesoMese: number;
   previstoMese: number | null;
-  daFare: DaFareCasa | null;
+  // I candidati della card Da fare, in ordine: chi guarda sceglie il primo non rimandato.
+  daFare: DaFareCasa[];
   ultime: { id: string; data: string; descrizione: string; importo: number; colore: string | null; chi: string }[];
-  vistaSemplice: { quota: number | null; entroGiorno: number | null; versato: number; stato: StatoPari; creditoVersoCasa: number };
+  vistaSemplice: {
+    quota: number | null;
+    // Il mese (YYYY-MM-01) da cui parte la quota, quando il piano o la tua quota non sono ancora partiti.
+    quotaDal?: string | null;
+    entroGiorno: number | null;
+    versato: number;
+    stato: StatoPari;
+    creditoVersoCasa: number;
+    // Il primo promemoria, se si risolve con un versamento o un rimborso: si fa anche da qui.
+    azione?: Extract<DaFareCasa, { tipo: 'promemoria' }> | null;
+  };
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -83,31 +95,40 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
     ? statoVociDaParte(pianoOra.items, dati.obiettiviConAccantonato).filter((v) => v.stato === 'da_mettere')
     : [];
 
-  let daFare: DaFareCasa | null = null;
-  if (promemoria[0]) {
-    const az = promemoria[0].azione;
-    daFare = {
-      tipo: 'promemoria',
-      testo: promemoria[0].testo,
-      href: az?.href ?? '/casa',
-      ...(az && !az.href ? { azione: az } : {}),
-    };
-  } else if (daMettere.length > 0) {
-    const voci = daMettere.map((v) => ({ nome: v.item.nome, importo: v.item.importoMensile }));
+  const daFare: DaFareCasa[] = promemoria.map((p) => ({
+    tipo: 'promemoria',
+    id: p.id,
+    testo: p.testo,
+    href: p.azione?.href ?? '/casa',
+    ...(p.azione && !p.azione.href ? { azione: p.azione } : {}),
+  }));
+  if (daMettere.length > 0) {
+    // Stessa cifra di Da parte: la quota mensile dalla prima scadenza proposta.
+    const voci = daMettere.map((v) => ({
+      nome: v.item.nome,
+      importo: anteprimaDaParte({
+        importoRicorrenza: v.item.importoRicorrenza,
+        frequenzaMesi: v.item.frequenzaMesi,
+        scadenza: ultimaScadenza(v.item, oggi),
+        oggi,
+      }).quotaMensile,
+    }));
     const importo = arrotonda(voci.reduce((s, v) => s + v.importo, 0));
-    daFare = {
+    daFare.push({
       tipo: 'da_parte',
       testo: `Metti da parte ${formatNumero(importo)} € per ${elenco(voci.map((v) => v.nome))}`,
       importo,
       voci,
-    };
+    });
   } else if (!pianoOra) {
-    daFare = { tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' };
+    daFare.push({ tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' });
   }
 
   const spese = dati.transazioni.filter((t) => t.tipo === 'expense');
-  const spesoMese = arrotonda(spese.filter((t) => t.data.slice(0, 7) === mese.slice(0, 7)).reduce((s, t) => s + t.importo, 0));
-  const previstoMese = pianoOra ? arrotonda(pianoOra.items.reduce((s, i) => s + i.importoMensile, 0)) : null;
+  // Come nel check-in: solo le voci mensili del piano, senza i fondi delle bollette e delle una tantum.
+  const mensili = speseMensiliDelMese(pianoOra, dati.transazioni, mese);
+  const spesoMese = mensili.spesoMensili;
+  const previstoMese = pianoOra ? mensili.previstoMensili : null;
 
   const coloreDi = new Map(dati.aggiunta.categorie.map((c) => [c.id, c.colore]));
   const ultime = [...spese]
@@ -124,6 +145,9 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
     }));
 
   const rigaMese = righeMie.find((r) => r.mese === mese) ?? null;
+  const pianoFuturo = dati.piani.find((p) => p.plan.validoDal > mese);
+  const primo = promemoria[0]?.azione;
+  const azione = daFare[0]?.tipo === 'promemoria' && daFare[0].azione && (primo?.tipo === 'versamento' || primo?.tipo === 'rimborso') ? daFare[0] : null;
 
   return {
     gestisce: chiGestisce(dati.casa.household, dati.casa.members) === meUserId,
@@ -134,10 +158,12 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
     ultime,
     vistaSemplice: {
       quota: rigaMese ? rigaMese.atteso : null,
+      quotaDal: !rigaMese && pianoFuturo ? `${pianoFuturo.plan.validoDal.slice(0, 7)}-01` : null,
       entroGiorno: pianoOra?.plan.giornoVersamento ?? null,
       versato: rigaMese ? rigaMese.versato : 0,
       stato: statoCoppia(dati, meUserId, nomi),
       creditoVersoCasa: arrotonda(dati.crediti[meUserId] ?? 0),
+      azione,
     },
   };
 }

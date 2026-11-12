@@ -99,7 +99,7 @@ export function CasaHome({
           {spiegazione ? <ComeSiCalcola spiegazione={spiegazione} className="mt-2" /> : null}
         </section>
 
-        {libretto.daFare ? (
+        {libretto.daFare.length > 0 ? (
           <DaFareCard daFare={libretto.daFare} householdId={casa.household.id} oggi={oggi} voci={vociDaParte}
             meUserId={casa.me.userId}
             debiti={debiti}

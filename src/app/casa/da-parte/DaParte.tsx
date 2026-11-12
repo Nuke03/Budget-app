@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   anteprimaDaParte,
   scadenzeProposte,
+  ultimaScadenza,
   type ObiettivoCasa,
   type StatoVoceDaParte,
 } from '@/lib/calculations/casa/fondi';
@@ -19,7 +20,7 @@ import { CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../Ca
 import { ComeSiCalcola } from '../ComeSiCalcola';
 import { CostiIngresso } from './CostiIngresso';
 import { NuovaCosa } from './NuovaCosa';
-import { ERRORE_DA_PARTE as ERRORE, ultimaScadenza, useMettiDaParte } from '../useMettiDaParte';
+import { ERRORE_DA_PARTE as ERRORE, useMettiDaParte } from '../useMettiDaParte';
 
 function testoFrequenza(mesi: number): string {
   return mesi === 12 ? "l'anno" : `ogni ${mesi} mesi`;

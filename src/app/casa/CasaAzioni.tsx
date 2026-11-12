@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { formatNumero } from '@/lib/format';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
-import type { AzionePromemoria, Promemoria } from '@/lib/calculations/casa/promemoria';
+import type { AzionePromemoria } from '@/lib/calculations/casa/promemoria';
 import type { Account } from '@/lib/types';
-import { StrisciaPromemoria } from './StrisciaPromemoria';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { Annulla, ErroreMovimento, Registra } from './CampiMovimento';
 import { RestituisciForm } from './RestituisciForm';
@@ -48,33 +47,6 @@ export function azioneDaPromemoria(
   }
   const debito = debiti.find((d) => d.debitoreId === meUserId && d.creditoreId === altro);
   return debito ? { tipo: 'restituisci', debito, nomeCreditore: nome } : null;
-}
-
-// La striscia dei promemoria dentro /casa: le azioni aprono gli stessi moduli dei pannelli.
-export function StrisciaPromemoriaCasa({
-  promemoria,
-  oggi,
-  meUserId,
-  debiti,
-  nomi,
-}: {
-  promemoria: Promemoria[];
-  oggi: string;
-  meUserId: string;
-  debiti: DebitoMembro[];
-  nomi: Record<string, string>;
-}) {
-  const { apri } = useCasaAzioni();
-  return (
-    <StrisciaPromemoria
-      promemoria={promemoria}
-      oggi={oggi}
-      onAzione={(az) => {
-        const azione = azioneDaPromemoria(az, meUserId, debiti, nomi);
-        if (azione) apri(azione);
-      }}
-    />
-  );
 }
 
 function Rinuncia({

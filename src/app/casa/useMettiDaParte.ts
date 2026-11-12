@@ -4,16 +4,10 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { creaFondoBolletta } from '@/lib/data/fondiCasa';
-import { scadenzeProposte, type StatoVoceDaParte } from '@/lib/calculations/casa/fondi';
+import { ultimaScadenza, type StatoVoceDaParte } from '@/lib/calculations/casa/fondi';
 import type { PlanItem } from '@/lib/types';
 
 export const ERRORE_DA_PARTE = 'Salvataggio fallito, controlla la connessione e riprova.';
-
-// La prossima rata che si propone di default: l'ultima scadenza utile.
-export function ultimaScadenza(item: PlanItem, oggi: string): string {
-  const date = scadenzeProposte({ oggi, frequenzaMesi: item.frequenzaMesi });
-  return date[date.length - 1];
-}
 
 // L'azione "Metti da parte": crea il fondo di ogni voce, una alla volta, senza rifare quelle già messe.
 // La usano Da parte e la card "Da fare" della Casa.

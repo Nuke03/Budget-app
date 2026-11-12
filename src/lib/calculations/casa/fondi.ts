@@ -32,6 +32,12 @@ function fondoPerCalcolo(
   };
 }
 
+// La prossima rata che si propone di default: l'ultima scadenza utile.
+export function ultimaScadenza(item: PlanItem, oggi: string): string {
+  const date = scadenzeProposte({ oggi, frequenzaMesi: item.frequenzaMesi });
+  return date[date.length - 1];
+}
+
 // Cosa si avrà messo da parte alla prima scadenza, partendo da oggi (stesso motore degli obiettivi).
 export function anteprimaDaParte(input: {
   importoRicorrenza: number;

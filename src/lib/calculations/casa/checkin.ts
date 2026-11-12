@@ -32,6 +32,33 @@ function esitoDi(avanzo: number): EsitoCheckin {
   return avanzo > 0 ? 'avanzo' : 'ammanco';
 }
 
+// Il previsto e lo speso "mensili" di un mese, gli stessi per il check-in e per l'intestazione della Casa.
+// Le spese collegate a un obiettivo contano solo se è quello di una voce mensile: i fondi
+// di una tantum (deposito, registro, arredo...) e quelli delle bollette non mensili sono già messi da parte.
+// Le spese di riconciliazione sono a parte (non registrate).
+export function speseMensiliDelMese(
+  piano: PlanBundle | null,
+  spese: Transaction[],
+  mese: string
+): { previstoMensili: number; spesoMensili: number; nonRegistrate: number } {
+  const voci = piano?.items ?? [];
+  const previstoMensili = arrotonda(voci.filter((v) => v.frequenzaMesi === 1).reduce((s, v) => s + v.importoMensile, 0));
+  const obiettiviMensili = new Set(voci.filter((v) => v.frequenzaMesi === 1 && v.goalId).map((v) => v.goalId));
+
+  let speso = 0;
+  let nonRegistrate = 0;
+  for (const s of spese) {
+    if (s.tipo !== 'expense' || s.data.slice(0, 7) !== mese.slice(0, 7)) continue;
+    if (s.origine === 'riconciliazione') {
+      nonRegistrate += s.importo;
+      continue;
+    }
+    if (s.goalId && !obiettiviMensili.has(s.goalId)) continue;
+    speso += s.importo;
+  }
+  return { previstoMensili, spesoMensili: arrotonda(speso), nonRegistrate: arrotonda(nonRegistrate) };
+}
+
 // avanzo = (versato - atteso) + (previsto - speso - non registrate): chi ha versato meno del dovuto
 // pesa, le spese mensili sotto il previsto avanzano, quelle non registrate si tolgono.
 export function computeCheckin(input: {
@@ -54,25 +81,7 @@ export function computeCheckin(input: {
   attesoTotale = arrotonda(attesoTotale);
   versatoTotale = arrotonda(versatoTotale);
 
-  const voci = piano?.items ?? [];
-  const previstoMensili = arrotonda(voci.filter((v) => v.frequenzaMesi === 1).reduce((s, v) => s + v.importoMensile, 0));
-  // Le spese collegate a un obiettivo contano qui solo se è quello di una voce mensile: i fondi
-  // di una tantum (deposito, registro, arredo...) e quelli delle bollette non mensili sono già messi da parte.
-  const obiettiviMensili = new Set(voci.filter((v) => v.frequenzaMesi === 1 && v.goalId).map((v) => v.goalId));
-
-  let speso = 0;
-  let nonRegistrate = 0;
-  for (const s of spese) {
-    if (s.tipo !== 'expense' || s.data.slice(0, 7) !== mese.slice(0, 7)) continue;
-    if (s.origine === 'riconciliazione') {
-      nonRegistrate += s.importo;
-      continue;
-    }
-    if (s.goalId && !obiettiviMensili.has(s.goalId)) continue;
-    speso += s.importo;
-  }
-  const spesoMensili = arrotonda(speso);
-  nonRegistrate = arrotonda(nonRegistrate);
+  const { previstoMensili, spesoMensili, nonRegistrate } = speseMensiliDelMese(piano, spese, mese);
 
   const avanzo = arrotonda(versatoTotale - attesoTotale + previstoMensili - spesoMensili - nonRegistrate);
   const esito = esitoDi(avanzo);

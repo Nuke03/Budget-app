@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { casaHomeDati } from '@/lib/calculations/supporto/casaHome';
+import { computeCheckin } from '@/lib/calculations/casa/checkin';
+import { anteprimaDaParte, ultimaScadenza } from '@/lib/calculations/casa/fondi';
+import { formatNumero } from '@/lib/format';
 import type { CasaData } from '@/lib/loadCasaData';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { HouseholdMember, PlanItem, Transaction } from '@/lib/types';
@@ -63,7 +66,7 @@ describe('casaHomeDati', () => {
       crediti: { giulia: 50 },
       piani: [piano([voce({ nome: 'Bolletta', frequenzaMesi: 2, importoMensile: 40 })])],
     });
-    expect(casaHomeDati(d, 'fabio', OGGI).daFare?.tipo).toBe('promemoria');
+    expect(casaHomeDati(d, 'fabio', OGGI).daFare[0].tipo).toBe('promemoria');
   });
 
   it('senza promemoria vale l accantonamento con le voci', () => {
@@ -71,25 +74,50 @@ describe('casaHomeDati', () => {
       piani: [piano([voce({ nome: 'Luce', frequenzaMesi: 2, importoMensile: 40 }), voce({ id: 'j', nome: 'Gas', frequenzaMesi: 3, importoMensile: 20 })])],
     });
     const r = casaHomeDati(d, 'fabio', OGGI).daFare;
-    expect(r).toEqual({
-      tipo: 'da_parte',
-      testo: 'Metti da parte 60 € per Luce e Gas',
-      importo: 60,
-      voci: [{ nome: 'Luce', importo: 40 }, { nome: 'Gas', importo: 20 }],
+    // Stessa cifra di Da parte: quota mensile dalla prima scadenza proposta.
+    const quota = (item: PlanItem) =>
+      anteprimaDaParte({ importoRicorrenza: item.importoRicorrenza, frequenzaMesi: item.frequenzaMesi, scadenza: ultimaScadenza(item, OGGI), oggi: OGGI }).quotaMensile;
+    const luce = quota(voce({ frequenzaMesi: 2, importoRicorrenza: 100 }));
+    const gas = quota(voce({ frequenzaMesi: 3, importoRicorrenza: 100 }));
+    const totale = Math.round((luce + gas) * 100) / 100;
+    expect(r).toEqual([
+      {
+        tipo: 'da_parte',
+        testo: `Metti da parte ${formatNumero(totale)} € per Luce e Gas`,
+        importo: totale,
+        voci: [{ nome: 'Luce', importo: luce }, { nome: 'Gas', importo: gas }],
+      },
+    ]);
+  });
+
+  it('la cifra di Da fare è la quota di Da parte, non l importo mensile del piano', () => {
+    const item = voce({ nome: 'Luce', frequenzaMesi: 6, importoRicorrenza: 600, importoMensile: 80 });
+    const r = casaHomeDati(dati({ piani: [piano([item])] }), 'fabio', OGGI).daFare;
+    const attesa = anteprimaDaParte({ importoRicorrenza: 600, frequenzaMesi: 6, scadenza: ultimaScadenza(item, OGGI), oggi: OGGI }).quotaMensile;
+    expect(attesa).not.toBe(80);
+    expect(r[0]).toMatchObject({ tipo: 'da_parte', importo: attesa, voci: [{ nome: 'Luce', importo: attesa }] });
+  });
+
+  it('i candidati sono in ordine: promemoria, poi da parte', () => {
+    const d = dati({
+      crediti: { giulia: 50 },
+      piani: [piano([voce({ nome: 'Bolletta', frequenzaMesi: 2, importoMensile: 40 })])],
     });
+    expect(casaHomeDati(d, 'fabio', OGGI).daFare.map((x) => x.tipo)).toEqual(['promemoria', 'da_parte']);
+    expect(casaHomeDati(d, 'fabio', OGGI).daFare[0]).toHaveProperty('id');
   });
 
   it('senza piano vale quota', () => {
     const r = casaHomeDati(dati({ piani: [], righe: {} }), 'fabio', OGGI);
-    expect(r.daFare).toEqual({ tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' });
+    expect(r.daFare).toEqual([{ tipo: 'quota', testo: 'Calcolate la quota: servono 3 minuti.', href: '/casa/quota' }]);
     expect(r.previstoMese).toBeNull();
     expect(r.vistaSemplice.quota).toBeNull();
     expect(r.vistaSemplice.entroGiorno).toBeNull();
     expect(r.vistaSemplice.versato).toBe(0);
   });
 
-  it('niente da fare: null', () => {
-    expect(casaHomeDati(dati(), 'fabio', OGGI).daFare).toBeNull();
+  it('niente da fare: lista vuota', () => {
+    expect(casaHomeDati(dati(), 'fabio', OGGI).daFare).toEqual([]);
   });
 
   it('ultime: tu, altro, casa, anticipo in contanti, colore, 3 più recenti', () => {
@@ -119,6 +147,46 @@ describe('casaHomeDati', () => {
     expect(r.spesoMese).toBe(30);
     expect(r.previstoMese).toBe(125.5);
     expect(r.disponibile).toBe(500);
+  });
+
+  it('l intestazione conta come il check-in: solo voci mensili, senza fondi, una tantum e riconciliazioni', () => {
+    const items = [
+      voce({ importoMensile: 100, goalId: 'g-affitto' }),
+      voce({ id: 'k', nome: 'Luce', frequenzaMesi: 2, importoMensile: 40, goalId: 'g-luce' }),
+    ];
+    const transazioni = [
+      spesa({ id: 'a', importo: 30 }),
+      spesa({ id: 'b', importo: 20, goalId: 'g-affitto' }),
+      spesa({ id: 'c', importo: 55, goalId: 'g-luce' }),
+      spesa({ id: 'd', importo: 70, goalId: 'g-arredo' }),
+      spesa({ id: 'e', importo: 9, origine: 'riconciliazione' }),
+    ];
+    const d = dati({ transazioni, piani: [piano(items)] });
+    const r = casaHomeDati(d, 'fabio', OGGI);
+    const c = computeCheckin({ mese: '2026-11-01', righePerMembro: {}, piano: piano(items), spese: transazioni, precedente: null });
+    expect(r.spesoMese).toBe(c.spesoMensili);
+    expect(r.previstoMese).toBe(c.previstoMensili);
+    expect(r.spesoMese).toBe(50);
+    expect(r.previstoMese).toBe(100);
+  });
+
+  it('vista semplice: quota non ancora partita, dal mese del piano', () => {
+    const futuro = piano([voce({})]);
+    futuro.plan.validoDal = '2026-12-01';
+    const r = casaHomeDati(dati({ piani: [futuro], righe: {} }), 'fabio', OGGI).vistaSemplice;
+    expect(r.quota).toBeNull();
+    expect(r.quotaDal).toBe('2026-12-01');
+    expect(casaHomeDati(dati({ piani: [], righe: {} }), 'fabio', OGGI).vistaSemplice.quotaDal).toBeNull();
+  });
+
+  it('vista semplice: il primo promemoria di versamento diventa un azione', () => {
+    const versamento = casaHomeDati(
+      dati({ righe: { fabio: [{ mese: '2026-11-01', atteso: 300, versato: 0, mancano: 300 }] } }),
+      'fabio',
+      OGGI
+    );
+    expect(versamento.vistaSemplice.azione).toMatchObject({ tipo: 'promemoria', azione: { tipo: 'versamento' } });
+    expect(casaHomeDati(dati(), 'fabio', OGGI).vistaSemplice.azione ?? null).toBeNull();
   });
 
   it('stato: pari, devi, ti_deve', () => {
