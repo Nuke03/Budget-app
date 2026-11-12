@@ -34,6 +34,22 @@ describe('righeLibretto', () => {
   });
 });
 
+describe('righeLibretto: colore della categoria', () => {
+  const cat = [
+    { id: 'spesa', colore: '#0F9D6B' },
+    { id: 'vuota', colore: null },
+  ];
+  const conCat = (id: string, categoriaId: string | null): Transaction => ({ ...tx(id, '2026-11-05', 'expense', 5), categoriaId });
+
+  it('mette in colore il colore della categoria della riga, null senza categoria o con categoria senza colore', () => {
+    const t = [conCat('a', 'spesa'), conCat('b', null), conCat('c', 'vuota'), conCat('d', 'sparita')];
+    const r = righeLibretto(t, '2026-11-10', 4, cat);
+    expect(Object.fromEntries(r.map((x) => [x.id, x.colore]))).toEqual({
+      a: '#0F9D6B', b: null, c: null, d: null,
+    });
+  });
+});
+
 describe('prossimaCosa', () => {
   const casa = [{ testo: 'Versa la quota', href: '/casa/versa' }, { testo: 'Altro' }];
   it('"in pari" vince', () => {

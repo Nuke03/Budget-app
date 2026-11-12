@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { RigaLibretto } from '@/lib/calculations/supporto/home';
 import { cifra, giornoMese, giornoMeseTimbro } from './formati';
+import { PallinoCategoria } from './PallinoCategoria';
 
 const COLONNE = 'grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-x-2 px-4';
 
@@ -37,9 +38,12 @@ export function Registro({ righe, registratoId }: { righe: RigaLibretto[]; regis
                 className={`${COLONNE} relative min-h-12 border-b border-rule py-3 text-[15px] ${nuova ? 'riga-entra' : ''}`}
               >
                 <span className="num text-[13px] text-ink-2">{giornoMese(r.data)}</span>
-                <span className="min-w-0">
-                  <span className={`block truncate ${nuova ? 'pr-16' : ''}`}>{nomeRiga(r)}</span>
-                  {r.stima ? <span className="block text-[11px] text-ink-2">stima</span> : null}
+                <span className="flex min-w-0 items-center gap-2">
+                  <PallinoCategoria colore={r.colore} />
+                  <span className="min-w-0">
+                    <span className={`block truncate ${nuova ? 'pr-16' : ''}`}>{nomeRiga(r)}</span>
+                    {r.stima ? <span className="block text-[11px] text-ink-2">stima</span> : null}
+                  </span>
                 </span>
                 <span className="num text-right text-foreground">
                   {r.tipo === 'expense' ? '−' : '+'}

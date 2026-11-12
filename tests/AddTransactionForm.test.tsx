@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { AddTransactionForm } from '@/app/add/AddTransactionForm';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
@@ -64,6 +64,15 @@ describe('AddTransactionForm', () => {
     expect(screen.getByLabelText('Descrizione')).toHaveValue('Vecchia spesa');
     expect(screen.getByText('Groceries')).toBeInTheDocument();
     expect(screen.getByText('Conto corrente')).toBeInTheDocument();
+  });
+
+  it('in aggiunta veloce il riepilogo mostra il pallino della categoria scelta', () => {
+    const colorate = [{ id: 'c-spesa', nome: 'Spesa', tipo: 'expense' as const, colore: '#0F9D6B', archiviata: false }];
+    const { container } = render(<AddTransactionForm categories={colorate} accounts={[]} veloce onSubmit={vi.fn()} />);
+    expect(container.querySelector('[data-colore]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Senza categoria' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Categoria' })).getByRole('button', { name: 'Spesa' }));
+    expect(container.querySelector('[data-colore="#0F9D6B"]')).not.toBeNull();
   });
 
   it('in aggiunta veloce con importo vuoto o zero Salva resta disattivo', () => {

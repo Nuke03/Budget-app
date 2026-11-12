@@ -179,7 +179,7 @@ export async function loadHomeData(
     categories,
     goals: goalsWithAccantonato,
     casa,
-    righe: righeLibretto(transazioni, oggi),
+    righe: righeLibretto(transazioni, oggi, 4, categories),
     storico: transazioni.map((t) => ({
       descrizione: t.descrizione,
       categoriaId: t.categoriaId,

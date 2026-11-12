@@ -31,10 +31,10 @@ const categorie: Category[] = [
 
 function righe(oggi: string): RigaLibretto[] {
   return [
-    { id: 'r1', data: oggi, descrizione: 'Caffè', importo: 1.4, tipo: 'expense', stima: false, nelMese: 412.9 },
-    { id: 'r2', data: giorniFa(oggi, 1), descrizione: 'Spesa al supermercato', importo: 38.2, tipo: 'expense', stima: true, nelMese: 411.5 },
-    { id: 'r3', data: giorniFa(oggi, 2), descrizione: 'Stipendio', importo: 1450, tipo: 'income', stima: false, nelMese: 373.3 },
-    { id: 'r4', data: giorniFa(oggi, 3), descrizione: 'Abbonamento treno', importo: 27.5, tipo: 'expense', stima: false, nelMese: 373.3 },
+    { id: 'r1', data: oggi, descrizione: 'Caffè', importo: 1.4, tipo: 'expense', stima: false, nelMese: 412.9, colore: '#F97362' },
+    { id: 'r2', data: giorniFa(oggi, 1), descrizione: 'Spesa al supermercato', importo: 38.2, tipo: 'expense', stima: true, nelMese: 411.5, colore: '#0F9D6B' },
+    { id: 'r3', data: giorniFa(oggi, 2), descrizione: 'Stipendio', importo: 1450, tipo: 'income', stima: false, nelMese: 373.3, colore: '#F5A524' },
+    { id: 'r4', data: giorniFa(oggi, 3), descrizione: 'Abbonamento treno', importo: 27.5, tipo: 'expense', stima: false, nelMese: 373.3, colore: '#3B9AE1' },
   ];
 }
 

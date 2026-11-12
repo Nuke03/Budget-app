@@ -401,9 +401,9 @@ describe('il libretto', () => {
     oggi: '2026-11-11',
   };
   const righe = [
-    { id: 'a', data: '2026-11-11', descrizione: 'Esselunga', importo: 38.2, tipo: 'expense' as const, stima: false, nelMese: 1240.5 },
-    { id: 'b', data: '2026-11-10', descrizione: '', importo: 50, tipo: 'expense' as const, stima: true, nelMese: 1202.3 },
-    { id: 'c', data: '2026-11-08', descrizione: 'Rimborso Fabio', importo: 25, tipo: 'income' as const, stima: false, nelMese: 1152.3 },
+    { id: 'a', data: '2026-11-11', descrizione: 'Esselunga', importo: 38.2, tipo: 'expense' as const, stima: false, nelMese: 1240.5, colore: '#F5A524' },
+    { id: 'b', data: '2026-11-10', descrizione: '', importo: 50, tipo: 'expense' as const, stima: true, nelMese: 1202.3, colore: null },
+    { id: 'c', data: '2026-11-08', descrizione: 'Rimborso Fabio', importo: 25, tipo: 'income' as const, stima: false, nelMese: 1152.3, colore: '#0F9D6B' },
   ];
   const andamento = {
     spesoFinora: 312,
@@ -559,6 +559,14 @@ describe('il libretto', () => {
     render(<HomeDashboard {...base} righe={righe} />);
     expect(screen.queryByText(/REGISTRATO/)).not.toBeInTheDocument();
     expect(window.sessionStorage.getItem('libretto:registrato')).toBeNull();
+  });
+
+  it('ogni riga mostra un pallino col colore della sua categoria; senza colore resta lo spazio ma nessun pallino', () => {
+    const { container } = render(<HomeDashboard {...base} righe={righe} />);
+    const pallini = Array.from(container.querySelectorAll('[data-colore]'));
+    expect(pallini.map((e) => e.getAttribute('data-colore'))).toEqual(['#F5A524', '#0F9D6B']);
+    expect(pallini[0]).toHaveStyle({ backgroundColor: '#F5A524' });
+    expect(pallini[0].className).toMatch(/h-2.5 w-2.5/);
   });
 
   it('nessun verde nei className', () => {

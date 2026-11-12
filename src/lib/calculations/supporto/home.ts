@@ -2,7 +2,7 @@ import { computeReminders, statoPromemoria } from '../casa/promemoria';
 import { riferimentoControllo } from '../casa/controlloSaldo';
 import { nomeMese } from '@/lib/format';
 import type { CasaPerHome } from '@/lib/loadHomeData';
-import type { Transaction } from '@/lib/types';
+import type { Category, Transaction } from '@/lib/types';
 
 export interface RigaLibretto {
   id: string;
@@ -13,6 +13,8 @@ export interface RigaLibretto {
   stima: boolean;
   // Speso cumulato del mese dopo questa riga (solo spese). Non è un saldo.
   nelMese: number;
+  // Colore della categoria della riga; null se la riga non ha categoria o la categoria non ha colore.
+  colore: string | null;
 }
 
 export interface Prossimo {
@@ -25,8 +27,14 @@ const arrotonda = (n: number): number => Math.round(n * 100) / 100;
 
 // Le righe più recenti (data poi createdAt, decrescente) con lo speso cumulato del loro mese.
 // Il cumulato si calcola in ordine di tempo; le entrate ripetono il valore della riga prima.
-export function righeLibretto(transazioni: Transaction[], oggi: string, quante = 4): RigaLibretto[] {
+export function righeLibretto(
+  transazioni: Transaction[],
+  oggi: string,
+  quante = 4,
+  categorie: Pick<Category, 'id' | 'colore'>[] = []
+): RigaLibretto[] {
   void oggi;
+  const coloreDi = new Map(categorie.map((c) => [c.id, c.colore]));
   const cronologico = [...transazioni].sort(
     (a, b) => a.data.localeCompare(b.data) || a.createdAt.localeCompare(b.createdAt)
   );
@@ -49,6 +57,7 @@ export function righeLibretto(transazioni: Transaction[], oggi: string, quante =
       tipo: t.tipo as 'expense' | 'income',
       stima: t.stima,
       nelMese: cumulatoPerId.get(t.id) ?? 0,
+      colore: t.categoriaId ? (coloreDi.get(t.categoriaId) ?? null) : null,
     }));
 }
 
