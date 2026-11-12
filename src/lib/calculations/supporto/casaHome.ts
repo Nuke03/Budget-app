@@ -24,7 +24,7 @@ export interface CasaHomeDati {
   previstoMese: number | null;
   daFare: DaFareCasa | null;
   ultime: { id: string; data: string; descrizione: string; importo: number; colore: string | null; chi: string }[];
-  vistaSemplice: { quota: number | null; entroGiorno: number | null; versato: number; stato: StatoPari };
+  vistaSemplice: { quota: number | null; entroGiorno: number | null; versato: number; stato: StatoPari; creditoVersoCasa: number };
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -34,16 +34,16 @@ function elenco(nomi: string[]): string {
   return nomi.length <= 1 ? (nomi[0] ?? '') : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`;
 }
 
-// Lo stato fra me e l'altro membro. Il netto verso ogni altro membro = debiti diretti (suo verso di me
-// meno mio verso di lui) + differenza dei crediti verso la casa (miei meno suoi). Con più di due membri
-// si sceglie l'altro con il netto più grande in valore assoluto; senza altri membri, pari.
+// Lo stato fra me e l'altro membro, solo dai debiti fra membri (suo verso di me meno mio verso di lui).
+// I crediti verso la casa sono dovuti dalla casa, non dall'altro: restano fuori (vedi creditoVersoCasa).
+// Con più di due membri si sceglie l'altro con il netto più grande in valore assoluto; senza altri, pari.
 function statoCoppia(dati: CasaData, me: string, nomi: Record<string, string>): StatoPari {
   const altri = dati.casa.members.filter((m) => m.attivo && m.userId !== me).map((m) => m.userId);
   let scelto: { id: string; netto: number } | null = null;
   for (const id of altri) {
     const daLui = dati.debiti.filter((d) => d.debitoreId === id && d.creditoreId === me).reduce((s, d) => s + d.importo, 0);
     const aLui = dati.debiti.filter((d) => d.debitoreId === me && d.creditoreId === id).reduce((s, d) => s + d.importo, 0);
-    const netto = arrotonda(daLui - aLui + ((dati.crediti[me] ?? 0) - (dati.crediti[id] ?? 0)));
+    const netto = arrotonda(daLui - aLui);
     if (scelto === null || Math.abs(netto) > Math.abs(scelto.netto)) scelto = { id, netto };
   }
   if (!scelto || Math.abs(scelto.netto) < SOGLIA_PARI) return { tipo: 'pari' };
@@ -131,6 +131,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
       entroGiorno: pianoOra?.plan.giornoVersamento ?? null,
       versato: rigaMese ? rigaMese.versato : 0,
       stato: statoCoppia(dati, meUserId, nomi),
+      creditoVersoCasa: arrotonda(dati.crediti[meUserId] ?? 0),
     },
   };
 }

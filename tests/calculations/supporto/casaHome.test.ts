@@ -131,9 +131,17 @@ describe('casaHomeDati', () => {
       .toEqual({ tipo: 'pari' });
   });
 
-  it('stato: i crediti verso la casa contano', () => {
-    const r = casaHomeDati(dati({ crediti: { fabio: 30 } }), 'fabio', OGGI).vistaSemplice.stato;
-    expect(r).toEqual({ tipo: 'ti_deve', importo: 30, da: 'Giulia' });
+  it('stato: un credito verso la casa da solo non cambia lo stato, va in creditoVersoCasa', () => {
+    const r = casaHomeDati(dati({ crediti: { fabio: 30.004, giulia: 12 } }), 'fabio', OGGI).vistaSemplice;
+    expect(r.stato).toEqual({ tipo: 'pari' });
+    expect(r.creditoVersoCasa).toBe(30);
+    expect(casaHomeDati(dati(), 'fabio', OGGI).vistaSemplice.creditoVersoCasa).toBe(0);
+  });
+
+  it('stato: il debito fra membri conta a prescindere dai crediti verso la casa', () => {
+    const r = casaHomeDati(dati({ crediti: { fabio: 30, giulia: 99 }, debiti: [debito('fabio', 'giulia', 40)] }), 'fabio', OGGI).vistaSemplice;
+    expect(r.stato).toEqual({ tipo: 'devi', importo: 40, a: 'Giulia' });
+    expect(r.creditoVersoCasa).toBe(30);
   });
 
   it('vista semplice: quota, giorno, versato', () => {
