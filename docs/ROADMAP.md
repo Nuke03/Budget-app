@@ -230,13 +230,27 @@ Revisioni fatte: per ogni task, revisione finale di impeccable (verdetto: da pub
 
 Per provare le schermate senza login: `/anteprima?vista=home|foglio|in-pari|vuota`, solo in sviluppo. Va avviata con la configurazione `dev-webpack` di `.claude/launch.json`: con Turbopack in sviluppo `next/font` non si carica. La build di produzione invece funziona.
 
-**Piano B2, da scrivere:**
-- Casa riordinata con "Da fare" e "Dettagli";
-- vista semplice per chi entra ogni tanto;
-- passaggio da Tricount;
+**Piano B2 "Il Libretto per la Casa", fatto (12 novembre 2026).** Piano:
+`docs/superpowers/plans/2026-11-12-libretto-casa.md`. Cosa contiene:
+- pallini colorati delle categorie nel registro e nel foglio di aggiunta;
+- Casa di chi gestisce: disponibile, spese del mese contro il previsto (stesso calcolo del check-in), una sola cosa da fare con "Più tardi", ultime 3 spese, "Dettagli";
+- vista semplice per chi entra ogni tanto: quota e scadenza, siete in pari, la casa ti deve, aggiungi spesa, versamento con un tocco, "Vedi tutto";
+- saldo da Tricount in Impostazioni, con il link da Dettagli;
+- tutte le pagine di Casa nel libretto;
+- percentuali della quota già compilate dai redditi.
+
+Revisioni fatte: per ogni task, revisione finale di impeccable (verdetto: da pubblicare) e revisione opus, con le correzioni fatte. `DESIGN.md` è aggiornato.
+
+**Piano B3, da scrivere:**
 - eliminazioni con annullamento;
-- le altre pagine nel nuovo stile: Storico, obiettivi, conti, P.IVA, check-in, quota;
-- l'icona dell'app.
+- Storico, obiettivi, conti e P.IVA nel nuovo stile;
+- l'icona dell'app;
+- al posto dei caratteri `›` e `‹`, icone vere.
+
+Resti segnati nel piano B2:
+- calendario a 3 tocchi;
+- "Più tardi" vale solo su quel telefono;
+- "La tua quota parte da…" non copre chi entra in casa a metà mese.
 
 Resti segnati nel piano B1:
 - il saldo del conto si aggiorna in due passi separati: andrebbe fatto in un passo solo, insieme alla spesa, da una funzione nel database;
