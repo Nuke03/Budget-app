@@ -23,6 +23,9 @@ import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Transaction, TransactionTipo, Transfer } from '@/lib/types';
 import { AddTransactionForm } from '../../add/AddTransactionForm';
+import { CoverHeader } from '../../CoverHeader';
+import { PallinoCategoria } from '../../home/PallinoCategoria';
+import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_SCHEDA, ErroreMovimento } from '../CampiMovimento';
 
 const ERRORE_SALVATAGGIO =
   'Salvataggio fallito, controlla la connessione e riprova.';
@@ -77,8 +80,6 @@ export function MovimentiCasa({
     const db = b.tipo === 'spesa' ? b.t.data : b.m.data;
     return da === db ? 0 : da < db ? 1 : -1;
   });
-  const categoria = (id: string | null) =>
-    aggiunta.categorie.find((c) => c.id === id)?.nome ?? '';
   const puoModificare = (t: Transaction) =>
     !t.pagataDaUserId || t.pagataDaUserId === meUserId;
   // Una spesa pagata con la carta personale si cambia dal conto personale: il modulo qui conosce solo i conti di casa.
@@ -201,169 +202,140 @@ export function MovimentiCasa({
     }
   }
 
+  const RIGA = 'flex flex-col gap-2 border-b border-rule px-4 py-3 last:border-b-0';
+  const AZIONE = 'inline-flex min-h-11 items-center text-[15px] font-semibold';
+
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-5 p-5 pt-8">
-      <div className="flex flex-col gap-1">
-        <Link href="/casa" className="text-sm font-semibold text-brand-dark">
-          {casa.household.nome}
+    <>
+      <CoverHeader titolo="Movimenti di casa" lato={casa.household.nome} />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
+        <Link href="/casa" className={CLASSE_LINK}>
+          ‹ La casa
         </Link>
-        <h1 className="text-2xl font-bold">Movimenti di casa</h1>
-      </div>
 
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
-        Mese
-        <select
-          value={mese}
-          onChange={(e) => setMese(e.target.value)}
-          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base text-foreground"
-        >
-          {mesi.map((m) => (
-            <option key={m} value={m}>
-              {etichettaMese(m)}
-            </option>
-          ))}
-        </select>
-      </label>
+        <Campo etichetta="Mese">
+          <select value={mese} onChange={(e) => setMese(e.target.value)} className={CLASSE_CAMPO}>
+            {mesi.map((m) => (
+              <option key={m} value={m}>
+                {etichettaMese(m)}
+              </option>
+            ))}
+          </select>
+        </Campo>
 
-      {errore && (
-        <p role="alert" className="text-sm font-medium text-danger">
-          {ERRORE_SALVATAGGIO}
-        </p>
-      )}
+        <ErroreMovimento testo={errore ? ERRORE_SALVATAGGIO : null} />
 
-      {conferma && (
-        <section
-          aria-label="Conferma"
-          className="flex flex-col gap-3 rounded-[var(--radius-md)] bg-surface p-4 text-sm shadow-[var(--shadow-card)]"
-        >
-          <p>{conferma.testo}</p>
-          <div className="flex gap-4 font-semibold">
-            <button type="button" onClick={conferma.procedi} className="text-danger">
-              Procedi lo stesso
-            </button>
-            <button type="button" onClick={() => setConferma(null)} className="text-brand-dark">
-              Lascia com&apos;è
-            </button>
-          </div>
-        </section>
-      )}
+        {conferma && (
+          <section aria-label="Conferma" className={`${CLASSE_SCHEDA} text-[15px]`}>
+            <p>{conferma.testo}</p>
+            <div className="flex gap-4">
+              <button type="button" onClick={conferma.procedi} className={`${AZIONE} text-danger`}>
+                Procedi lo stesso
+              </button>
+              <button type="button" onClick={() => setConferma(null)} className={`${AZIONE} text-brand-dark`}>
+                Lascia com&apos;è
+              </button>
+            </div>
+          </section>
+        )}
 
-      {voci.length === 0 ? (
-        <p className="text-sm text-muted">Nessun movimento in questo mese.</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {voci.map((voce) => {
-            if (voce.tipo === 'trasferimento') {
-              const m = voce.m;
-              const { titolo, dettaglio } = descriviTrasferimento(m, nomi);
-              return (
-                <li
-                  key={`tr-${m.id}`}
-                  className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface-muted p-4"
-                >
-                  <div className="flex justify-between gap-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">{titolo}</span>
-                      <span className="text-xs text-muted">
-                        {formatDateIt(m.data)}
-                        {dettaglio ? ` · ${dettaglio}` : ''}
-                      </span>
-                    </div>
-                    <span className="text-sm tabular-nums text-muted">
-                      {formatEuro(m.importo)}
-                    </span>
-                  </div>
-                  {m.userId === meUserId && (
-                    <div className="flex gap-4 text-sm font-semibold">
-                      <button
-                        type="button"
-                        onClick={() => chiediAnnulla(m)}
-                        className="text-brand-dark"
-                      >
-                        Annulla
-                      </button>
-                    </div>
-                  )}
-                </li>
-              );
-            }
-            const t = voce.t;
-            return (
-              <li
-                key={t.id}
-                className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]"
-              >
-                {inModifica === t.id ? (
-                  <div className="-mx-5">
-                    <AddTransactionForm
-                      categories={aggiunta.categorie}
-                      accounts={aggiunta.conti}
-                      goals={aggiunta.obiettivi}
-                      initial={{
-                        tipo: t.tipo,
-                        importo: t.importo,
-                        categoriaId: t.categoriaId,
-                        accountId: t.accountId,
-                        goalId: t.goalId,
-                        descrizione: t.descrizione,
-                      }}
-                      contoEtichetta="Chi ha pagato"
-                      obiettivoEtichetta="Da parte (opzionale)"
-                      nascondiGestisciCategorie
-                      submitLabel="Salva modifiche"
-                      onCancel={() => setInModifica(null)}
-                      onSubmit={(payload) => salva(t, payload)}
-                    />
-                  </div>
-                ) : (
-                  <>
+        {voci.length === 0 ? (
+          <section className={CLASSE_SCHEDA}>
+            <p className="text-[15px] text-ink-2">Nessun movimento in questo mese.</p>
+          </section>
+        ) : (
+          <ul className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-surface">
+            {voci.map((voce) => {
+              if (voce.tipo === 'trasferimento') {
+                const m = voce.m;
+                const { titolo, dettaglio } = descriviTrasferimento(m, nomi);
+                return (
+                  <li key={`tr-${m.id}`} className={`${RIGA} bg-brand-tint`}>
                     <div className="flex justify-between gap-3">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold">
-                          {t.descrizione}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {formatDateIt(t.data)}
-                          {categoria(t.categoriaId)
-                            ? ` · ${categoria(t.categoriaId)}`
-                            : ''}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {etichettaChiHaPagato(t, aggiunta.conti, nomi)}
+                      <div className="flex min-w-0 flex-col">
+                        <span className="text-[15px] font-semibold">{titolo}</span>
+                        <span className="num text-[13px] text-ink-2">
+                          {formatDateIt(m.data)}
+                          {dettaglio ? ` · ${dettaglio}` : ''}
                         </span>
                       </div>
-                      <span className="text-sm font-bold tabular-nums">
-                        {t.tipo === 'expense' ? '-' : '+'}
-                        {formatEuro(t.importo)}
-                      </span>
+                      <span className="num text-[15px] text-ink-2">{formatEuro(m.importo)}</span>
                     </div>
-                    {puoModificare(t) && (
-                      <div className="flex gap-4 text-sm font-semibold">
-                        {!conCartaPersonale(t) && (
-                          <button
-                            type="button"
-                            onClick={() => setInModifica(t.id)}
-                            className="text-brand-dark"
-                          >
-                            Modifica
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => chiediElimina(t)}
-                          className="text-danger"
-                        >
-                          Elimina
+                    {m.userId === meUserId && (
+                      <div className="flex gap-4">
+                        <button type="button" onClick={() => chiediAnnulla(m)} className={`${AZIONE} text-brand-dark`}>
+                          Annulla
                         </button>
                       </div>
                     )}
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </main>
+                  </li>
+                );
+              }
+              const t = voce.t;
+              const cat = aggiunta.categorie.find((c) => c.id === t.categoriaId);
+              return (
+                <li key={t.id} className={RIGA}>
+                  {inModifica === t.id ? (
+                    <div className="-mx-4">
+                      <AddTransactionForm
+                        categories={aggiunta.categorie}
+                        accounts={aggiunta.conti}
+                        goals={aggiunta.obiettivi}
+                        initial={{
+                          tipo: t.tipo,
+                          importo: t.importo,
+                          categoriaId: t.categoriaId,
+                          accountId: t.accountId,
+                          goalId: t.goalId,
+                          descrizione: t.descrizione,
+                        }}
+                        contoEtichetta="Chi ha pagato"
+                        obiettivoEtichetta="Da parte (opzionale)"
+                        nascondiGestisciCategorie
+                        submitLabel="Salva modifiche"
+                        onCancel={() => setInModifica(null)}
+                        onSubmit={(payload) => salva(t, payload)}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between gap-3">
+                        <div className="flex min-w-0 flex-col">
+                          <span className="flex items-center gap-2 text-[15px]">
+                            <PallinoCategoria colore={cat?.colore ?? null} />
+                            <span className="min-w-0 break-words">{t.descrizione}</span>
+                          </span>
+                          <span className="num text-[13px] text-ink-2">
+                            {formatDateIt(t.data)}
+                            {cat ? ` · ${cat.nome}` : ''}
+                          </span>
+                          <span className="text-[13px] text-ink-2">{etichettaChiHaPagato(t, aggiunta.conti, nomi)}</span>
+                        </div>
+                        <span className="num text-[15px] font-semibold">
+                          {t.tipo === 'expense' ? '\u2212' : '+'}
+                          {formatEuro(t.importo)}
+                        </span>
+                      </div>
+                      {puoModificare(t) && (
+                        <div className="flex gap-4">
+                          {!conCartaPersonale(t) && (
+                            <button type="button" onClick={() => setInModifica(t.id)} className={`${AZIONE} text-brand-dark`}>
+                              Modifica
+                            </button>
+                          )}
+                          <button type="button" onClick={() => chiediElimina(t)} className={`${AZIONE} text-danger`}>
+                            Elimina
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </main>
+    </>
   );
 }

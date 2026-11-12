@@ -88,7 +88,7 @@ describe('MovimentiCasa', () => {
 
   it('mostra importo con segno, categoria e chi ha pagato', () => {
     apri();
-    expect(screen.getByText('-64,20 €')).toBeInTheDocument();
+    expect(screen.getByText('−64,20 €')).toBeInTheDocument();
     expect(screen.getAllByText(/Bollette/).length).toBeGreaterThan(0);
     expect(screen.getByText('Anna')).toBeInTheDocument();
   });
@@ -113,7 +113,7 @@ describe('MovimentiCasa', () => {
       'luce',
       expect.objectContaining({ importo: 70, data: '2026-11-05' })
     );
-    expect(screen.getByText('-70,00 €')).toBeInTheDocument();
+    expect(screen.getByText('−70,00 €')).toBeInTheDocument();
   });
 
   it('non mostra Elimina né Modifica per una spesa pagata da un altro', () => {
@@ -173,8 +173,8 @@ describe('MovimentiCasa', () => {
     fireEvent.click(screen.getByText('Salva modifiche'));
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
     expect(updateTransaction).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('-70,00 €')).toBeInTheDocument();
-    expect(screen.queryByText('-64,20 €')).not.toBeInTheDocument();
+    expect(screen.getByText('−70,00 €')).toBeInTheDocument();
+    expect(screen.queryByText('−64,20 €')).not.toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
   });
 
@@ -185,7 +185,7 @@ describe('MovimentiCasa', () => {
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '70' } });
     fireEvent.click(screen.getByText('Salva modifiche'));
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
-    expect(screen.getByText('-64,20 €')).toBeInTheDocument();
+    expect(screen.getByText('−64,20 €')).toBeInTheDocument();
     expect(adjustAccountBalance).not.toHaveBeenCalled();
   });
 
@@ -243,5 +243,19 @@ describe('MovimentiCasa', () => {
   it('nessuna parola vietata', () => {
     const { container } = apri();
     assertNessunaParolaVietata(container);
+  });
+});
+
+describe('MovimentiCasa: libretto', () => {
+  it('copertina con il titolo e pallino del colore della categoria', () => {
+    const conColore: CasaAggiunta = {
+      ...aggiunta,
+      categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#f97362', archiviata: false }],
+    };
+    const { container } = render(
+      <MovimentiCasa casa={casa} aggiunta={conColore} transazioni={lista} trasferimenti={[]} meUserId="u1" />
+    );
+    expect(screen.getByRole('banner')).toHaveTextContent('Movimenti di casa');
+    expect(container.querySelector('[data-colore="#f97362"]')).not.toBeNull();
   });
 });
