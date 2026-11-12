@@ -29,7 +29,7 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
 
   if (conti.length === 0) {
     return (
-      <p className="text-sm">
+      <p className="text-[15px]">
         <Link href="/casa" className={CLASSE_LINK}>
           Aggiungete prima il conto comune dalla pagina Casa.
         </Link>
