@@ -14,6 +14,7 @@ import {
 } from '@/lib/data/households';
 import { CodiceInvito } from '../CodiceInvito';
 import { CalendarioCasa } from './CalendarioCasa';
+import { SaldoTricount, type SaldoEsistente } from './SaldoTricount';
 import type { CalendarFeed } from '@/lib/types';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
@@ -37,10 +38,12 @@ export function ImpostazioniCasa({
   casa,
   feedCalendario = null,
   origin,
+  saldoIniziale = null,
 }: {
   casa: CasaCorrente;
   feedCalendario?: CalendarFeed | null;
   origin?: string;
+  saldoIniziale?: SaldoEsistente | null;
 }) {
   const router = useRouter();
   const [codice, setCodice] = useState<string | null>(casa.invite?.codice ?? null);
@@ -140,6 +143,8 @@ export function ImpostazioniCasa({
       </section>
 
       <CalendarioCasa feedIniziale={feedCalendario} origin={origin} />
+
+      <SaldoTricount householdId={casa.household.id} members={casa.members} saldoEsistente={saldoIniziale} />
 
       <section className="flex flex-col gap-3 pt-4">
         {ultimo ? (

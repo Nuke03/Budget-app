@@ -54,8 +54,8 @@ beforeEach(() => {
 describe('ImpostazioniCasa', () => {
   it('elenca i membri', () => {
     render(<ImpostazioniCasa casa={casa()} />);
-    expect(screen.getByText(/Fabio/)).toBeInTheDocument();
-    expect(screen.getByText(/Anna/)).toBeInTheDocument();
+    expect(screen.getByText('Fabio', { exact: false, selector: 'li' })).toBeInTheDocument();
+    expect(screen.getByText('Anna', { exact: false, selector: 'li' })).toBeInTheDocument();
   });
 
   it('mostra il codice di invito con "Rigenera" e "Revoca"', async () => {
