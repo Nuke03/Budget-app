@@ -4,14 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { createHousehold, createInvite, formatCodiceInvito, joinHousehold } from '@/lib/data/households';
+import { CoverHeader } from '../../CoverHeader';
+import { CLASSE_CAMPO, CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../CampiMovimento';
 import { CodiceInvito } from '../CodiceInvito';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
 const ERRORE_CODICE = 'Codice non valido o scaduto. Chiedine uno nuovo.';
 const MESSAGGIO_RPC_CODICE = 'Codice non valido o scaduto';
 
-const inputClass =
-  'rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand';
+const inputClass = CLASSE_CAMPO;
+const CORPO = 'mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5';
 
 export function InizioCasa({
   defaultDisplayName,
@@ -81,49 +83,47 @@ export function InizioCasa({
 
   if (casaCreata) {
     return (
-      <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-        <h1 className="text-2xl font-bold">La casa è pronta</h1>
-        <section className="rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
+      <>
+      <CoverHeader titolo="La casa è pronta" />
+      <main className={CORPO}>
+        <section className={CLASSE_SCHEDA}>
           {codiceCreato ? (
             <CodiceInvito codice={codiceCreato} origin={origin} />
           ) : (
-            <p className="text-sm text-muted">
+            <p className="text-[15px] text-ink-2">
               Il codice di invito non è stato creato: puoi generarlo da Impostazioni, dentro la casa.
             </p>
           )}
         </section>
-        <button
-          type="button"
-          onClick={vaiAllaCasa}
-          className="rounded-[var(--radius-md)] border border-black/10 py-3 text-sm font-semibold"
-        >
+        <button type="button" onClick={vaiAllaCasa} className={CLASSE_NEUTRO}>
           Vai alla casa
         </button>
       </main>
+      </>
     );
   }
 
   const segmento = (attivo: boolean) =>
-    `flex-1 rounded-[var(--radius-md)] py-2.5 text-sm font-semibold ${
-      attivo ? 'bg-brand-tint text-brand-dark' : 'text-muted'
+    `min-h-11 flex-1 rounded-full px-3 text-[15px] font-semibold ${
+      attivo ? 'bg-brand text-brand-foreground' : 'text-foreground'
     }`;
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">Casa</h1>
-
-      <div className="flex gap-1 rounded-[var(--radius-lg)] bg-surface p-1 shadow-[var(--shadow-card)]">
-        <button type="button" className={segmento(modo === 'crea')} onClick={() => setModo('crea')}>
+    <>
+    <CoverHeader titolo="Casa" />
+    <main className={CORPO}>
+      <div className="flex gap-1 rounded-full bg-brand-tint p-1">
+        <button type="button" aria-pressed={modo === 'crea'} className={segmento(modo === 'crea')} onClick={() => setModo('crea')}>
           Creo la casa
         </button>
-        <button type="button" className={segmento(modo === 'entra')} onClick={() => setModo('entra')}>
+        <button type="button" aria-pressed={modo === 'entra'} className={segmento(modo === 'entra')} onClick={() => setModo('entra')}>
           Ho un codice di invito
         </button>
       </div>
 
-      <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
+      <section className={`${CLASSE_SCHEDA} gap-4`}>
         {modo === 'crea' ? (
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
             Nome della casa (facoltativo)
             <input
               value={nomeCasa}
@@ -133,7 +133,7 @@ export function InizioCasa({
             />
           </label>
         ) : (
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
             Codice di invito
             <input
               value={codice}
@@ -145,7 +145,7 @@ export function InizioCasa({
           </label>
         )}
 
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+        <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
           Come ti chiami per gli altri in casa?
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
         </label>
@@ -155,7 +155,7 @@ export function InizioCasa({
             type="button"
             onClick={crea}
             disabled={inCorso || !displayName.trim()}
-            className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+            className={CLASSE_PRIMARIO}
           >
             Crea la casa
           </button>
@@ -164,17 +164,18 @@ export function InizioCasa({
             type="button"
             onClick={entra}
             disabled={inCorso || !codice.trim() || !displayName.trim()}
-            className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+            className={CLASSE_PRIMARIO}
           >
             Entra
           </button>
         )}
         {errore && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-[15px] text-danger">
             {errore}
           </p>
         )}
       </section>
     </main>
+    </>
   );
 }
