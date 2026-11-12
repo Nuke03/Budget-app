@@ -14,16 +14,12 @@ import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { formatNumero, nomeMese } from '@/lib/format';
 import type { BudgetGoal } from '@/lib/types';
 import { ERRORE_GENERICO } from './quota/quotaWizardState';
-import { ErroreMovimento } from './CampiMovimento';
+import { CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO, ErroreMovimento } from './CampiMovimento';
 import { ComeSiCalcola } from './ComeSiCalcola';
 
 const euro = (n: number): string => `${formatNumero(n)} €`;
 
-const CLASSE_SCHEDA = 'flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]';
-const CLASSE_PRIMARIO =
-  'rounded-[var(--radius-md)] bg-brand py-3 text-center text-base font-semibold text-brand-foreground disabled:opacity-40';
-const CLASSE_SECONDARIO = 'rounded-[var(--radius-md)] border border-black/10 py-3 text-center text-base font-semibold disabled:opacity-40';
-const CLASSE_LINK = 'font-semibold text-brand-dark';
+const CLASSE_LINK_IN_FRASE = 'font-semibold text-brand-dark underline';
 
 // Quante bollette (o mesi) stanno dietro la media: al massimo le ultime 3.
 const quanti = (p: PropostaStima): number => Math.min(p.n, 3);
@@ -117,25 +113,25 @@ export function CardStima({
 
       {nuovo ? (
         <>
-          <p className="text-sm">
+          <p className="text-[15px]">
             {`Con ${euro(proposta.nuovoMensile)}: ${quote.map((q) => `${q.nome} ${formatNumero(q.prima)} → ${formatNumero(q.dopo)} €`).join(', ')}.`}
           </p>
-          <p className="text-sm text-muted">
+          <p className="text-[15px] text-ink-2">
             {goal
               ? `La parte messa da parte per questa voce si aggiorna subito; la quota nuova parte da ${mese}.`
               : `La quota nuova parte da ${mese}.`}
           </p>
         </>
       ) : programmata ? (
-        <p className="text-sm">
+        <p className="text-[15px]">
           {"C'è già una modifica programmata: la trovate in "}
-          <Link href="/casa/quota" className={CLASSE_LINK}>
+          <Link href="/casa/quota" className={CLASSE_LINK_IN_FRASE}>
             Rivedi la quota
           </Link>
           .
         </p>
       ) : (
-        <p className="text-sm">Per ora non si può aggiornare: rivedi la quota.</p>
+        <p className="text-[15px]">Per ora non si può aggiornare: rivedi la quota.</p>
       )}
 
       <ComeSiCalcola spiegazione={spiegazione(proposta)} />

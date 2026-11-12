@@ -6,6 +6,7 @@ import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { Account } from '@/lib/types';
 import { useRegistraMovimento } from './useRegistraMovimento';
+import { SceltePill } from './SceltePill';
 import { Annulla, CampoImporto, ErroreMovimento, Registra, SelezioneConto, Spunta } from './CampiMovimento';
 
 type Modo = 'diretto' | 'conto_comune';
@@ -53,21 +54,20 @@ export function RestituisciForm({
 
   return (
     <form onSubmit={invia} className="flex flex-col gap-3 px-5 pb-6">
-      <p className="text-sm">
+      <p className="text-[15px]">
         Devi {formatNumero(debito.importo)} € a {nomeCreditore}. Puoi restituirne anche solo una parte.
       </p>
-      <div role="radiogroup" aria-label="Come restituisci" className="flex flex-col gap-1.5 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="radio" name="modo" checked={modo === 'diretto'} onChange={() => setModo('diretto')} />
-          Restituisco direttamente
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="modo" checked={modo === 'conto_comune'} onChange={() => setModo('conto_comune')} />
-          Verso di più sul conto comune
-        </label>
-      </div>
+      <SceltePill
+        legenda="Come restituisci"
+        valore={modo}
+        onChange={(c) => setModo(c as Modo)}
+        opzioni={[
+          { chiave: 'diretto', etichetta: 'Restituisco direttamente' },
+          { chiave: 'conto_comune', etichetta: 'Verso di più sul conto comune' },
+        ]}
+      />
       <CampoImporto valore={importoTesto} onChange={setImportoTesto} />
-      {oltreMax ? <p className="text-sm text-muted">Il debito residuo è di {formatNumero(debito.importo)} €.</p> : null}
+      {oltreMax ? <p className="text-[13px] text-ink-2">Il debito residuo è di {formatNumero(debito.importo)} €.</p> : null}
       <SelezioneConto etichetta="Dal tuo conto" conti={contiPersonali} valore={da} onChange={setDa} />
       {modo === 'conto_comune' ? (
         <SelezioneConto etichetta="Sul conto comune" conti={contiCasa} valore={a} onChange={setA} />

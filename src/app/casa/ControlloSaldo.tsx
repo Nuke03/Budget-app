@@ -10,12 +10,9 @@ import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import { formatDateIt, formatNumero } from '@/lib/format';
 import type { Account } from '@/lib/types';
-import { Campo, CLASSE_CAMPO, ErroreMovimento, SelezioneConto } from './CampiMovimento';
+import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO, ErroreMovimento, SelezioneConto } from './CampiMovimento';
 import { ComeSiCalcola } from './ComeSiCalcola';
 
-const CLASSE_PRIMARIO =
-  'rounded-[var(--radius-md)] bg-brand py-3 text-center text-base font-semibold text-brand-foreground disabled:opacity-40';
-const CLASSE_LINK = 'text-sm font-semibold text-brand-dark';
 
 // Una domanda sola: quanto c'è davvero sul conto. La data è oggi, la conferma una sola.
 export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?: () => void }) {
@@ -99,7 +96,7 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
       className="flex flex-col gap-4"
     >
       {conti.length > 1 ? <SelezioneConto etichetta="Conto" conti={conti} valore={conto.id} onChange={setContoId} /> : null}
-      <p className="text-sm text-muted">{`Per l'app c'è: ${formatNumero(conto.saldoAttuale)} €`}</p>
+      <p className="text-[15px] text-ink-2">{`Per l'app c'è: ${formatNumero(conto.saldoAttuale)} €`}</p>
       <Campo etichetta="Quanto c'è davvero sul conto comune?">
         <input
           inputMode="decimal"
@@ -114,7 +111,7 @@ export function ControlloSaldo({ conti, onFatto }: { conti: Account[]; onFatto?:
           <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={CLASSE_CAMPO} />
         </Campo>
       ) : (
-        <p className="text-sm text-muted">
+        <p className="text-[15px] text-ink-2">
           {data === oggiRomaISO() ? 'Oggi' : formatDateIt(data)}{' '}
           <button type="button" onClick={() => setCambiaData(true)} className={CLASSE_LINK}>
             Cambia data

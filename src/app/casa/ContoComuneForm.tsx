@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { creaContoComune } from '@/lib/data/casaSetup';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
+import { CLASSE_CAMPO, CLASSE_PRIMARIO } from './CampiMovimento';
 
 export function ContoComuneForm({ householdId }: { householdId: string }) {
   const router = useRouter();
@@ -33,29 +34,29 @@ export function ContoComuneForm({ householdId }: { householdId: string }) {
 
   return (
     <form onSubmit={crea} className="flex flex-col gap-3">
-      <p className="text-sm">Aprite il conto comune qui</p>
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <p className="text-[15px]">Aprite il conto comune qui</p>
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Nome del conto
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base text-foreground outline-none focus-visible:border-brand"
+          className={CLASSE_CAMPO}
         />
       </label>
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Saldo attuale
         <input
           inputMode="decimal"
           placeholder="0"
           value={saldo}
           onChange={(e) => setSaldo(e.target.value)}
-          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base text-foreground outline-none focus-visible:border-brand"
+          className={CLASSE_CAMPO}
         />
       </label>
       <button
         type="submit"
         disabled={!valido || inCorso}
-        className="rounded-[var(--radius-md)] bg-brand py-3 text-base font-semibold text-brand-foreground disabled:opacity-40"
+        className={CLASSE_PRIMARIO}
       >
         Apri il conto
       </button>

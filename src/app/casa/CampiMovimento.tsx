@@ -1,11 +1,19 @@
 import type { ReactNode } from 'react';
 
+// Le classi condivise delle pagine di Casa: carta a filo sottile, pulsanti da 48 e 44 px, link da 44 px.
+export const CLASSE_SCHEDA = 'flex flex-col gap-3 rounded-[var(--radius-md)] border border-rule bg-surface p-4';
+export const CLASSE_PRIMARIO =
+  'flex min-h-12 items-center justify-center rounded-[var(--radius-md)] bg-brand px-4 text-center text-base font-semibold text-brand-foreground disabled:opacity-40';
+export const CLASSE_SECONDARIO =
+  'flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand-tint px-4 text-center text-[15px] font-semibold text-foreground disabled:opacity-40';
+export const CLASSE_LINK = 'inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark';
+
 export const CLASSE_CAMPO =
-  'rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base text-foreground outline-none focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-[15px] text-foreground outline-none focus-visible:border-brand';
 
 export function Campo({ etichetta, children }: { etichetta: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+    <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
       {etichetta}
       {children}
     </label>
@@ -60,7 +68,7 @@ export function Spunta({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex min-h-11 items-center gap-2 text-[15px]">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {etichetta}
     </label>
@@ -72,7 +80,7 @@ export function Registra({ disabilitato, etichetta = 'Registra' }: { disabilitat
     <button
       type="submit"
       disabled={disabilitato}
-      className="rounded-[var(--radius-md)] bg-brand py-3 text-base font-semibold text-brand-foreground disabled:opacity-40"
+      className={CLASSE_PRIMARIO}
     >
       {etichetta}
     </button>
@@ -81,7 +89,7 @@ export function Registra({ disabilitato, etichetta = 'Registra' }: { disabilitat
 
 export function Annulla({ onClose }: { onClose: () => void }) {
   return (
-    <button type="button" onClick={onClose} className="text-sm font-semibold text-muted">
+    <button type="button" onClick={onClose} className="inline-flex min-h-11 items-center justify-center text-[15px] font-semibold text-ink-2">
       Annulla
     </button>
   );

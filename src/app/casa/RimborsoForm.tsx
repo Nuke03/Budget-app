@@ -49,11 +49,11 @@ export function RimborsoForm({
 
   return (
     <form onSubmit={invia} className="flex flex-col gap-3 px-5 pb-6">
-      <p className="text-sm">
+      <p className="text-[15px]">
         A {creditore.nome} spettano {formatNumero(importoIniziale)} € per spese anticipate.
       </p>
       <CampoImporto valore={importoTesto} onChange={setImportoTesto} />
-      {oltreMax ? <p className="text-sm text-muted">Il credito è di {formatNumero(importoIniziale)} €.</p> : null}
+      {oltreMax ? <p className="text-[13px] text-ink-2">Il credito è di {formatNumero(importoIniziale)} €.</p> : null}
       <SelezioneConto etichetta="Dal conto comune" conti={contiCasa} valore={conto} onChange={setConto} />
       <Spunta etichetta="Già riflesso nei saldi" checked={riflesso} onChange={setRiflesso} />
       <ErroreMovimento testo={errore} />

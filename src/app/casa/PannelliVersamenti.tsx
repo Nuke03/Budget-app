@@ -5,11 +5,12 @@ import { it } from 'date-fns/locale';
 import { formatNumero } from '@/lib/format';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
+import { CLASSE_LINK, CLASSE_SCHEDA } from './CampiMovimento';
 import { useCasaAzioni } from './CasaAzioni';
 
 const etichettaMese = (mese: string): string => format(parseISO(mese), 'LLLL yyyy', { locale: it });
-const SEZIONE = 'flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]';
-const AZIONE = 'text-sm font-semibold text-brand-dark';
+const SEZIONE = CLASSE_SCHEDA;
+const AZIONE = CLASSE_LINK;
 
 // Cosa c'è da versare, cosa è stato anticipato per conto di altri e cosa spetta a chi ha speso di tasca sua.
 export function PannelliVersamenti({
@@ -38,20 +39,20 @@ export function PannelliVersamenti({
   return (
     <>
       <section className={SEZIONE}>
-        <h2 className="text-base font-bold">Versamenti di {etichettaMese(meseCorrente)}</h2>
+        <h2 className="font-serif text-lg font-semibold">Versamenti di {etichettaMese(meseCorrente)}</h2>
         <ul className="flex flex-col gap-1.5">
           {membri.map((m) => {
             const riga = (righe[m.userId] ?? []).find((r) => r.mese === meseCorrente);
             if (!riga || riga.atteso === 0) {
               return (
-                <li key={m.userId} className="text-sm">
+                <li key={m.userId} className="text-[15px]">
                   {`${m.nome}: Nessun versamento in questo periodo`}
                 </li>
               );
             }
             const stato = riga.mancano > 0 ? `mancano ${formatNumero(riga.mancano)} €` : 'fatto';
             return (
-              <li key={m.userId} className="text-sm">
+              <li key={m.userId} className="text-[15px]">
                 {`${m.nome} ${formatNumero(riga.versato)} di ${formatNumero(riga.atteso)} € ${stato}`}
               </li>
             );
@@ -64,15 +65,15 @@ export function PannelliVersamenti({
 
       {arretrati.length > 0 || debiti.length > 0 ? (
         <section className={SEZIONE}>
-          <h2 className="text-base font-bold">Arretrati e quote coperte</h2>
+          <h2 className="font-serif text-lg font-semibold">Arretrati e quote coperte</h2>
           <ul className="flex flex-col gap-2">
             {arretrati.map(({ nome: n, riga }) => (
-              <li key={`${n}-${riga.mese}`} className="text-sm">
+              <li key={`${n}-${riga.mese}`} className="text-[15px]">
                 {`${etichettaMese(riga.mese)}: ${n} ${formatNumero(riga.mancano)} €, ancora da versare`}
               </li>
             ))}
             {debiti.map((d) => (
-              <li key={`${d.creditoreId}-${d.debitoreId}`} className="flex flex-col gap-1 text-sm">
+              <li key={`${d.creditoreId}-${d.debitoreId}`} className="flex flex-col gap-1 text-[15px]">
                 {d.mesi.map((m) => (
                   <span key={m.mese}>
                     {m.origine === 'tricount'
@@ -106,12 +107,12 @@ export function PannelliVersamenti({
 
       {conCredito.length > 0 ? (
         <section className={SEZIONE}>
-          <h2 className="text-base font-bold">Crediti</h2>
+          <h2 className="font-serif text-lg font-semibold">Crediti</h2>
           <ul className="flex flex-col gap-2">
             {conCredito.map((m) => {
               const importo = crediti[m.userId];
               return (
-                <li key={m.userId} className="flex flex-col gap-1 text-sm">
+                <li key={m.userId} className="flex flex-col gap-1 text-[15px]">
                   {m.userId === meUserId ? (
                     <>
                       <span>{`In attesa del rimborso: ${formatNumero(importo)} €`}</span>

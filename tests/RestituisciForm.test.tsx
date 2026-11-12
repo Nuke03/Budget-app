@@ -61,7 +61,7 @@ describe('RestituisciForm', () => {
 
   it('verso di più sul conto comune manda versamento con beneficiario e senza mese', async () => {
     monta();
-    fireEvent.click(screen.getByLabelText('Verso di più sul conto comune'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Verso di più sul conto comune' }));
     fireEvent.change(importo(), { target: { value: '603' } });
     fireEvent.click(registra());
     await waitFor(() => expect(recordTransfer).toHaveBeenCalled());
