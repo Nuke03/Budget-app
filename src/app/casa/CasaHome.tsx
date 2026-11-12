@@ -12,6 +12,8 @@ import { cifra, dividiCifra, giornoMese } from '../home/formati';
 import { PallinoCategoria } from '../home/PallinoCategoria';
 import { CasaFab } from './CasaFab';
 import { ComeSiCalcola } from './ComeSiCalcola';
+import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
+import { CasaAzioni } from './CasaAzioni';
 import { DaFareCard } from './DaFareCard';
 
 const COLONNE = 'grid grid-cols-[2.75rem_minmax(0,1fr)_3.5rem_4.5rem] items-center gap-x-2 px-4';
@@ -28,6 +30,8 @@ export function CasaHome({
   vociDaParte = [],
   aggiunta,
   contiPersonali,
+  debiti = [],
+  mesiArretrati = [],
   oggi = oggiRomaISO(),
 }: {
   casa: CasaCorrente;
@@ -37,6 +41,9 @@ export function CasaHome({
   vociDaParte?: StatoVoceDaParte[];
   aggiunta?: CasaAggiunta;
   contiPersonali?: Account[];
+  // Servono ai fogli che si aprono dalla card Da fare: versamento, rimborso, restituzione.
+  debiti?: DebitoMembro[];
+  mesiArretrati?: string[];
   oggi?: string;
 }) {
   if (!libretto) {
@@ -59,9 +66,19 @@ export function CasaHome({
   }
 
   const { intero, resto } = dividiCifra(formatEuro(libretto.disponibile));
+  const membri = casa.members.map((m) => ({ userId: m.userId, nome: m.displayName }));
+  const nomi = Object.fromEntries(membri.map((m) => [m.userId, m.nome]));
 
   return (
-    <>
+    <CasaAzioni
+      householdId={casa.household.id}
+      meUserId={casa.me.userId}
+      membri={membri}
+      contiPersonali={contiPersonali ?? []}
+      contiCasa={aggiunta?.conti ?? []}
+      meseDefault={`${oggi.slice(0, 7)}-01`}
+      mesiArretrati={mesiArretrati}
+    >
       <CoverHeader titolo="La casa" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
 
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
@@ -83,7 +100,11 @@ export function CasaHome({
         </section>
 
         {libretto.daFare ? (
-          <DaFareCard daFare={libretto.daFare} householdId={casa.household.id} oggi={oggi} voci={vociDaParte} />
+          <DaFareCard daFare={libretto.daFare} householdId={casa.household.id} oggi={oggi} voci={vociDaParte}
+            meUserId={casa.me.userId}
+            debiti={debiti}
+            nomi={nomi}
+          />
         ) : null}
 
         <section className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-surface">
@@ -131,6 +152,6 @@ export function CasaHome({
       </main>
 
       {aggiunta ? <CasaFab aggiunta={aggiunta} contiPersonali={contiPersonali} /> : null}
-    </>
+    </CasaAzioni>
   );
 }

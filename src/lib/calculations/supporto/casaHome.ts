@@ -2,12 +2,12 @@ import type { CasaData } from '@/lib/loadCasaData';
 import { formatNumero } from '@/lib/format';
 import { riferimentoControllo } from '../casa/controlloSaldo';
 import { statoVociDaParte } from '../casa/fondi';
-import { computeReminders, statoPromemoria } from '../casa/promemoria';
+import { computeReminders, statoPromemoria, type AzionePromemoria } from '../casa/promemoria';
 import { pianoDelMese, pianoInVigore } from '../casa/versamenti';
 import { chiGestisce } from './gestore';
 
 export type DaFareCasa =
-  | { tipo: 'promemoria'; testo: string; href: string }
+  | { tipo: 'promemoria'; testo: string; href: string; azione?: AzionePromemoria }
   | { tipo: 'da_parte'; testo: string; importo: number; voci: { nome: string; importo: number }[] }
   | { tipo: 'quota'; testo: string; href: '/casa/quota' };
 
@@ -85,7 +85,13 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
 
   let daFare: DaFareCasa | null = null;
   if (promemoria[0]) {
-    daFare = { tipo: 'promemoria', testo: promemoria[0].testo, href: promemoria[0].azione?.href ?? '/casa' };
+    const az = promemoria[0].azione;
+    daFare = {
+      tipo: 'promemoria',
+      testo: promemoria[0].testo,
+      href: az?.href ?? '/casa',
+      ...(az && !az.href ? { azione: az } : {}),
+    };
   } else if (daMettere.length > 0) {
     const voci = daMettere.map((v) => ({ nome: v.item.nome, importo: v.item.importoMensile }));
     const importo = arrotonda(voci.reduce((s, v) => s + v.importo, 0));

@@ -7,6 +7,7 @@ import { formatEuro, formatNumero } from '@/lib/format';
 import { descriviStatoPiano } from '@/lib/calculations/casa/fraseVersamento';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { CoverHeader } from '../../CoverHeader';
+import { ComeSiCalcola } from '../ComeSiCalcola';
 import { CodiceInvito } from '../CodiceInvito';
 import { ContoComuneForm } from '../ContoComuneForm';
 import { CasaAzioni } from '../CasaAzioni';
@@ -24,12 +25,15 @@ export function CasaDettagli({
   meseCorrente,
   finanze,
   origin,
+  gestisce = false,
 }: {
   casa: CasaCorrente;
   piano?: PlanBundle | null;
   meseCorrente?: string;
   finanze?: FinanzeCasa;
   origin?: string;
+  // Il codice di invito lo vede solo chi gestisce la casa.
+  gestisce?: boolean;
 }) {
   const stato = piano ? descriviStatoPiano(piano.shares.filter((s) => s.esceDal === null)) : null;
   // Un piano attivo che parte in un mese futuro non e ancora in corso.
@@ -58,6 +62,14 @@ export function CasaDettagli({
         ) : (
           <ContoComuneForm householdId={casa.household.id} />
         )}
+        {finanze.cuscinetto ? (
+          <div className="flex items-center justify-between gap-3 border-t border-rule pt-2 text-[15px]">
+            <span className="num">
+              Cuscinetto: {formatNumero(finanze.cuscinetto.attuale)} € di {formatNumero(finanze.cuscinetto.obiettivo)} €
+            </span>
+            <ComeSiCalcola spiegazione={finanze.disponibile.spiegazione} />
+          </div>
+        ) : null}
         {finanze.conti.length > 0 ? (
           <>
             {(finanze.speseNonRegistrate ?? 0) > 0 ? (
@@ -151,7 +163,7 @@ export function CasaDettagli({
               </li>
             ))}
           </ul>
-          {casa.invite ? <CodiceInvito codice={casa.invite.codice} origin={origin} /> : null}
+          {gestisce && casa.invite ? <CodiceInvito codice={casa.invite.codice} origin={origin} /> : null}
         </section>
 
         <section className={SEZIONE}>

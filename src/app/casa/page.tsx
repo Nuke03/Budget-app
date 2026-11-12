@@ -34,6 +34,8 @@ export default async function CasaPage() {
       }
       aggiunta={dati?.aggiunta}
       contiPersonali={contiPersonali}
+      debiti={dati?.debiti}
+      mesiArretrati={(dati?.righe[casa.me.userId] ?? []).filter((r) => r.mancano > 0).map((r) => r.mese)}
       oggi={oggi}
     />
   );

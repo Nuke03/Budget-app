@@ -41,6 +41,8 @@ describe('pagina Casa', () => {
     vi.mocked(casaHomeDati).mockReturnValue({ gestisce: true, disponibile: 10 } as never);
     vi.mocked(loadCasaData).mockResolvedValue({
       piani: [],
+      righe: {},
+      debiti: [],
       obiettiviConAccantonato: [],
       aggiunta: { conti: [] },
       disponibile: { valore: 10, spiegazione: { valore: 10, formula: 'f', ingredienti: [] } },

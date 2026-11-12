@@ -33,7 +33,7 @@ export function useCasaAzioni(): CasaAzioniContestoValore {
 }
 
 // Dall'azione di un promemoria al modulo che si apre.
-function azioneDaPromemoria(
+export function azioneDaPromemoria(
   az: AzionePromemoria,
   meUserId: string,
   debiti: DebitoMembro[],

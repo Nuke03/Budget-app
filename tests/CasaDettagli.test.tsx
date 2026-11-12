@@ -205,16 +205,38 @@ describe('CasaDettagli', () => {
       expect(screen.getByRole('link', { name: 'Vai a Da parte' })).toHaveAttribute('href', '/casa/da-parte');
     });
 
-    it('il codice di invito compare solo se qualcuno può ancora entrare', () => {
-      const { rerender } = render(<CasaDettagli casa={casa} finanze={finanze([conto])} />);
+    it("il codice di invito lo vede solo chi gestisce, e solo se c'è", () => {
+      const invito = { id: 'i1', householdId: 'h1', codice: 'ABCD2345', createdAt: '', scadeIl: '2027-01-01', revocatoIl: null };
+      const { rerender } = render(<CasaDettagli casa={casa} gestisce finanze={finanze([conto])} />);
       expect(screen.queryByText('Codice di invito')).not.toBeInTheDocument();
-      rerender(
+      rerender(<CasaDettagli casa={{ ...casa, invite: invito }} gestisce finanze={finanze([conto])} />);
+      expect(screen.getByText('Codice di invito')).toBeInTheDocument();
+      rerender(<CasaDettagli casa={{ ...casa, invite: invito }} finanze={finanze([conto])} />);
+      expect(screen.queryByText('Codice di invito')).not.toBeInTheDocument();
+    });
+
+    it('il cuscinetto sta nel conto comune, con la spiegazione', () => {
+      const disponibile = computeDisponibileCasa({
+        conti: [{ ...conto, saldoAttuale: 1500 }],
+        obiettivi: [],
+        today: new Date('2026-11-09T10:00:00Z'),
+        cuscinettoObiettivo: 1321,
+        cuscinettoQuotaMensile: 59,
+      });
+      render(
         <CasaDettagli
-          casa={{ ...casa, invite: { id: 'i1', householdId: 'h1', codice: 'ABCD2345', createdAt: '', scadeIl: '2027-01-01', revocatoIl: null } }}
-          finanze={finanze([conto])}
+          casa={casa}
+          finanze={{ ...finanze([conto]), disponibile, cuscinetto: { attuale: 1321, obiettivo: 1321, quotaMensile: 59 } }}
         />
       );
-      expect(screen.getByText('Codice di invito')).toBeInTheDocument();
+      expect(screen.getByText('Cuscinetto: 1.321 € di 1.321 €')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
+      expect(screen.getByText(/Cuscinetto 1\.321 di 1\.321 €, già pieno/)).toBeInTheDocument();
+    });
+
+    it("senza cuscinetto la riga non c'è", () => {
+      render(<CasaDettagli casa={casa} finanze={{ ...finanze([conto]), cuscinetto: null }} />);
+      expect(screen.queryByText(/Cuscinetto/)).not.toBeInTheDocument();
     });
 
     describe('versamenti e crediti', () => {

@@ -163,6 +163,25 @@ describe('CasaHome del libretto', () => {
       expect(screen.queryByRole('button', { name: 'Fatto' })).not.toBeInTheDocument();
     });
 
+    it('un promemoria di versamento apre il foglio sul posto, senza cambiare pagina', () => {
+      monta(
+        {
+          ...base,
+          daFare: {
+            tipo: 'promemoria',
+            testo: 'Il tuo versamento di 690 € è da fare entro il 5.',
+            href: '/casa',
+            azione: { tipo: 'versamento', etichetta: 'Registra', importo: 690 },
+          },
+        },
+        { contiPersonali: [] }
+      );
+      expect(screen.queryByRole('link', { name: /versamento di 690/ })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /versamento di 690/ }));
+      expect(screen.getAllByText('Registra un versamento').length).toBeGreaterThan(0);
+      expect(screen.getByLabelText('Importo')).toBeInTheDocument();
+    });
+
     it('un promemoria senza pagina propria porta ai Dettagli, dove si registra', () => {
       monta({ ...base, daFare: { tipo: 'promemoria', testo: 'Il tuo versamento di 690 € è da fare entro il 5.', href: '/casa' } });
       expect(screen.getByRole('link', { name: /versamento di 690/ })).toHaveAttribute('href', '/casa/dettagli');

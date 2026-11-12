@@ -8,6 +8,7 @@ import { loadCasaData } from '@/lib/loadCasaData';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoDelMese } from '@/lib/calculations/casa/versamenti';
 import { origineSito } from '@/lib/siteOrigin';
+import { chiGestisce } from '@/lib/calculations/supporto/gestore';
 import { finanzeCasa } from '../finanzeCasa';
 import { CasaDettagli } from './CasaDettagli';
 
@@ -34,6 +35,7 @@ export default async function CasaDettagliPage() {
       meseCorrente={meseCorrente}
       finanze={dati ? finanzeCasa(dati, contiPersonali, meseCorrente) : undefined}
       origin={origin}
+      gestisce={chiGestisce(casa.household, casa.members) === casa.me.userId}
     />
   );
 }
