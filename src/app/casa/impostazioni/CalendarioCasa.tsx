@@ -4,12 +4,9 @@ import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { revokeCalendarFeed, rotateCalendarFeed } from '@/lib/data/calendarFeeds';
 import type { CalendarFeed } from '@/lib/types';
+import { CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../CampiMovimento';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
-
-const bottoneSecondario = 'rounded-[var(--radius-md)] border border-black/10 px-4 py-2.5 text-sm font-semibold';
-const bottonePrimario =
-  'rounded-[var(--radius-md)] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground disabled:opacity-40';
 
 type Conferma = 'rigenera' | 'revoca' | null;
 
@@ -102,9 +99,9 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
-      <h2 className="text-base font-bold">Calendario</h2>
-      <p className="text-sm text-muted">
+    <section className={CLASSE_SCHEDA}>
+      <h2 className="font-serif text-lg font-semibold">Calendario</h2>
+      <p className="text-[15px] text-ink-2">
         Un link privato per vedere nel tuo calendario il versamento, i controlli e le scadenze della casa.
       </p>
 
@@ -116,29 +113,29 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
             aria-label="Link del calendario"
             value={link}
             onFocus={(e) => e.currentTarget.select()}
-            className="w-full rounded-[var(--radius-md)] border border-black/10 bg-transparent px-3 py-2 text-xs"
+            className="min-h-11 w-full rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-[13px]"
           />
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={copia} className={bottonePrimario}>
+            <button type="button" onClick={copia} className={CLASSE_PRIMARIO}>
               Copia
             </button>
-            <button type="button" onClick={() => setConferma('rigenera')} disabled={inCorso} className={bottoneSecondario}>
+            <button type="button" onClick={() => setConferma('rigenera')} disabled={inCorso} className={CLASSE_SECONDARIO}>
               Rigenera
             </button>
-            <button type="button" onClick={() => setConferma('revoca')} disabled={inCorso} className={bottoneSecondario}>
+            <button type="button" onClick={() => setConferma('revoca')} disabled={inCorso} className={CLASSE_SECONDARIO}>
               Revoca
             </button>
-            <button type="button" onClick={scarica} className={bottoneSecondario}>
+            <button type="button" onClick={scarica} className={CLASSE_SECONDARIO}>
               Scarica una volta
             </button>
           </div>
-          {copiato && <p className="text-xs text-brand-dark">Link copiato.</p>}
+          {copiato && <p className="text-[13px] text-brand-dark">Link copiato.</p>}
           {daCopiareAMano && (
-            <p className="text-xs text-muted">Non sono riuscito a copiare: il link è selezionato, copialo a mano.</p>
+            <p className="text-[13px] text-ink-2">Non sono riuscito a copiare: il link è selezionato, copialo a mano.</p>
           )}
           {conferma && (
-            <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-black/10 p-3">
-              <p className="text-sm">
+            <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-rule bg-brand-tint p-3">
+              <p className="text-[15px]">
                 {conferma === 'rigenera'
                   ? 'Il link attuale smette di funzionare e ne viene creato uno nuovo. Vuoi procedere?'
                   : 'Il link attuale smette di funzionare. Vuoi procedere?'}
@@ -148,11 +145,11 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
                   type="button"
                   onClick={conferma === 'rigenera' ? crea : revoca}
                   disabled={inCorso}
-                  className={bottoneSecondario}
+                  className={CLASSE_NEUTRO}
                 >
                   {conferma === 'rigenera' ? 'Sì, rigenera' : 'Sì, revoca'}
                 </button>
-                <button type="button" onClick={() => setConferma(null)} className={bottoneSecondario}>
+                <button type="button" onClick={() => setConferma(null)} className={CLASSE_NEUTRO}>
                   Annulla
                 </button>
               </div>
@@ -160,15 +157,15 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
           )}
         </>
       ) : (
-        <button type="button" onClick={crea} disabled={inCorso} className={bottonePrimario}>
+        <button type="button" onClick={crea} disabled={inCorso} className={CLASSE_PRIMARIO}>
           Crea il link
         </button>
       )}
 
-      <p className="text-sm font-medium">Chiunque abbia questo link vede le scadenze della casa: non condividerlo.</p>
-      <p className="text-xs text-muted">Può volerci qualche ora perché il calendario si aggiorni.</p>
+      <p className="text-[15px] font-semibold">Chiunque abbia questo link vede le scadenze della casa: non condividerlo.</p>
+      <p className="text-[13px] text-ink-2">Può volerci qualche ora perché il calendario si aggiorni.</p>
 
-      <div className="flex flex-col gap-1.5 text-sm text-muted">
+      <div className="flex flex-col gap-1.5 text-[15px] text-ink-2">
         <p>
           <span className="font-semibold">Google Calendar.</span> Dal computer apri Altri calendari, poi Da URL, e
           incolla il link.
@@ -180,7 +177,7 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
       </div>
 
       {errore && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-[15px] text-danger">
           {errore}
         </p>
       )}

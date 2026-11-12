@@ -12,6 +12,8 @@ import {
   type CasaCorrente,
   type MotivoBlocco,
 } from '@/lib/data/households';
+import { CoverHeader } from '../../CoverHeader';
+import { CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../CampiMovimento';
 import { CodiceInvito } from '../CodiceInvito';
 import { CalendarioCasa } from './CalendarioCasa';
 import { SaldoTricount, type SaldoEsistente } from './SaldoTricount';
@@ -32,7 +34,6 @@ const TESTI_BLOCCO: Record<MotivoBlocco, string> = {
 const CONFERMA_CHIUSURA =
   "Non vedrai più i dati della casa. I soldi sul conto comune non si muovono da soli: mettetevi d'accordo prima su come dividerli.";
 
-const bottoneSecondario = 'rounded-[var(--radius-md)] border border-black/10 px-4 py-2.5 text-sm font-semibold';
 
 export function ImpostazioniCasa({
   casa,
@@ -96,47 +97,48 @@ export function ImpostazioniCasa({
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">Impostazioni della casa</h1>
+    <>
+    <CoverHeader titolo="Impostazioni della casa" />
+    <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
 
-      <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
-        <h2 className="text-base font-bold">Chi c&apos;è in casa</h2>
+      <section className={CLASSE_SCHEDA}>
+        <h2 className="font-serif text-lg font-semibold">Chi c&apos;è in casa</h2>
         <ul className="flex flex-col gap-1.5">
           {casa.members.map((m) => (
-            <li key={m.userId} className="text-sm">
+            <li key={m.userId} className="text-[15px]">
               {m.displayName}
-              {m.userId === casa.me.userId ? <span className="text-muted"> (tu)</span> : null}
+              {m.userId === casa.me.userId ? <span className="text-ink-2"> (tu)</span> : null}
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
-        <h2 className="text-base font-bold">Invito</h2>
+      <section className={CLASSE_SCHEDA}>
+        <h2 className="font-serif text-lg font-semibold">Invito</h2>
         {codice ? (
           <CodiceInvito codice={codice} origin={origin}>
-            <button type="button" onClick={genera} disabled={inCorso} className={bottoneSecondario}>
+            <button type="button" onClick={genera} disabled={inCorso} className={CLASSE_SECONDARIO}>
               Rigenera
             </button>
-            <button type="button" onClick={revoca} disabled={inCorso} className={bottoneSecondario}>
+            <button type="button" onClick={revoca} disabled={inCorso} className={CLASSE_SECONDARIO}>
               Revoca
             </button>
           </CodiceInvito>
         ) : (
           <>
-            <p className="text-sm text-muted">Non c&apos;è un codice di invito attivo.</p>
+            <p className="text-[15px] text-ink-2">Non c&apos;è un codice di invito attivo.</p>
             <button
               type="button"
               onClick={genera}
               disabled={inCorso}
-              className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+              className={CLASSE_PRIMARIO}
             >
               Genera un codice di invito
             </button>
           </>
         )}
         {erroreInvito && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-[15px] text-danger">
             {erroreInvito}
           </p>
         )}
@@ -146,21 +148,21 @@ export function ImpostazioniCasa({
 
       <SaldoTricount householdId={casa.household.id} members={casa.members} saldoEsistente={saldoIniziale} />
 
-      <section className="flex flex-col gap-3 pt-4">
+      <section className="flex flex-col gap-3 pt-2">
         {ultimo ? (
           confermaChiusura ? (
             <>
-              <p className="text-sm text-muted">{CONFERMA_CHIUSURA}</p>
+              <p className="text-[15px] text-ink-2">{CONFERMA_CHIUSURA}</p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => esci(closeHousehold)}
                   disabled={inCorso}
-                  className={`${bottoneSecondario} text-danger`}
+                  className={`${CLASSE_NEUTRO} text-danger`}
                 >
                   Sì, chiudi la casa
                 </button>
-                <button type="button" onClick={() => setConfermaChiusura(false)} className={bottoneSecondario}>
+                <button type="button" onClick={() => setConfermaChiusura(false)} className={CLASSE_NEUTRO}>
                   Annulla
                 </button>
               </div>
@@ -169,7 +171,7 @@ export function ImpostazioniCasa({
             <button
               type="button"
               onClick={() => setConfermaChiusura(true)}
-              className={`${bottoneSecondario} self-start text-muted`}
+              className={`${CLASSE_NEUTRO} self-start text-ink-2`}
             >
               Chiudi la casa
             </button>
@@ -179,17 +181,18 @@ export function ImpostazioniCasa({
             type="button"
             onClick={() => esci(leaveHousehold)}
             disabled={inCorso}
-            className={`${bottoneSecondario} self-start text-muted`}
+            className={`${CLASSE_NEUTRO} self-start text-ink-2`}
           >
             Esci dalla casa
           </button>
         )}
         {errore && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-[15px] text-danger">
             {errore}
           </p>
         )}
       </section>
     </main>
+    </>
   );
 }

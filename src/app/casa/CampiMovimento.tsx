@@ -6,6 +6,9 @@ export const CLASSE_PRIMARIO =
   'flex min-h-12 items-center justify-center rounded-[var(--radius-md)] bg-brand px-4 text-center text-base font-semibold text-brand-foreground disabled:opacity-40';
 export const CLASSE_SECONDARIO =
   'flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-brand-tint px-4 text-center text-[15px] font-semibold text-foreground disabled:opacity-40';
+// Pulsante discreto su fondo di pagina: tiene bene anche il testo di avviso.
+export const CLASSE_NEUTRO =
+  'flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-center text-[15px] font-semibold text-foreground disabled:opacity-40';
 export const CLASSE_LINK = 'inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark';
 
 export const CLASSE_CAMPO =

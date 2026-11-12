@@ -7,7 +7,7 @@ import { registraSaldoIniziale } from '@/lib/data/transfers';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import { formatNumero } from '@/lib/format';
 import type { HouseholdMember } from '@/lib/types';
-import { CampoImporto } from '../CampiMovimento';
+import { CampoImporto, CLASSE_CAMPO, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../CampiMovimento';
 
 const ERRORE_GENERICO = 'Salvataggio fallito, controlla la connessione e riprova.';
 const ERRORE_GIA_INSERITO = 'Il saldo da Tricount è già stato inserito.';
@@ -18,9 +18,6 @@ export interface SaldoEsistente {
   debitoreId: string;
   importo: number;
 }
-
-const selezione =
-  'min-h-11 rounded-[var(--radius-md)] border border-rule bg-surface-muted px-4 py-3 text-base text-foreground outline-none focus-visible:border-brand';
 
 export function SaldoTricount({
   householdId,
@@ -67,9 +64,9 @@ export function SaldoTricount({
   }
 
   const sceltaPersona = (etichetta: string, valore: string, onChange: (v: string) => void) => (
-    <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+    <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
       {etichetta}
-      <select value={valore} onChange={(e) => onChange(e.target.value)} className={selezione}>
+      <select value={valore} onChange={(e) => onChange(e.target.value)} className={CLASSE_CAMPO}>
         <option value="">Scegli una persona</option>
         {members.map((m) => (
           <option key={m.userId} value={m.userId}>
@@ -81,29 +78,26 @@ export function SaldoTricount({
   );
 
   return (
-    <section
-      id="saldo-tricount"
-      className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-rule bg-surface p-5"
-    >
-      <h2 className="text-base font-bold">Saldo da Tricount</h2>
+    <section id="saldo-tricount" className={CLASSE_SCHEDA}>
+      <h2 className="font-serif text-lg font-semibold">Saldo da Tricount</h2>
       {saldoEsistente ? (
-        <p className="text-sm">
+        <p className="text-[15px]">
           Già inserito: {nome(saldoEsistente.debitoreId)} doveva{' '}
           <span className="num">{formatNumero(saldoEsistente.importo)} €</span> a {nome(saldoEsistente.creditoreId)}.
         </p>
       ) : (
         <>
-          <p className="text-sm text-muted">Venite da Tricount? Scrivi il saldo di oggi e ripartite da qui.</p>
+          <p className="text-[15px] text-ink-2">Venite da Tricount? Scrivi il saldo di oggi e ripartite da qui.</p>
           {soloDue ? (
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1.5 text-sm font-medium text-muted">Chi deve dare soldi a chi</legend>
+              <legend className="mb-1.5 text-[13px] text-ink-2">Chi deve dare soldi a chi</legend>
               {[
                 [members[0], members[1]],
                 [members[1], members[0]],
               ].map(([d, c]) => (
                 <label
                   key={d.userId}
-                  className="flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] border border-rule px-4 text-sm font-semibold"
+                  className="flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] border border-rule px-4 text-[15px] font-semibold"
                 >
                   <input
                     type="radio"
@@ -130,12 +124,12 @@ export function SaldoTricount({
             type="button"
             onClick={salva}
             disabled={inCorso || !valido}
-            className="min-h-11 rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+            className={CLASSE_PRIMARIO}
           >
             Salva il saldo
           </button>
           {errore && (
-            <p role="alert" className="text-sm text-danger">
+            <p role="alert" className="text-[15px] text-danger">
               {errore}
             </p>
           )}

@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { formatCodiceInvito } from '@/lib/data/households';
 import { testoInvito } from '@/lib/invito';
+import { CLASSE_PRIMARIO, CLASSE_SECONDARIO } from './CampiMovimento';
 
 // Unico blocco che mostra un codice di invito, ovunque compaia.
 export function CodiceInvito({
@@ -43,16 +44,16 @@ export function CodiceInvito({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm font-medium text-muted">Codice di invito</p>
-      <p className="text-3xl font-bold tracking-widest">{mostrato}</p>
-      <p className="text-xs text-muted">
+      <p className="text-[13px] text-ink-2">Codice di invito</p>
+      <p className="num font-serif text-3xl font-bold tracking-widest">{mostrato}</p>
+      <p className="text-[13px] text-ink-2">
         Vale finché non lo revochi o ne generi un altro, al massimo 7 giorni; lo possono usare più persone.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={copia}
-          className="rounded-[var(--radius-md)] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground"
+          className={CLASSE_PRIMARIO}
         >
           Copia l&apos;invito
         </button>
@@ -60,7 +61,7 @@ export function CodiceInvito({
           <button
             type="button"
             onClick={condividi}
-            className="rounded-[var(--radius-md)] border border-black/10 px-4 py-2.5 text-sm font-semibold"
+            className={CLASSE_SECONDARIO}
           >
             Condividi
           </button>
@@ -68,12 +69,12 @@ export function CodiceInvito({
         {children}
       </div>
       {copiaFallita && (
-        <p role="alert" className="text-xs text-danger">
+        <p role="alert" className="text-[13px] text-danger">
           Non riesco a copiare: tieni premuto sul codice qui sopra per copiarlo.
         </p>
       )}
-      {copiato && <p className="text-xs text-brand-dark">Invito copiato.</p>}
-      <p className="text-sm text-muted">
+      {copiato && <p className="text-[13px] text-brand-dark">Invito copiato.</p>}
+      <p className="text-[15px] text-ink-2">
         Chi lo riceve tocca il link ed entra; il codice serve solo se lo scrive a mano.
       </p>
     </div>
