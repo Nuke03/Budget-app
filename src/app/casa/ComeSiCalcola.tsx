@@ -31,12 +31,17 @@ export function ComeSiCalcola({
         aria-expanded={aperto}
         aria-controls={pannelloId}
         onClick={() => setAperto((a) => !a)}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/10 text-xs font-bold text-brand-dark"
+        className="inline-flex h-11 w-11 items-center justify-center text-brand-dark"
       >
-        ?
+        <span
+          aria-hidden="true"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rule text-[13px] font-semibold"
+        >
+          ?
+        </span>
       </button>
       {aperto ? (
-        <div id={pannelloId} className="mt-2 flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface-muted p-3 text-sm">
+        <div id={pannelloId} className="mt-2 flex flex-col gap-2 rounded-[var(--radius-md)] border border-rule bg-brand-tint p-3 text-[15px]">
           {spiegazione.formula.split('\n').map((riga, i) => (
             <p key={i}>{riga}</p>
           ))}
@@ -44,7 +49,7 @@ export function ComeSiCalcola({
             <ul className="flex flex-col gap-1">
               {spiegazione.ingredienti.map((ing) => (
                 <li key={ing.etichetta} className="flex justify-between gap-3">
-                  <span className="text-muted">{ing.etichetta}</span>
+                  <span className="text-ink-2">{ing.etichetta}</span>
                   <span className="num font-semibold">{formatIngrediente(ing.etichetta, ing.valore)}</span>
                 </li>
               ))}

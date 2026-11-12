@@ -51,7 +51,7 @@ export function StrisciaPromemoria({
     return (
       <Link
         href={(visibili[0].azione?.tipo === 'controllo' || visibili[0].azione?.tipo === 'checkin') && visibili[0].azione.href ? visibili[0].azione.href : '/casa'}
-        className="block rounded-[var(--radius-md)] bg-surface px-4 py-3 text-sm shadow-[var(--shadow-card)]"
+        className="block rounded-[var(--radius-md)] border border-rule bg-surface px-4 py-3 text-[15px]"
       >
         {visibili[0].testo}
       </Link>
@@ -68,24 +68,24 @@ export function StrisciaPromemoria({
       {visibili.map((p) => (
         <div
           key={p.id}
-          className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 text-sm shadow-[var(--shadow-card)]"
+          className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-rule bg-surface p-4 text-[15px]"
         >
           <p>{p.testo}</p>
           <div className="flex gap-4">
             {p.azione?.href ? (
-              <Link href={p.azione.href} className="text-sm font-semibold text-brand-dark">
+              <Link href={p.azione.href} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark">
                 {p.azione.etichetta}
               </Link>
             ) : p.azione ? (
               <button
                 type="button"
                 onClick={() => onAzione?.(p.azione as AzionePromemoria)}
-                className="text-sm font-semibold text-brand-dark"
+                className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark"
               >
                 {p.azione.etichetta}
               </button>
             ) : null}
-            <button type="button" onClick={() => piuTardi(p.id)} className="text-sm font-semibold text-muted">
+            <button type="button" onClick={() => piuTardi(p.id)} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2">
               Più tardi
             </button>
           </div>
