@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getTransfers,
+  getSaldoIniziale,
   recordTransfer,
   registraSaldoIniziale,
   deleteTransfer,
@@ -148,5 +149,28 @@ describe('messaggioErroreTrasferimento', () => {
       'Salvataggio fallito, controlla la connessione e riprova.',
     );
     expect(messaggioErroreTrasferimento(null)).toBe('Salvataggio fallito, controlla la connessione e riprova.');
+  });
+});
+
+describe('getSaldoIniziale', () => {
+  const saldo = {
+    ...riga('s1', 'h1', '2026-10-01', '2026-10-01T10:00:00Z'),
+    causale: 'saldo_iniziale',
+    beneficiario_user_id: 'u2',
+  };
+  it('legge solo il saldo iniziale della casa', async () => {
+    const db = createFakeDb(
+      { transfers: [riga('t1', 'h1', '2026-10-05', '2026-10-05T10:00:00Z'), saldo, { ...saldo, id: 's2', household_id: 'h2' }] },
+      { userId: 'u1', membri: { h1: ['u1'], h2: ['u1'] } },
+    );
+    const r = await getSaldoIniziale(db.client, 'h1');
+    expect(r).toMatchObject({ id: 's1', causale: 'saldo_iniziale', beneficiarioUserId: 'u2', importo: 603.5 });
+  });
+  it('null se non c’è', async () => {
+    const db = createFakeDb(
+      { transfers: [riga('t1', 'h1', '2026-10-05', '2026-10-05T10:00:00Z')] },
+      { userId: 'u1', membri: { h1: ['u1'] } },
+    );
+    expect(await getSaldoIniziale(db.client, 'h1')).toBeNull();
   });
 });

@@ -26,6 +26,7 @@ export function CasaDettagli({
   finanze,
   origin,
   gestisce = false,
+  mostraTricount = false,
 }: {
   casa: CasaCorrente;
   piano?: PlanBundle | null;
@@ -34,6 +35,8 @@ export function CasaDettagli({
   origin?: string;
   // Il codice di invito lo vede solo chi gestisce la casa.
   gestisce?: boolean;
+  // Almeno due persone in casa e nessun saldo da Tricount ancora inserito.
+  mostraTricount?: boolean;
 }) {
   const stato = piano ? descriviStatoPiano(piano.shares.filter((s) => s.esceDal === null)) : null;
   // Un piano attivo che parte in un mese futuro non e ancora in corso.
@@ -185,6 +188,16 @@ export function CasaDettagli({
             </Link>
           )}
         </section>
+
+        {mostraTricount ? (
+          <Link
+            href="/casa/impostazioni#saldo-tricount"
+            className="flex min-h-12 items-center justify-between rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-[15px] font-semibold text-brand-dark"
+          >
+            Venite da Tricount? Inserisci il saldo di oggi
+            <span aria-hidden="true">›</span>
+          </Link>
+        ) : null}
 
         <Link href="/casa/impostazioni" className={LINK}>
           Impostazioni

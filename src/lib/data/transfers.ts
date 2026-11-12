@@ -54,6 +54,19 @@ export async function getTransfers(supabase: SupabaseClient, scope: Scope = PERS
   return righe.map(mapRow);
 }
 
+// Il saldo di partenza da Tricount della casa, se c'è (al massimo uno: indice unico nel database).
+export async function getSaldoIniziale(supabase: SupabaseClient, householdId: string): Promise<Transfer | null> {
+  const { data, error } = await supabase
+    .from('transfers')
+    .select(COLONNE)
+    .eq('household_id', householdId)
+    .eq('causale', 'saldo_iniziale')
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapRow(data as TransferRow) : null;
+}
+
 export interface RecordTransferInput {
   householdId: string | null;
   causale: TransferCausale;

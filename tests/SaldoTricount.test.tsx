@@ -55,6 +55,15 @@ describe('SaldoTricount', () => {
     expect(vi.mocked(registraSaldoIniziale).mock.calls[0][1]).toMatchObject({ creditoreId: 'u1', debitoreId: 'u2', importo: 12.5 });
   });
 
+  it('accetta 1.234,50 come 1234.5', async () => {
+    render(<SaldoTricount householdId="h1" members={[fabio, anna]} saldoEsistente={null} />);
+    fireEvent.click(screen.getByLabelText('Fabio deve a Anna'));
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '1.234,50' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salva il saldo' }));
+    await waitFor(() => expect(registraSaldoIniziale).toHaveBeenCalled());
+    expect(vi.mocked(registraSaldoIniziale).mock.calls[0][1]).toMatchObject({ importo: 1234.5 });
+  });
+
   it('senza scelta o importo valido il pulsante è spento', () => {
     render(<SaldoTricount householdId="h1" members={[fabio, anna]} saldoEsistente={null} />);
     const salva = screen.getByRole('button', { name: 'Salva il saldo' });

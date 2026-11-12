@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { utenteECasa } from '@/lib/utenteOLogin';
 import { getAccounts } from '@/lib/data/accounts';
 import { getPlanForMonth } from '@/lib/data/householdPlans';
+import { getSaldoIniziale } from '@/lib/data/transfers';
 import { loadCasaData } from '@/lib/loadCasaData';
 import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoDelMese } from '@/lib/calculations/casa/versamenti';
@@ -20,7 +21,11 @@ export default async function CasaDettagliPage() {
   if (!casa) redirect('/casa');
 
   const meseCorrente = meseRomaISO();
-  const [dati, contiPersonali] = await Promise.all([loadCasaData(supabase, casa).catch(() => null), contiInCorso]);
+  const [dati, contiPersonali, saldoIniziale] = await Promise.all([
+    loadCasaData(supabase, casa).catch(() => null),
+    contiInCorso,
+    getSaldoIniziale(supabase, casa.household.id).catch(() => undefined),
+  ]);
   const piano = dati
     ? pianoDelMese(dati.piani, meseCorrente)
     : await getPlanForMonth(supabase, casa.household.id, meseCorrente);
@@ -35,6 +40,7 @@ export default async function CasaDettagliPage() {
       meseCorrente={meseCorrente}
       finanze={dati ? finanzeCasa(dati, contiPersonali, meseCorrente) : undefined}
       origin={origin}
+      mostraTricount={casa.members.length >= 2 && saldoIniziale === null}
       gestisce={chiGestisce(casa.household, casa.members) === casa.me.userId}
     />
   );

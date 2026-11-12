@@ -62,6 +62,19 @@ function piano(legato: boolean): PlanBundle {
 }
 
 describe('CasaDettagli', () => {
+  it('mostra il link Tricount quando serve', () => {
+    render(<CasaDettagli casa={casa} mostraTricount />);
+    expect(screen.getByRole('link', { name: /Venite da Tricount\? Inserisci il saldo di oggi/ })).toHaveAttribute(
+      'href',
+      '/casa/impostazioni#saldo-tricount',
+    );
+  });
+
+  it('nasconde il link Tricount di default', () => {
+    render(<CasaDettagli casa={casa} />);
+    expect(screen.queryByRole('link', { name: /Tricount/ })).toBeNull();
+  });
+
   it('ha il link Impostazioni verso /casa/impostazioni', () => {
     render(<CasaDettagli casa={casa} />);
     expect(screen.getByRole('link', { name: 'Impostazioni' })).toHaveAttribute('href', '/casa/impostazioni');
