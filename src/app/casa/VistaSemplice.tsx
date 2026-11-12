@@ -12,6 +12,7 @@ import { CoverHeader } from '../CoverHeader';
 import { dividiCifra } from '../home/formati';
 import { CasaAzioni, useCasaAzioni } from './CasaAzioni';
 import { CasaFab } from './CasaFab';
+import { DaFareCard } from './DaFareCard';
 
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 const RIGA = 'flex min-h-11 items-center border-b border-rule py-3 text-[15px]';
@@ -36,7 +37,7 @@ function Stato({ casa, stato, debiti }: { casa: CasaCorrente; stato: CasaHomeDat
   return (
     <button
       type="button"
-      onClick={() => apri({ tipo: 'restituisci', debito, nomeCreditore: stato.a })}
+      onClick={() => apri({ tipo: 'restituisci', debito: { ...debito, importo: Math.min(debito.importo, stato.importo) }, nomeCreditore: stato.a })}
       className={`${RIGA} w-full justify-between text-left font-normal text-brand-dark`}
     >
       <span>{testo}</span>
@@ -81,7 +82,9 @@ export function VistaSemplice({
 }) {
   const mese = nomeMese(oggi);
   const membri = casa.members.map((m) => ({ userId: m.userId, nome: m.displayName }));
-  const { quota, entroGiorno, versato, stato, creditoVersoCasa } = vista;
+  const { quota, quotaDal, entroGiorno, versato, stato, creditoVersoCasa, azione } = vista;
+  const nomi = Object.fromEntries(membri.map((m) => [m.userId, m.nome]));
+  const scaduta = entroGiorno !== null && Number(oggi.slice(8, 10)) > entroGiorno;
   const niente = quota !== null && quota <= 0;
   const versata = quota !== null && quota > 0 && versato >= quota;
   const parziale = quota !== null && versato > 0 && versato < quota;
@@ -102,11 +105,13 @@ export function VistaSemplice({
       <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pb-6 pt-5">
         <section>
           {quota === null ? (
-            <p className="text-[15px]">La quota non è ancora stata calcolata.</p>
+            <p className="text-[15px]">
+              {quotaDal ? `La tua quota parte da ${nomeMese(quotaDal)}.` : 'La quota non è ancora stata calcolata.'}
+            </p>
           ) : niente ? (
             <p className="text-[15px]">Questo mese non c’è niente da versare.</p>
           ) : versata ? (
-            <p className="text-[15px]">Hai già versato la quota di {mese}.</p>
+            <p className="text-[15px]">La quota di {mese} è coperta.</p>
           ) : (
             <>
               <p className="text-[15px] text-ink-2">
@@ -116,15 +121,31 @@ export function VistaSemplice({
                 {cifra?.intero}
                 {cifra?.resto ? <span className="text-[28px]">{cifra.resto}</span> : null}
               </p>
-              {entroGiorno ? <p className="mt-1.5 text-[15px] text-ink-2">entro il {giornoEMeseScadenza(oggi, entroGiorno)}</p> : null}
+              {entroGiorno ? (
+                <p className="mt-1.5 text-[15px] text-ink-2">
+                  {scaduta ? 'era da versare ' : ''}entro il {giornoEMeseScadenza(oggi, entroGiorno)}
+                </p>
+              ) : null}
               {parziale ? (
                 <p className="mt-1.5 text-[15px] text-ink-2">
-                  Hai già versato <span className="num">{euroInFrase(versato)}</span> di <span className="num">{euroInFrase(quota)}</span>.
+                  Già coperti <span className="num">{euroInFrase(versato)}</span> di <span className="num">{euroInFrase(quota)}</span>.
                 </p>
               ) : null}
             </>
           )}
         </section>
+
+        {azione ? (
+          <DaFareCard
+            daFare={[azione]}
+            householdId={casa.household.id}
+            oggi={oggi}
+            voci={[]}
+            meUserId={casa.me.userId}
+            debiti={debiti}
+            nomi={nomi}
+          />
+        ) : null}
 
         <section className="border-t border-rule">
           <Stato casa={casa} stato={stato} debiti={debiti} />
