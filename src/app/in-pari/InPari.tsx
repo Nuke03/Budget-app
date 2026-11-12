@@ -25,7 +25,8 @@ function leggi(chiave: string): string | null {
 }
 
 const MESSAGGIO_ERRORE = 'Non sono riuscito a salvare: riprova.';
-const MESSAGGIO_SALDO = 'Spese registrate, il saldo del conto non si è aggiornato: riprova.';
+const messaggioSaldo = (righe: number) =>
+  `${righe === 1 ? 'Spesa registrata' : 'Spese registrate'}, il saldo del conto non si è aggiornato: riprova.`;
 const MESSAGGIO_PARZIALE = "Una spesa è registrata, l'altra no: riprova.";
 const SCELTE_CONTANTI = [20, 50];
 
@@ -109,17 +110,13 @@ export function InPari({
 
   const { contoCarta } = scegliConti(conti, [leggi('aggiungi:conto:personale'), leggi('aggiungi:conto:casa')]);
   const { contoContanti } = scegliConti(conti, []);
-  // In Casa ogni riga è una spesa anticipata da te: serve un conto personale.
-  const senzaContiPersonali = conti.length === 0;
-  const modoEffettivo: Modo = senzaContiPersonali ? 'personale' : modo;
-  const contoDiRiserva = contoCarta ?? conti[0]?.id ?? null;
   const righeAttuali = righeDaRiepilogo({
     carta: importoDa(carta),
     contanti: contantiScelta === 'altro' ? importoDa(contantiAltro) : contantiScelta,
-    spazio: modoEffettivo,
+    spazio: modo,
     contoCarta,
     contoContanti,
-  }).map((r) => (r.casa ? { ...r, accountId: r.accountId ?? contoDiRiserva } : r));
+  });
   const righe = righeRef.current ?? righeAttuali;
 
   function spazioPer(riga: RigaStima): SpazioSpesa {
@@ -167,7 +164,7 @@ export function InPari({
       // Se non è stato scritto niente, le modifiche successive valgono di nuovo.
       const qualcosaCreato = createRef.current.some(Boolean);
       if (!qualcosaCreato) righeRef.current = null;
-      setErrore(fallitoSaldo ? MESSAGGIO_SALDO : qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
+      setErrore(fallitoSaldo ? messaggioSaldo(righe.length) : qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
     } finally {
       setOccupato(false);
     }
@@ -259,11 +256,7 @@ export function InPari({
         ) : null}
       </fieldset>
 
-      {casa && senzaContiPersonali ? (
-        <p className="text-[15px] text-ink-2">Per le spese di casa serve almeno un tuo conto.</p>
-      ) : null}
-
-      {casa && !senzaContiPersonali ? (
+      {casa ? (
         <div role="group" aria-label="Spazio" className="flex gap-2">
           <button
             type="button"

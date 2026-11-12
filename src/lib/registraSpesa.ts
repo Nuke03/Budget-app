@@ -43,14 +43,16 @@ export async function creaSpesa(
   }
   const conPersonale =
     payload.tipo === 'expense' && !!payload.accountId && spazio.contiPersonaliIds.includes(payload.accountId);
-  // Anticipata con la propria carta: il credito verso la casa nasce dalla spesa, il saldo scalato è quello personale.
+  // Anticipata con la propria carta o in contanti: il credito verso la casa nasce dalla spesa.
+  // Con i contanti non c'è un conto da scalare, ma chi ha pagato va registrato lo stesso.
+  const contanti = payload.tipo === 'expense' && !payload.accountId;
   const creata = await createTransaction(
     supabase,
     {
       ...payload,
       data: oggiRomaISO(),
       nota: null,
-      ...(conPersonale ? { pagataDaUserId: spazio.meUserId } : {}),
+      ...(conPersonale || contanti ? { pagataDaUserId: spazio.meUserId } : {}),
     },
     scopeCasa(spazio.householdId)
   );

@@ -90,7 +90,7 @@ export function AddTransactionSheet({
   meUserId?: string;
   // Le spese passate, da cui indovinare la categoria. Dove non c'è, nessun suggerimento.
   storico?: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
-  onSaved: (id: string) => void;
+  onSaved: (id: string, spazio: Modo) => void;
 }) {
   const [modoScelto, setModoScelto] = useState<Modo | null>(null);
   // L'importo già scritto resta quando si cambia spazio (il modulo si ricrea).
@@ -125,7 +125,9 @@ export function AddTransactionSheet({
 
   // Chiudendo con il saldo ancora da aggiornare la riga è già salvata: la Home va aggiornata.
   function chiudi() {
-    if (saldoInSospeso?.id) onSaved(saldoInSospeso.id);
+    if (saldoInSospeso?.id) onSaved(saldoInSospeso.id, modo);
+    // Con il saldo da rifare la bozza resta: la riga è già salvata e si riprova dopo.
+    if (!saldoInSospeso) setImportoBozza('');
     onClose();
   }
 
@@ -142,8 +144,9 @@ export function AddTransactionSheet({
     salvaConto(modo, registrata.payload.accountId);
     if (registrata.id) {
       segnaRegistrato(registrata.id);
-      onSaved(registrata.id);
+      onSaved(registrata.id, modo);
     }
+    setImportoBozza('');
     onClose();
   }
 

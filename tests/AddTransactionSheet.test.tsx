@@ -412,7 +412,7 @@ describe('AddTransactionSheet', () => {
     const onClose = vi.fn();
     apri({ modoIniziale: 'personale', onSaved, onClose });
     compila('8');
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova', expect.any(String)));
     expect(window.sessionStorage.getItem('libretto:registrato')).toBe('t-nuova');
     expect(onClose).toHaveBeenCalled();
     expect(screen.queryByText('Salvata ✓')).not.toBeInTheDocument();
@@ -426,7 +426,7 @@ describe('AddTransactionSheet', () => {
     const onClose = vi.fn();
     apri({ modoIniziale: 'personale', onSaved, onClose });
     compila('8');
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova', expect.any(String)));
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -457,7 +457,7 @@ describe('AddTransactionSheet', () => {
     expect(pezzo('Conto mio')).toBeDisabled();
     expect(screen.getByText('Aggiungi una nota')).toBeDisabled();
     fireEvent.click(screen.getByText('Riprova'));
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova', expect.any(String)));
     expect(createTransaction).toHaveBeenCalledTimes(1);
     expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
     expect(adjustAccountBalance).toHaveBeenLastCalledWith(expect.anything(), 'ap', -8);
@@ -474,7 +474,7 @@ describe('AddTransactionSheet', () => {
     compila('8');
     await screen.findByText(/il saldo del conto non si è aggiornato/);
     fireEvent.click(screen.getAllByRole('button', { name: 'Chiudi' })[0]);
-    expect(onSaved).toHaveBeenCalledWith('t-nuova');
+    expect(onSaved).toHaveBeenCalledWith('t-nuova', expect.any(String));
     expect(onClose).toHaveBeenCalledTimes(1);
     const el = (aperto: boolean) => (
       <AddTransactionSheet aperto={aperto} onClose={onClose} personale={personale} casa={casa} meUserId="u1" modoIniziale="personale" onSaved={onSaved} />
@@ -499,5 +499,26 @@ describe('AddTransactionSheet', () => {
   it('nessuna parola vietata', () => {
     const { container } = apri({ modoIniziale: 'casa' });
     assertNessunaParolaVietata(container);
+  });
+
+  it('dopo un salvataggio la riapertura parte senza l importo', async () => {
+    const props = { onClose: vi.fn(), personale, casa: null, meUserId: 'u1', onSaved: vi.fn() };
+    const { rerender } = render(<AddTransactionSheet aperto {...props} />);
+    compila('12');
+    await waitFor(() => expect(props.onSaved).toHaveBeenCalled());
+    rerender(<AddTransactionSheet aperto={false} {...props} />);
+    rerender(<AddTransactionSheet aperto {...props} />);
+    expect((screen.getByLabelText('Importo') as HTMLInputElement).value).toBe('');
+  });
+
+  it('in Casa con i contanti la spesa è anticipata da te e nessun saldo cambia', async () => {
+    window.localStorage.setItem('aggiungiModo', 'casa');
+    window.localStorage.setItem('aggiungi:conto:casa', '');
+    const onSaved = vi.fn();
+    apri({ onSaved });
+    compila('9');
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova', 'casa'));
+    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ accountId: null, pagataDaUserId: 'u1' });
+    expect(adjustAccountBalance).not.toHaveBeenCalled();
   });
 });
