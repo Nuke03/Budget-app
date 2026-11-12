@@ -26,10 +26,7 @@ function Stato({ casa, stato, debiti }: { casa: CasaCorrente; stato: CasaHomeDat
       </p>
     );
   }
-  const creditore = casa.members.find((m) => m.displayName === stato.a);
-  const debito = creditore
-    ? debiti.find((d) => d.debitoreId === casa.me.userId && d.creditoreId === creditore.userId)
-    : undefined;
+  const debito = debiti.find((d) => d.debitoreId === casa.me.userId && d.creditoreId === stato.aUserId);
   const testo = (
     <>
       Devi&nbsp;<b className="num font-semibold">{euroInFrase(stato.importo)}</b>&nbsp;a {stato.a}

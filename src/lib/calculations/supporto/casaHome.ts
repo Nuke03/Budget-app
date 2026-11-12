@@ -13,8 +13,8 @@ export type DaFareCasa =
 
 export type StatoPari =
   | { tipo: 'pari' }
-  | { tipo: 'devi'; importo: number; a: string }
-  | { tipo: 'ti_deve'; importo: number; da: string };
+  | { tipo: 'devi'; importo: number; a: string; aUserId: string }
+  | { tipo: 'ti_deve'; importo: number; da: string; daUserId: string };
 
 export interface CasaHomeDati {
   gestisce: boolean;
@@ -49,8 +49,8 @@ function statoCoppia(dati: CasaData, me: string, nomi: Record<string, string>): 
   if (!scelto || Math.abs(scelto.netto) < SOGLIA_PARI) return { tipo: 'pari' };
   const nome = nomi[scelto.id] ?? 'Un altro membro';
   return scelto.netto > 0
-    ? { tipo: 'ti_deve', importo: scelto.netto, da: nome }
-    : { tipo: 'devi', importo: -scelto.netto, a: nome };
+    ? { tipo: 'ti_deve', importo: scelto.netto, da: nome, daUserId: scelto.id }
+    : { tipo: 'devi', importo: -scelto.netto, a: nome, aUserId: scelto.id };
 }
 
 export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): CasaHomeDati {

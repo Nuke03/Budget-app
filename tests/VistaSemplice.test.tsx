@@ -59,17 +59,36 @@ describe('VistaSemplice', () => {
   });
 
   it('stato: ti deve', () => {
-    vista({ stato: { tipo: 'ti_deve', importo: 30, da: 'Fabio' } });
+    vista({ stato: { tipo: 'ti_deve', importo: 30, da: 'Fabio', daUserId: 'u1' } });
     expect(screen.getByText(/Fabio ti deve/)).toBeInTheDocument();
   });
 
   it('stato: devi, apre il foglio per restituire', () => {
     vista(
-      { stato: { tipo: 'devi', importo: 30, a: 'Fabio' } },
+      { stato: { tipo: 'devi', importo: 30, a: 'Fabio', aUserId: 'u1' } },
       [{ debitoreId: 'u2', creditoreId: 'u1', importo: 30 }]
     );
     fireEvent.click(screen.getByRole('button', { name: /Devi.*30.*Fabio/ }));
     expect(screen.getByText('Restituisci')).toBeInTheDocument();
+  });
+
+  it('due membri con lo stesso nome: apre il foglio del debito giusto', () => {
+    const casaDoppia = { ...casa, members: [fabio, { ...anna, userId: 'u3', displayName: 'Fabio' }, anna] };
+    render(
+      <VistaSemplice
+        casa={{ ...casaDoppia, me: anna } as never}
+        vista={{ ...base, stato: { tipo: 'devi', importo: 30, a: 'Fabio', aUserId: 'u1' } }}
+        aggiunta={aggiunta}
+        debiti={[
+          { debitoreId: 'u2', creditoreId: 'u3', importo: 99 },
+          { debitoreId: 'u2', creditoreId: 'u1', importo: 30 },
+        ] as never}
+        oggi="2026-11-12"
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Devi.*30.*Fabio/ }));
+    expect(screen.getByText('Restituisci')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('30')).toBeInTheDocument();
   });
 
   it('credito verso la casa, riga a parte', () => {
@@ -94,7 +113,7 @@ describe('VistaSemplice', () => {
   });
 
   it('testi senza parole vietate', () => {
-    const { container } = vista({ stato: { tipo: 'devi', importo: 30, a: 'Fabio' }, creditoVersoCasa: 5 });
+    const { container } = vista({ stato: { tipo: 'devi', importo: 30, a: 'Fabio', aUserId: 'u1' }, creditoVersoCasa: 5 });
     assertNessunaParolaVietata(container);
   });
 });

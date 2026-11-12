@@ -124,9 +124,9 @@ describe('casaHomeDati', () => {
   it('stato: pari, devi, ti_deve', () => {
     expect(casaHomeDati(dati(), 'fabio', OGGI).vistaSemplice.stato).toEqual({ tipo: 'pari' });
     expect(casaHomeDati(dati({ debiti: [debito('fabio', 'giulia', 40)] }), 'fabio', OGGI).vistaSemplice.stato)
-      .toEqual({ tipo: 'devi', importo: 40, a: 'Giulia' });
+      .toEqual({ tipo: 'devi', importo: 40, a: 'Giulia', aUserId: 'giulia' });
     expect(casaHomeDati(dati({ debiti: [debito('giulia', 'fabio', 25)] }), 'fabio', OGGI).vistaSemplice.stato)
-      .toEqual({ tipo: 'ti_deve', importo: 25, da: 'Giulia' });
+      .toEqual({ tipo: 'ti_deve', importo: 25, da: 'Giulia', daUserId: 'giulia' });
     expect(casaHomeDati(dati({ debiti: [debito('giulia', 'fabio', 10), debito('fabio', 'giulia', 10.004)] }), 'fabio', OGGI).vistaSemplice.stato)
       .toEqual({ tipo: 'pari' });
   });
@@ -140,7 +140,7 @@ describe('casaHomeDati', () => {
 
   it('stato: il debito fra membri conta a prescindere dai crediti verso la casa', () => {
     const r = casaHomeDati(dati({ crediti: { fabio: 30, giulia: 99 }, debiti: [debito('fabio', 'giulia', 40)] }), 'fabio', OGGI).vistaSemplice;
-    expect(r.stato).toEqual({ tipo: 'devi', importo: 40, a: 'Giulia' });
+    expect(r.stato).toEqual({ tipo: 'devi', importo: 40, a: 'Giulia', aUserId: 'giulia' });
     expect(r.creditoVersoCasa).toBe(30);
   });
 
@@ -159,6 +159,6 @@ describe('casaHomeDati', () => {
   it('più di due membri: l altro con il netto più grande', () => {
     const marco = membro('marco', 'Marco', '2026-01-03T00:00:00Z');
     const d = dati({ debiti: [debito('fabio', 'giulia', 10), debito('fabio', 'marco', 70)] }, [fabio, giulia, marco]);
-    expect(casaHomeDati(d, 'fabio', OGGI).vistaSemplice.stato).toEqual({ tipo: 'devi', importo: 70, a: 'Marco' });
+    expect(casaHomeDati(d, 'fabio', OGGI).vistaSemplice.stato).toEqual({ tipo: 'devi', importo: 70, a: 'Marco', aUserId: 'marco' });
   });
 });
