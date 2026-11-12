@@ -81,6 +81,13 @@ export function HomeDashboard({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [registratoId, setRegistratoId] = useState<string | null>(null);
+  // Le spese di Casa non stanno nel libretto personale: niente timbro, quindi una riga di conferma.
+  const [registratoInCasa, setRegistratoInCasa] = useState(false);
+  useEffect(() => {
+    if (!registratoInCasa) return;
+    const t = setTimeout(() => setRegistratoInCasa(false), 2500);
+    return () => clearTimeout(t);
+  }, [registratoInCasa]);
 
   // Il + della barra: apre il foglio; con ?aggiungi=1 (arrivo da un'altra pagina) lo apre al caricamento.
   useEffect(() => {
@@ -126,8 +133,14 @@ export function HomeDashboard({
             {resto ? <span className="text-[28px]">{resto}</span> : null}
           </p>
           <p className="mt-2 text-[15px] text-ink-2">
-            Puoi spendere <b className="num font-semibold text-foreground">{euroInFrase(margineGiornaliero)} al giorno</b> fino al{' '}
-            {giornoEMese(dataTarget.slice(0, 10))}
+            {margineGiornaliero <= 0 || disponibileLibero <= 0 ? (
+              <>Fino al {giornoEMese(dataTarget.slice(0, 10))} conviene spendere solo per il necessario.</>
+            ) : (
+              <>
+                Puoi spendere <b className="num font-semibold text-foreground">{euroInFrase(margineGiornaliero)} al giorno</b> fino al{' '}
+                {giornoEMese(dataTarget.slice(0, 10))}
+              </>
+            )}
           </p>
           <p className="mt-1 text-[15px] text-ink-2">
             Hai {euroInFrase(saldoConti)} sui conti
@@ -156,6 +169,9 @@ export function HomeDashboard({
         <p aria-live="polite" className="sr-only">
           {registratoId ? `Registrato. Disponibile ora ${euroInFrase(disponibileLibero)}` : ''}
         </p>
+        <p role="status" aria-live="polite" className={registratoInCasa ? 'text-center text-[15px] font-semibold text-brand-dark' : 'sr-only'}>
+          {registratoInCasa ? 'Registrato in Casa' : ''}
+        </p>
 
         {prossimo ? (
           <Link
@@ -179,7 +195,10 @@ export function HomeDashboard({
         contiPersonali={accounts}
         meUserId={meUserId}
         storico={storico}
-        onSaved={() => router.refresh()}
+        onSaved={(_id, spazio) => {
+          if (spazio === 'casa') setRegistratoInCasa(true);
+          router.refresh();
+        }}
       />
     </>
   );

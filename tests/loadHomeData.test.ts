@@ -43,4 +43,27 @@ describe('loadHomeData: libretto', () => {
     expect(d.prossimo?.tipo).toBe('in_pari');
     expect(d.notificheAttive).toBe(true);
   });
+
+  it('una spesa recente in Casa conta per "in pari"', async () => {
+    const db = createFakeDb(
+      {
+        accounts: [], budget_goals: [], categories: [],
+        transactions: [
+          {
+            id: 't1', user_id: 'A', household_id: null, tipo: 'expense', importo: 12, data: '2026-11-10',
+            categoria_id: null, account_id: null, goal_id: null, descrizione: 'Pizza', nota: null,
+            created_at: '2026-11-10T10:00:00Z', stima: false,
+          },
+          {
+            id: 't2', user_id: 'A', household_id: 'h1', tipo: 'expense', importo: 30, data: '2026-11-15',
+            categoria_id: null, account_id: null, goal_id: null, descrizione: 'Spesa', nota: null,
+            created_at: '2026-11-15T09:00:00Z', stima: false,
+          },
+        ],
+      },
+      { userId: 'A', membri: { h1: ['A'] } }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.inPari).toBeNull();
+  });
 });

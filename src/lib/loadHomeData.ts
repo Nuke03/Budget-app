@@ -82,6 +82,23 @@ async function casaOpzionale(
   return { aggiunta, stato };
 }
 
+// Una sola riga leggera: la creazione più recente fra le righe di cui sono autore (personali e di casa).
+async function ultimaCreazioneUtente(supabase: SupabaseClient, userId: string | null): Promise<string | null> {
+  if (!userId) return null;
+  try {
+    const { data } = await supabase
+      .from('transactions')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (data as { created_at: string } | null)?.created_at ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // Tutto ciò che la home mostra: solo dati personali (scope di default).
 export async function loadHomeData(
   supabase: SupabaseClient,
@@ -92,7 +109,7 @@ export async function loadHomeData(
   // (una sola query per tutti), senza aspettare la parte di casa.
   const obiettivi = getOpenGoals(supabase);
   const oggi = oggiRomaISO(today);
-  const [accounts, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte] = await Promise.all([
+  const [accounts, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     obiettivi,
@@ -106,6 +123,8 @@ export async function loadHomeData(
     getTransactions(supabase, PERSONALE, { da: inizioFinestra(oggi) }),
     // Le scelte sui promemoria non devono rompere la home.
     leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null })),
+    // L'ultima riga scritta da te in qualunque spazio (anche Casa): conta per "in pari".
+    ultimaCreazioneUtente(supabase, userId),
   ]);
   const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
@@ -140,7 +159,7 @@ export async function loadHomeData(
   });
   const ultimaCreazione = transazioni.reduce<string | null>(
     (max, t) => (max === null || t.createdAt > max ? t.createdAt : max),
-    null
+    ultimaMia
   );
   const inPari = periodoDaRecuperare(
     ultimaCreazione ? oggiRomaISO(new Date(ultimaCreazione)) : null,

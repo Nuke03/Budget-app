@@ -22,6 +22,7 @@ vi.mock('@/lib/data/accounts', () => ({
 }));
 
 import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
+import { createTransaction } from '@/lib/data/transactions';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { CasaStato } from '@/lib/loadCasaStato';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
@@ -107,6 +108,21 @@ describe('HomeDashboard', () => {
 
     expect(screen.getByTestId('disponibile')).toHaveTextContent('870,00 €');
     expect(screen.getByText(/29 € al giorno/)).toBeInTheDocument();
+  });
+
+  it('con il disponibile a zero o sotto non mostra una cifra negativa', () => {
+    render(
+      <HomeDashboard
+        disponibileLibero={-12.4}
+        margineGiornaliero={-0.4}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+      />
+    );
+    expect(screen.getByText('Fino al 1 luglio conviene spendere solo per il necessario.')).toBeInTheDocument();
+    expect(screen.queryByText(/al giorno/)).not.toBeInTheDocument();
   });
 
   it('mostra il dettaglio conti/obiettivi solo dopo il click', () => {
@@ -210,6 +226,34 @@ describe('HomeDashboard', () => {
     expect(screen.getByLabelText('Importo')).toBeInTheDocument();
     expect(replace).toHaveBeenCalledWith('/');
     window.history.pushState({}, '', '/');
+  });
+
+  it('dopo un salvataggio in Casa dice "Registrato in Casa" per un momento', async () => {
+    vi.mocked(createTransaction).mockResolvedValueOnce({ id: 'c1' } as never);
+    window.localStorage.setItem('aggiungiModo', 'casa');
+    window.localStorage.setItem('aggiungi:conto:casa', accounts[0].id);
+    try {
+      render(
+        <HomeDashboard
+          disponibileLibero={870}
+          margineGiornaliero={29}
+          dataTarget="2026-07-01T00:00:00Z"
+          accounts={accounts}
+          categories={[]}
+          goals={goals}
+          meUserId="u1"
+          casa={casaPerHome()}
+        />
+      );
+      act(() => {
+        window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+      });
+      fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '9' } });
+      fireEvent.click(screen.getByText('Salva'));
+      expect(await screen.findByText('Registrato in Casa')).toBeInTheDocument();
+    } finally {
+      window.localStorage.clear();
+    }
   });
 
   it('con una casa passata mostra il selettore nel foglio', () => {
