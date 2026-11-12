@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-12T00:00:00.000Z",
+  "title": "Design System: Budget — Il Libretto",
+  "extensions": {
+    "colorMeta": {
+      "cover-blue": { "role": "primary", "displayName": "Passbook Blue", "canonical": "#14306b", "tonalRamp": ["#081535", "#0e2350", "#14306b", "#2f4a85", "#5d77a8", "#8fa4c9", "#c3cee3", "#e4eaf5"], "dark": "#6b8fe0" },
+      "cover-blue-deep": { "role": "primary", "displayName": "Passbook Blue Deep", "canonical": "#0e2350", "tonalRamp": ["#050d22", "#0a1a3c", "#0e2350", "#243b69", "#4f6590", "#8093b4", "#b9c3d8", "#e4eaf5"], "dark": "#9fb6e6" },
+      "cover-blue-tint": { "role": "neutral", "displayName": "Cover Tint", "canonical": "#e4eaf5", "tonalRamp": ["#6d7a96", "#8b97b0", "#a8b3c9", "#c1cadb", "#d3daea", "#e4eaf5", "#eef2f9", "#f7f9fc"], "dark": "#1a2a4d" },
+      "ground": { "role": "neutral", "displayName": "Pale Blue-Grey Ground", "canonical": "#eef2f8", "tonalRamp": ["#7a8396", "#979fb0", "#b2b9c8", "#c9cfdb", "#dbe0ea", "#eef2f8", "#f3f6fa", "#f9fafd"], "dark": "#0c1424" },
+      "page": { "role": "neutral", "displayName": "Page White", "canonical": "#ffffff", "tonalRamp": ["#cfd3da", "#dde0e6", "#e8eaee", "#f0f1f4", "#f6f7f9", "#fafbfc", "#fdfdfe", "#ffffff"], "dark": "#131d33" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#14213d", "tonalRamp": ["#0a1122", "#14213d", "#2b3753", "#4d5a73", "#76819a", "#a0a9bb", "#cbd0dc", "#e8edf6"], "dark": "#e8edf6" },
+      "ink-soft": { "role": "neutral", "displayName": "Soft Ink", "canonical": "#4d5a73", "tonalRamp": ["#1c2540", "#2e3a55", "#3e4b65", "#4d5a73", "#6b7790", "#8d97ab", "#b4bbc9", "#dde1ea"], "dark": "#a3b0c6" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "#e3e8f1", "tonalRamp": ["#6b7388", "#8a91a4", "#a9afbf", "#c2c8d5", "#d3d9e4", "#e3e8f1", "#edf0f6", "#f6f8fb"], "dark": "#24314d" },
+      "stamp-red": { "role": "secondary", "displayName": "Stamp Red", "canonical": "#c8102e", "tonalRamp": ["#4a0510", "#740a1c", "#9d0d26", "#c8102e", "#df4a62", "#ec808f", "#f5b3bd", "#fbe3e7"], "dark": "#ff7a8c" },
+      "alert-red": { "role": "alert", "displayName": "Alert Red", "canonical": "#dc2626", "tonalRamp": ["#450a0a", "#7f1d1d", "#b91c1c", "#dc2626", "#ef5b5b", "#f58f8f", "#fac1c1", "#fdecec"] },
+      "alert-tint": { "role": "alert", "displayName": "Alert Tint", "canonical": "#fdecec", "tonalRamp": ["#b85a5a", "#d17f7f", "#e3a3a3", "#eebfbf", "#f5d3d3", "#fae1e1", "#fdecec", "#fff6f6"], "dark": "#2a1414" },
+      "cat-coral": { "role": "category", "displayName": "Coral", "canonical": "#f97362" },
+      "cat-amber": { "role": "category", "displayName": "Amber", "canonical": "#f5a524" },
+      "cat-emerald": { "role": "category", "displayName": "Emerald", "canonical": "#0f9d6b" },
+      "cat-teal": { "role": "category", "displayName": "Teal", "canonical": "#14b8a6" },
+      "cat-sky": { "role": "category", "displayName": "Sky", "canonical": "#3b9ae1" },
+      "cat-violet": { "role": "category", "displayName": "Violet", "canonical": "#8452f5" },
+      "cat-pink": { "role": "category", "displayName": "Pink", "canonical": "#e1177b" },
+      "cat-slate": { "role": "category", "displayName": "Slate", "canonical": "#64748b" }
+    },
+    "typographyMeta": {
+      "figure": { "displayName": "Figure", "purpose": "The Disponibile libero amount; cents drop to 28px." },
+      "figure-entry": { "displayName": "Figure, entry", "purpose": "The amount typed in the quick-add sheet." },
+      "title": { "displayName": "Title", "purpose": "Cover band heading." },
+      "section": { "displayName": "Section", "purpose": "Block headings such as Promemoria." },
+      "body": { "displayName": "Body", "purpose": "Sentences, ledger rows, buttons." },
+      "body-small": { "displayName": "Body small", "purpose": "Captions, ledger dates, bar labels, cover side label." },
+      "label": { "displayName": "Label", "purpose": "Uppercase ledger column heads only." },
+      "tab": { "displayName": "Tab", "purpose": "Bottom bar labels, bold when active." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "none", "purpose": "Cards are flat; hierarchy from hairline borders." },
+      { "name": "shadow-hero", "value": "0 4px 16px -4px rgb(15 23 42 / 0.08)", "purpose": "Defined token, unused by built surfaces." },
+      { "name": "shadow-fab", "value": "0 4px 16px -4px rgb(15 23 42 / 0.2)", "purpose": "Soft lift under the quick-add save button." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Button press, sheet rise (0.32s), row entry (0.22s), stamp press (0.26s)." },
+      { "name": "press", "value": "transform 0.15s, scale(0.96), brightness(0.94)", "purpose": "Every button while pressed." },
+      { "name": "stamp-fade", "value": "0.4s ease after 2.5s", "purpose": "The stamp vanishes; reduced motion keeps only this timer." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Cover Band",
+      "kind": "custom",
+      "refersTo": "cover-band",
+      "description": "Passbook-blue header with serif title and month label.",
+      "html": "<header class=\"ds-cover\"><h1>Il mio libretto</h1><p>Novembre 2026</p></header>",
+      "css": ".ds-cover { background: var(--cover, #14306b); color: #fff; display: flex; align-items: baseline; justify-content: space-between; padding: 40px 20px 16px; } .ds-cover h1 { margin: 0; font-family: 'Source Serif 4', Georgia, serif; font-size: 22px; font-weight: 600; letter-spacing: 0.02em; } .ds-cover p { margin: 0; font-size: 13px; }"
+    },
+    {
+      "name": "Headline Page",
+      "kind": "card",
+      "refersTo": "page-card",
+      "description": "White page attached under the cover with the Disponibile figure.",
+      "html": "<section class=\"ds-page\"><p class=\"ds-page-l\">Disponibile libero</p><p class=\"ds-page-f\">1.240<span>,50 €</span></p><p class=\"ds-page-s\">Puoi spendere 45 € al giorno fino al 30 novembre</p></section>",
+      "css": ".ds-page { background: var(--page, #fff); border: 1px solid var(--rule, #e3e8f1); border-top: 0; border-radius: 0 0 1rem 1rem; padding: 20px 18px 16px; color: var(--foreground, #14213d); } .ds-page-l { margin: 0; font-size: 13px; color: var(--ink-2, #4d5a73); } .ds-page-f { margin: 6px 0 0; font-family: 'Source Serif 4', Georgia, serif; font-size: 56px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums lining-nums; } .ds-page-f span { font-size: 28px; } .ds-page-s { margin: 8px 0 0; font-size: 15px; color: var(--ink-2, #4d5a73); }"
+    },
+    {
+      "name": "Ledger",
+      "kind": "card",
+      "refersTo": "ledger-row",
+      "description": "Four-column passbook ledger with month-to-date totals.",
+      "html": "<section class=\"ds-ledger\"><div class=\"ds-lg-row ds-lg-head\"><span>Data</span><span>Movimento</span><span class=\"r\">Importo</span><span class=\"r\">Nel mese</span></div><div class=\"ds-lg-row\"><span class=\"n s\">12/11</span><span>Spesa</span><span class=\"n r\">−23,40</span><span class=\"n r b\">412,10</span></div><div class=\"ds-lg-row\"><span class=\"n s\">11/11</span><span>Caffè</span><span class=\"n r\">−1,40</span><span class=\"n r b\">388,70</span></div></section>",
+      "css": ".ds-ledger { background: var(--surface, #fff); border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; overflow: hidden; font-size: 15px; color: var(--foreground, #14213d); } .ds-lg-row { display: grid; grid-template-columns: 2.75rem minmax(0,1fr) 4.5rem 4.5rem; column-gap: 8px; align-items: center; padding: 12px 16px; min-height: 48px; border-bottom: 1px solid var(--rule, #e3e8f1); } .ds-lg-head { min-height: 0; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2, #4d5a73); border-bottom: 2px solid var(--brand, #14306b); } .ds-ledger .r { text-align: right; } .ds-ledger .n { font-variant-numeric: tabular-nums lining-nums; } .ds-ledger .s { font-size: 13px; color: var(--ink-2, #4d5a73); } .ds-ledger .b { font-weight: 600; }"
+    },
+    {
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Red round REGISTRATO mark, the only use of stamp red.",
+      "html": "<span class=\"ds-stamp\"><span>REGISTRATO<br>12/11</span></span>",
+      "css": ".ds-stamp { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border: 3px solid var(--stamp, #c8102e); border-radius: 9999px; color: var(--stamp, #c8102e); font-size: 9px; font-weight: 600; line-height: 1.2; letter-spacing: 0.02em; text-align: center; transform: rotate(-10deg); opacity: 0.9; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid passbook-blue action, 48px tall.",
+      "html": "<button class=\"ds-btn\">Registra</button>",
+      "css": ".ds-btn { background: var(--brand, #14306b); color: var(--brand-foreground, #fff); border: 0; border-radius: 1rem; min-height: 48px; padding: 14px 24px; font-family: 'Work Sans', system-ui, sans-serif; font-size: 16px; font-weight: 600; transition: transform 0.15s cubic-bezier(0.16,1,0.3,1), filter 0.15s; } .ds-btn:active { transform: scale(0.96); filter: brightness(0.94); } .ds-btn:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.4; }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Full-round choice chip; selected fills with passbook blue.",
+      "html": "<button class=\"ds-chip\">Personale</button> <button class=\"ds-chip ds-chip-on\">Casa</button>",
+      "css": ".ds-chip { min-height: 44px; padding: 8px 16px; border-radius: 9999px; border: 2px solid var(--rule, #e3e8f1); background: var(--surface, #fff); color: var(--foreground, #14213d); font-family: 'Work Sans', system-ui, sans-serif; font-size: 14px; font-weight: 600; } .ds-chip-on { background: var(--brand, #14306b); border-color: var(--brand, #14306b); color: var(--brand-foreground, #fff); } .ds-chip:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Amount Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Serif tabular amount input with euro sign.",
+      "html": "<span class=\"ds-amt\"><input class=\"ds-field\" inputmode=\"decimal\" value=\"23,40\" aria-label=\"Importo\"><span>€</span></span>",
+      "css": ".ds-amt { display: inline-flex; align-items: baseline; gap: 8px; } .ds-amt span { font-family: 'Source Serif 4', Georgia, serif; font-size: 20px; color: var(--ink-2, #4d5a73); } .ds-field { min-height: 48px; width: 160px; padding: 0 12px; border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; background: var(--page, #fff); color: var(--foreground, #14213d); font-family: 'Source Serif 4', Georgia, serif; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; } .ds-field:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Bottom Bar",
+      "kind": "nav",
+      "refersTo": "add-button",
+      "description": "Four tabs with the round + as the centre slot.",
+      "html": "<nav class=\"ds-nav\"><a class=\"on\">Home</a><a>Storico</a><button aria-label=\"Aggiungi\">+</button><a>Casa</a><a>Altro</a></nav>",
+      "css": ".ds-nav { display: flex; align-items: flex-end; background: var(--surface, #fff); border-top: 1px solid var(--rule, #e3e8f1); font-family: 'Work Sans', system-ui, sans-serif; font-size: 12px; } .ds-nav a { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; font-weight: 500; color: var(--ink-2, #4d5a73); } .ds-nav a.on { font-weight: 700; color: var(--brand, #14306b); } .ds-nav button { flex: 1; max-width: 56px; height: 56px; margin: -20px 12px 0; border-radius: 9999px; border: 4px solid var(--surface, #fff); background: var(--brand, #14306b); color: var(--brand-foreground, #fff); font-size: 26px; line-height: 1; }"
+    },
+    {
+      "name": "Comparison Bars",
+      "kind": "custom",
+      "refersTo": "page-card",
+      "description": "Two 8px bars on one scale: this month vs usual.",
+      "html": "<div class=\"ds-bars\"><div><div class=\"ds-bl\"><span>Questo mese</span><b>412 €</b></div><div class=\"ds-tr\"><i style=\"width:80%;background:var(--brand,#14306b)\"></i></div></div><div><div class=\"ds-bl\"><span>Di solito a quest'ora</span><b>515 €</b></div><div class=\"ds-tr\"><i style=\"width:100%;background:var(--ink-2,#4d5a73)\"></i></div></div></div>",
+      "css": ".ds-bars { display: flex; flex-direction: column; gap: 10px; color: var(--foreground, #14213d); } .ds-bl { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--ink-2, #4d5a73); } .ds-bl b { font-weight: 600; color: var(--foreground, #14213d); font-variant-numeric: tabular-nums lining-nums; } .ds-tr { margin-top: 4px; height: 8px; border-radius: 9999px; background: var(--surface-muted, #e4eaf5); } .ds-tr i { display: block; height: 8px; border-radius: 9999px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Il Libretto",
+    "overview": "The money is a savings passbook. A narrow blue cover band sits on top, white pages lie on a pale blue-grey ground, and everything that is a movement is a ruled line with its number in a column. The mood is calm and reliable: ink on paper, nothing glowing, nothing shouting. The headline figure is set in a serif and earns its place by being the total of the lines below it. Density is low and glanceable, built for one thumb on an iPhone installed as a PWA. Identity comes from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp.",
+    "keyCharacteristics": [
+      "Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.",
+      "Serif for figures and headings, grotesk for everything else, tabular lining numerals in every amount.",
+      "Flat colour. Depth comes from borders and tonal steps, not shadows.",
+      "One reserved red, the stamp, for \"registrato\" only.",
+      "Light and dark themes share one token set; dark follows the system setting."
+    ],
+    "rules": [
+      { "name": "The One Red Rule", "body": "Stamp red marks a movement as registered and has no other use. Errors use alert red; emphasis uses blue or weight.", "section": "colors" },
+      { "name": "The Flat Colour Rule", "body": "No gradients, no glow, no coloured balance card. A fill is one solid token.", "section": "colors" },
+      { "name": "The Darker Paper Rule", "body": "Dark mode darkens the paper (navy ground, navy page) and lightens the blue; it never switches to black with neon.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Every amount, date and running total carries the .num class (tabular, lining numerals) so columns align. A number in a column without it is a bug.", "section": "typography" },
+      { "name": "The Serif For Counted Things Rule", "body": "Serif is for figures and headings. Prose, buttons, chips and labels are always Work Sans.", "section": "typography" },
+      { "name": "The Hairline Depth Rule", "body": "Hierarchy comes from borders, tone and spacing. A shadow is allowed only on a control that must read as pressable above content, and stays soft and low-opacity.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do put every amount, date and running total in a .num column with tabular lining numerals.",
+      "Do keep the stamp red (#c8102e) for \"registrato\" confirmations only.",
+      "Do build surfaces from a 1px hairline border, a white page and 1rem radius before reaching for a shadow.",
+      "Do keep done obligations visible and struck through until month end.",
+      "Do keep touch targets at 44px or more and primary actions at 48px.",
+      "Do respect safe-area insets at the top (cover band) and bottom (tab bar) and honour reduced motion."
+    ],
+    "donts": [
+      "Don't use a coloured balance card over a feed of icon tiles; this system refuses that category default.",
+      "Don't compute or display a backward running balance: balances are edited by hand, so the ledger shows the month-to-date total (\"Nel mese\").",
+      "Don't use gradients, glow shadows or a second reserved accent next to the stamp.",
+      "Don't set prose, buttons or labels in the serif, or figures in the grotesk.",
+      "Don't use stamp red for errors; errors use alert red."
+    ]
+  }
+}
