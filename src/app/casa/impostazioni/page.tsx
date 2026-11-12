@@ -14,7 +14,7 @@ export default async function ImpostazioniCasaPage() {
 
   const [feed, saldo] = await Promise.all([
     getMyCalendarFeed(supabase),
-    getSaldoIniziale(supabase, casa.household.id),
+    getSaldoIniziale(supabase, casa.household.id).catch(() => null),
   ]);
   const saldoIniziale =
     saldo && saldo.beneficiarioUserId && saldo.perContoDiUserId

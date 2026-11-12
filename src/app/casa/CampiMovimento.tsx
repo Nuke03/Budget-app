@@ -100,7 +100,7 @@ export function Annulla({ onClose }: { onClose: () => void }) {
 
 export function ErroreMovimento({ testo }: { testo: string | null }) {
   return testo ? (
-    <p role="alert" className="text-sm font-medium text-danger">
+    <p role="alert" className="text-[15px] font-medium text-danger">
       {testo}
     </p>
   ) : null;
