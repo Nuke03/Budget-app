@@ -8,6 +8,7 @@ import { descriviStatoPiano } from '@/lib/calculations/casa/fraseVersamento';
 import { etichettaChiHaPagato } from '@/lib/calculations/casa/etichette';
 import type { DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
+import type { CasaHomeDati } from '@/lib/calculations/supporto/casaHome';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import { computeReminders, statoPromemoria } from '@/lib/calculations/casa/promemoria';
@@ -39,6 +40,8 @@ export interface FinanzeCasa {
   // Il mese dell'ultimo check-in fatto: serve al promemoria del check-in.
   ultimoCheckinMese?: string | null;
   speseNonRegistrate?: number;
+  // I dati della Casa a libretto (B2): per ora solo disponibili, la pagina li mostrerà nei prossimi task.
+  libretto?: CasaHomeDati;
 }
 
 export function CasaHome({

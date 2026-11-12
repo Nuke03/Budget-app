@@ -7,6 +7,8 @@ import { meseRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoDelMese, pianoInVigore } from '@/lib/calculations/casa/versamenti';
 import { speseNonRegistrate } from '@/lib/calculations/casa/controlloSaldo';
 import { statoVociDaParte } from '@/lib/calculations/casa/fondi';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { casaHomeDati } from '@/lib/calculations/supporto/casaHome';
 import { CasaHome } from './CasaHome';
 import { CasaSenzaCasa } from './CasaSenzaCasa';
 
