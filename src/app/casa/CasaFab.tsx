@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Account } from '@/lib/types';
 import { AddTransactionSheet } from '../add/AddTransactionSheet';
@@ -11,16 +11,18 @@ export function CasaFab({ aggiunta, contiPersonali }: { aggiunta: CasaAggiunta; 
   const router = useRouter();
   const [aperto, setAperto] = useState(false);
 
+  // Il + della barra apre il foglio in modo casa.
+  useEffect(() => {
+    const apri = (e: Event) => {
+      segnaGestito(e);
+      setAperto(true);
+    };
+    window.addEventListener(EVENTO_AGGIUNGI, apri);
+    return () => window.removeEventListener(EVENTO_AGGIUNGI, apri);
+  }, []);
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setAperto(true)}
-        aria-label="Aggiungi spesa di casa"
-        className="fixed bottom-28 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[var(--shadow-fab)]"
-      >
-        <Plus size={26} strokeWidth={2.5} />
-      </button>
       <AddTransactionSheet
         aperto={aperto}
         onClose={() => setAperto(false)}

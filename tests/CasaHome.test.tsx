@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { CasaHome } from '@/app/casa/CasaHome';
 import { computeDisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
@@ -251,7 +251,9 @@ describe('CasaHome', () => {
 
     it('il pulsante + apre il foglio in modalità Casa senza selettore', () => {
       render(<CasaHome casa={casa} finanze={finanze([conto])} />);
-      fireEvent.click(screen.getByLabelText('Aggiungi spesa di casa'));
+      act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+    });
       fireEvent.click(screen.getByRole('button', { name: conto.nome }));
       expect(screen.getByRole('group', { name: 'Chi ha pagato' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Personale' })).not.toBeInTheDocument();

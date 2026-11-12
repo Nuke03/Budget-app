@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
 import { formatEuro, nomeMese } from '@/lib/format';
 import { CoverHeader } from './CoverHeader';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
@@ -13,6 +12,7 @@ import { DettaglioDisponibile } from './home/DettaglioDisponibile';
 import { Registro } from './home/Registro';
 import { SchedaNotifiche } from './home/SchedaNotifiche';
 import { giornoEMese } from './home/formati';
+import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
@@ -82,6 +82,21 @@ export function HomeDashboard({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [registratoId, setRegistratoId] = useState<string | null>(null);
 
+  // Il + della barra: apre il foglio; con ?aggiungi=1 (arrivo da un'altra pagina) lo apre al caricamento.
+  useEffect(() => {
+    const apri = (e: Event) => {
+      segnaGestito(e);
+      setIsAddOpen(true);
+    };
+    window.addEventListener(EVENTO_AGGIUNGI, apri);
+    if (new URLSearchParams(window.location.search).has('aggiungi')) {
+      setIsAddOpen(true);
+      router.replace('/');
+    }
+    return () => window.removeEventListener(EVENTO_AGGIUNGI, apri);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Il timbro: se il foglio ha appena registrato una riga che è fra quelle mostrate.
   useEffect(() => {
     let id: string | null = null;
@@ -103,7 +118,7 @@ export function HomeDashboard({
     <>
       <CoverHeader titolo="Il mio libretto" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
 
-      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-12">
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
         <section className="rounded-b-[var(--radius-md)] border border-t-0 border-rule bg-page px-[18px] pb-4 pt-5">
           <p className="text-[13px] text-ink-2">Disponibile libero</p>
           <p data-testid="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
@@ -155,15 +170,6 @@ export function HomeDashboard({
 
         <SchedaNotifiche chiavePubblica={chiavePubblica} notificheAttive={notificheAttive} />
       </main>
-
-      <button
-        type="button"
-        onClick={() => setIsAddOpen(true)}
-        aria-label="Aggiungi transazione"
-        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-[18px] z-40 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[var(--shadow-fab)]"
-      >
-        <Plus size={28} strokeWidth={2.5} />
-      </button>
 
       <AddTransactionSheet
         aperto={isAddOpen}

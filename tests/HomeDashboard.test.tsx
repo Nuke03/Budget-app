@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render as renderRTL, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
+import { render as renderRTL, screen, fireEvent, waitFor, within, cleanup, act } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { HomeDashboard as HomeBase } from '@/app/HomeDashboard';
 
+const replace = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace }),
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -182,7 +183,9 @@ describe('HomeDashboard', () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+    });
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '26' } });
     fireEvent.click(screen.getByText('Salva'));
 
@@ -190,6 +193,23 @@ describe('HomeDashboard', () => {
       expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), '1', -26);
       expect(updateAccountBalance).not.toHaveBeenCalled();
     });
+  });
+
+  it('con ?aggiungi=1 apre il foglio al caricamento e ripulisce l indirizzo', () => {
+    window.history.pushState({}, '', '/?aggiungi=1');
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+      />
+    );
+    expect(screen.getByLabelText('Importo')).toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith('/');
+    window.history.pushState({}, '', '/');
   });
 
   it('con una casa passata mostra il selettore nel foglio', () => {
@@ -205,7 +225,9 @@ describe('HomeDashboard', () => {
         casa={casaPerHome()}
       />
     );
-    fireEvent.click(screen.getByLabelText('Aggiungi transazione'));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Personale' }));
     expect(screen.getByRole('button', { name: 'Personale', pressed: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Casa', pressed: false })).toBeInTheDocument();
@@ -378,7 +400,7 @@ describe('il libretto', () => {
     expect(screen.getByRole('link', { name: 'Tutti i movimenti' })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /Prossimo/ })).toHaveAttribute('href', '/casa');
     expect(screen.getByText('Segna la prima spesa.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Aggiungi transazione')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Aggiungi transazione')).not.toBeInTheDocument();
     assertNessunaParolaVietata(container);
   });
 

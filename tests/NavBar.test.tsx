@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { NavBar } from '@/app/NavBar';
 
 let pathname = '/';
-vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
+const push = vi.hoisted(() => vi.fn());
+vi.mock('next/navigation', () => ({ usePathname: () => pathname, useRouter: () => ({ push }) }));
 
 describe('NavBar', () => {
   it('ha quattro schede: Home, Storico, Casa, Altro', () => {
@@ -15,6 +16,27 @@ describe('NavBar', () => {
     expect(screen.getByRole('link', { name: 'Storico' })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: 'Casa' })).toHaveAttribute('href', '/casa');
     expect(screen.getByRole('link', { name: 'Altro' })).toHaveAttribute('href', '/altro');
+  });
+
+  it('il + al centro apre il foglio se la pagina lo gestisce', () => {
+    pathname = '/';
+    push.mockClear();
+    render(<NavBar />);
+    const ascolta = (e: Event) => {
+      (e as CustomEvent).detail.gestito = true;
+    };
+    window.addEventListener('libretto:aggiungi', ascolta);
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi transazione' }));
+    window.removeEventListener('libretto:aggiungi', ascolta);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('il + su un altra pagina porta alla Home col foglio aperto', () => {
+    pathname = '/altro';
+    push.mockClear();
+    render(<NavBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi transazione' }));
+    expect(push).toHaveBeenCalledWith('/?aggiungi=1');
   });
 
   it('Casa è attiva su /casa e su /casa/quota', () => {
