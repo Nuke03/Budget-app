@@ -189,8 +189,8 @@ describe('CheckinMensile', () => {
   it('avanzo: cuscinetto già scelto, Fatto è un solo tocco', async () => {
     render(<CheckinMensile dati={dati()} />);
     expect(screen.getByText('In avanzo di 47 €. Cosa ne facciamo?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Lasciamoli al cuscinetto')).toBeChecked();
-    expect(screen.queryByText('Mettiamoli da parte per…')).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Lasciamoli al cuscinetto' })).toBeChecked();
+    expect(screen.queryByRole('radio', { name: 'Una cosa nuova' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
     expect(saveCheckin).toHaveBeenCalledTimes(1);
@@ -200,8 +200,9 @@ describe('CheckinMensile', () => {
   it('dietro "Altro": un fondo oppure una cosa nuova', async () => {
     render(<CheckinMensile dati={dati()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Altro' }));
-    expect(screen.getByText('Mettiamoli da parte per…')).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText('Vacanza estiva'));
+    expect(screen.getByRole('radio', { name: 'Una cosa nuova' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Vacanza estiva' }));
+    expect(screen.getByRole('radio', { name: 'Vacanza estiva' })).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
     await waitFor(() => expect(saveCheckin).toHaveBeenCalledTimes(1));
     expect(vi.mocked(saveCheckin).mock.calls[0][1]).toEqual({ ...base, destinazione: 'da_parte', goalId: 'g1' });
@@ -210,7 +211,7 @@ describe('CheckinMensile', () => {
   it('una cosa nuova vuole il nome', async () => {
     render(<CheckinMensile dati={dati()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Altro' }));
-    fireEvent.click(screen.getByLabelText('Una cosa nuova'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Una cosa nuova' }));
     expect(screen.getByRole('button', { name: 'Fatto, a novembre' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Nome della cosa nuova'), { target: { value: 'Vacanza' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
@@ -223,8 +224,8 @@ describe('CheckinMensile', () => {
     expect(calcolo.avanzo).toBe(-82);
     const { container } = render(<CheckinMensile dati={dati({ calcolo, versamenti })} />);
     expect(screen.getByText('Sono usciti 82 € più del previsto. Li prendiamo dal cuscinetto.')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Lasciamoli al cuscinetto')).not.toBeInTheDocument();
-    expect(screen.queryByText(/quota è un po/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Lasciamoli al cuscinetto' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/quota vada ritoccata/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, a novembre' }));
     await waitFor(() => expect(saveCheckin).toHaveBeenCalledTimes(1));
     expect(vi.mocked(saveCheckin).mock.calls[0][1]).toEqual({ ...base, avanzo: -82, spesoMensili: 1370, nonRegistrate: 0 });
@@ -268,7 +269,8 @@ describe('CheckinMensile', () => {
     const { calcolo, versamenti } = scenario({ speso: 1370, nonRegistrate: 0, precedente: 'ammanco' });
     expect(calcolo.secondoAmmanco).toBe(true);
     render(<CheckinMensile dati={dati({ calcolo, versamenti })} />);
-    const testo = screen.getByText("È il secondo mese: forse la quota è un po' bassa. Non è colpa di nessuno.");
+    const testo = screen.getByText(/^È il secondo mese sotto il previsto: può darsi che la quota vada ritoccata/);
+    expect(document.body.textContent).not.toMatch(/colpa/i);
     expect(screen.getByRole('link', { name: 'Guarda le stime reali' })).toHaveAttribute('href', '/casa/quota');
     const fatto = screen.getByRole('button', { name: 'Fatto, a novembre' });
     expect(fatto.compareDocumentPosition(testo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -377,5 +379,17 @@ describe('CheckinMensile', () => {
     expect(screen.getByText('Il check-in parte dal primo mese intero con la quota attiva.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Torna alla casa' })).toHaveAttribute('href', '/casa');
     assertNessunaParolaVietata(container);
+  });
+});
+
+describe('CheckinMensile: scelte in stile pill', () => {
+  it('copertina con il titolo del mese e radio con tastiera', () => {
+    render(<CheckinMensile dati={dati()} />);
+    expect(screen.getByRole('banner')).toHaveTextContent('Ottobre in casa');
+    fireEvent.click(screen.getByRole('button', { name: 'Altro' }));
+    const cuscinetto = screen.getByRole('radio', { name: 'Lasciamoli al cuscinetto' });
+    fireEvent.keyDown(cuscinetto, { key: 'ArrowRight' });
+    expect(screen.getByRole('radio', { name: 'Vacanza estiva' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Vacanza estiva' })).toHaveFocus();
   });
 });

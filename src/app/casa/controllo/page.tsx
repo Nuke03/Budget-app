@@ -10,9 +10,5 @@ export default async function CheckinPage() {
   if (!casa) redirect('/casa');
   const dati = await loadCheckin(supabase, casa);
 
-  return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <CheckinMensile dati={dati} />
-    </main>
-  );
+  return <CheckinMensile dati={dati} />;
 }

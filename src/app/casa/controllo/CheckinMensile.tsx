@@ -9,15 +9,23 @@ import type { SaveCheckinInput } from '@/lib/data/checkins';
 import { formatNumero, nomeMese } from '@/lib/format';
 import type { CheckinCalcolato } from '@/lib/calculations/casa/checkin';
 import type { CheckinCaricato } from '@/lib/loadCheckin';
-import { CLASSE_CAMPO, ErroreMovimento } from '../CampiMovimento';
+import type { ReactNode } from 'react';
+import { CoverHeader } from '../../CoverHeader';
+import { CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO, CLASSE_SCHEDA, ErroreMovimento } from '../CampiMovimento';
+import { SceltePill } from '../SceltePill';
 import { CardStima } from '../CardStima';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 import { ControlloSaldo } from '../ControlloSaldo';
 
-const CLASSE_PRIMARIO =
-  'rounded-[var(--radius-md)] bg-brand py-3 text-center text-base font-semibold text-brand-foreground disabled:opacity-40';
-const CLASSE_LINK = 'text-sm font-semibold text-brand-dark';
-const CLASSE_SCHEDA = 'flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]';
+// Cornice di ogni stato del check-in: copertina con il titolo e la colonna del libretto.
+function Pagina({ titolo, children }: { titolo: string; children: ReactNode }) {
+  return (
+    <>
+      <CoverHeader titolo={titolo} />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">{children}</main>
+    </>
+  );
+}
 
 const euro = (n: number): string => `${formatNumero(n)} €`;
 const maiuscola = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -67,12 +75,14 @@ export function CheckinMensile({ dati }: { dati: CheckinCaricato }) {
 
   if (dati.stato === 'nessun_mese' || !dati.mese) {
     return (
-      <div className="flex flex-col gap-3">
-        <p className="text-base">Il check-in parte dal primo mese intero con la quota attiva.</p>
+      <Pagina titolo="Il mese in casa">
+        <section className={CLASSE_SCHEDA}>
+          <p className="text-[15px]">Il check-in parte dal primo mese intero con la quota attiva.</p>
+        </section>
         <Link href="/casa" className={CLASSE_LINK}>
           Torna alla casa
         </Link>
-      </div>
+      </Pagina>
     );
   }
 
@@ -81,37 +91,37 @@ export function CheckinMensile({ dati }: { dati: CheckinCaricato }) {
   if (dati.stato === 'fatto' && dati.fatto) {
     const f = dati.fatto;
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">{`${nomeDelMese} in casa`}</h1>
-        <p role="status" className="text-base font-semibold">
+      <Pagina titolo={`${nomeDelMese} in casa`}>
+        <p role="status" className="text-[15px] font-semibold">
           {`Fatto da ${dati.chi ?? 'un altro membro'} il ${giornoEMese(f.createdAt)}.`}
         </p>
         <section className={CLASSE_SCHEDA}>
-          <p className="text-sm">{`Versamenti: ${formatNumero(f.versatoTotale)} di ${euro(f.attesoTotale)}`}</p>
-          <p className="text-sm">
+          <p className="text-[15px]">{`Versamenti: ${formatNumero(f.versatoTotale)} di ${euro(f.attesoTotale)}`}</p>
+          <p className="text-[15px]">
             {`Spese del mese: previste ${euro(f.previstoMensili)}, registrate ${euro(f.spesoMensili)}, non registrate ${euro(f.nonRegistrate)}`}
           </p>
-          <p className="text-sm font-semibold">{fraseEsito(f)}</p>
+          <p className="text-[15px] font-semibold">{fraseEsito(f)}</p>
         </section>
         <CardStimaCheckin dati={dati} />
         <Link href="/casa" className={CLASSE_LINK}>
           Torna alla casa
         </Link>
-      </div>
+      </Pagina>
     );
   }
 
   if (passo0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">{`${nomeDelMese} in casa`}</h1>
-        <p className="text-sm text-muted">Prima un controllo veloce del conto comune.</p>
-        <p className="text-sm text-muted">{"Se c'è una differenza, la registriamo nel mese in corso, non in quello che state chiudendo."}</p>
-        <ControlloSaldo conti={dati.conti} onFatto={() => setPasso0(false)} />
+      <Pagina titolo={`${nomeDelMese} in casa`}>
+        <section className={CLASSE_SCHEDA}>
+          <p className="text-[15px] text-ink-2">Prima un controllo veloce del conto comune.</p>
+          <p className="text-[15px] text-ink-2">{"Se c'è una differenza, la registriamo nel mese in corso, non in quello che state chiudendo."}</p>
+          <ControlloSaldo conti={dati.conti} onFatto={() => setPasso0(false)} />
+        </section>
         <button type="button" onClick={() => setPasso0(false)} className={`${CLASSE_LINK} self-start`}>
           Salta
         </button>
-      </div>
+      </Pagina>
     );
   }
 
@@ -187,68 +197,64 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
     }
   }
 
+  const opzioni = [
+    { chiave: 'cuscinetto', etichetta: 'Lasciamoli al cuscinetto' },
+    ...(altro
+      ? [
+          ...dati.fondiPerAvanzo.map((g) => ({ chiave: `fondo:${g.id}`, etichetta: g.nome })),
+          { chiave: 'nuova', etichetta: 'Una cosa nuova' },
+        ]
+      : []),
+  ];
+  const chiaveScelta = scelta === 'fondo' ? `fondo:${goalId}` : scelta;
+  function scegli(chiave: string) {
+    if (chiave.startsWith('fondo:')) {
+      setScelta('fondo');
+      setGoalId(chiave.slice('fondo:'.length));
+    } else {
+      setScelta(chiave as Scelta);
+    }
+  }
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        void conferma();
-      }}
-      className="flex flex-col gap-5"
-    >
-      <h1 className="text-2xl font-bold">{`${nomeDelMese} in casa`}</h1>
+    <Pagina titolo={`${nomeDelMese} in casa`}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void conferma();
+        }}
+        className="flex flex-col gap-3.5"
+      >
+        <section className={CLASSE_SCHEDA}>
+          <ul className="flex flex-col gap-1">
+            {dati.versamenti.map((v) => (
+              <li key={v.userId} className="text-[15px]">
+                {`${v.nome} ${formatNumero(v.versato)} di ${formatNumero(v.atteso)}`}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[15px]">
+            {`Spese del mese: previste ${euro(calcolo.previstoMensili)}, registrate ${euro(calcolo.spesoMensili)}, non registrate ${euro(calcolo.nonRegistrate)}`}
+          </p>
+          {dati.cuscinetto ? (
+            <p className="text-[15px]">{`Cuscinetto ${formatNumero(dati.cuscinetto.attuale)} di ${euro(dati.cuscinetto.obiettivo)}`}</p>
+          ) : null}
+        </section>
 
-      <section className={CLASSE_SCHEDA}>
-        <ul className="flex flex-col gap-1">
-          {dati.versamenti.map((v) => (
-            <li key={v.userId} className="text-sm">
-              {`${v.nome} ${formatNumero(v.versato)} di ${formatNumero(v.atteso)}`}
-            </li>
-          ))}
-        </ul>
-        <p className="text-sm">
-          {`Spese del mese: previste ${euro(calcolo.previstoMensili)}, registrate ${euro(calcolo.spesoMensili)}, non registrate ${euro(calcolo.nonRegistrate)}`}
-        </p>
-        {dati.cuscinetto ? (
-          <p className="text-sm">{`Cuscinetto ${formatNumero(dati.cuscinetto.attuale)} di ${euro(dati.cuscinetto.obiettivo)}`}</p>
-        ) : null}
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <p className="text-base font-semibold">
-          {conAvanzo ? `${fraseEsito(calcolo)} Cosa ne facciamo?` : fraseEsito(calcolo)}
-        </p>
-        <ComeSiCalcola spiegazione={calcolo.spiegazioneAvanzo} />
-      </section>
-
-      {conAvanzo ? (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="sr-only">Cosa ne facciamo?</legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="destinazione" checked={scelta === 'cuscinetto'} onChange={() => setScelta('cuscinetto')} />
-            Lasciamoli al cuscinetto
-          </label>
-          {altro ? (
+        <section className={CLASSE_SCHEDA}>
+          {calcolo.esito === 'in_pari' ? null : (
+            <p aria-hidden="true" className="num font-serif text-[40px] font-bold leading-none">
+              {`${calcolo.avanzo > 0 ? '+' : '−'}${euro(Math.abs(calcolo.avanzo))}`}
+            </p>
+          )}
+          <p className="text-[15px] font-semibold">
+            {conAvanzo ? `${fraseEsito(calcolo)} Cosa ne facciamo?` : fraseEsito(calcolo)}
+          </p>
+          <ComeSiCalcola spiegazione={calcolo.spiegazioneAvanzo} />
+          {conAvanzo ? (
             <div className="flex flex-col gap-2">
-              <p className="text-sm font-semibold">Mettiamoli da parte per…</p>
-              {dati.fondiPerAvanzo.map((g) => (
-                <label key={g.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="destinazione"
-                    checked={scelta === 'fondo' && goalId === g.id}
-                    onChange={() => {
-                      setScelta('fondo');
-                      setGoalId(g.id);
-                    }}
-                  />
-                  {g.nome}
-                </label>
-              ))}
-              <label className="flex items-center gap-2 text-sm">
-                <input type="radio" name="destinazione" checked={scelta === 'nuova'} onChange={() => setScelta('nuova')} />
-                Una cosa nuova
-              </label>
-              {scelta === 'nuova' ? (
+              <SceltePill legenda="Cosa ne facciamo?" opzioni={opzioni} valore={chiaveScelta} onChange={scegli} />
+              {altro && scelta === 'nuova' ? (
                 <input
                   aria-label="Nome della cosa nuova"
                   placeholder="Come la chiamiamo?"
@@ -257,28 +263,31 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
                   className={CLASSE_CAMPO}
                 />
               ) : null}
+              {altro ? null : (
+                <button type="button" onClick={() => setAltro(true)} className={`${CLASSE_LINK} self-start`}>
+                  Altro
+                </button>
+              )}
             </div>
-          ) : (
-            <button type="button" onClick={() => setAltro(true)} className={`${CLASSE_LINK} self-start`}>
-              Altro
-            </button>
-          )}
-        </fieldset>
-      ) : null}
-
-      <ErroreMovimento testo={errore} />
-      <button type="submit" disabled={!valido || !fondoValido || inCorso} className={CLASSE_PRIMARIO}>
-        {`Fatto, a ${nomeMese(meseSuccessivo(mese))}`}
-      </button>
-
-      {calcolo.secondoAmmanco ? (
-        <section className={CLASSE_SCHEDA}>
-          <p className="text-sm">{"È il secondo mese: forse la quota è un po' bassa. Non è colpa di nessuno."}</p>
-          <Link href="/casa/quota" className={CLASSE_LINK}>
-            Guarda le stime reali
-          </Link>
+          ) : null}
         </section>
-      ) : null}
-    </form>
+
+        <ErroreMovimento testo={errore} />
+        <button type="submit" disabled={!valido || !fondoValido || inCorso} className={CLASSE_PRIMARIO}>
+          {`Fatto, a ${nomeMese(meseSuccessivo(mese))}`}
+        </button>
+
+        {calcolo.secondoAmmanco ? (
+          <section className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-rule bg-brand-tint p-4">
+            <p className="text-[15px]">
+              {'È il secondo mese sotto il previsto: può darsi che la quota vada ritoccata. Le stime reali aiutano a deciderlo.'}
+            </p>
+            <Link href="/casa/quota" className={CLASSE_LINK}>
+              Guarda le stime reali
+            </Link>
+          </section>
+        ) : null}
+      </form>
+    </Pagina>
   );
 }
