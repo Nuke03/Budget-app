@@ -11,7 +11,8 @@ vi.mock('@/lib/utenteOLogin', () => ({
 vi.mock('@/lib/data/accounts', () => ({ getAccounts: vi.fn() }));
 vi.mock('@/lib/loadCasaData', () => ({ loadCasaData: vi.fn() }));
 vi.mock('@/lib/calculations/supporto/casaHome', () => ({ casaHomeDati: vi.fn() }));
-vi.mock('@/app/casa/CasaHome', () => ({ CasaHome: () => null }));
+vi.mock('@/app/casa/CasaHome', () => ({ CasaHome: function CasaHome() { return null; } }));
+vi.mock('@/app/casa/VistaSemplice', () => ({ VistaSemplice: function VistaSemplice() { return null; } }));
 vi.mock('@/app/casa/CasaSenzaCasa', () => ({ CasaSenzaCasa: () => null }));
 import { getAccounts } from '@/lib/data/accounts';
 import { loadCasaData } from '@/lib/loadCasaData';
@@ -53,5 +54,28 @@ describe('pagina Casa', () => {
     expect(el.props.libretto).toEqual({ gestisce: true, disponibile: 10 });
     expect(el.props.spiegazione).toEqual({ valore: 10, formula: 'f', ingredienti: [] });
     expect(el.props.vociDaParte).toEqual([]);
+  });
+
+  describe('vista semplice', () => {
+    const dati = {
+      piani: [], righe: {}, debiti: [], obiettiviConAccantonato: [], aggiunta: { conti: [] },
+      disponibile: { valore: 10, spiegazione: { valore: 10, formula: 'f', ingredienti: [] } },
+    } as never;
+    const tipo = async (gestisce: boolean, sp?: { vista?: string }) => {
+      vi.mocked(casaHomeDati).mockReturnValue({ gestisce, vistaSemplice: { quota: 1 } } as never);
+      vi.mocked(loadCasaData).mockResolvedValue(dati);
+      vi.mocked(getAccounts).mockResolvedValue([]);
+      const el = (await CasaPage({ searchParams: Promise.resolve(sp ?? {}) })) as { type: unknown };
+      return (el.type as { name?: string }).name;
+    };
+    it('chi non gestisce vede la vista semplice', async () => {
+      expect(await tipo(false)).toBe('VistaSemplice');
+    });
+    it('chi gestisce vede la Casa piena', async () => {
+      expect(await tipo(true)).toBe('CasaHome');
+    });
+    it('con ?vista=completa anche chi non gestisce vede la Casa piena', async () => {
+      expect(await tipo(false, { vista: 'completa' })).toBe('CasaHome');
+    });
   });
 });

@@ -149,6 +149,11 @@ export function CasaHome({
           <span>Dettagli</span>
           <span aria-hidden="true">›</span>
         </Link>
+        {!libretto.gestisce ? (
+          <Link href="/casa" className="flex min-h-11 items-center justify-center text-sm font-semibold text-brand-dark">
+            Torna alla vista semplice
+          </Link>
+        ) : null}
       </main>
 
       {aggiunta ? <CasaFab aggiunta={aggiunta} contiPersonali={contiPersonali} /> : null}
