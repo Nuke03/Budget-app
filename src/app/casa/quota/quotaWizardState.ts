@@ -62,6 +62,24 @@ export const nuovaChiave = () => ++contatoreChiavi;
 export const testoNumero = (n: number) => String(n).replace('.', ',');
 export const arrotonda2 = (n: number) => Math.round(n * 100) / 100;
 
+// Percentuali intere che fanno 100, come punto di partenza per "Percentuali a scelta":
+// secondo il reddito di ciascuno, oppure uguali se i redditi non dicono niente.
+export function percentualiDiPartenza(persone: { slot: number; reddito: number | null }[]): Record<number, string> {
+  if (persone.length === 0) return {};
+  const pesi = persone.map((p) => Math.max(0, p.reddito ?? 0));
+  const somma = pesi.reduce((s, n) => s + n, 0);
+  const quote = persone.map((_, i) => (somma > 0 ? (pesi[i] / somma) * 100 : 100 / persone.length));
+  const interi = quote.map(Math.floor);
+  // I punti che restano vanno a chi ha perso di più nell'arrotondamento.
+  const resto = 100 - interi.reduce((s, n) => s + n, 0);
+  quote
+    .map((q, i) => ({ i, perso: q - interi[i] }))
+    .sort((a, b) => b.perso - a.perso || a.i - b.i)
+    .slice(0, resto)
+    .forEach(({ i }) => (interi[i] += 1));
+  return Object.fromEntries(persone.map((p, i) => [p.slot, String(interi[i])]));
+}
+
 export function parseMesi(testo: string): number | null {
   const t = testo.trim();
   if (!/^\d+$/.test(t)) return null;

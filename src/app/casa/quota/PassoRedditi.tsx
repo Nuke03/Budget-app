@@ -10,12 +10,12 @@ export function PassoRedditi({ b }: { b: BozzaQuota }) {
         const placeholder = p.userId === null;
         return (
           <fieldset key={p.slot} className={carta}>
-            <legend className="px-1 text-sm font-bold">
+            <legend className="px-1 text-[15px] font-semibold">
               {nomePersona(p)}
-              {tu ? <span className="font-normal text-muted"> (tu)</span> : null}
+              {tu ? <span className="font-normal text-ink-2"> (tu)</span> : null}
             </legend>
             {placeholder ? (
-              <label className="flex flex-col gap-1 text-sm">
+              <label className="flex flex-col gap-1 text-[15px]">
                 Nome
                 <input
                   type="text"
@@ -25,7 +25,7 @@ export function PassoRedditi({ b }: { b: BozzaQuota }) {
                 />
               </label>
             ) : null}
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-[15px]">
               {p.irregolare ? 'Reddito prudente' : 'Reddito netto al mese'}
               <input
                 type="text"
@@ -37,10 +37,10 @@ export function PassoRedditi({ b }: { b: BozzaQuota }) {
               />
             </label>
             {p.soloLettura ? (
-              <p className="text-xs text-muted">Il suo reddito lo corregge {p.displayName}.</p>
+              <p className="text-[13px] text-ink-2">Il suo reddito lo corregge {p.displayName}.</p>
             ) : null}
             {tu ? (
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex min-h-11 items-center gap-2 text-[15px]">
                 <input
                   type="checkbox"
                   checked={p.irregolare}
@@ -49,7 +49,7 @@ export function PassoRedditi({ b }: { b: BozzaQuota }) {
                 Il mio reddito cambia da mese a mese (partita IVA)
               </label>
             ) : null}
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-[15px]">
               In casa dal
               <MesiSelect
                 id={`in-casa-dal-${p.slot}`}
@@ -72,12 +72,12 @@ export function PassoRedditi({ b }: { b: BozzaQuota }) {
         );
       })}
       {irregolareAttivo ? (
-        <p className="text-sm text-muted">
+        <p className="text-[15px] text-ink-2">
           Scrivi una cifra che incassi anche nei mesi magri. La quota si calcola su questa, il resto lo gestirete a
           parte.
         </p>
       ) : null}
-      <p className="text-sm text-muted">Il reddito che scrivi qui lo vede tutta la casa.</p>
+      <p className="text-[15px] text-ink-2">Il reddito che scrivi qui lo vede tutta la casa.</p>
       <button type="button" onClick={aggiungiPersona} className={`${bottoneSecondario} self-start`}>
         Aggiungi una persona
       </button>

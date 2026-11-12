@@ -31,7 +31,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                     className={`${inputClass} flex-1`}
                   />
                 ) : (
-                  <span className="text-sm font-bold">{v.nome}</span>
+                  <span className="text-[15px] font-semibold">{v.nome}</span>
                 )}
                 <div className="flex items-center gap-2">
                   {v.info ? (
@@ -40,7 +40,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                       aria-label={`Che cos'è ${v.nome}`}
                       aria-expanded={infoAperta === v.key}
                       onClick={() => setInfoAperta(infoAperta === v.key ? null : v.key)}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/10 text-xs font-bold text-brand-dark"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[15px] font-semibold text-brand-dark"
                     >
                       i
                     </button>
@@ -49,14 +49,14 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                     type="button"
                     aria-label={`Togli ${v.nome || 'voce'}`}
                     onClick={() => setVoci((vs) => vs.filter((x) => x.key !== v.key))}
-                    className="text-xs font-semibold text-muted"
+                    className="inline-flex min-h-11 items-center px-2 text-[15px] font-semibold text-ink-2"
                   >
                     Togli
                   </button>
                 </div>
               </div>
-              {infoAperta === v.key && v.info ? <p className="text-sm text-muted">{v.info}</p> : null}
-              <div className="flex flex-wrap items-center gap-2 text-sm">
+              {infoAperta === v.key && v.info ? <p className="text-[15px] text-ink-2">{v.info}</p> : null}
+              <div className="flex flex-wrap items-center gap-2 text-[15px]">
                 <input
                   type="text"
                   inputMode="decimal"
@@ -76,15 +76,15 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                 />
                 <span>{freq === 1 ? 'mese' : 'mesi'}</span>
                 {sembraStima ? (
-                  <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold text-muted">stima</span>
+                  <span className="rounded-full bg-brand-tint px-2 py-0.5 text-[13px] font-semibold text-brand-dark">stima</span>
                 ) : null}
                 {freq !== null && freq > 1 && importo !== null ? (
-                  <span className="num text-muted">{`= ${formatNumero(importo / freq)} al mese`}</span>
+                  <span className="num text-ink-2">{`= ${formatNumero(importo / freq)} al mese`}</span>
                 ) : null}
               </div>
               {bolletta && v.origine !== 'reale' ? (
                 <div className="flex flex-col items-start gap-1">
-                  <p className="text-sm text-muted">
+                  <p className="text-[15px] text-ink-2">
                     Cifra tipica per una casa, non la vostra bolletta: con la prima vera ve la correggiamo.
                   </p>
                   {!sembraStima ? (
@@ -97,7 +97,7 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
                         origine: 'suggerita',
                       })
                     }
-                    className="text-sm font-semibold text-brand-dark"
+                    className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark"
                   >
                     Non lo so ancora
                   </button>
@@ -132,8 +132,8 @@ export function PassoSpese({ b }: { b: BozzaQuota }) {
       >
         Aggiungi una voce
       </button>
-      <p className="num text-base font-bold">{`Totale al mese: ${euro(sottotot)}`}</p>
-      <p className="text-sm text-muted">Le cifre sono stime: si cambiano.</p>
+      <p className="num font-serif text-lg font-semibold">{`Totale al mese: ${euro(sottotot)}`}</p>
+      <p className="text-[15px] text-ink-2">Le cifre sono stime: si cambiano.</p>
     </>
   );
 }

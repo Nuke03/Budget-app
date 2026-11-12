@@ -593,6 +593,25 @@ describe('QuotaWizard: per questo periodo', () => {
     expect(screen.getByRole('button', { name: 'Avanti' })).toBeEnabled();
   });
 
+  it('"Percentuali a scelta" parte già compilata secondo i redditi e si va avanti senza scrivere', () => {
+    conSegnapostoFebbraio();
+    fireEvent.click(screen.getByRole('radio', { name: 'Percentuali a scelta' }));
+    expect(screen.getByLabelText('Percentuale di Fabio')).toHaveValue('56');
+    expect(screen.getByLabelText('Percentuale di Giulia')).toHaveValue('44');
+    expect(screen.queryByText('Le percentuali devono fare 100.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Avanti' })).toBeEnabled();
+  });
+
+  it('tornando a "Percentuali a scelta" non cancella quello che hai scritto', () => {
+    conSegnapostoFebbraio();
+    fireEvent.click(screen.getByRole('radio', { name: 'Percentuali a scelta' }));
+    scrivi(screen.getByLabelText('Percentuale di Fabio'), '70');
+    scrivi(screen.getByLabelText('Percentuale di Giulia'), '30');
+    fireEvent.click(screen.getByRole('radio', { name: 'La regola normale' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Percentuali a scelta' }));
+    expect(screen.getByLabelText('Percentuale di Fabio')).toHaveValue('70');
+  });
+
   it('mostra cosa resta a ciascuno per il periodo e salva due versioni', async () => {
     const { onSaved } = monta();
     scrivi(redditi()[0], '1800');

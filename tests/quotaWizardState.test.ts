@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMesi, uscentiDaPiani } from '@/app/casa/quota/quotaWizardState';
+import { parseMesi, percentualiDiPartenza, uscentiDaPiani } from '@/app/casa/quota/quotaWizardState';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { PlanShare } from '@/lib/types';
 
@@ -40,5 +40,22 @@ describe('parseMesi', () => {
     expect(parseMesi('2,5')).toBeNull();
     expect(parseMesi('0')).toBeNull();
     expect(parseMesi('')).toBeNull();
+  });
+});
+
+describe('percentualiDiPartenza', () => {
+  it('segue i redditi e fa sempre 100', () => {
+    expect(percentualiDiPartenza([{ slot: 1, reddito: 1800 }, { slot: 2, reddito: 1400 }])).toEqual({ 1: '56', 2: '44' });
+    const tre = percentualiDiPartenza([
+      { slot: 1, reddito: 1000 },
+      { slot: 2, reddito: 1000 },
+      { slot: 3, reddito: 1000 },
+    ]);
+    expect(Object.values(tre).reduce((s, n) => s + Number(n), 0)).toBe(100);
+  });
+
+  it('senza redditi utili divide in parti uguali', () => {
+    expect(percentualiDiPartenza([{ slot: 1, reddito: 0 }, { slot: 2, reddito: null }])).toEqual({ 1: '50', 2: '50' });
+    expect(percentualiDiPartenza([])).toEqual({});
   });
 });

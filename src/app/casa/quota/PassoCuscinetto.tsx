@@ -5,13 +5,13 @@ export function PassoCuscinetto({ b }: { b: BozzaQuota }) {
   const { mesiCuscinetto, setMesiCuscinetto, cuscinettoObiettivo, cuscinettoTestoEffettivo, setCuscinettoText, piene } = b;
   return (
     <section className={carta}>
-      <p className="text-sm">
+      <p className="text-[15px]">
         Il cuscinetto sono soldi della casa per gli imprevisti: una caldaia, una bolletta più alta del solito.
       </p>
-      <div className="flex flex-col gap-2 text-sm">
+      <div className="flex flex-col gap-2 text-[15px]">
         <span className="font-semibold">Obiettivo</span>
         {([1, 2] as const).map((m) => (
-          <label key={m} className="flex items-center gap-2">
+          <label key={m} className="flex min-h-11 items-center gap-2">
             <input
               type="radio"
               name="cuscinetto-mesi"
@@ -21,9 +21,9 @@ export function PassoCuscinetto({ b }: { b: BozzaQuota }) {
             {m === 1 ? '1 mese di spese' : '2 mesi di spese'}
           </label>
         ))}
-        <p className="text-muted">{`= ${euro(cuscinettoObiettivo)}`}</p>
+        <p className="num text-ink-2">{`= ${euro(cuscinettoObiettivo)}`}</p>
       </div>
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1 text-[15px]">
         Ogni mese
         <input
           type="text"
@@ -34,7 +34,7 @@ export function PassoCuscinetto({ b }: { b: BozzaQuota }) {
         />
       </label>
       {piene !== null ? (
-        <p className="text-sm text-muted">{`Sarà pieno tra circa ${piene} ${piene === 1 ? 'mese' : 'mesi'}.`}</p>
+        <p className="text-[15px] text-ink-2">{`Sarà pieno tra circa ${piene} ${piene === 1 ? 'mese' : 'mesi'}.`}</p>
       ) : null}
     </section>
   );

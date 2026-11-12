@@ -8,9 +8,10 @@ import { totaleVociMensili } from '@/lib/calculations/casa/mensilizza';
 import { fraseVersamento, descriviStatoPiano } from '@/lib/calculations/casa/fraseVersamento';
 import { spiegaQuotaPersona, spiegaTotaleMensile, type Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import type { PersonaQuotaInput } from '@/lib/calculations/casa/quota';
+import { CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../CampiMovimento';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 
-const carta = 'flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]';
+const carta = CLASSE_SCHEDA;
 
 export function PianoAttuale({
   bundle,
@@ -66,50 +67,50 @@ export function PianoAttuale({
   const parteDopo = plan.validoDal > meseCorrente;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5">
       <section className={carta}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold">La nostra quota</h2>
-          <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold">
+          <h2 className="font-serif text-lg font-semibold">La nostra quota</h2>
+          <span className="rounded-full bg-brand-tint px-3 py-1 text-[13px] font-semibold text-brand-dark">
             {stato === 'bozza' ? 'Bozza' : 'Attivo'}
           </span>
         </div>
-        <p className="text-base font-semibold">
+        <p className="text-[15px] font-semibold">
           {fraseVersamento({
             quote: shares.map((s) => ({ nome: s.displayName, quota: s.quotaMensile })),
             giorno: plan.giornoVersamento,
           })}
         </p>
         {parteDopo ? (
-          <p className="text-sm text-muted">
+          <p className="text-[15px] text-ink-2">
             Parte da {format(parseISO(plan.validoDal), 'LLLL yyyy', { locale: it })}.
           </p>
         ) : null}
-        {fraseBozza ? <p className="text-sm text-muted">{fraseBozza}</p> : null}
+        {fraseBozza ? <p className="text-[15px] text-ink-2">{fraseBozza}</p> : null}
       </section>
 
       <section className={carta} data-testid="totale">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm">
-            Totale da versare ogni mese: <span className="num font-bold">{formatNumero(plan.totaleMensile)} €</span>
+          <p className="text-[15px]">
+            Totale da versare ogni mese: <span className="num font-serif text-lg font-semibold">{formatNumero(plan.totaleMensile)} €</span>
           </p>
           <ComeSiCalcola spiegazione={spiegazioneTotale} />
         </div>
       </section>
 
       <section className={carta}>
-        <h2 className="text-base font-bold">Quote</h2>
+        <h2 className="font-serif text-lg font-semibold">Quote</h2>
         <ul className="flex flex-col gap-3">
           {shares.map((s) => {
             const sp = spiegazione(s.slot);
             return (
               <li key={s.slot} className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm">{s.displayName}</span>
+                  <span className="text-[15px]">{s.displayName}</span>
                   {s.quotaMensile > 0 ? (
-                    <span className="num text-sm font-bold">{formatNumero(s.quotaMensile)} € al mese</span>
+                    <span className="num text-[15px] font-semibold">{formatNumero(s.quotaMensile)} € al mese</span>
                   ) : (
-                    <span className="text-sm text-muted">Nessun versamento in questo periodo</span>
+                    <span className="text-[15px] text-ink-2">Nessun versamento in questo periodo</span>
                   )}
                 </div>
                 {sp && s.quotaMensile > 0 ? <ComeSiCalcola spiegazione={sp} /> : null}
@@ -119,11 +120,7 @@ export function PianoAttuale({
         </ul>
       </section>
 
-      <button
-        type="button"
-        onClick={onRivedi}
-        className="rounded-[var(--radius-md)] border border-black/10 px-4 py-3 text-sm font-semibold"
-      >
+      <button type="button" onClick={onRivedi} className={CLASSE_SECONDARIO}>
         Rivedi la quota
       </button>
     </div>

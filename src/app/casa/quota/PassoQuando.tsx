@@ -9,7 +9,7 @@ export function PassoQuando({ b }: { b: BozzaQuota }) {
   return (
     <>
       <section className={carta}>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-[15px]">
           Versamento entro il giorno
           <select value={giorno} onChange={(e) => setGiorno(Number(e.target.value))} className={inputClass}>
             {Array.from({ length: 28 }, (_, i) => i + 1).map((g) => (
@@ -19,7 +19,7 @@ export function PassoQuando({ b }: { b: BozzaQuota }) {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-[15px]">
           Partite dal mese di
           <MesiSelect id="partenza" valore={partenza} da={meseCorrente} onChange={setPartenza} />
         </label>
@@ -28,7 +28,7 @@ export function PassoQuando({ b }: { b: BozzaQuota }) {
       {versioni ? (
         <section className={carta}>
           {versioni.length === 1 ? (
-            <p className="text-base font-semibold">
+            <p className="text-[15px] font-semibold">
               {fraseVersamento({
                 quote: versioni[0].quote.map((q) => ({ nome: q.displayName, quota: q.quotaMensile })),
                 giorno,
@@ -38,7 +38,7 @@ export function PassoQuando({ b }: { b: BozzaQuota }) {
           ) : (
             <ul className="flex flex-col gap-2">
               {versioni.map((v) => (
-                <li key={v.validoDal} className="text-base font-semibold">
+                <li key={v.validoDal} className="text-[15px] font-semibold">
                   {`Da ${format(parseISO(v.validoDal), 'LLLL yyyy', { locale: it })}: ${fraseVersamento({
                     quote: v.quote.map((q) => ({ nome: q.displayName, quota: q.quotaMensile })),
                     giorno,
@@ -47,12 +47,12 @@ export function PassoQuando({ b }: { b: BozzaQuota }) {
               ))}
             </ul>
           )}
-          {statoBozza.frase ? <p className="text-sm text-muted">{statoBozza.frase}</p> : null}
+          {statoBozza.frase ? <p className="text-[15px] text-ink-2">{statoBozza.frase}</p> : null}
         </section>
       ) : null}
 
       {errore ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-[15px] text-danger">
           {errore}
         </p>
       ) : null}

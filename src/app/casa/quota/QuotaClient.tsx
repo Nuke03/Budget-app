@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import type { PlanBundle } from '@/lib/data/householdPlans';
 import type { PropostaStima } from '@/lib/calculations/casa/stimaVsReale';
 import type { BudgetGoal, HouseholdMember } from '@/lib/types';
+import { CoverHeader } from '../../CoverHeader';
 import { CardStima } from '../CardStima';
+import { CLASSE_LINK } from '../CampiMovimento';
 import { PianoAttuale } from './PianoAttuale';
 import { QuotaWizard } from './QuotaWizard';
 
@@ -41,8 +43,9 @@ export function QuotaClient({
   const [salvata, setSalvata] = useState(false);
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">Calcola la nostra quota</h1>
+    <>
+      <CoverHeader titolo="Calcola la nostra quota" />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
       {pianoAttuale && !modifica ? (
         <>
           {(altre ? proposte : proposte.slice(0, 1)).map((p) => (
@@ -61,7 +64,7 @@ export function QuotaClient({
             />
           ))}
           {!altre && proposte.length > 1 ? (
-            <button type="button" onClick={() => setAltre(true)} className="self-start text-sm font-semibold text-brand-dark">
+            <button type="button" onClick={() => setAltre(true)} className={`${CLASSE_LINK} self-start`}>
               {`Altre ${proposte.length - 1} ${proposte.length - 1 === 1 ? 'stima' : 'stime'} da rivedere`}
             </button>
           ) : null}
@@ -81,6 +84,7 @@ export function QuotaClient({
           }}
         />
       )}
-    </main>
+      </main>
+    </>
   );
 }

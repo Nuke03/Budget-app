@@ -14,10 +14,10 @@ export function QuotaWizard(props: QuotaWizardProps) {
   const { passo, setPasso, puoProseguire, versioni, inCorso, conferma } = b;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-muted">{passo} di 5</p>
-        <h2 className="text-xl font-bold">{PASSI[passo - 1]}</h2>
+        <p className="num text-[13px] text-ink-2">{passo} di 5</p>
+        <h2 className="font-serif text-lg font-semibold">{PASSI[passo - 1]}</h2>
       </div>
 
       {passo === 1 ? <PassoRedditi b={b} /> : null}

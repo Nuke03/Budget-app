@@ -22,6 +22,7 @@ import {
   arrotonda2,
   messaggioErrore,
   parseMesi,
+  percentualiDiPartenza,
   personeIniziali,
   testoNumero,
   uscentiDaPiani,
@@ -215,6 +216,14 @@ export function useBozzaQuota(props: QuotaWizardProps) {
   const setVoce = (key: number, patch: Partial<VoceState>) =>
     setVoci((vs) => vs.map((v) => (v.key === key ? { ...v, ...patch } : v)));
 
+  // Scegliendo "Percentuali a scelta" non si parte da caselle vuote: la proposta segue i redditi.
+  function scegliPeriodo(tipo: PeriodoIniziale['tipo']) {
+    setPeriodoTipo(tipo);
+    if (tipo === 'percentuali' && persone.every((p) => (percText[p.slot] ?? '').trim() === '')) {
+      setPercText(percentualiDiPartenza(persone.map((p) => ({ slot: p.slot, reddito: parseImporto(p.redditoText) }))));
+    }
+  }
+
   function aggiungiPersona() {
     const massimo = Math.max(
       0,
@@ -256,7 +265,7 @@ export function useBozzaQuota(props: QuotaWizardProps) {
   return {
     meUserId, meseCorrente, passo, setPasso, persone, setPersone, voci, setVoci, infoAperta, setInfoAperta,
     mesiCuscinetto, setMesiCuscinetto, setCuscinettoText, regola, setRegola, eraPersonalizzata,
-    periodoTipo, setPeriodoTipo, percText, setPercText, giorno, setGiorno, partenza, setPartenza,
+    periodoTipo, scegliPeriodo, percText, setPercText, giorno, setGiorno, partenza, setPartenza,
     inCorso, errore, nomePersona, sottotot, cuscinettoTestoEffettivo, cuscinettoObiettivo, piene, totale,
     colonne, colonnaScelta, piuPeriodi, percentualiValide, versioni, statoBozza, avvisoUscenti, quoteFisse, puoProseguire,
     setPersona, setVoce, aggiungiPersona, conferma, irregolareAttivo,
