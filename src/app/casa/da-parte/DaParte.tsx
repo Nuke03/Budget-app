@@ -14,6 +14,8 @@ import { formatDateIt, formatNumero } from '@/lib/format';
 import type { PlanItem } from '@/lib/types';
 import { GoalsList } from '@/app/goals/GoalsList';
 import { closeGoal } from '@/lib/data/goals';
+import { CoverHeader } from '../../CoverHeader';
+import { CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../CampiMovimento';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 import { CostiIngresso } from './CostiIngresso';
 import { NuovaCosa } from './NuovaCosa';
@@ -79,24 +81,28 @@ export function DaParte({
 
   if (!haPiano) {
     return (
-      <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-        <h1 className="text-2xl font-bold">Da parte per le bollette</h1>
-        <p className="text-sm">Prima calcolate la quota: servono le voci per sapere cosa mettere da parte.</p>
-        <Link href="/casa/quota" className="text-sm font-semibold text-brand-dark">
-          Calcolate la nostra quota
-        </Link>
-      </main>
+      <>
+        <CoverHeader titolo="Da parte per le bollette" />
+        <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
+          <section className={CLASSE_SCHEDA}>
+            <p className="text-[15px]">Prima calcolate la quota: servono le voci per sapere cosa mettere da parte.</p>
+            <Link href="/casa/quota" className={CLASSE_LINK}>
+              Calcolate la nostra quota
+            </Link>
+          </section>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">Da parte per le bollette</h1>
-
+    <>
+    <CoverHeader titolo="Da parte per le bollette" />
+    <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-bold">Da parte, mese per mese</h2>
+        <h2 className="font-serif text-lg font-semibold">Da parte, mese per mese</h2>
         {voci.length === 0 ? (
-          <p className="text-sm text-muted">Nel piano non ci sono bollette da mettere da parte.</p>
+          <p className="text-[15px] text-ink-2">Nel piano non ci sono bollette da mettere da parte.</p>
         ) : null}
 
         {daMettere.map(({ item }) => {
@@ -109,32 +115,29 @@ export function DaParte({
           });
           const tutto = a.allaPrimaScadenza >= item.importoRicorrenza;
           return (
-            <div
-              key={item.id}
-              className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]"
-            >
-              <p className="text-sm font-semibold">
+            <div key={item.id} className={CLASSE_SCHEDA}>
+              <p className="text-[15px] font-semibold">
                 {`${item.nome}, circa ${formatNumero(item.importoRicorrenza)} € ${testoFrequenza(item.frequenzaMesi)}: ${formatNumero(a.quotaMensile)} € al mese da ora.`}
               </p>
-              <p className="text-xs text-muted">
+              <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-ink-2">
                 {`La prossima rata è entro il ${formatDateIt(scadenza)}. `}
                 {!aperte[item.id] ? (
                   <button
                     type="button"
                     onClick={() => setAperte((x) => ({ ...x, [item.id]: true }))}
-                    className="font-semibold text-brand-dark"
+                    className="inline-flex min-h-11 items-center px-1 text-[15px] font-semibold text-brand-dark"
                   >
                     Cambia
                   </button>
                 ) : null}
               </p>
               {aperte[item.id] ? (
-                <label className="flex flex-col gap-1 text-xs font-medium">
+                <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
                   Quando arriva la prossima rata?
                   <select
                     value={scadenza}
                     onChange={(e) => setScelte((s) => ({ ...s, [item.id]: e.target.value }))}
-                    className="rounded-[var(--radius-sm)] border border-black/10 bg-surface-muted p-2 text-sm"
+                    className={CLASSE_CAMPO}
                   >
                     {scadenzeProposte({ oggi, frequenzaMesi: item.frequenzaMesi }).map((d) => (
                       <option key={d} value={d}>
@@ -144,7 +147,7 @@ export function DaParte({
                   </select>
                 </label>
               ) : null}
-              <p className="text-xs text-muted">
+              <p className="text-[13px] text-ink-2">
                 {tutto
                   ? 'Entro la prima scadenza avrete messo da parte tutto.'
                   : `Per questa prima volta avrete messo da parte ${formatNumero(a.allaPrimaScadenza)} di ${formatNumero(item.importoRicorrenza)} €; il resto verrà dal cuscinetto. Dalla seconda, ${formatNumero(item.importoRicorrenza)} su ${formatNumero(item.importoRicorrenza)}.`}
@@ -153,7 +156,7 @@ export function DaParte({
                 type="button"
                 disabled={inCorso}
                 onClick={() => metti([{ item, goal: null, stato: 'da_mettere' }])}
-                className="rounded-[var(--radius-md)] bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50"
+                className={CLASSE_PRIMARIO}
               >
                 Metti da parte
               </button>
@@ -166,13 +169,13 @@ export function DaParte({
             type="button"
             disabled={inCorso}
             onClick={() => metti(daMettere)}
-            className="rounded-[var(--radius-md)] bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground disabled:opacity-50"
+            className={CLASSE_PRIMARIO}
           >
             Metti da parte tutto
           </button>
         ) : null}
         {errore ? (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-[15px] text-danger">
             {errore}
           </p>
         ) : null}
@@ -181,40 +184,40 @@ export function DaParte({
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-bold">Da pagare una volta</h2>
+        <h2 className="font-serif text-lg font-semibold">Da pagare una volta</h2>
         {unaVolta.length === 0 ? (
-          <p className="text-sm text-muted">Ancora niente da pagare una volta.</p>
+          <p className="text-[15px] text-ink-2">Ancora niente da pagare una volta.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {unaVolta.map((g) => (
               <li
                 key={g.id}
-                className="flex flex-col gap-1 rounded-[var(--radius-md)] bg-surface p-3 shadow-[var(--shadow-card)]"
+                className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-rule bg-surface p-4"
               >
-                <p className="num text-sm font-semibold">{`${g.nome}: ${formatNumero(g.importoTarget)} €`}</p>
-                <p className="num text-xs text-muted">
+                <p className="num text-[15px] font-semibold">{`${g.nome}: ${formatNumero(g.importoTarget)} €`}</p>
+                <p className="num text-[13px] text-ink-2">
                   {`Messi da parte ${formatNumero(g.accantonato)} €${g.scadenza ? `, entro il ${formatDateIt(g.scadenza)}` : ''}.`}
                 </p>
                 <ComeSiCalcola spiegazione={g.spiegazione} />
                 <button
                   type="button"
                   onClick={() => setChiedePagato(g.id)}
-                  className="self-start text-sm font-semibold text-brand-dark"
+                  className={`${CLASSE_LINK} self-start`}
                 >
                   L&apos;ho pagato
                 </button>
                 {chiedePagato === g.id ? (
-                  <p className="flex flex-wrap items-center gap-2 text-xs">
+                  <p className="flex flex-wrap items-center gap-x-3 text-[13px]">
                     Prima registra la spesa nei movimenti della casa, collegata a questo fondo. Poi tocca &quot;L&apos;ho pagato&quot;: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui.
                     <button
                       type="button"
                       disabled={chiudendo}
                       onClick={() => pagato(g.id)}
-                      className="font-semibold text-brand-dark disabled:opacity-50"
+                      className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark disabled:opacity-50"
                     >
                       Conferma
                     </button>
-                    <button type="button" onClick={() => setChiedePagato(null)} className="font-semibold text-muted">
+                    <button type="button" onClick={() => setChiedePagato(null)} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2">
                       Annulla
                     </button>
                   </p>
@@ -224,7 +227,7 @@ export function DaParte({
           </ul>
         )}
         {errorePagato ? (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-[15px] text-danger">
             {errorePagato}
           </p>
         ) : null}
@@ -238,5 +241,6 @@ export function DaParte({
         esistenti={unaVolta.map((g) => g.nome)}
       />
     </main>
+    </>
   );
 }

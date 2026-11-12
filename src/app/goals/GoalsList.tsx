@@ -35,7 +35,9 @@ export function GoalsList({
   const casa = variante === 'casa';
   if (goals.length === 0) {
     return (
-      <p className="rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted shadow-[var(--shadow-card)]">
+      <p
+        className={`rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted ${casa ? 'border border-rule' : 'shadow-[var(--shadow-card)]'}`}
+      >
         {casa ? 'Ancora niente messo da parte.' : 'Nessun obiettivo aperto.'}
       </p>
     );
@@ -51,7 +53,7 @@ export function GoalsList({
         return (
           <li
             key={g.id}
-            className="rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]"
+            className={`rounded-[var(--radius-md)] bg-surface p-4 ${casa ? 'border border-rule' : 'shadow-[var(--shadow-card)]'}`}
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold">{g.nome}</span>

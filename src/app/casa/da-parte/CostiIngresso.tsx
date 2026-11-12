@@ -14,6 +14,7 @@ import {
 } from '@/lib/calculations/casa/costiIngresso';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import { formatNumero } from '@/lib/format';
+import { CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO } from '../CampiMovimento';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 
 const ERRORE = 'Salvataggio fallito, controlla la connessione e riprova.';
@@ -92,29 +93,29 @@ export function CostiIngresso({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-base font-bold">Costi per entrare in casa</h2>
-      <p className="text-xs text-muted">{AVVISO_COSTI}</p>
+      <h2 className="font-serif text-lg font-semibold">Costi per entrare in casa</h2>
+      <p className="text-[13px] text-ink-2">{AVVISO_COSTI}</p>
 
-      <label className="flex flex-col gap-1 text-xs font-medium">
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Canone al mese (€)
         <input
           inputMode="decimal"
           value={canoneTesto}
           onChange={(e) => setCanoneTesto(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-black/10 bg-surface-muted p-2 text-sm"
+          className={CLASSE_CAMPO}
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs font-medium">
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Data di ingresso
         <input
           type="date"
           value={data}
           onChange={(e) => setData(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-black/10 bg-surface-muted p-2 text-sm"
+          className={CLASSE_CAMPO}
         />
       </label>
       {dataStato === 'passata' ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-[15px] text-danger">
           {DATA_PASSATA}
         </p>
       ) : null}
@@ -128,21 +129,21 @@ export function CostiIngresso({
               return (
                 <li
                   key={v.chiave}
-                  className="flex flex-col gap-1 rounded-[var(--radius-md)] bg-surface p-3 shadow-[var(--shadow-card)]"
+                  className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-rule bg-surface p-3"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold">{v.nome}</span>
-                    <span className="flex items-center gap-2 text-sm font-semibold">
+                    <span className="text-[15px] font-semibold">{v.nome}</span>
+                    <span className="num flex items-center gap-2 text-[15px] font-semibold">
                       {`${formatNumero(v.importo)} €`}
                       <ComeSiCalcola spiegazione={v.spiegazione} />
                     </span>
                   </div>
-                  {v.nota ? <p className="text-xs text-muted">{v.nota}</p> : null}
+                  {v.nota ? <p className="text-[13px] text-ink-2">{v.nota}</p> : null}
                   {v.chiave === 'deposito' ? (
-                    <p className="text-xs text-muted">Importo indicativo, controllate il contratto.</p>
+                    <p className="text-[13px] text-ink-2">Importo indicativo, controllate il contratto.</p>
                   ) : null}
                   {a ? (
-                    <p className="text-xs text-muted">
+                    <p className="text-[13px] text-ink-2">
                       {`Mettete da parte ${formatNumero(v.importo)} € in ${a.mesi} ${a.mesi === 1 ? 'mese' : 'mesi'}: ${formatNumero(a.quotaMensile)} € al mese`}
                     </p>
                   ) : null}
@@ -150,28 +151,28 @@ export function CostiIngresso({
               );
             })}
           </ul>
-          <p className="num text-base font-bold">{`Totale: ${formatNumero(totale)} €`}</p>
+          <p className="num font-serif text-lg font-semibold">{`Totale: ${formatNumero(totale)} €`}</p>
         </>
       ) : (
-        <p className="text-sm text-muted">Scrivete il canone e l&apos;eventuale arredo come numeri, per vedere i costi.</p>
+        <p className="text-[15px] text-ink-2">Scrivete il canone e l&apos;eventuale arredo come numeri, per vedere i costi.</p>
       )}
 
       {!modifica ? (
         <button
           type="button"
           onClick={() => setModifica(true)}
-          className="self-start text-sm font-semibold text-brand-dark"
+          className={`${CLASSE_LINK} self-start`}
         >
           Modifica
         </button>
       ) : (
-        <div className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface-muted p-3 text-sm">
-          <label className="flex flex-col gap-1 text-xs font-medium">
+        <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-rule bg-brand-tint p-3 text-[15px]">
+          <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
             Mensilità di deposito
             <select
               value={mesi}
               onChange={(e) => setMesi(Number(e.target.value))}
-              className="rounded-[var(--radius-sm)] border border-black/10 bg-surface p-2 text-sm"
+              className={CLASSE_CAMPO}
             >
               {[1, 2, 3].map((m) => (
                 <option key={m} value={m}>
@@ -180,21 +181,21 @@ export function CostiIngresso({
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2">
             <input type="checkbox" checked={cedolare} onChange={(e) => setCedolare(e.target.checked)} />
             Cedolare secca
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex min-h-11 items-center gap-2">
             <input type="checkbox" checked={agenzia} onChange={(e) => setAgenzia(e.target.checked)} />
             Agenzia immobiliare
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium">
+          <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
             Arredo (€)
             <input
               inputMode="decimal"
               value={arredoTesto}
               onChange={(e) => setArredoTesto(e.target.value)}
-              className="rounded-[var(--radius-sm)] border border-black/10 bg-surface p-2 text-sm"
+              className={CLASSE_CAMPO}
             />
           </label>
         </div>
@@ -204,13 +205,13 @@ export function CostiIngresso({
         type="button"
         disabled={!puoMettere}
         onClick={metti}
-        className="rounded-[var(--radius-md)] bg-brand px-4 py-3 text-sm font-semibold text-brand-foreground disabled:opacity-50"
+        className={CLASSE_PRIMARIO}
       >
         Metti da parte i costi per entrare
       </button>
-      {fatto ? <p className="text-sm">{'Fatto: trovate le voci qui sopra, in "Da pagare una volta".'}</p> : null}
+      {fatto ? <p className="text-[15px]">{'Fatto: trovate le voci qui sopra, in "Da pagare una volta".'}</p> : null}
       {errore ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-[15px] text-danger">
           {errore}
         </p>
       ) : null}

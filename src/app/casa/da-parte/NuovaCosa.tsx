@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { creaFondoUnaVolta } from '@/lib/data/fondiCasa';
 import { controllaDataIngresso } from '@/lib/calculations/casa/costiIngresso';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
+import { CLASSE_CAMPO, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../CampiMovimento';
 
 const ERRORE = 'Salvataggio fallito, controlla la connessione e riprova.';
 
@@ -42,36 +43,36 @@ export function NuovaCosa({ householdId, oggi }: { householdId: string; oggi: st
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
-      <p className="text-sm font-semibold">Un&apos;altra spesa da pagare una volta</p>
-      <label className="flex flex-col gap-1 text-xs font-medium">
+    <div className={CLASSE_SCHEDA}>
+      <p className="text-[15px] font-semibold">Un&apos;altra spesa da pagare una volta</p>
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Nome
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-black/10 bg-surface-muted p-2 text-sm"
+          className={CLASSE_CAMPO}
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs font-medium">
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Importo (€)
         <input
           inputMode="decimal"
           value={importoTesto}
           onChange={(e) => setImportoTesto(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-black/10 bg-surface-muted p-2 text-sm"
+          className={CLASSE_CAMPO}
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs font-medium">
+      <label className="flex flex-col gap-1.5 text-[13px] text-ink-2">
         Entro quando
         <input
           type="date"
           value={data}
           onChange={(e) => setData(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-black/10 bg-surface-muted p-2 text-sm"
+          className={CLASSE_CAMPO}
         />
       </label>
       {passata ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-[15px] text-danger">
           La data è già passata.
         </p>
       ) : null}
@@ -79,12 +80,12 @@ export function NuovaCosa({ householdId, oggi }: { householdId: string; oggi: st
         type="button"
         disabled={!puoSalvare}
         onClick={salva}
-        className="rounded-[var(--radius-md)] bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground disabled:opacity-50"
+        className={CLASSE_PRIMARIO}
       >
         Aggiungi
       </button>
       {errore ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-[15px] text-danger">
           {errore}
         </p>
       ) : null}
