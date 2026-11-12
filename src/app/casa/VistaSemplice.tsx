@@ -82,8 +82,11 @@ export function VistaSemplice({
   const mese = nomeMese(oggi);
   const membri = casa.members.map((m) => ({ userId: m.userId, nome: m.displayName }));
   const { quota, entroGiorno, versato, stato, creditoVersoCasa } = vista;
-  const versata = quota !== null && versato >= quota;
-  const cifra = quota !== null ? dividiCifra(formatEuro(quota)) : null;
+  const niente = quota !== null && quota <= 0;
+  const versata = quota !== null && quota > 0 && versato >= quota;
+  const parziale = quota !== null && versato > 0 && versato < quota;
+  const dovuto = quota !== null && parziale ? Math.round((quota - versato) * 100) / 100 : quota;
+  const cifra = dovuto !== null ? dividiCifra(formatEuro(dovuto)) : null;
 
   return (
     <CasaAzioni
@@ -100,12 +103,14 @@ export function VistaSemplice({
         <section>
           {quota === null ? (
             <p className="text-[15px]">La quota non è ancora stata calcolata.</p>
+          ) : niente ? (
+            <p className="text-[15px]">Questo mese non c’è niente da versare.</p>
           ) : versata ? (
             <p className="text-[15px]">Hai già versato la quota di {mese}.</p>
           ) : (
             <>
               <p className="text-[15px] text-ink-2">
-                La tua quota di {mese}
+                {parziale ? <>Per {mese} ti mancano</> : <>La tua quota di {mese}</>}
               </p>
               <p data-testid="quota" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
                 {cifra?.intero}
@@ -113,6 +118,11 @@ export function VistaSemplice({
                 <span className="text-[28px]"> €</span>
               </p>
               {entroGiorno ? <p className="mt-1.5 text-[15px] text-ink-2">entro il {entroGiorno}</p> : null}
+              {parziale ? (
+                <p className="mt-1.5 text-[15px] text-ink-2">
+                  Hai già versato <span className="num">{euroInFrase(versato)}</span> di <span className="num">{euroInFrase(quota)}</span>.
+                </p>
+              ) : null}
             </>
           )}
         </section>

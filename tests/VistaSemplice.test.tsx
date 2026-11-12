@@ -48,6 +48,20 @@ describe('VistaSemplice', () => {
     expect(screen.getByText('Hai già versato la quota di novembre.')).toBeInTheDocument();
   });
 
+  it('versamento parziale: mostra quello che manca', () => {
+    vista({ versato: 200 });
+    expect(screen.getByText(/Per novembre ti mancano/)).toBeInTheDocument();
+    expect(screen.getByTestId('quota').textContent).toContain('250');
+    expect(screen.getByText(/entro il 5/)).toBeInTheDocument();
+    expect(screen.getByText(/Hai già versato/).textContent).toMatch(/200.*di.*450/);
+  });
+
+  it('piano con quota 0: niente da versare, non "già versato"', () => {
+    vista({ quota: 0, versato: 0 });
+    expect(screen.getByText('Questo mese non c’è niente da versare.')).toBeInTheDocument();
+    expect(screen.queryByText(/già versato/)).toBeNull();
+  });
+
   it('senza piano', () => {
     vista({ quota: null, entroGiorno: null });
     expect(screen.getByText('La quota non è ancora stata calcolata.')).toBeInTheDocument();
