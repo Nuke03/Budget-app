@@ -19,6 +19,12 @@ export function formatDateIt(date: Date | string): string {
   }).format(d);
 }
 
+// "16 aprile 2027": data in lettere, per le scadenze lette in una frase.
+export function formatDataLunga(date: Date | string): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+  return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+}
+
 export function formatNumero(value: number): string {
   return new Intl.NumberFormat('it-IT', {
     useGrouping: true,

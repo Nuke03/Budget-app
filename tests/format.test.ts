@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatEuro, formatDateIt, formatNumero } from '@/lib/format';
+import { formatEuro, formatDateIt, formatDataLunga, formatNumero } from '@/lib/format';
 
 describe('formatEuro', () => {
   it('formats a positive amount as Italian euros', () => {
@@ -22,6 +22,13 @@ describe('formatDateIt', () => {
 
   it('formats an ISO date string', () => {
     expect(formatDateIt('2026-01-05')).toBe('05/01/2026');
+  });
+});
+
+describe('formatDataLunga', () => {
+  it('scrive giorno, mese in lettere e anno', () => {
+    expect(formatDataLunga('2027-04-16')).toBe('16 aprile 2027');
+    expect(formatDataLunga(new Date(2026, 0, 5))).toBe('5 gennaio 2026');
   });
 });
 

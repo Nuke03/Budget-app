@@ -24,7 +24,7 @@ describe('GoalsList', () => {
 
     render(<GoalsList goals={goals} categories={[]} />);
 
-    expect(screen.getByText(/Sposta questo mese/)).toBeInTheDocument();
+    expect(screen.getByText(/Da mettere da parte questo mese/)).toBeInTheDocument();
     expect(screen.getByText(/30,00/)).toBeInTheDocument();
   });
 
@@ -48,7 +48,7 @@ describe('GoalsList', () => {
 
     render(<GoalsList goals={goals} categories={[]} />);
 
-    expect(screen.queryByText(/Sposta questo mese/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Da mettere da parte questo mese/)).not.toBeInTheDocument();
   });
 
   it('mostra la quota per un obiettivo bloccato ricorrente (es. abbonamento mensile)', () => {
@@ -71,7 +71,7 @@ describe('GoalsList', () => {
 
     render(<GoalsList goals={goals} categories={[]} />);
 
-    expect(screen.getByText(/Sposta questo mese/)).toBeInTheDocument();
+    expect(screen.getByText(/Da mettere da parte questo mese/)).toBeInTheDocument();
     // Compare per un bloccato ricorrente sia nell'intestazione (importoTarget) sia nella riga quota (quotaMensile) — stesso valore, entrambi visibili.
     expect(screen.getAllByText('9,99 €')).toHaveLength(2);
   });
@@ -119,8 +119,20 @@ describe('GoalsList', () => {
 
     render(<GoalsList goals={goals} categories={[]} />);
 
-    expect(screen.getByText(/Ancora riservato/)).toBeInTheDocument();
-    expect(screen.getByText(/350,00/)).toBeInTheDocument();
+    expect(screen.getByText('Già spesi 50,00 €, restano 350,00 € da parte')).toBeInTheDocument();
+  });
+
+  it('per un obiettivo dilazionato dice "Ancora riservato"', () => {
+    const goals = [
+      {
+        id: '1', nome: 'Vacanza', importoTarget: 300, modalita: 'dilazionato' as const,
+        scadenza: '2027-04-16', categoriaId: null, ricorrente: false, frequenzaMesi: null,
+        stato: 'aperto' as const, createdAt: '2026-01-01T00:00:00Z', quotaMensile: 30, accantonato: 150,
+      },
+    ];
+    render(<GoalsList goals={goals} categories={[]} />);
+    expect(screen.getByText('Ancora riservato')).toBeInTheDocument();
+    expect(screen.getByText('entro il 16 aprile 2027')).toBeInTheDocument();
   });
 
   it('non mostra la riga "ancora riservato" se non è stata collegata nessuna spesa', () => {

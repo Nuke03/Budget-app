@@ -1,5 +1,5 @@
-import { Lock, Clock, Pencil, Trash2, PiggyBank } from 'lucide-react';
-import { formatEuro, formatDateIt, formatNumero } from '@/lib/format';
+import { Lock, Clock, Pencil, Archive, PiggyBank } from 'lucide-react';
+import { formatEuro, formatDataLunga, formatNumero } from '@/lib/format';
 import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { ComeSiCalcola } from '@/app/casa/ComeSiCalcola';
 import type { BudgetGoal, Category } from '@/lib/types';
@@ -76,7 +76,7 @@ export function GoalsList({
                     aria-label="Chiudi obiettivo"
                     className="flex h-11 w-11 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint hover:text-danger"
                   >
-                    <Trash2 size={18} aria-hidden="true" />
+                    <Archive size={18} aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -93,7 +93,7 @@ export function GoalsList({
                   {tuttoSubito ? 'tutto messo da parte' : 'messo da parte finora'}
                 </span>
               )}
-              {g.scadenza && <span className="num">entro il {formatDateIt(g.scadenza)}</span>}
+              {g.scadenza && <span className="num">entro il {formatDataLunga(g.scadenza)}</span>}
               {g.ricorrente && g.frequenzaMesi && <span>· {frequenzaLabel(g.frequenzaMesi)}</span>}
               {categoriaNome && <span>· {categoriaNome}</span>}
             </div>
@@ -110,14 +110,24 @@ export function GoalsList({
             {casa && g.spiegazione ? <ComeSiCalcola spiegazione={g.spiegazione} className="mt-2" /> : null}
             {!casa && g.quotaMensile !== null && (
               <div className="mt-2 flex items-center justify-between rounded-[var(--radius-sm)] bg-brand-tint px-3 py-2 text-[13px] font-medium text-brand-dark">
-                <span>Sposta questo mese</span>
+                <span>Da mettere da parte questo mese</span>
                 <span className="num">{formatEuro(g.quotaMensile)}</span>
               </div>
             )}
             {!casa && g.accantonato !== g.importoTarget && (
-              <div className="mt-2 flex items-center justify-between text-[13px] text-ink-2">
-                <span>Ancora riservato</span>
-                <span className="num font-medium">{formatEuro(g.accantonato)}</span>
+              <div className="mt-2 flex items-center justify-between gap-3 text-[13px] text-ink-2">
+                {tuttoSubito ? (
+                  <span>
+                    {g.accantonato > 0
+                      ? `Già spesi ${formatEuro(g.importoTarget - g.accantonato)}, restano ${formatEuro(g.accantonato)} da parte`
+                      : `Già spesi ${formatEuro(g.importoTarget)}, niente più da parte`}
+                  </span>
+                ) : (
+                  <>
+                    <span>Ancora riservato</span>
+                    <span className="num font-medium">{formatEuro(g.accantonato)}</span>
+                  </>
+                )}
               </div>
             )}
           </li>
