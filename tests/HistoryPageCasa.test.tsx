@@ -80,11 +80,12 @@ vi.mock('@/lib/data/transfers', () => ({
 }));
 
 import HistoryPage from '@/app/history/page';
+import { AnnullaProvider } from '@/app/AnnullaProvider';
 
 async function renderStorico(conCasa: boolean) {
   dati.casa = conCasa;
   chartProps.last = null;
-  const { container } = render(<HistoryPage />);
+  const { container } = render(<AnnullaProvider><HistoryPage /></AnnullaProvider>);
   await waitFor(() => expect(screen.getByText('Pane')).toBeInTheDocument());
   if (conCasa) {
     await waitFor(() => expect(screen.getByText('Movimenti con la casa')).toBeInTheDocument());

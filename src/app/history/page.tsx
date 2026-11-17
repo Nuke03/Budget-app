@@ -19,6 +19,7 @@ import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/fi
 import { deltaPerModifica } from '@/lib/calculations/accountBalance';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
+import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { HistoryChartCard } from './HistoryChartCard';
 import { StoricoCasa } from './StoricoCasa';
 import { PeriodoFilter } from './PeriodoFilter';
@@ -27,6 +28,9 @@ import type { Transaction, Category, Account, BudgetGoal, TransactionTipo } from
 
 export default function HistoryPage() {
   const fail = useThrowToBoundary();
+  const eliminaConAnnulla = useEliminaConAnnulla();
+  // Righe tolte alla vista in attesa della scrittura vera: Annulla le rimette al loro posto.
+  const [nascoste, setNascoste] = useState<Set<string>>(new Set());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -129,14 +133,29 @@ export default function HistoryPage() {
     }
   }
 
-  async function handleDelete(t: Transaction) {
-    const supabase = createClient();
-    await deleteTransaction(supabase, t.id);
-    await applicaAggiornamentiSaldo(
-      { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
-      { accountId: null, tipo: t.tipo, importo: 0 }
-    );
-    await refresh();
+  function handleDelete(t: Transaction) {
+    const cambia = (nascondi: boolean) =>
+      setNascoste((prima) => {
+        const dopo = new Set(prima);
+        if (nascondi) dopo.add(t.id);
+        else dopo.delete(t.id);
+        return dopo;
+      });
+    eliminaConAnnulla({
+      id: t.id,
+      testo: t.tipo === 'income' ? 'Entrata eliminata.' : 'Spesa eliminata.',
+      nascondi: () => cambia(true),
+      ripristina: () => cambia(false),
+      esegui: async () => {
+        const supabase = createClient();
+        await deleteTransaction(supabase, t.id);
+        await applicaAggiornamentiSaldo(
+          { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
+          { accountId: null, tipo: t.tipo, importo: 0 }
+        );
+        await refresh();
+      },
+    });
   }
 
   async function handleUpdate(payload: {
@@ -163,7 +182,7 @@ export default function HistoryPage() {
   }
 
   const transactionsFiltrate = filterTransactionsByPeriodo(
-    transactions,
+    transactions.filter((t) => !nascoste.has(t.id)),
     periodo,
     new Date(),
     rangePersonalizzato
