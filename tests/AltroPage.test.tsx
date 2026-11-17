@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => {
@@ -21,6 +21,7 @@ vi.mock('@/app/altro/Notifiche', () => ({
 }));
 
 import AltroPage from '@/app/altro/page';
+import { serveConferma, nonAvvisarePiu } from '@/lib/conferme';
 
 describe('pagina Altro', () => {
   it('ha cinque link con gli href previsti', async () => {
@@ -32,6 +33,16 @@ describe('pagina Altro', () => {
     expect(screen.getByRole('link', { name: /Categorie/ })).toHaveAttribute('href', '/categories');
     expect(screen.getByRole('link', { name: /P\.IVA/ })).toHaveAttribute('href', '/piva');
     expect(screen.getByRole('link', { name: /Notifiche/ })).toHaveAttribute('href', '/altro#notifiche');
+  });
+
+  it('Riattiva gli avvisi rimette le conferme', async () => {
+    nonAvvisarePiu('movimento_casa');
+    expect(serveConferma('movimento_casa')).toBe(false);
+    render(await AltroPage());
+    expect(screen.getByRole('heading', { name: 'Conferme' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Riattiva gli avvisi' }));
+    expect(serveConferma('movimento_casa')).toBe(true);
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('porta la sezione notifiche con lo stato dell utente', async () => {

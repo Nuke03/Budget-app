@@ -5,6 +5,7 @@ import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
 import { chiaviVapid } from '@/lib/chiaviVapid';
 import { CoverHeader } from '../CoverHeader';
 import { Notifiche } from './Notifiche';
+import { RiattivaAvvisi } from './RiattivaAvvisi';
 import { Target, Wallet, Tags, Receipt, Bell, ChevronRight } from 'lucide-react';
 
 const voci = [
@@ -39,6 +40,7 @@ export default async function AltroPage() {
         })}
       </ul>
       <Notifiche chiavePubblica={chiaviVapid()?.pubblica ?? null} notificheAttive={dati.notificheAttive} />
+      <RiattivaAvvisi />
       </main>
     </>
   );
