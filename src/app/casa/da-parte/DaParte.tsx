@@ -16,7 +16,9 @@ import type { PlanItem } from '@/lib/types';
 import { GoalsList } from '@/app/goals/GoalsList';
 import { closeGoal } from '@/lib/data/goals';
 import { useEliminaConAnnulla } from '../../AnnullaProvider';
+import { ConfermaPesante } from '../../ConfermaPesante';
 import { CoverHeader } from '../../CoverHeader';
+import { serveConferma } from '@/lib/conferme';
 import { CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../CampiMovimento';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 import { CostiIngresso } from './CostiIngresso';
@@ -207,32 +209,28 @@ export function DaParte({
                 <ComeSiCalcola spiegazione={g.spiegazione} />
                 <button
                   type="button"
-                  onClick={() => setChiedePagato(g.id)}
+                  onClick={() => (serveConferma('movimento_casa') ? setChiedePagato(g.id) : pagato(g.id))}
                   className={`${CLASSE_LINK} self-start`}
                 >
                   L&apos;ho pagato
                 </button>
-                {chiedePagato === g.id ? (
-                  <p className="flex flex-wrap items-center gap-x-3 text-[13px]">
-                    Prima registra la spesa nei movimenti della casa, collegata a questo fondo. Poi tocca &quot;L&apos;ho pagato&quot;: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui.
-                    <button
-                      type="button"
-                      onClick={() => pagato(g.id)}
-                      className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark"
-                    >
-                      Conferma
-                    </button>
-                    <button type="button" onClick={() => setChiedePagato(null)} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2">
-                      Annulla
-                    </button>
-                  </p>
-                ) : null}
               </li>
             ))}
           </ul>
         )}
         <NuovaCosa householdId={householdId} oggi={oggi} />
       </section>
+
+      {chiedePagato ? (
+        <ConfermaPesante
+          titolo="Segnare come pagato?"
+          frase="Prima registra la spesa nei movimenti della casa, collegata a questo fondo. Poi il fondo si chiude e i soldi tornano disponibili. Puoi comunque annullare per qualche secondo."
+          tipo="movimento_casa"
+          etichettaConferma="Segna come pagato"
+          onConferma={() => pagato(chiedePagato)}
+          onChiudi={() => setChiedePagato(null)}
+        />
+      ) : null}
 
       <CostiIngresso
         householdId={householdId}

@@ -45,6 +45,7 @@ async function passa(ms: number) {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   refresh.mockReset();
   vi.mocked(creaFondoBolletta).mockReset();
   vi.mocked(creaFondoBolletta).mockResolvedValue({} as never);
@@ -151,12 +152,13 @@ describe('DaParte', () => {
       expect(
         screen.getByText(/Prima registra la spesa nei movimenti della casa, collegata a questo fondo/)
       ).toBeInTheDocument();
+      expect(screen.queryByText(/Non si può annullare/)).not.toBeInTheDocument();
       expect(closeGoal).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole('button', { name: 'Conferma' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Segna come pagato' }));
       return utente;
     }
 
-    it('conferma sotto il pulsante, poi nasconde il fondo senza scrivere ancora', () => {
+    it('conferma nel foglio, poi nasconde il fondo senza scrivere ancora', () => {
       const { container } = segna();
       expect(screen.queryByText('Divano: 600 €')).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Segnata come pagata.');
@@ -170,6 +172,25 @@ describe('DaParte', () => {
       expect(closeGoal).toHaveBeenCalledTimes(1);
       expect(vi.mocked(closeGoal).mock.calls[0][1]).toBe('g9');
       expect(refresh).toHaveBeenCalled();
+    });
+
+    it('Lascia stare non chiude niente', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      monta({ unaVolta: [divano] });
+      fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
+      fireEvent.click(screen.getByRole('button', { name: 'Lascia stare' }));
+      expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
+      await passa(10000);
+      expect(closeGoal).not.toHaveBeenCalled();
+    });
+
+    it('con "Non avvisarmi più" si salta il foglio ma resta annullabile', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      window.localStorage.setItem('conferme:movimento_casa', 'no');
+      monta({ unaVolta: [divano] });
+      fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Segnata come pagata.');
     });
 
     it('Annulla non chiude mai il fondo e la riga torna', async () => {
