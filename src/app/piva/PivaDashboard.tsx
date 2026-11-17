@@ -29,28 +29,27 @@ export function PivaDashboard({
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-[var(--radius-lg)] bg-brand p-7 text-brand-foreground shadow-[var(--shadow-hero)]">
-        <p className="text-sm font-medium text-brand-foreground/75">Totale da accantonare</p>
-        <p className="mt-1 text-5xl font-bold tabular-nums tracking-tight">
+    <div className="flex flex-col gap-3.5">
+      <section className="rounded-[var(--radius-md)] border border-rule bg-page p-4">
+        <p className="text-[13px] text-ink-2">Totale da accantonare</p>
+        <p className="num mt-1 font-serif text-5xl font-bold leading-none">
           {formatEuro(totaleDaAccantonare)}
         </p>
-        <div className="mt-5 h-px bg-brand-foreground/15" />
-        <p className="mt-5 text-sm text-brand-foreground/85">
+        <p className="mt-3 border-t border-rule pt-3 text-[15px]">
           Quota mensile suggerita: <span className="num font-semibold">{formatEuro(quotaMensileSuggerita)}</span>
         </p>
       </section>
 
-      <section className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface p-4 text-sm shadow-[var(--shadow-card)]">
+      <section className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-page text-[15px]">
         {righe.map((r) => (
-          <div key={r.label} className="flex justify-between py-1">
-            <span className="font-medium">{r.label}</span>
-            <span className="tabular-nums">{formatEuro(r.value)}</span>
+          <div key={r.label} className="flex min-h-12 items-center justify-between gap-3 border-b border-rule px-4 py-2 last:border-b-0">
+            <span>{r.label}</span>
+            <span className="num shrink-0 font-semibold">{formatEuro(r.value)}</span>
           </div>
         ))}
       </section>
 
-      <p className="text-xs text-muted">
+      <p className="px-1 text-[13px] text-ink-2">
         Il calcolo applica le impostazioni attuali retroattivamente a tutto l&apos;anno solare
         in corso e non gestisce variazioni di aliquota a metà anno. I contributi versati
         l&apos;anno precedente sono un valore inserito a mano, non derivato automaticamente
@@ -63,14 +62,14 @@ export function PivaDashboard({
         <button
           type="button"
           onClick={onModifica}
-          className="rounded-[var(--radius-md)] bg-surface py-3 text-sm font-semibold text-foreground shadow-[var(--shadow-card)]"
+          className="min-h-12 rounded-[var(--radius-md)] bg-brand-tint py-3 text-base font-semibold text-foreground"
         >
           Modifica impostazioni
         </button>
         <button
           type="button"
           onClick={onDisattiva}
-          className="rounded-[var(--radius-md)] py-3 text-sm font-semibold text-danger"
+          className="min-h-12 rounded-[var(--radius-md)] py-3 text-[15px] font-semibold text-danger"
         >
           Disattiva gestione P.IVA
         </button>

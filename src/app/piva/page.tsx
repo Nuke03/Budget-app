@@ -17,6 +17,7 @@ import {
   computeTotaleDaAccantonare,
   computeQuotaMensileSuggerita,
 } from '@/lib/calculations/piva';
+import { CoverHeader } from '../CoverHeader';
 import { PivaSettingsForm, type PivaSettingsFormValues } from './PivaSettingsForm';
 import { PivaDashboard } from './PivaDashboard';
 import type { Category, PivaSettings, Transaction } from '@/lib/types';
@@ -80,16 +81,18 @@ export default function PivaPage() {
 
   if (!settings || !settings.attivo || editing) {
     return (
-      <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-        <h1 className="text-2xl font-bold">P.IVA</h1>
-        <PivaSettingsForm
-          categories={categories}
-          initial={settings}
-          submitLabel={settings ? 'Salva modifiche' : 'Attiva gestione P.IVA'}
-          onSubmit={handleSave}
-          onCancel={settings && settings.attivo ? () => setEditing(false) : undefined}
-        />
-      </main>
+      <>
+        <CoverHeader titolo="P.IVA" />
+        <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
+          <PivaSettingsForm
+            categories={categories}
+            initial={settings}
+            submitLabel={settings ? 'Salva modifiche' : 'Attiva gestione P.IVA'}
+            onSubmit={handleSave}
+            onCancel={settings && settings.attivo ? () => setEditing(false) : undefined}
+          />
+        </main>
+      </>
     );
   }
 
@@ -126,18 +129,20 @@ export default function PivaPage() {
   const quotaMensileSuggerita = computeQuotaMensileSuggerita(totaleDaAccantonare, oggi);
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">P.IVA</h1>
-      <PivaDashboard
-        fatturatoAnnuo={fatturatoAnnuo}
-        impostaSostitutiva={impostaSostitutiva}
-        contributoSoggettivo={contributoSoggettivo}
-        contributoIntegrativo={contributoIntegrativo}
-        totaleDaAccantonare={totaleDaAccantonare}
-        quotaMensileSuggerita={quotaMensileSuggerita}
-        onModifica={() => setEditing(true)}
-        onDisattiva={handleDisattiva}
-      />
-    </main>
+    <>
+      <CoverHeader titolo="P.IVA" />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
+        <PivaDashboard
+          fatturatoAnnuo={fatturatoAnnuo}
+          impostaSostitutiva={impostaSostitutiva}
+          contributoSoggettivo={contributoSoggettivo}
+          contributoIntegrativo={contributoIntegrativo}
+          totaleDaAccantonare={totaleDaAccantonare}
+          quotaMensileSuggerita={quotaMensileSuggerita}
+          onModifica={() => setEditing(true)}
+          onDisattiva={handleDisattiva}
+        />
+      </main>
+    </>
   );
 }

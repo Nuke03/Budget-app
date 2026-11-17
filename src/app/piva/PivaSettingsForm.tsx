@@ -27,7 +27,7 @@ const DEFAULTS: PivaSettingsFormValues = {
 };
 
 const fieldClass =
-  'rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
 
 export function PivaSettingsForm({
   categories,
@@ -108,9 +108,9 @@ export function PivaSettingsForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]"
+      className="flex flex-col gap-4 rounded-[var(--radius-md)] border border-rule bg-page p-4"
     >
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <label htmlFor="piva-data-apertura">Data apertura P.IVA (opzionale)</label>
         <input
           id="piva-data-apertura"
@@ -121,7 +121,7 @@ export function PivaSettingsForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <label htmlFor="piva-categoria-fatturato">Categoria fatturato</label>
         <select
           id="piva-categoria-fatturato"
@@ -138,7 +138,7 @@ export function PivaSettingsForm({
         </select>
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <span className="flex items-center gap-1">
           <label htmlFor="piva-coefficiente">Coefficiente di redditività (%)</label>
           <FieldHint testo="Percentuale di legge sul tuo fatturato che diventa reddito imponibile. Per il regime forfettario dipende dal codice ATECO della tua attività (spesso 78%): controlla il tuo, se non lo conosci lascia il valore proposto." />
@@ -153,7 +153,7 @@ export function PivaSettingsForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <span className="flex items-center gap-1">
           <label htmlFor="piva-aliquota-sostitutiva">Aliquota imposta sostitutiva</label>
           <FieldHint testo="La tassa che sostituisce l'IRPEF nel regime forfettario: 5% nei primi 5 anni di attività, poi 15%. 'Automatica' la calcola da sola in base alla data di apertura; scegli un valore fisso solo se sai che il tuo caso è diverso." />
@@ -170,7 +170,7 @@ export function PivaSettingsForm({
         </select>
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <span className="flex items-center gap-1">
           <label htmlFor="piva-soggettivo">Aliquota contributo soggettivo (%)</label>
           <FieldHint testo="Il contributo previdenziale principale che versi alla tua cassa (es. ENPAP, ENPAIA), calcolato sul reddito imponibile. La percentuale esatta dipende dalla tua cassa: controlla il tuo tariffario, di solito è intorno al 10%." />
@@ -185,7 +185,7 @@ export function PivaSettingsForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <span className="flex items-center gap-1">
           <label htmlFor="piva-integrativo">Aliquota contributo integrativo (%)</label>
           <FieldHint testo="Un secondo contributo che alcune casse calcolano sul fatturato lordo (non sul reddito), spesso aggiunto in fattura al cliente. Controlla il tariffario della tua cassa; se non si applica alla tua, metti 0." />
@@ -200,7 +200,7 @@ export function PivaSettingsForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <span className="flex items-center gap-1">
           <label htmlFor="piva-minimale">Minimale contributivo annuo</label>
           <FieldHint testo="L'importo minimo che la tua cassa richiede ogni anno anche se il calcolo percentuale darebbe meno. Lo trovi nel tariffario della tua cassa; se non sai qual è, metti 0 e il calcolo userà solo la percentuale." />
@@ -215,7 +215,7 @@ export function PivaSettingsForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         <span className="flex items-center gap-1">
           <label htmlFor="piva-contributi-versati">Contributi versati l&apos;anno precedente</label>
           <FieldHint testo="Quanto hai effettivamente pagato di contributi previdenziali l'anno scorso: questo importo si sottrae dal reddito imponibile di quest'anno. Se non l'hai ancora calcolato o è il primo anno, lascia 0." />
@@ -233,7 +233,7 @@ export function PivaSettingsForm({
       <button
         type="submit"
         disabled={!isValid}
-        className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+        className="min-h-12 rounded-[var(--radius-md)] bg-brand py-3 text-base font-semibold text-brand-foreground disabled:opacity-40"
       >
         {submitLabel}
       </button>
@@ -242,7 +242,7 @@ export function PivaSettingsForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-[var(--radius-md)] bg-surface py-3 text-sm font-semibold text-foreground shadow-[var(--shadow-card)]"
+          className="min-h-11 rounded-[var(--radius-md)] bg-brand-tint py-3 text-[15px] font-semibold text-foreground"
         >
           Annulla
         </button>
