@@ -48,17 +48,17 @@ export function ConfermaPesante({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={conferma}
-            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-[15px] font-semibold text-danger"
+            onClick={onChiudi}
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] bg-brand px-4 text-[15px] font-semibold text-brand-foreground"
           >
-            {etichettaConferma}
+            Lascia stare
           </button>
           <button
             type="button"
-            onClick={onChiudi}
-            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-[15px] font-semibold text-brand-dark"
+            onClick={conferma}
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-md)] border border-danger bg-surface px-4 text-[15px] font-semibold text-danger"
           >
-            Lascia stare
+            {etichettaConferma}
           </button>
         </div>
       </div>

@@ -25,6 +25,13 @@ describe('ConfermaPesante', () => {
     expect(screen.getByRole('button', { name: 'Lascia stare' })).toBeInTheDocument();
     assertNessunaParolaVietata(container);
   });
+  it('Lascia stare è la scelta piena, Elimina è il bordo rosso', () => {
+    monta();
+    expect(screen.getByRole('button', { name: 'Lascia stare' }).className).toContain('bg-brand');
+    expect(screen.getByRole('button', { name: 'Elimina' }).className).toContain('border-danger');
+    const [primo] = screen.getAllByRole('button').filter((b) => ['Lascia stare', 'Elimina'].includes(b.textContent ?? ''));
+    expect(primo).toHaveTextContent('Lascia stare');
+  });
   it('con la spunta salva la preferenza e conferma', () => {
     const { onConferma } = monta();
     fireEvent.click(screen.getByLabelText('Non avvisarmi più'));

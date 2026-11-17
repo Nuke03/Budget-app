@@ -20,7 +20,7 @@ export function AvvisoAnnulla({
       className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-xl justify-center px-3"
     >
       {testo ? (
-        <div className="pointer-events-auto flex w-full items-center gap-1 rounded-md bg-foreground pl-4 text-background">
+        <div className="pointer-events-auto flex w-full items-center gap-1 rounded-[var(--radius-md)] bg-foreground pl-4 text-background">
           <p className="flex-1 py-3 text-[15px]">{testo}</p>
           {onAnnulla ? (
             <button
