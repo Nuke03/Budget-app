@@ -7,10 +7,12 @@ const TIMBRO = '#c8102e';
 // `margine` e' la quota del lato lasciata libera attorno al disegno.
 export function IconaApp({ lato, margine }: { lato: number; margine: number }) {
   const area = lato * (1 - 2 * margine);
-  const larghezza = area * 0.62;
-  const altezza = area * 0.76;
-  const riga = Math.max(2, Math.round(area * 0.025));
-  const timbro = area * 0.3;
+  // Libretto verticale (rapporto 0.75), circa il 58% del lato, dentro i margini di sicurezza.
+  const altezza = Math.min((lato * 0.58) / 0.75, area);
+  const larghezza = altezza * 0.75;
+  const riga = Math.max(3, Math.round(lato * 0.022));
+  const timbro = larghezza * 0.42;
+  const anello = Math.max(3, Math.round(lato * 0.017));
   return (
     <div
       style={{
@@ -28,28 +30,27 @@ export function IconaApp({ lato, margine }: { lato: number; margine: number }) {
           height: altezza,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           background: PAGINA,
-          borderRadius: area * 0.08,
-          paddingBottom: altezza * 0.16,
+          borderRadius: larghezza * 0.1,
+          padding: larghezza * 0.14,
           position: 'relative',
         }}
       >
+        <div style={{ width: larghezza * 0.6, height: riga, background: COPERTINA, opacity: 0.4, marginTop: altezza * 0.08 }} />
+        <div style={{ width: larghezza * 0.42, height: riga, background: COPERTINA, opacity: 0.4, marginTop: riga * 3 }} />
         <div
           style={{
             position: 'absolute',
-            top: -timbro * 0.35,
-            right: -timbro * 0.3,
+            bottom: altezza * 0.1,
+            right: larghezza * 0.1,
             width: timbro,
             height: timbro,
             borderRadius: timbro,
-            background: TIMBRO,
-            border: `${Math.max(2, Math.round(timbro * 0.1))}px solid ${COPERTINA}`,
+            border: `${anello}px solid ${TIMBRO}`,
+            transform: 'rotate(-10deg)',
           }}
         />
-        <div style={{ width: larghezza * 0.64, height: riga, background: COPERTINA, opacity: 0.35, marginTop: riga * 3 }} />
-        <div style={{ width: larghezza * 0.46, height: riga, background: COPERTINA, opacity: 0.35, marginTop: riga * 3 }} />
       </div>
     </div>
   );
