@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { createAccount, updateAccountDetails } from '@/lib/data/accounts';
 import { createCategory } from '@/lib/data/categories';
@@ -48,8 +48,15 @@ export function ImpostazioneGuidata({
   const categorieEntrate = categorie.filter((c) => !c.archiviata && c.tipo === 'income');
 
   const [passo, setPasso] = useState<Passo>(passoIniziale);
-  const [preset, setPreset] = useState<Preset | null>(iniziale?.preset ?? null);
+  const [preset, setPreset] = useState<Preset | null>(
+    // Riga vecchia senza preset: si parte da "Altro", così i valori salvati restano intatti.
+    iniziale ? (iniziale.preset ?? 'altro') : null
+  );
   const [dataApertura, setDataApertura] = useState(iniziale?.dataApertura ?? '');
+  const [nonRicordo, setNonRicordo] = useState(!!iniziale && iniziale.dataApertura === null);
+  // Id di conto e categoria già creati: se il salvataggio fallisce a metà, il nuovo tentativo li riusa.
+  const contoCreato = useRef<string | null>(null);
+  const categoriaCreata = useRef<string | null>(null);
   const [coefficiente, setCoefficiente] = useState(iniziale ? String(iniziale.coefficienteRedditivita) : '');
   const [soggettivo, setSoggettivo] = useState(iniziale ? String(iniziale.aliquotaContributoSoggettivo) : '');
   const [integrativo, setIntegrativo] = useState(iniziale ? String(iniziale.aliquotaContributoIntegrativo) : '');
@@ -72,7 +79,11 @@ export function ImpostazioneGuidata({
   const [errore, setErrore] = useState<string | null>(null);
 
   const oggi = oggiRomaData();
-  const aliquotaAuto = dataApertura ? computeAliquotaSostitutiva(dataApertura, oggi, null) : null;
+  const aliquotaAuto = dataApertura
+    ? computeAliquotaSostitutiva(dataApertura, oggi, null)
+    : nonRicordo
+      ? computeAliquotaSostitutiva(null, oggi, null)
+      : null;
   const aliquota = aliquotaScelta ?? (aliquotaAuto !== null ? String(aliquotaAuto) : '');
 
   const numero = (v: string) => (v.trim() === '' ? NaN : Number(v));
@@ -109,13 +120,16 @@ export function ImpostazioneGuidata({
 
       let contoTasseId = conto;
       if (conto === NUOVO) {
-        const nuovo = await createAccount(supabase, {
-          nome: NOME_CONTO_NUOVO,
-          saldoAttuale: 0,
-          contaInDisponibile: false,
-          targetSaldo: null,
-        });
-        contoTasseId = nuovo.id;
+        if (!contoCreato.current) {
+          const nuovo = await createAccount(supabase, {
+            nome: NOME_CONTO_NUOVO,
+            saldoAttuale: 0,
+            contaInDisponibile: false,
+            targetSaldo: null,
+          });
+          contoCreato.current = nuovo.id;
+        }
+        contoTasseId = contoCreato.current;
       } else {
         const scelto = conti.find((c) => c.id === conto);
         if (scelto && scelto.contaInDisponibile) {
@@ -129,8 +143,11 @@ export function ImpostazioneGuidata({
 
       let categoriaFatturatoId = categoria;
       if (categoria === NUOVO) {
-        const nuova = await createCategory(supabase, { nome: NOME_CATEGORIA_NUOVA, tipo: 'income', colore: null });
-        categoriaFatturatoId = nuova.id;
+        if (!categoriaCreata.current) {
+          const nuova = await createCategory(supabase, { nome: NOME_CATEGORIA_NUOVA, tipo: 'income', colore: null });
+          categoriaCreata.current = nuova.id;
+        }
+        categoriaFatturatoId = categoriaCreata.current;
       }
 
       await onFatto({
@@ -204,17 +221,36 @@ export function ImpostazioneGuidata({
               value={dataApertura}
               onChange={(e) => {
                 setDataApertura(e.target.value);
+                if (e.target.value) setNonRicordo(false);
                 setAliquotaScelta(null);
               }}
               className={CLASSE_CAMPO}
             />
+            <button
+              type="button"
+              aria-pressed={nonRicordo && !dataApertura}
+              onClick={() => {
+                setDataApertura('');
+                setNonRicordo(true);
+                setAliquotaScelta(null);
+              }}
+              className={CLASSE_SECONDARIO}
+            >
+              Non ricordo
+            </button>
             {aliquotaAuto !== null && (
               <div className="flex flex-col gap-1 border-t border-rule pt-3">
                 <p className="text-[17px] font-semibold">
-                  {aliquotaAuto === 5 ? 'Primi 5 anni: aliquota 5%' : 'Dopo i primi 5 anni: aliquota 15%'}
+                  {!dataApertura
+                    ? 'Senza la data: aliquota 15%'
+                    : aliquotaAuto === 5
+                      ? 'Primi 5 anni: aliquota 5%'
+                      : 'Dopo i primi 5 anni: aliquota 15%'}
                 </p>
                 <p className="text-[13px] text-ink-2">
-                  L’aliquota sostitutiva è la tassa fissa del forfettario: 5% per i primi 5 anni, poi 15%.
+                  {!dataApertura
+                    ? 'Uso il 15%, la più prudente. Controlla la data di apertura con il commercialista.'
+                    : 'L’aliquota sostitutiva è la tassa fissa del forfettario: 5% per i primi 5 anni, poi 15%.'}
                 </p>
               </div>
             )}

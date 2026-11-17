@@ -205,4 +205,56 @@ describe('ImpostazioneGuidata', () => {
     );
     expect(screen.getByText('Su quale conto metti da parte le tasse?')).toBeInTheDocument();
   });
+
+  it('onFatto fallisce una volta: il secondo Confermo non ricrea conto e categoria', async () => {
+    const onFatto = vi.fn().mockRejectedValueOnce(new Error('rete')).mockResolvedValue(undefined);
+    const senza: Category[] = [{ id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false }];
+    render(<ImpostazioneGuidata iniziale={null} conti={[]} categorie={senza} onFatto={onFatto} />);
+    percorsoFinoAlRiepilogo();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermo' }));
+    await screen.findByRole('alert');
+    fireEvent.click(screen.getByRole('button', { name: 'Confermo' }));
+    await waitFor(() => expect(onFatto).toHaveBeenCalledTimes(2));
+    expect(createAccount).toHaveBeenCalledTimes(1);
+    expect(createCategory).toHaveBeenCalledTimes(1);
+    expect(onFatto.mock.calls[1][0]).toEqual(
+      expect.objectContaining({ contoTasseId: 'nuovo', categoriaFatturatoId: 'cnuova' })
+    );
+  });
+
+  it('riga vecchia senza preset: parte da Altro e il riepilogo mostra i valori salvati', () => {
+    render(
+      <ImpostazioneGuidata
+        iniziale={base({ coefficienteRedditivita: 65, aliquotaContributoSoggettivo: 12 })}
+        conti={conti}
+        categorie={categorie}
+        onFatto={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('radio', { name: 'Altro' })).toHaveAttribute('aria-checked', 'true');
+    avanti();
+    avanti();
+    avanti();
+    expect(screen.getByLabelText('Coefficiente di redditività (%)')).toHaveValue(65);
+    expect(screen.getByLabelText('Contributo soggettivo (%)')).toHaveValue(12);
+  });
+
+  it('Non ricordo lascia la data vuota e usa il 15%', async () => {
+    const onFatto = vi.fn().mockResolvedValue(undefined);
+    render(<ImpostazioneGuidata iniziale={null} conti={conti} categorie={categorie} onFatto={onFatto} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Psicologa, ENPAP' }));
+    avanti();
+    expect(screen.getByRole('button', { name: 'Avanti' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Non ricordo' }));
+    expect(screen.getByText('Senza la data: aliquota 15%')).toBeInTheDocument();
+    expect(screen.getByText(/commercialista/)).toBeInTheDocument();
+    avanti();
+    avanti();
+    expect(screen.getByLabelText('Aliquota sostitutiva (%)')).toHaveValue(15);
+    fireEvent.click(screen.getByRole('button', { name: 'Confermo' }));
+    await waitFor(() => expect(onFatto).toHaveBeenCalled());
+    expect(onFatto.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ dataApertura: null, aliquotaSostitutivaOverride: null })
+    );
+  });
 });
