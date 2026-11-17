@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CategoriesPage from '@/app/categories/page';
+import { AnnullaProvider } from '@/app/AnnullaProvider';
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({}),
@@ -13,17 +14,68 @@ vi.mock('@/lib/data/categories', () => ({
   archiveCategory: vi.fn(),
 }));
 
-import { getCategories, updateCategory } from '@/lib/data/categories';
+import { getCategories, updateCategory, archiveCategory } from '@/lib/data/categories';
 
 const categories = [
   { id: '1', nome: 'Spesa alimentare', tipo: 'expense' as const, colore: null, archiviata: false },
   { id: '2', nome: 'Stipendio', tipo: 'income' as const, colore: null, archiviata: false },
 ];
 
+function Pagina() {
+  return (
+    <AnnullaProvider>
+      <CategoriesPage />
+    </AnnullaProvider>
+  );
+}
+
+// act di React e timer finti non vanno d'accordo: si fa passare il tempo e si lasciano finire le promesse.
+async function passa(ms: number) {
+  await vi.advanceTimersByTimeAsync(ms);
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+}
+
+describe('CategoriesPage: archiviare con Annulla', () => {
+  async function apri() {
+    vi.clearAllMocks();
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    vi.mocked(archiveCategory).mockResolvedValue(undefined);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  }
+  afterEach(() => vi.useRealTimers());
+
+  it('il clic nasconde la categoria e non scrive ancora', async () => {
+    await apri();
+    fireEvent.click(screen.getByLabelText('Archivia Spesa alimentare'));
+    expect(screen.queryByText('Spesa alimentare')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Categoria archiviata.');
+    expect(archiveCategory).not.toHaveBeenCalled();
+  });
+
+  it('dopo 5 secondi archivia una volta', async () => {
+    await apri();
+    fireEvent.click(screen.getByLabelText('Archivia Spesa alimentare'));
+    await passa(5000);
+    expect(archiveCategory).toHaveBeenCalledTimes(1);
+    expect(archiveCategory).toHaveBeenCalledWith(expect.anything(), '1');
+  });
+
+  it('Annulla non scrive mai e la categoria torna', async () => {
+    await apri();
+    fireEvent.click(screen.getByLabelText('Archivia Spesa alimentare'));
+    fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+    expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();
+    await passa(10000);
+    expect(archiveCategory).not.toHaveBeenCalled();
+  });
+});
+
 describe('CategoriesPage', () => {
   it('mostra di default solo le categorie di spesa, e passa a quelle di entrata col toggle', async () => {
     vi.mocked(getCategories).mockResolvedValue(categories);
-    render(<CategoriesPage />);
+    render(<Pagina />);
 
     await waitFor(() => {
       expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();
@@ -45,7 +97,7 @@ describe('CategoriesPage', () => {
       colore: '#3B9AE1',
       archiviata: false,
     });
-    render(<CategoriesPage />);
+    render(<Pagina />);
 
     await waitFor(() => {
       expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();
@@ -68,7 +120,7 @@ describe('CategoriesPage', () => {
 
   it('annulla la modifica e torna al form di creazione', async () => {
     vi.mocked(getCategories).mockResolvedValue(categories);
-    render(<CategoriesPage />);
+    render(<Pagina />);
 
     await waitFor(() => {
       expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();

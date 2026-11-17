@@ -6,10 +6,14 @@ import { Archive, Pencil } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCategories, createCategory, updateCategory, archiveCategory } from '@/lib/data/categories';
 import { CATEGORY_COLORS, CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
+import { useEliminaConAnnulla } from '../AnnullaProvider';
 import type { Category, CategoriaTipo } from '@/lib/types';
 
 export default function CategoriesPage() {
   const fail = useThrowToBoundary();
+  const eliminaConAnnulla = useEliminaConAnnulla();
+  // Categorie tolte alla vista in attesa della scrittura vera: Annulla le rimette al loro posto.
+  const [nascoste, setNascoste] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<Category[]>([]);
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<CategoriaTipo>('expense');
@@ -54,13 +58,28 @@ export default function CategoriesPage() {
     await refresh();
   }
 
-  async function handleArchive(id: string) {
-    const supabase = createClient();
-    await archiveCategory(supabase, id);
-    await refresh();
+  function handleArchive(id: string) {
+    const cambia = (nascondi: boolean) =>
+      setNascoste((prima) => {
+        const dopo = new Set(prima);
+        if (nascondi) dopo.add(id);
+        else dopo.delete(id);
+        return dopo;
+      });
+    eliminaConAnnulla({
+      id,
+      testo: 'Categoria archiviata.',
+      nascondi: () => cambia(true),
+      ripristina: () => cambia(false),
+      esegui: async () => {
+        const supabase = createClient();
+        await archiveCategory(supabase, id);
+        await refresh();
+      },
+    });
   }
 
-  const attive = categories.filter((c) => !c.archiviata && c.tipo === filtroTipo);
+  const attive = categories.filter((c) => !c.archiviata && c.tipo === filtroTipo && !nascoste.has(c.id));
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
