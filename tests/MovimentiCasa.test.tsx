@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MovimentiCasa } from '@/app/casa/movimenti/MovimentiCasa';
+import { AnnullaProvider } from '@/app/AnnullaProvider';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
@@ -65,8 +66,22 @@ function trasf(over: Partial<Transfer>): Transfer {
 
 function apri(trasferimenti: Transfer[] = [], transazioni: Transaction[] = lista) {
   return render(
-    <MovimentiCasa casa={casa} aggiunta={aggiunta} transazioni={transazioni} trasferimenti={trasferimenti} meUserId="u1" />
+    <AnnullaProvider>
+      <MovimentiCasa casa={casa} aggiunta={aggiunta} transazioni={transazioni} trasferimenti={trasferimenti} meUserId="u1" />
+    </AnnullaProvider>
   );
+}
+
+// L'eliminazione parte dopo 5 secondi: qui il tempo si controlla a mano (act di React e timer finti
+// non vanno d'accordo, quindi si lasciano solo finire le promesse).
+function timerFinti() {
+  vi.useRealTimers();
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+  vi.setSystemTime(new Date('2026-11-09T10:00:00Z'));
+}
+async function passa(ms: number) {
+  await vi.advanceTimersByTimeAsync(ms);
+  for (let i = 0; i < 20; i++) await Promise.resolve();
 }
 
 beforeEach(() => {
@@ -93,13 +108,39 @@ describe('MovimentiCasa', () => {
     expect(screen.getByText('Anna')).toBeInTheDocument();
   });
 
-  it('Elimina rimuove subito la riga e chiama adjustAccountBalance con +64.2', async () => {
+  it('Elimina nasconde la riga e non scrive ancora', () => {
+    timerFinti();
     apri();
     const riga = screen.getByText('Luce').closest('li') as HTMLElement;
     fireEvent.click(riga.querySelector('button:last-of-type') as HTMLElement);
     expect(screen.queryByText('Luce')).not.toBeInTheDocument();
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', 64.2));
+    expect(screen.getByRole('status')).toHaveTextContent('Spesa eliminata.');
+    expect(deleteTransaction).not.toHaveBeenCalled();
+    expect(adjustAccountBalance).not.toHaveBeenCalled();
+  });
+
+  it('dopo 5 secondi cancella una volta e chiama adjustAccountBalance con +64.2', async () => {
+    timerFinti();
+    apri();
+    const riga = screen.getByText('Luce').closest('li') as HTMLElement;
+    fireEvent.click(riga.querySelector('button:last-of-type') as HTMLElement);
+    await passa(5000);
+    expect(deleteTransaction).toHaveBeenCalledTimes(1);
     expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 'luce');
+    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', 64.2);
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('Annulla non scrive mai e la riga torna al suo posto', async () => {
+    timerFinti();
+    apri();
+    fireEvent.click(screen.getAllByText('Elimina')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+    expect(screen.getByText('Luce')).toBeInTheDocument();
+    await passa(10000);
+    expect(deleteTransaction).not.toHaveBeenCalled();
+    expect(adjustAccountBalance).not.toHaveBeenCalled();
   });
 
   it('modificare applica la differenza sul conto', async () => {
@@ -123,13 +164,26 @@ describe('MovimentiCasa', () => {
     expect(screen.getAllByText('Elimina')).toHaveLength(1);
   });
 
-  it('se la scrittura fallisce mostra il messaggio standard e rimette la riga', async () => {
+  it('se la scrittura fallisce mostra l avviso di errore e rimette la riga', async () => {
+    timerFinti();
     vi.mocked(deleteTransaction).mockRejectedValueOnce(new Error('rete'));
     apri();
     fireEvent.click(screen.getAllByText('Elimina')[0]);
-    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+    await passa(5000);
+    expect(screen.getByRole('status')).toHaveTextContent('Non sono riuscito a eliminarla: riprova.');
     expect(screen.getByText('Luce')).toBeInTheDocument();
     expect(adjustAccountBalance).not.toHaveBeenCalled();
+  });
+
+  it('se la riga è cancellata ma il saldo fallisce, la riga non torna e compare l errore', async () => {
+    timerFinti();
+    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+    apri();
+    fireEvent.click(screen.getAllByText('Elimina')[0]);
+    await passa(5000);
+    expect(deleteTransaction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Luce')).not.toBeInTheDocument();
+    expect(screen.getByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
   });
 
   it('mostra un versamento in stile neutro e senza importo nei totali', () => {
@@ -141,19 +195,36 @@ describe('MovimentiCasa', () => {
     expect(riga.querySelector('.text-danger, .text-success')).toBeNull();
   });
 
-  it('Annulla compare solo per l autore e chiama deleteTransfer', async () => {
+  it('Annulla compare solo per l autore: nasconde il movimento e dopo 5 secondi chiama deleteTransfer', async () => {
+    timerFinti();
     apri([trasf({}), trasf({ id: 'v2', userId: 'u2', importo: 90 })]);
     expect(screen.getAllByText('Annulla')).toHaveLength(1);
     fireEvent.click(screen.getByText('Annulla'));
     expect(screen.queryByText('Versamento di Fabio')).not.toBeInTheDocument();
-    await waitFor(() => expect(deleteTransfer).toHaveBeenCalledWith(expect.anything(), 'v1'));
+    expect(screen.getByRole('status')).toHaveTextContent('Movimento eliminato.');
+    expect(deleteTransfer).not.toHaveBeenCalled();
+    await passa(5000);
+    expect(deleteTransfer).toHaveBeenCalledTimes(1);
+    expect(deleteTransfer).toHaveBeenCalledWith(expect.anything(), 'v1');
   });
 
-  it('se Annulla fallisce mostra il messaggio standard e rimette il movimento', async () => {
+  it('Annulla dell avviso rimette il movimento e non cancella mai', async () => {
+    timerFinti();
+    apri([trasf({})]);
+    fireEvent.click(screen.getByText('Annulla'));
+    fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+    expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
+    await passa(10000);
+    expect(deleteTransfer).not.toHaveBeenCalled();
+  });
+
+  it('se la cancellazione del movimento fallisce compare l errore e il movimento torna', async () => {
+    timerFinti();
     vi.mocked(deleteTransfer).mockRejectedValueOnce(new Error('rete'));
     apri([trasf({})]);
     fireEvent.click(screen.getByText('Annulla'));
-    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+    await passa(5000);
+    expect(screen.getByRole('status')).toHaveTextContent('Non sono riuscito a eliminarla: riprova.');
     expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
   });
 
@@ -194,6 +265,7 @@ describe('MovimentiCasa', () => {
     const rimborso = trasf({ id: 'rb', causale: 'rimborso', userId: 'u2', beneficiarioUserId: 'u1', importo: 100, aAccountId: null });
 
     it('eliminare una spesa già rimborsata chiede conferma e spiega chi resta senza', async () => {
+      timerFinti();
       apri([rimborso], [cartaRimborsata]);
       fireEvent.click(screen.getByText('Elimina'));
       expect(screen.getByText(/già stata rimborsata a Fabio/)).toBeInTheDocument();
@@ -201,8 +273,9 @@ describe('MovimentiCasa', () => {
       expect(deleteTransaction).not.toHaveBeenCalled();
       assertNessunaParolaVietata(screen.getByLabelText('Conferma'));
       fireEvent.click(screen.getByText('Procedi lo stesso'));
-      await waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 'carta'));
       expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
+      await passa(5000);
+      expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 'carta');
     });
 
     it('Lascia com è non cancella niente', () => {
@@ -214,14 +287,17 @@ describe('MovimentiCasa', () => {
       expect(deleteTransaction).not.toHaveBeenCalled();
     });
 
-    it('una spesa non rimborsata si elimina subito, senza conferma', async () => {
+    it('una spesa non rimborsata si elimina senza conferma', async () => {
+      timerFinti();
       apri([], [cartaRimborsata]);
       fireEvent.click(screen.getByText('Elimina'));
       expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
-      await waitFor(() => expect(deleteTransaction).toHaveBeenCalled());
+      await passa(5000);
+      expect(deleteTransaction).toHaveBeenCalled();
     });
 
     it('annullare un versamento per conto di un altro già restituito chiede conferma', async () => {
+      timerFinti();
       const prestito = trasf({ id: 'pc', perContoDiUserId: 'u2', importo: 200, aAccountId: null });
       const resto = trasf({ id: 'rs', causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo: 200, meseCompetenza: null, aAccountId: null });
       apri([prestito, resto], []);
@@ -229,7 +305,8 @@ describe('MovimentiCasa', () => {
       expect(screen.getByText(/Anna ha già restituito dei soldi a Fabio/)).toBeInTheDocument();
       expect(deleteTransfer).not.toHaveBeenCalled();
       fireEvent.click(screen.getByText('Procedi lo stesso'));
-      await waitFor(() => expect(deleteTransfer).toHaveBeenCalledWith(expect.anything(), 'pc'));
+      await passa(5000);
+      expect(deleteTransfer).toHaveBeenCalledWith(expect.anything(), 'pc');
     });
   });
 
@@ -253,7 +330,9 @@ describe('MovimentiCasa: libretto', () => {
       categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#f97362', archiviata: false }],
     };
     const { container } = render(
-      <MovimentiCasa casa={casa} aggiunta={conColore} transazioni={lista} trasferimenti={[]} meUserId="u1" />
+      <AnnullaProvider>
+        <MovimentiCasa casa={casa} aggiunta={conColore} transazioni={lista} trasferimenti={[]} meUserId="u1" />
+      </AnnullaProvider>
     );
     expect(screen.getByRole('banner')).toHaveTextContent('Movimenti di casa');
     expect(container.querySelector('[data-colore="#f97362"]')).not.toBeNull();

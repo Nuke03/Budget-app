@@ -23,6 +23,7 @@ import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Transaction, TransactionTipo, Transfer } from '@/lib/types';
 import { AddTransactionForm } from '../../add/AddTransactionForm';
+import { useEliminaConAnnulla } from '../../AnnullaProvider';
 import { CoverHeader } from '../../CoverHeader';
 import { PallinoCategoria } from '../../home/PallinoCategoria';
 import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_SCHEDA, ErroreMovimento } from '../CampiMovimento';
@@ -48,6 +49,7 @@ export function MovimentiCasa({
   meUserId: string;
 }) {
   const router = useRouter();
+  const eliminaConAnnulla = useEliminaConAnnulla();
   const [righe, setRighe] = useState<Transaction[]>(transazioni);
   const meseCorrente = meseRomaISO().slice(0, 7);
   const [mosse, setMosse] = useState<Transfer[]>(trasferimenti);
@@ -107,54 +109,67 @@ export function MovimentiCasa({
     setConferma({ testo: frase(sc, 'spesa'), procedi: () => void elimina(t) });
   }
 
-  async function annulla(m: Transfer) {
+  function annulla(m: Transfer) {
     const posizione = mosse.findIndex((x) => x.id === m.id);
     setErrore(false);
     setConferma(null);
-    setMosse((r) => r.filter((x) => x.id !== m.id));
-    try {
-      await deleteTransfer(createClient(), m.id);
-      router.refresh();
-    } catch {
-      setErrore(true);
-      setMosse((r) => {
-        if (r.some((x) => x.id === m.id)) return r;
-        const copia = [...r];
-        copia.splice(Math.min(posizione, copia.length), 0, m);
-        return copia;
-      });
-    }
+    eliminaConAnnulla({
+      id: m.id,
+      testo: 'Movimento eliminato.',
+      nascondi: () => setMosse((r) => r.filter((x) => x.id !== m.id)),
+      ripristina: () =>
+        setMosse((r) => {
+          if (r.some((x) => x.id === m.id)) return r;
+          const copia = [...r];
+          copia.splice(Math.min(posizione, copia.length), 0, m);
+          return copia;
+        }),
+      esegui: async () => {
+        await deleteTransfer(createClient(), m.id);
+        router.refresh();
+      },
+    });
   }
 
-  async function elimina(t: Transaction) {
+  function elimina(t: Transaction) {
     const posizione = righe.findIndex((r) => r.id === t.id);
     setErrore(false);
     setConferma(null);
-    setRighe((r) => r.filter((x) => x.id !== t.id));
     let cancellata = false;
-    try {
-      const supabase = createClient();
-      await deleteTransaction(supabase, t.id);
-      cancellata = true;
-      if (t.accountId) {
-        await adjustAccountBalance(
-          supabase,
-          t.accountId,
-          t.tipo === 'expense' ? t.importo : -t.importo,
-        );
-      }
-      router.refresh();
-    } catch {
-      setErrore(true);
-      // Se la riga e gia stata cancellata e fallisce solo il saldo, non va rimessa.
-      if (cancellata) return;
-      setRighe((r) => {
-        if (r.some((x) => x.id === t.id)) return r;
-        const copia = [...r];
-        copia.splice(Math.min(posizione, copia.length), 0, t);
-        return copia;
-      });
-    }
+    eliminaConAnnulla({
+      id: t.id,
+      testo: t.tipo === 'expense' ? 'Spesa eliminata.' : 'Entrata eliminata.',
+      nascondi: () => setRighe((r) => r.filter((x) => x.id !== t.id)),
+      ripristina: () =>
+        setRighe((r) => {
+          if (r.some((x) => x.id === t.id)) return r;
+          const copia = [...r];
+          copia.splice(Math.min(posizione, copia.length), 0, t);
+          return copia;
+        }),
+      esegui: async () => {
+        try {
+          const supabase = createClient();
+          await deleteTransaction(supabase, t.id);
+          cancellata = true;
+          if (t.accountId) {
+            await adjustAccountBalance(
+              supabase,
+              t.accountId,
+              t.tipo === 'expense' ? t.importo : -t.importo,
+            );
+          }
+          router.refresh();
+        } catch (e) {
+          // Se la riga e gia stata cancellata e fallisce solo il saldo, non va rimessa.
+          if (cancellata) {
+            setErrore(true);
+            return;
+          }
+          throw e;
+        }
+      },
+    });
   }
 
   async function salva(
