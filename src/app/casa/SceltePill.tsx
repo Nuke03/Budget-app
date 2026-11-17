@@ -45,7 +45,7 @@ export function SceltePill({
   return (
     <div role="radiogroup" aria-label={legenda} className={
         scorrevole
-          ? '-mx-3 flex snap-x flex-nowrap gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+          ? '-mx-3 flex snap-x flex-nowrap gap-2 overflow-x-auto scroll-px-3 px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
           : 'flex flex-wrap gap-2'
       }
     >
