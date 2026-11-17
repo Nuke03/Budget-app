@@ -24,7 +24,9 @@ import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Transaction, TransactionTipo, Transfer } from '@/lib/types';
 import { AddTransactionForm } from '../../add/AddTransactionForm';
 import { useEliminaConAnnulla } from '../../AnnullaProvider';
+import { ConfermaPesante } from '../../ConfermaPesante';
 import { CoverHeader } from '../../CoverHeader';
+import { serveConferma } from '@/lib/conferme';
 import { PallinoCategoria } from '../../home/PallinoCategoria';
 import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_SCHEDA, ErroreMovimento } from '../CampiMovimento';
 
@@ -57,6 +59,7 @@ export function MovimentiCasa({
   const [inModifica, setInModifica] = useState<string | null>(null);
   const [errore, setErrore] = useState(false);
   const [conferma, setConferma] = useState<{ testo: string; procedi: () => void } | null>(null);
+  const [pesante, setPesante] = useState<Transfer | null>(null);
 
   const nomi = Object.fromEntries(aggiunta.nomi.map((n) => [n.userId, n.nome]));
   const mesi = Array.from(
@@ -99,14 +102,20 @@ export function MovimentiCasa({
   // Se togliere il movimento lascia qualcuno senza soldi già restituiti, prima si chiede conferma.
   function chiediAnnulla(m: Transfer) {
     const sc = scopertoAnnullandoVersamento(m, mosse);
-    if (!sc) return void annulla(m);
-    setConferma({ testo: frase(sc, 'versamento'), procedi: () => void annulla(m) });
+    if (sc) return setConferma({ testo: frase(sc, 'versamento'), procedi: () => void annulla(m) });
+    if (serveConferma('movimento_casa')) return setPesante(m);
+    annulla(m);
   }
 
   function chiediElimina(t: Transaction) {
     const sc = scopertoEliminandoSpesa(t, righe, mosse);
     if (!sc) return void elimina(t);
     setConferma({ testo: frase(sc, 'spesa'), procedi: () => void elimina(t) });
+  }
+
+  function fraseMovimento(m: Transfer): string {
+    const cosa = m.causale === 'rimborso' ? 'rimborso' : m.causale === 'restituzione' ? 'importo restituito' : 'versamento';
+    return `Il ${cosa} di ${formatEuro(m.importo)} sparisce anche dai saldi dei conti. Puoi comunque annullare per qualche secondo.`;
   }
 
   function annulla(m: Transfer) {
@@ -240,6 +249,20 @@ export function MovimentiCasa({
         </Campo>
 
         <ErroreMovimento testo={errore ? ERRORE_SALVATAGGIO : null} />
+
+        {pesante && (
+          <ConfermaPesante
+            titolo="Eliminare questo movimento?"
+            frase={fraseMovimento(pesante)}
+            tipo="movimento_casa"
+            onConferma={() => {
+              const m = pesante;
+              setPesante(null);
+              annulla(m);
+            }}
+            onChiudi={() => setPesante(null)}
+          />
+        )}
 
         {conferma && (
           <section aria-label="Conferma" className={`${CLASSE_SCHEDA} text-[15px]`}>

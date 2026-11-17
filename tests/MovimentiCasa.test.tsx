@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MovimentiCasa } from '@/app/casa/movimenti/MovimentiCasa';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
@@ -85,6 +85,7 @@ async function passa(ms: number) {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-11-09T10:00:00Z'));
@@ -201,6 +202,7 @@ describe('MovimentiCasa', () => {
     apri([trasf({}), trasf({ id: 'v2', userId: 'u2', importo: 90 })]);
     expect(screen.getAllByText('Annulla')).toHaveLength(1);
     fireEvent.click(screen.getByText('Annulla'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Elimina' }));
     expect(screen.queryByText('Versamento di Fabio')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Movimento eliminato.');
     expect(deleteTransfer).not.toHaveBeenCalled();
@@ -213,6 +215,7 @@ describe('MovimentiCasa', () => {
     timerFinti();
     apri([trasf({})]);
     fireEvent.click(screen.getByText('Annulla'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Elimina' }));
     fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
     expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
     await passa(10000);
@@ -224,9 +227,38 @@ describe('MovimentiCasa', () => {
     vi.mocked(deleteTransfer).mockRejectedValueOnce(new Error('rete'));
     apri([trasf({})]);
     fireEvent.click(screen.getByText('Annulla'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Elimina' }));
     await passa(5000);
     expect(screen.getByRole('status')).toHaveTextContent('Non sono riuscito a eliminarla: riprova.');
     expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
+  });
+
+  describe('conferma per i movimenti che spostano soldi', () => {
+    it('chiede conferma con una frase chiara e Lascia stare non fa nulla', async () => {
+      timerFinti();
+      const { container } = apri([trasf({ importo: 640 })]);
+      fireEvent.click(screen.getByText('Annulla'));
+      expect(screen.getByText(/Il versamento di .*640,00.* sparisce anche dai saldi dei conti/)).toBeInTheDocument();
+      assertNessunaParolaVietata(container);
+      fireEvent.click(screen.getByRole('button', { name: 'Lascia stare' }));
+      expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
+      await passa(10000);
+      expect(deleteTransfer).not.toHaveBeenCalled();
+    });
+
+    it('con "Non avvisarmi più" la volta dopo elimina subito, ma resta annullabile', async () => {
+      timerFinti();
+      apri([trasf({}), trasf({ id: 'v3', importo: 30 })]);
+      fireEvent.click(screen.getAllByText('Annulla')[0]);
+      fireEvent.click(screen.getByLabelText('Non avvisarmi più'));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Elimina' }));
+      expect(window.localStorage.getItem('conferme:movimento_casa')).toBe('no');
+      fireEvent.click(screen.getAllByText('Annulla')[0]);
+      expect(screen.queryByRole('button', { name: 'Lascia stare' })).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Movimento eliminato.');
+      await passa(5000);
+      expect(deleteTransfer).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('una spesa pagata da Fabio con la sua carta mostra "Fabio" come chi ha pagato', () => {
