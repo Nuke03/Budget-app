@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AnnullaProvider, useEliminaConAnnulla } from '@/app/AnnullaProvider';
 
@@ -65,7 +66,7 @@ describe('AvvisoAnnulla', () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
     expect(ripristina).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('status')).toHaveTextContent('Non sono riuscito a eliminarla: riprova.');
+    expect(screen.getByRole('status')).toHaveTextContent('Non è andata: riprova.');
     expect(screen.queryByRole('button', { name: 'Annulla' })).toBeNull();
   });
 
@@ -167,7 +168,7 @@ describe('AvvisoAnnulla', () => {
       rifiuta(new Error('no'));
     });
     expect(rip1).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('status')).toHaveTextContent("Non sono riuscito a eliminare l'altra: riprova.");
+    expect(screen.getByRole('status')).toHaveTextContent("Una cosa è andata, l'altra no: riprova.");
     expect(screen.getByRole('status')).toHaveTextContent('Spesa b eliminata.');
     fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
     expect(rip2).toHaveBeenCalledTimes(1);

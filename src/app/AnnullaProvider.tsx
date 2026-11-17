@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { creaCodaRimandata } from '@/lib/eliminazioneRimandata';
 import { AvvisoAnnulla } from './AvvisoAnnulla';
 
@@ -21,6 +22,8 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
   const [pendente, setPendente] = useState<{ id: string; testo: string } | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
   const [nascosto, setNascosto] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
   const coda = useRef<ReturnType<typeof creaCodaRimandata> | null>(null);
   const ripristini = useRef(new Map<string, () => void>());
   const timerErrore = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,20 +50,24 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
         esegui: async () => {
           try {
             await r.esegui();
+            // Le pagine del server (Home) mostrano i dati nuovi; un errore qui non rimette in gioco la scrittura.
+            try {
+              router.refresh();
+            } catch {}
             setPendente((p) => (p && p.id === r.id ? null : p));
           } catch {
             r.ripristina();
             setPendente((p) => (p && p.id === r.id ? null : p));
             // Se c'è un'altra eliminazione in attesa, il suo Annulla resta: l'errore si aggiunge allo stesso avviso.
             const altra = coda.current!.inAttesa();
-            mostraErrore(altra ? "Non sono riuscito a eliminare l'altra: riprova." : 'Non sono riuscito a eliminarla: riprova.');
+            mostraErrore(altra ? "Una cosa è andata, l'altra no: riprova." : 'Non è andata: riprova.');
           } finally {
             ripristini.current.delete(r.id);
           }
         },
       });
     },
-    [mostraErrore],
+    [mostraErrore, router],
   );
 
   // Se la pagina si nasconde o si chiude, la scrittura parte comunque, una volta sola:
@@ -84,6 +91,16 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Cambio pagina: le scritture in attesa partono ora e l'avviso sparisce (resta valido solo dove è nato).
+  const percorsoPrecedente = useRef(pathname);
+  useEffect(() => {
+    if (percorsoPrecedente.current === pathname) return;
+    percorsoPrecedente.current = pathname;
+    setPendente(null);
+    setNascosto(false);
+    void coda.current!.eseguiTutte();
+  }, [pathname]);
+
   const annulla = useCallback(() => {
     if (!pendente) return;
     const ripristina = ripristini.current.get(pendente.id);
@@ -100,7 +117,14 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     <Contesto.Provider value={elimina}>
       {children}
       {/* La X nasconde soltanto: il timer corre e la cancellazione avviene lo stesso. */}
-      <AvvisoAnnulla testo={testo} onAnnulla={pendente ? annulla : null} onChiudi={() => setNascosto(true)} />
+      <AvvisoAnnulla
+        testo={testo}
+        onAnnulla={pendente ? annulla : null}
+        onChiudi={() => setNascosto(true)}
+        onPausa={() => coda.current!.pausa()}
+        onRiprendi={() => coda.current!.riprendi()}
+        focalizza={pendente?.id ?? null}
+      />
     </Contesto.Provider>
   );
 }

@@ -87,4 +87,31 @@ describe('creaCodaRimandata', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(b.esegui).toHaveBeenCalledTimes(1);
   });
+
+
+  it('pausa ferma il conto, riprendi lo fa ripartire intero', async () => {
+    const coda = creaCodaRimandata({ attesaMs: 5000 });
+    const a = r('a');
+    coda.aggiungi(a);
+    await vi.advanceTimersByTimeAsync(3000);
+    coda.pausa();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(a.esegui).not.toHaveBeenCalled();
+    coda.riprendi();
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(a.esegui).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(a.esegui).toHaveBeenCalledTimes(1);
+  });
+
+  it('eseguiTutte funziona anche in pausa, una volta sola', async () => {
+    const coda = creaCodaRimandata({ attesaMs: 5000 });
+    const a = r('a');
+    coda.aggiungi(a);
+    coda.pausa();
+    await coda.eseguiTutte();
+    coda.riprendi();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(a.esegui).toHaveBeenCalledTimes(1);
+  });
 });

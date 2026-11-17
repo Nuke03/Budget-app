@@ -22,6 +22,9 @@ export function creaCodaRimandata(opts: {
   annulla(id: string): boolean;
   eseguiTutte(): Promise<void>;
   inAttesa(): Rimandata | null;
+  // Ferma il conto alla rovescia (mouse o tastiera sull'avviso); riprendi lo fa ripartire intero.
+  pausa(): void;
+  riprendi(): void;
 } {
   const setT = (opts.setTimer ?? ((f: () => void, ms: number) => setTimeout(f, ms))) as (f: () => void, ms: number) => ReturnType<typeof setTimeout>;
   const clearT = (opts.clearTimer ?? ((id: ReturnType<typeof setTimeout>) => clearTimeout(id))) as (id: ReturnType<typeof setTimeout>) => void;
@@ -63,6 +66,17 @@ export function creaCodaRimandata(opts: {
     },
     inAttesa() {
       return corrente ? corrente.r : null;
+    },
+    pausa() {
+      const v = corrente;
+      if (!v || v.fatta || v.timer === null) return;
+      clearT(v.timer);
+      v.timer = null;
+    },
+    riprendi() {
+      const v = corrente;
+      if (!v || v.fatta || v.timer !== null) return;
+      v.timer = setT(() => void esegui(v), opts.attesaMs);
     },
   };
 }
