@@ -114,7 +114,8 @@ describe('ripulisci', () => {
 });
 
 describe('testi della parte Casa', () => {
-  const files = CARTELLE.flatMap((c) => file(join(RADICE, c)));
+  const FILE_RADICE = ['AnnullaProvider', 'AvvisoAnnulla', 'ConfermaPesante', 'FoglioInferiore'].map((n) => join(RADICE, 'src/app', `${n}.tsx`));
+  const files = [...CARTELLE.flatMap((c) => file(join(RADICE, c))), ...FILE_RADICE];
 
   it('trova i file da controllare', () => {
     expect(files.length).toBeGreaterThan(20);

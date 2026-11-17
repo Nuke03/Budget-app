@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   anteprimaDaParte,
@@ -52,7 +51,6 @@ export function DaParte({
   unaVolta: ObiettivoCasa[];
   canonePiano?: number;
 }) {
-  const router = useRouter();
   const [scelte, setScelte] = useState<Record<string, string>>({});
   const [aperte, setAperte] = useState<Record<string, boolean>>({});
   const { metti: mettiVoci, inCorso, errore, fatte } = useMettiDaParte({ householdId, oggi });
@@ -61,7 +59,7 @@ export function DaParte({
   // Fondi tolti alla vista in attesa della scrittura vera: Annulla li rimette al loro posto.
   const [nascosti, setNascosti] = useState<Set<string>>(new Set());
 
-  function pagato(id: string) {
+  function pagato(id: string, senzaConferma = false) {
     const cambia = (nascondi: boolean) =>
       setNascosti((prima) => {
         const dopo = new Set(prima);
@@ -72,12 +70,12 @@ export function DaParte({
     setChiedePagato(null);
     eliminaConAnnulla({
       id,
-      testo: 'Segnata come pagata.',
+      // Senza la conferma, la frase che insegna a registrare anche la spesa resta qui.
+      testo: senzaConferma ? 'Segnata come pagata. Ricordati di segnare anche la spesa.' : 'Segnata come pagata.',
       nascondi: () => cambia(true),
       ripristina: () => cambia(false),
       esegui: async () => {
         await closeGoal(createClient(), id);
-        router.refresh();
       },
     });
   }
@@ -209,7 +207,7 @@ export function DaParte({
                 <ComeSiCalcola spiegazione={g.spiegazione} />
                 <button
                   type="button"
-                  onClick={() => (serveConferma('fondo_pagato') ? setChiedePagato(g.id) : pagato(g.id))}
+                  onClick={() => (serveConferma('fondo_pagato') ? setChiedePagato(g.id) : pagato(g.id, true))}
                   className={`${CLASSE_LINK} self-start`}
                 >
                   L&apos;ho pagato

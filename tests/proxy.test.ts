@@ -75,4 +75,15 @@ describe('proxy: icone e manifest', () => {
       expect(re.test(percorso)).toBe(false);
     },
   );
+
+  it.each(['/icons', '/iconografia', '/apple-iconx', '/icon-vecchia'])("%s non è un'icona: il proxy gira", async (percorso) => {
+    const { config } = await import('@/proxy');
+    const re = new RegExp(`^${config.matcher[0]}$`);
+    expect(re.test(percorso)).toBe(true);
+  });
+
+  it.each(['/icon', '/apple-icon'])('%s senza barra resta escluso', async (percorso) => {
+    const { config } = await import('@/proxy');
+    expect(new RegExp(`^${config.matcher[0]}$`).test(percorso)).toBe(false);
+  });
 });

@@ -6,7 +6,7 @@ import type { ObiettivoCasa, StatoVoceDaParte } from '@/lib/calculations/casa/fo
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const refresh = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push: vi.fn() }), usePathname: () => '/x' }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/fondiCasa', () => ({
   creaFondoBolletta: vi.fn(),
@@ -190,7 +190,7 @@ describe('DaParte', () => {
       monta({ unaVolta: [divano] });
       fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent('Segnata come pagata.');
+      expect(screen.getByRole('status')).toHaveTextContent('Segnata come pagata. Ricordati di segnare anche la spesa.');
     });
 
     it('"Non avvisarmi più" qui non tocca la conferma dei movimenti', () => {
