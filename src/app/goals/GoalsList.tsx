@@ -46,7 +46,7 @@ export function GoalsList({
   return (
     <ul className="flex flex-col gap-3.5">
       {goals.map((g) => {
-        const isBloccato = g.modalita === 'bloccato';
+        const tuttoSubito = g.modalita === 'bloccato';
         const categoriaNome = g.categoriaId
           ? categories.find((c) => c.id === g.categoriaId)?.nome
           : null;
@@ -89,8 +89,8 @@ export function GoalsList({
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-brand-tint px-2.5 py-1 font-medium text-brand-dark">
-                  {isBloccato ? <Lock size={14} aria-hidden="true" /> : <Clock size={14} aria-hidden="true" />}
-                  {isBloccato ? 'tutto messo da parte' : 'messo da parte finora'}
+                  {tuttoSubito ? <Lock size={14} aria-hidden="true" /> : <Clock size={14} aria-hidden="true" />}
+                  {tuttoSubito ? 'tutto messo da parte' : 'messo da parte finora'}
                 </span>
               )}
               {g.scadenza && <span className="num">entro il {formatDateIt(g.scadenza)}</span>}
