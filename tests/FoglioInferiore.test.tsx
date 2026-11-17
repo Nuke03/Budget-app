@@ -19,6 +19,13 @@ function Prova({ onClose = () => {} }: { onClose?: () => void }) {
 }
 
 describe('FoglioInferiore', () => {
+  it('è piatto: niente ombra né sfocatura, bordo sopra', () => {
+    render(<Prova />);
+    fireEvent.click(screen.getByText('Apri'));
+    const html = document.body.innerHTML;
+    expect(html).not.toMatch(/shadow-2xl|backdrop-blur/);
+    expect(screen.getByRole('dialog').className).toContain('border-t');
+  });
   it('porta il focus sul primo controllo del contenuto', () => {
     render(<Prova />);
     fireEvent.click(screen.getByText('Apri'));
