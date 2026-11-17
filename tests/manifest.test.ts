@@ -25,6 +25,14 @@ describe('manifest', () => {
     expect(icone.some((x) => x.purpose === 'maskable')).toBe(true);
   });
 
+  it('maschera e any non condividono la stessa immagine', () => {
+    const icone = m.icons ?? [];
+    const maschera = icone.find((x) => x.purpose === 'maskable');
+    const qualsiasi = icone.filter((x) => x.purpose === 'any');
+    expect(maschera?.src).toBe('/icon/maskable');
+    expect(qualsiasi.map((x) => x.src)).not.toContain(maschera?.src);
+  });
+
   it('ogni icona punta a una route generata', () => {
     const ids = generateImageMetadata().map((x) => x.id);
     for (const i of m.icons ?? []) {
@@ -34,9 +42,10 @@ describe('manifest', () => {
 });
 
 describe('icone generate', () => {
-  it('icon: 192 e 512 in png', () => {
+  it('icon: 192, 512 e maskable in png', () => {
     const meta = generateImageMetadata();
-    expect(meta.map((x) => x.size.width)).toEqual([192, 512]);
+    expect(meta.map((x) => x.id)).toEqual(['192', '512', 'maskable']);
+    expect(meta.map((x) => x.size.width)).toEqual([192, 512, 512]);
     expect(meta.every((x) => x.contentType === 'image/png')).toBe(true);
   });
 
@@ -50,6 +59,14 @@ describe('icone generate', () => {
     expect(res.headers.get('content-type')).toBe('image/png');
     const buf = new Uint8Array(await res.arrayBuffer());
     expect(buf.length).toBeGreaterThan(100);
+    expect(Array.from(buf.slice(1, 4))).toEqual([0x50, 0x4e, 0x47]);
+  });
+
+  it('renderizza anche la versione maskable', async () => {
+    const { default: Icon } = await import('@/app/icon');
+    const res = await Icon({ id: Promise.resolve('maskable') });
+    expect(res.headers.get('content-type')).toBe('image/png');
+    const buf = new Uint8Array(await res.arrayBuffer());
     expect(Array.from(buf.slice(1, 4))).toEqual([0x50, 0x4e, 0x47]);
   });
 });

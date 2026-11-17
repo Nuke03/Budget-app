@@ -12,7 +12,7 @@ export function IconaApp({ lato, margine }: { lato: number; margine: number }) {
   const larghezza = altezza * 0.75;
   const riga = Math.max(3, Math.round(lato * 0.022));
   const timbro = larghezza * 0.42;
-  const anello = Math.max(3, Math.round(lato * 0.017));
+  const anello = Math.max(3, Math.round(lato * 0.028));
   return (
     <div
       style={{
@@ -37,6 +37,19 @@ export function IconaApp({ lato, margine }: { lato: number; margine: number }) {
           position: 'relative',
         }}
       >
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: larghezza * 0.09,
+            background: COPERTINA,
+            opacity: 0.22,
+            borderTopLeftRadius: larghezza * 0.1,
+            borderBottomLeftRadius: larghezza * 0.1,
+          }}
+        />
         <div style={{ width: larghezza * 0.6, height: riga, background: COPERTINA, opacity: 0.4, marginTop: altezza * 0.08 }} />
         <div style={{ width: larghezza * 0.42, height: riga, background: COPERTINA, opacity: 0.4, marginTop: riga * 3 }} />
         <div
