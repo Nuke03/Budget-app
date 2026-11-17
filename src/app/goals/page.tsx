@@ -8,6 +8,7 @@ import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goal
 import { getCategories } from '@/lib/data/categories';
 import { getSpecoCollegato } from '@/lib/data/goalSpending';
 import { computeQuotaMensile, computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { GoalsList, type GoalWithQuotaMensile } from './GoalsList';
 import { CreateGoalForm, type GoalPayload } from './CreateGoalForm';
 import type { BudgetGoal, Category } from '@/lib/types';
@@ -16,6 +17,9 @@ type GoalConSpeso = BudgetGoal & { specoCollegato: number };
 
 export default function GoalsPage() {
   const fail = useThrowToBoundary();
+  const eliminaConAnnulla = useEliminaConAnnulla();
+  // Obiettivi tolti alla vista in attesa della scrittura vera: Annulla li rimette al loro posto.
+  const [nascosti, setNascosti] = useState<Set<string>>(new Set());
   const [goals, setGoals] = useState<GoalConSpeso[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editingGoal, setEditingGoal] = useState<GoalWithQuotaMensile | null>(null);
@@ -49,13 +53,28 @@ export default function GoalsPage() {
     await refresh();
   }
 
-  async function handleClose(goal: GoalWithQuotaMensile) {
-    const supabase = createClient();
-    await closeGoal(supabase, goal.id);
-    await refresh();
+  function handleClose(goal: GoalWithQuotaMensile) {
+    const cambia = (nascondi: boolean) =>
+      setNascosti((prima) => {
+        const dopo = new Set(prima);
+        if (nascondi) dopo.add(goal.id);
+        else dopo.delete(goal.id);
+        return dopo;
+      });
+    eliminaConAnnulla({
+      id: goal.id,
+      testo: 'Obiettivo chiuso.',
+      nascondi: () => cambia(true),
+      ripristina: () => cambia(false),
+      esegui: async () => {
+        const supabase = createClient();
+        await closeGoal(supabase, goal.id);
+        await refresh();
+      },
+    });
   }
 
-  const goalsConQuota = goals.map((g) => {
+  const goalsConQuota = goals.filter((g) => !nascosti.has(g.id)).map((g) => {
     const oggi = new Date();
     return {
       ...g,
