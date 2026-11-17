@@ -47,12 +47,12 @@ vi.mock('@/lib/data/goals', () => ({ getOpenGoals: async () => [], createGoal: v
 vi.mock('@/lib/data/transactions', () => ({
   updateTransaction: vi.fn().mockResolvedValue(undefined),
   deleteTransaction: vi.fn().mockResolvedValue(undefined),
-  getTransactions: async () => [
+  getTransactions: vi.fn(async () => [
     {
       id: 't1', tipo: 'expense', importo: 10, data: '2026-11-04', categoriaId: null, accountId: 'a',
       goalId: null, descrizione: 'Pane', nota: null, createdAt: '',
     },
-  ],
+  ]),
 }));
 vi.mock('@/lib/data/households', () => ({
   getMyHousehold: async () => {
@@ -64,7 +64,7 @@ vi.mock('@/lib/data/transfers', () => ({ getTransfers: async () => [] }));
 
 import HistoryPage from '@/app/history/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
-import { deleteTransaction } from '@/lib/data/transactions';
+import { deleteTransaction, getTransactions } from '@/lib/data/transactions';
 import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
 
 function Pagina() {
@@ -112,6 +112,17 @@ describe('Storico: saldi personali per differenza', () => {
       expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'a', 10);
       expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
       expect(updateAccountBalance).not.toHaveBeenCalled();
+    });
+
+    it('cancellata ma saldo non aggiornato: la riga non torna, si ricarica e compare l avviso', async () => {
+      vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+      await apri();
+      const prima = vi.mocked(getTransactions).mock.calls.length;
+      fireEvent.click(screen.getByLabelText('Elimina transazione'));
+      await passa(5000);
+      expect(deleteTransaction).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('alert')).toHaveTextContent('Spesa eliminata, ma il saldo del conto non si è aggiornato: controllalo in Conti.');
+      expect(vi.mocked(getTransactions).mock.calls.length).toBeGreaterThan(prima);
     });
 
     it('Annulla non scrive mai e la riga torna', async () => {

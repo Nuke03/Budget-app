@@ -164,6 +164,7 @@ export function MovimentiCasa({
           // Se la riga e gia stata cancellata e fallisce solo il saldo, non va rimessa.
           if (cancellata) {
             setErrore(true);
+            router.refresh();
             return;
           }
           throw e;

@@ -184,6 +184,7 @@ describe('MovimentiCasa', () => {
     expect(deleteTransaction).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Luce')).not.toBeInTheDocument();
     expect(screen.getByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+    expect(refresh).toHaveBeenCalled();
   });
 
   it('mostra un versamento in stile neutro e senza importo nei totali', () => {

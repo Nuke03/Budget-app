@@ -31,6 +31,7 @@ export default function HistoryPage() {
   const eliminaConAnnulla = useEliminaConAnnulla();
   // Righe tolte alla vista in attesa della scrittura vera: Annulla le rimette al loro posto.
   const [nascoste, setNascoste] = useState<Set<string>>(new Set());
+  const [erroreSaldo, setErroreSaldo] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -149,10 +150,18 @@ export default function HistoryPage() {
       esegui: async () => {
         const supabase = createClient();
         await deleteTransaction(supabase, t.id);
-        await applicaAggiornamentiSaldo(
-          { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
-          { accountId: null, tipo: t.tipo, importo: 0 }
-        );
+        try {
+          await applicaAggiornamentiSaldo(
+            { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
+            { accountId: null, tipo: t.tipo, importo: 0 }
+          );
+        } catch {
+          // La riga è già cancellata: non va rimessa. Si ricarica lo stato vero e si avvisa.
+          setErroreSaldo(true);
+          await refresh().catch(() => {});
+          return;
+        }
+        setErroreSaldo(false);
         await refresh();
       },
     });
@@ -202,6 +211,12 @@ export default function HistoryPage() {
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
       <h1 className="text-2xl font-bold">Storico</h1>
+
+      {erroreSaldo && (
+        <p role="alert" className="text-sm text-danger">
+          Spesa eliminata, ma il saldo del conto non si è aggiornato: controllalo in Conti.
+        </p>
+      )}
 
       <PeriodoFilter
         periodo={periodo}
