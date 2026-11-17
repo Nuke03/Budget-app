@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { ImpostazioniCasa } from '@/app/casa/impostazioni/ImpostazioniCasa';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import type { CasaCorrente } from '@/lib/data/households';
@@ -69,6 +69,7 @@ describe('ImpostazioniCasa', () => {
     expect(createInvite).toHaveBeenCalledWith({}, 'h1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Revoca' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Revoca' }));
     await waitFor(() => expect(revokeInvite).toHaveBeenCalledWith({}, 'h1'));
     await waitFor(() => expect(screen.queryByText('NEWC-ODE1')).not.toBeInTheDocument());
   });
@@ -77,6 +78,9 @@ describe('ImpostazioniCasa', () => {
     leaveHousehold.mockResolvedValue(undefined);
     render(<ImpostazioniCasa casa={casa()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Esci dalla casa' }));
+    expect(leaveHousehold).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Non avvisarmi più')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sì, esco dalla casa' }));
     await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
     expect(leaveHousehold).toHaveBeenCalled();
     expect(refresh).toHaveBeenCalled();
@@ -96,6 +100,7 @@ describe('ImpostazioniCasa', () => {
     leaveHousehold.mockRejectedValue(new CasaBloccataError(reason));
     const { container } = render(<ImpostazioniCasa casa={casa()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Esci dalla casa' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sì, esco dalla casa' }));
     expect(await screen.findByText(testo)).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
     assertNessunaParolaVietata(container);
@@ -114,15 +119,45 @@ describe('ImpostazioniCasa', () => {
     ).toBeInTheDocument();
     expect(closeHousehold).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sì, chiudi la casa' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sì, chiudi la casa' }));
     await waitFor(() => expect(closeHousehold).toHaveBeenCalled());
     await waitFor(() => expect(push).toHaveBeenCalledWith('/casa'));
+  });
+
+  it('Lascia stare sull uscita non fa nulla', () => {
+    render(<ImpostazioniCasa casa={casa()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Esci dalla casa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lascia stare' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(leaveHousehold).not.toHaveBeenCalled();
+  });
+
+  it('chiudere la casa non offre "Non avvisarmi più"', () => {
+    render(<ImpostazioniCasa casa={casa({ members: [fabio] })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi la casa' }));
+    expect(screen.queryByLabelText('Non avvisarmi più')).not.toBeInTheDocument();
+  });
+
+  it('Revoca chiede conferma; con "Non avvisarmi più" la volta dopo revoca subito', async () => {
+    window.localStorage.clear();
+    revokeInvite.mockResolvedValue(undefined);
+    render(<ImpostazioniCasa casa={casa()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Revoca' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lascia stare' }));
+    expect(revokeInvite).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Revoca' }));
+    fireEvent.click(screen.getByLabelText('Non avvisarmi più'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Revoca' }));
+    await waitFor(() => expect(revokeInvite).toHaveBeenCalledTimes(1));
+    expect(window.localStorage.getItem('conferme:revoca_invito')).toBe('no');
+    window.localStorage.clear();
   });
 
   it('un errore generico mostra il messaggio di salvataggio fallito', async () => {
     leaveHousehold.mockRejectedValue(new Error('boom'));
     render(<ImpostazioniCasa casa={casa()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Esci dalla casa' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sì, esco dalla casa' }));
     expect(
       await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')
     ).toBeInTheDocument();
