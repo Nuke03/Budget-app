@@ -103,3 +103,17 @@ describe('migrazione 0010 (statica)', () => {
     expect(commentate).toContain('drop column if exists guidata_dal');
   });
 });
+
+describe('migrazione 0010, controlli aggiuntivi', () => {
+  it('accantona_tasse accetta solo un incasso personale', () => {
+    expect(corpo(codice, 'accantona_tasse')).toContain("tipo = 'income' and household_id is null");
+  });
+  it('annulla_accantonamento blocca i conti in ordine', () => {
+    expect(corpo(codice, 'annulla_accantonamento')).toContain('order by id for update');
+  });
+  it('paga_scadenza esclude le categorie archiviate e serializza la creazione', () => {
+    const c = corpo(codice, 'paga_scadenza');
+    expect(c).toContain('not archiviata');
+    expect(c).toContain('pg_advisory_xact_lock');
+  });
+});

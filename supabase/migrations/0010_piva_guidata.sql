@@ -233,7 +233,8 @@ begin
   ) then raise exception 'conto non valido'; end if;
   if p_transaction is not null then
     if not exists (
-      select 1 from public.transactions where id = p_transaction and user_id = (select auth.uid())
+      select 1 from public.transactions
+      where id = p_transaction and user_id = (select auth.uid()) and tipo = 'income' and household_id is null
     ) then raise exception 'movimento non valido'; end if;
     if exists (select 1 from public.piva_accantonamenti where transaction_id = p_transaction) then
       raise exception 'quota già spostata';
@@ -260,6 +261,8 @@ begin
   delete from public.piva_accantonamenti where id = p_id returning * into r;
   get diagnostics n = row_count;
   if n = 0 then return 0; end if;
+  perform 1 from public.accounts
+  where id in (r.da_account_id, r.a_account_id) order by id for update;
   if r.da_account_id is not null then
     update public.accounts set saldo_attuale = saldo_attuale + r.importo where id = r.da_account_id;
   end if;
@@ -289,8 +292,10 @@ begin
   if s.pagata_il is not null then raise exception 'scadenza già pagata'; end if;
   select * into a from public.accounts where id = p_account for update;
   if not found or a.household_id is not null then raise exception 'conto non valido'; end if;
+  perform pg_advisory_xact_lock(hashtext((select auth.uid())::text || 'tasse'));
   select id into v_cat from public.categories
   where user_id = (select auth.uid()) and household_id is null and tipo = 'expense' and nome = 'Tasse e contributi'
+    and not archiviata
   limit 1;
   if v_cat is null then
     insert into public.categories (nome, tipo) values ('Tasse e contributi', 'expense') returning id into v_cat;
