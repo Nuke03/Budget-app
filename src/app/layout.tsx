@@ -20,7 +20,6 @@ const sans = Work_Sans({
 
 export const metadata: Metadata = {
   title: "Budget",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

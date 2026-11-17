@@ -64,3 +64,15 @@ describe('proxy: anteprima', () => {
     expect(new URL(res.headers.get('location')!).pathname).toBe('/login');
   });
 });
+
+describe('proxy: icone e manifest', () => {
+  it.each(['/manifest.webmanifest', '/icon/192', '/icon/512', '/apple-icon', '/sw.js'])(
+    '%s passa senza sessione',
+    async (percorso) => {
+      // Il matcher esclude queste route: il proxy non deve nemmeno girare.
+      const { config } = await import('@/proxy');
+      const re = new RegExp(`^${config.matcher[0]}$`);
+      expect(re.test(percorso)).toBe(false);
+    },
+  );
+});
