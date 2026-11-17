@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { creaCodaRimandata } from '@/lib/eliminazioneRimandata';
 import { AvvisoAnnulla } from './AvvisoAnnulla';
 
@@ -15,21 +15,22 @@ export interface EliminaConAnnulla {
   ripristina: () => void;
 }
 
-type Avviso = { id: string; testo: string } | { id: null; testo: string };
-
 const Contesto = createContext<((r: EliminaConAnnulla) => void) | null>(null);
 
 export function AnnullaProvider({ children }: { children: ReactNode }) {
-  const [avviso, setAvviso] = useState<Avviso | null>(null);
+  const [pendente, setPendente] = useState<{ id: string; testo: string } | null>(null);
+  const [errore, setErrore] = useState<string | null>(null);
+  const [nascosto, setNascosto] = useState(false);
   const coda = useRef<ReturnType<typeof creaCodaRimandata> | null>(null);
   const ripristini = useRef(new Map<string, () => void>());
   const timerErrore = useRef<ReturnType<typeof setTimeout> | null>(null);
   if (coda.current === null) coda.current = creaCodaRimandata({ attesaMs: ATTESA_MS });
 
-  const mostraErrore = useCallback(() => {
+  const mostraErrore = useCallback((testo: string) => {
     if (timerErrore.current) clearTimeout(timerErrore.current);
-    setAvviso({ id: null, testo: 'Non sono riuscito a eliminarla: riprova.' });
-    timerErrore.current = setTimeout(() => setAvviso((a) => (a && a.id === null ? null : a)), ERRORE_MS);
+    setErrore(testo);
+    setNascosto(false);
+    timerErrore.current = setTimeout(() => setErrore(null), ERRORE_MS);
   }, []);
 
   const elimina = useCallback(
@@ -37,17 +38,22 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
       ripristini.current.set(r.id, r.ripristina);
       r.nascondi();
       if (timerErrore.current) clearTimeout(timerErrore.current);
-      setAvviso({ id: r.id, testo: r.testo });
+      setErrore(null);
+      setNascosto(false);
+      setPendente({ id: r.id, testo: r.testo });
       coda.current!.aggiungi({
         id: r.id,
         testo: r.testo,
         esegui: async () => {
           try {
             await r.esegui();
-            setAvviso((a) => (a && a.id === r.id ? null : a));
+            setPendente((p) => (p && p.id === r.id ? null : p));
           } catch {
             r.ripristina();
-            mostraErrore();
+            setPendente((p) => (p && p.id === r.id ? null : p));
+            // Se c'è un'altra eliminazione in attesa, il suo Annulla resta: l'errore si aggiunge allo stesso avviso.
+            const altra = coda.current!.inAttesa();
+            mostraErrore(altra ? "Non sono riuscito a eliminare l'altra: riprova." : 'Non sono riuscito a eliminarla: riprova.');
           } finally {
             ripristini.current.delete(r.id);
           }
@@ -57,10 +63,14 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     [mostraErrore],
   );
 
-  // Se la pagina si nasconde o si chiude, la scrittura parte comunque, una volta sola.
+  // Se la pagina si nasconde o si chiude, la scrittura parte comunque, una volta sola:
+  // l'avviso sparisce subito, così Annulla non resta lì a non fare niente.
   useEffect(() => {
     const q = coda.current!;
-    const subito = () => void q.eseguiTutte();
+    const subito = () => {
+      setPendente(null);
+      void q.eseguiTutte();
+    };
     const alCambio = () => {
       if (document.visibilityState === 'hidden') subito();
     };
@@ -70,32 +80,27 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('pagehide', subito);
       document.removeEventListener('visibilitychange', alCambio);
       if (timerErrore.current) clearTimeout(timerErrore.current);
-      subito();
+      void q.eseguiTutte();
     };
   }, []);
 
   const annulla = useCallback(() => {
-    if (!avviso || avviso.id === null) return;
-    const ripristina = ripristini.current.get(avviso.id);
-    if (coda.current!.annulla(avviso.id)) {
-      ripristini.current.delete(avviso.id);
+    if (!pendente) return;
+    const ripristina = ripristini.current.get(pendente.id);
+    if (coda.current!.annulla(pendente.id)) {
+      ripristini.current.delete(pendente.id);
       ripristina?.();
-      setAvviso(null);
+      setPendente(null);
     }
-  }, [avviso]);
+  }, [pendente]);
 
-  const chiudi = useCallback(() => {
-    // Chiudere l'avviso non annulla: la cancellazione procede subito.
-    void coda.current!.eseguiTutte();
-    setAvviso(null);
-  }, []);
-
-  const valore = useMemo(() => elimina, [elimina]);
+  const testo = nascosto ? null : errore ? (pendente ? `${errore} ${pendente.testo}` : errore) : (pendente?.testo ?? null);
 
   return (
-    <Contesto.Provider value={valore}>
+    <Contesto.Provider value={elimina}>
       {children}
-      <AvvisoAnnulla testo={avviso?.testo ?? null} onAnnulla={avviso && avviso.id !== null ? annulla : null} onChiudi={chiudi} />
+      {/* La X nasconde soltanto: il timer corre e la cancellazione avviene lo stesso. */}
+      <AvvisoAnnulla testo={testo} onAnnulla={pendente ? annulla : null} onChiudi={() => setNascosto(true)} />
     </Contesto.Provider>
   );
 }

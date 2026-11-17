@@ -34,7 +34,7 @@ export function AvvisoAnnulla({
           <button
             type="button"
             onClick={onChiudi}
-            aria-label="Chiudi avviso"
+            aria-label="Chiudi l'avviso"
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm"
           >
             <X size={18} strokeWidth={2.2} aria-hidden="true" />

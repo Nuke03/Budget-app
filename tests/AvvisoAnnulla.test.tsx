@@ -127,13 +127,53 @@ describe('AvvisoAnnulla', () => {
     expect(e2).toHaveBeenCalledTimes(1);
   });
 
-  it('chiudere l avviso non annulla: scrive subito', async () => {
+  it('la X nasconde soltanto: dopo 5 secondi scrive lo stesso', async () => {
     const { esegui, ripristina } = monta();
     fireEvent.click(screen.getByText('elimina a'));
+    fireEvent.click(screen.getByRole('button', { name: "Chiudi l'avviso" }));
+    expect(screen.queryByRole('button', { name: 'Annulla' })).toBeNull();
+    expect(esegui).not.toHaveBeenCalled();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Chiudi avviso' }));
+      await vi.advanceTimersByTimeAsync(5000);
     });
     expect(esegui).toHaveBeenCalledTimes(1);
     expect(ripristina).not.toHaveBeenCalled();
+  });
+
+  it('pagehide toglie subito l avviso con Annulla', async () => {
+    monta();
+    fireEvent.click(screen.getByText('elimina a'));
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(screen.queryByRole('button', { name: 'Annulla' })).toBeNull();
+  });
+
+  it('l errore della prima non nasconde l Annulla della seconda', async () => {
+    let rifiuta!: (e: Error) => void;
+    const e1 = vi.fn(() => new Promise<void>((_, rej) => { rifiuta = rej; }));
+    const e2 = vi.fn(async () => {});
+    const rip1 = vi.fn();
+    const rip2 = vi.fn();
+    render(
+      <AnnullaProvider>
+        <Prova id="a" esegui={e1} nascondi={() => {}} ripristina={rip1} />
+        <Prova id="b" esegui={e2} nascondi={() => {}} ripristina={rip2} />
+      </AnnullaProvider>,
+    );
+    fireEvent.click(screen.getByText('elimina a'));
+    fireEvent.click(screen.getByText('elimina b'));
+    await act(async () => {
+      rifiuta(new Error('no'));
+    });
+    expect(rip1).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('status')).toHaveTextContent("Non sono riuscito a eliminare l'altra: riprova.");
+    expect(screen.getByRole('status')).toHaveTextContent('Spesa b eliminata.');
+    fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+    expect(rip2).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10000);
+    });
+    expect(e2).not.toHaveBeenCalled();
   });
 });
