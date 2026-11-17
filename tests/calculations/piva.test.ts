@@ -8,8 +8,14 @@ import {
   computeContributoIntegrativo,
   computeTotaleDaAccantonare,
   computeQuotaMensileSuggerita,
+  computePercentualeIncasso,
+  computeQuotaIncasso,
+  computeStimaAnno,
+  confrontoAnno,
+  quoteInSospeso,
+  totaleInSospeso,
 } from '@/lib/calculations/piva';
-import type { Transaction } from '@/lib/types';
+import type { PivaAccantonamento, PivaSettings, Transaction } from '@/lib/types';
 
 function tx(overrides: Partial<Transaction>): Transaction {
   return {
@@ -105,5 +111,70 @@ describe('computeQuotaMensileSuggerita', () => {
 
   it('a dicembre resta un solo mese', () => {
     expect(computeQuotaMensileSuggerita(1200, new Date('2026-12-01'))).toBe(1200);
+  });
+});
+
+describe('quota per incasso e stima dell anno', () => {
+  const settings: PivaSettings = {
+    id: 's',
+    attivo: true,
+    dataApertura: '2024-01-01',
+    categoriaFatturatoId: 'cat-fatt',
+    coefficienteRedditivita: 78,
+    aliquotaSostitutivaOverride: 5,
+    aliquotaContributoSoggettivo: 10,
+    aliquotaContributoIntegrativo: 2,
+    minimaleContributivoAnnuo: 856,
+    contributiVersatiAnnoPrecedente: 0,
+    contoTasseId: null,
+    preset: 'enpap',
+    guidataDal: '2026-03-01',
+    stipendioMensile: null,
+    stipendioRivistoIl: null,
+    incassoMeseMagro: null,
+  };
+  const acc = (transactionId: string | null): PivaAccantonamento => ({
+    id: 'a',
+    transactionId,
+    importo: 10,
+    data: '2026-04-01',
+    daAccountId: null,
+    aAccountId: null,
+  });
+
+  it('percentuale ENPAP al 5%: 13.7', () => {
+    expect(computePercentualeIncasso(78, 5, 10, 2)).toBe(13.7);
+  });
+  it('percentuale al 15%: 21.5', () => {
+    expect(computePercentualeIncasso(78, 15, 10, 2)).toBe(21.5);
+  });
+  it('quota di 600 € al 13.7%: 82', () => {
+    expect(computeQuotaIncasso(600, 13.7)).toBe(82);
+  });
+  it('confronto: servono 4300, messi 3100, mancano 1200', () => {
+    expect(confrontoAnno(4300, 3100)).toEqual({ servono: 4300, messi: 3100, mancano: 1200 });
+  });
+  it('mancano mai negativo', () => {
+    expect(confrontoAnno(1000, 3000).mancano).toBe(0);
+  });
+  it('stima anno applica il minimale 856 se il 10% è più basso', () => {
+    const s = computeStimaAnno(settings, 5000, new Date('2026-06-01'));
+    expect(s.soggettivo).toBe(856);
+    expect(s.totale).toBeCloseTo(s.imposta + 856 + s.integrativo);
+  });
+  it('quoteInSospeso esclude incassi prima di guidataDal e quelli già accantonati', () => {
+    const incassi = [
+      tx({ id: 'vecchio', categoriaId: 'cat-fatt', data: '2026-02-01', importo: 500 }),
+      tx({ id: 'fatto', categoriaId: 'cat-fatt', data: '2026-03-10', importo: 500 }),
+      tx({ id: 'nuovo', categoriaId: 'cat-fatt', data: '2026-03-01', importo: 600 }),
+      tx({ id: 'altra', categoriaId: 'cat-altro', data: '2026-03-10', importo: 600 }),
+    ];
+    const q = quoteInSospeso(incassi, [acc('fatto')], 13.7, 'cat-fatt', '2026-03-01');
+    expect(q).toEqual([{ transactionId: 'nuovo', importo: 600, quota: 82 }]);
+    expect(totaleInSospeso(q)).toBe(82);
+  });
+  it('quoteInSospeso con guidataDal null è vuota', () => {
+    const incassi = [tx({ id: 'n', categoriaId: 'cat-fatt', data: '2026-03-10', importo: 600 })];
+    expect(quoteInSospeso(incassi, [], 13.7, 'cat-fatt', null)).toEqual([]);
   });
 });

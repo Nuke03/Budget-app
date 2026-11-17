@@ -1,5 +1,5 @@
 import { differenceInCalendarYears, parseISO } from 'date-fns';
-import type { Transaction } from '../types';
+import type { PivaAccantonamento, PivaSettings, Transaction } from '../types';
 
 export function computeFatturatoAnnuo(
   transactions: Transaction[],
@@ -70,4 +70,95 @@ export function computeTotaleDaAccantonare(
 export function computeQuotaMensileSuggerita(totale: number, today: Date): number {
   const mesiRimanenti = 12 - today.getMonth();
   return totale / mesiRimanenti;
+}
+
+export function computePercentualeIncasso(
+  coefficiente: number,
+  aliquotaSostitutiva: number,
+  soggettivo: number,
+  integrativo: number
+): number {
+  const valore = (coefficiente * (aliquotaSostitutiva + soggettivo)) / 100 + integrativo;
+  return Math.round(valore * 10) / 10;
+}
+
+export function computeQuotaIncasso(importo: number, percentuale: number): number {
+  return Math.round((importo * percentuale) / 100);
+}
+
+export function computeStimaAnno(
+  settings: PivaSettings,
+  fatturato: number,
+  oggi: Date
+): { imposta: number; soggettivo: number; integrativo: number; totale: number } {
+  const reddito = computeRedditoImponibile(
+    fatturato,
+    settings.coefficienteRedditivita,
+    settings.contributiVersatiAnnoPrecedente
+  );
+  const aliquota = computeAliquotaSostitutiva(
+    settings.dataApertura,
+    oggi,
+    settings.aliquotaSostitutivaOverride
+  );
+  const imposta = computeImpostaSostitutiva(reddito, aliquota);
+  const soggettivo = computeContributoSoggettivo(
+    reddito,
+    settings.aliquotaContributoSoggettivo,
+    settings.minimaleContributivoAnnuo
+  );
+  const integrativo = computeContributoIntegrativo(fatturato, settings.aliquotaContributoIntegrativo);
+  return {
+    imposta,
+    soggettivo,
+    integrativo,
+    totale: computeTotaleDaAccantonare(imposta, soggettivo, integrativo),
+  };
+}
+
+export function confrontoAnno(
+  stimaTotale: number,
+  messoDaParte: number
+): { servono: number; messi: number; mancano: number } {
+  return {
+    servono: stimaTotale,
+    messi: messoDaParte,
+    mancano: Math.max(0, stimaTotale - messoDaParte),
+  };
+}
+
+export interface QuotaInSospeso {
+  transactionId: string;
+  importo: number;
+  quota: number;
+}
+
+export function quoteInSospeso(
+  incassi: Transaction[],
+  accantonamenti: PivaAccantonamento[],
+  percentuale: number,
+  categoriaFatturatoId: string,
+  guidataDal: string | null
+): QuotaInSospeso[] {
+  if (guidataDal === null) return [];
+  const gestiti = new Set(
+    accantonamenti.map((a) => a.transactionId).filter((id): id is string => id !== null)
+  );
+  return incassi
+    .filter(
+      (t) =>
+        t.tipo === 'income' &&
+        t.categoriaId === categoriaFatturatoId &&
+        t.data >= guidataDal &&
+        !gestiti.has(t.id)
+    )
+    .map((t) => ({
+      transactionId: t.id,
+      importo: t.importo,
+      quota: computeQuotaIncasso(t.importo, percentuale),
+    }));
+}
+
+export function totaleInSospeso(q: QuotaInSospeso[]): number {
+  return q.reduce((sum, x) => sum + x.quota, 0);
 }
