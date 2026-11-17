@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import type { CasaCorrente } from '@/lib/data/households';
 import { formatEuro, giornoEMeseScadenza, nomeMese } from '@/lib/format';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
@@ -41,7 +42,7 @@ function Stato({ casa, stato, debiti }: { casa: CasaCorrente; stato: CasaHomeDat
       className={`${RIGA} w-full justify-between text-left font-normal text-brand-dark`}
     >
       <span>{testo}</span>
-      <span aria-hidden="true">›</span>
+      <ChevronRight size={18} aria-hidden="true" className="shrink-0" />
     </button>
   );
 }

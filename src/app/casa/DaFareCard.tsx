@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import type { StatoVoceDaParte } from '@/lib/calculations/casa/fondi';
 import type { DaFareCasa } from '@/lib/calculations/supporto/casaHome';
 import { formatEuro } from '@/lib/format';
@@ -65,9 +66,7 @@ export function DaFareCard({
             className={`${CARD} flex min-h-12 w-full items-center justify-between gap-3 text-left text-[15px]`}
           >
             <span>{daFare.testo}</span>
-            <span aria-hidden="true" className="text-brand-dark">
-              ›
-            </span>
+            <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-brand-dark" />
           </button>
           {piuTardi}
         </section>
@@ -82,9 +81,7 @@ export function DaFareCard({
         </h2>
         <Link href={href} className={`${CARD} flex min-h-12 items-center justify-between gap-3 text-[15px]`}>
           <span>{daFare.testo}</span>
-          <span aria-hidden="true" className="text-brand-dark">
-            ›
-          </span>
+          <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-brand-dark" />
         </Link>
         {piuTardi}
       </section>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
@@ -235,7 +236,8 @@ export function MovimentiCasa({
       <CoverHeader titolo="Movimenti di casa" lato={casa.household.nome} />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
         <Link href="/casa" className={CLASSE_LINK}>
-          ‹ La casa
+          <ChevronLeft size={18} aria-hidden="true" className="shrink-0" />
+          La casa
         </Link>
 
         <Campo etichetta="Mese">

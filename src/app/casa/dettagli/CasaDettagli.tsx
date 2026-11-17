@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { CasaCorrente } from '@/lib/data/households';
@@ -16,7 +17,7 @@ import type { FinanzeCasa } from '../finanzeCasa';
 
 const SEZIONE = 'flex flex-col gap-3 rounded-[var(--radius-md)] border border-rule bg-surface p-4';
 const TITOLO = 'font-serif text-lg font-semibold';
-const LINK = 'inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark';
+const LINK = 'inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold text-brand-dark';
 
 // Tutto quello che sta sotto la Casa: il conto comune, i versamenti, chi c'è, la quota.
 export function CasaDettagli({
@@ -137,7 +138,8 @@ export function CasaDettagli({
       <CoverHeader titolo="Dettagli della casa" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
         <Link href="/casa" className={LINK}>
-          ‹ La casa
+          <ChevronLeft size={18} aria-hidden="true" className="shrink-0" />
+          La casa
         </Link>
 
         {finanze ? (
@@ -195,7 +197,7 @@ export function CasaDettagli({
             className="flex min-h-12 items-center justify-between rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-[15px] font-semibold text-brand-dark"
           >
             Venite da Tricount? Inserisci il saldo di oggi
-            <span aria-hidden="true">›</span>
+            <ChevronRight size={18} aria-hidden="true" className="shrink-0" />
           </Link>
         ) : null}
 

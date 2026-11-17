@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import type { CasaCorrente } from '@/lib/data/households';
 import { formatEuro, nomeMese } from '@/lib/format';
 import type { StatoVoceDaParte } from '@/lib/calculations/casa/fondi';
@@ -147,7 +148,7 @@ export function CasaHome({
 
         <Link href="/casa/dettagli" className={LINK_RIGA}>
           <span>Dettagli</span>
-          <span aria-hidden="true">›</span>
+          <ChevronRight size={18} aria-hidden="true" className="shrink-0" />
         </Link>
         {!libretto.gestisce ? (
           <Link href="/casa" className="flex min-h-11 items-center justify-center text-sm font-semibold text-brand-dark">

@@ -208,7 +208,7 @@ describe('CasaDettagli', () => {
       expect(screen.getByRole('heading', { name: "Chi c'è in casa" })).toBeInTheDocument();
       expect(screen.getByText('Anna')).toBeInTheDocument();
       expect(screen.getByText(/Fabio/)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: '‹ La casa' })).toHaveAttribute('href', '/casa');
+      expect(screen.getByRole('link', { name: 'La casa' })).toHaveAttribute('href', '/casa');
     });
 
     it('mostra il conto comune con il saldo e il link a Da parte', () => {
