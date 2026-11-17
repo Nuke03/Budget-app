@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -15,12 +15,13 @@ import { formatDateIt, formatNumero } from '@/lib/format';
 import type { PlanItem } from '@/lib/types';
 import { GoalsList } from '@/app/goals/GoalsList';
 import { closeGoal } from '@/lib/data/goals';
+import { useEliminaConAnnulla } from '../../AnnullaProvider';
 import { CoverHeader } from '../../CoverHeader';
 import { CLASSE_CAMPO, CLASSE_LINK, CLASSE_PRIMARIO, CLASSE_SCHEDA } from '../CampiMovimento';
 import { ComeSiCalcola } from '../ComeSiCalcola';
 import { CostiIngresso } from './CostiIngresso';
 import { NuovaCosa } from './NuovaCosa';
-import { ERRORE_DA_PARTE as ERRORE, useMettiDaParte } from '../useMettiDaParte';
+import { useMettiDaParte } from '../useMettiDaParte';
 
 function testoFrequenza(mesi: number): string {
   return mesi === 12 ? "l'anno" : `ogni ${mesi} mesi`;
@@ -54,25 +55,29 @@ export function DaParte({
   const [aperte, setAperte] = useState<Record<string, boolean>>({});
   const { metti: mettiVoci, inCorso, errore, fatte } = useMettiDaParte({ householdId, oggi });
   const [chiedePagato, setChiedePagato] = useState<string | null>(null);
-  const [chiudendo, setChiudendo] = useState(false);
-  const [errorePagato, setErrorePagato] = useState<string | null>(null);
-  const chiudeRef = useRef(false);
+  const eliminaConAnnulla = useEliminaConAnnulla();
+  // Fondi tolti alla vista in attesa della scrittura vera: Annulla li rimette al loro posto.
+  const [nascosti, setNascosti] = useState<Set<string>>(new Set());
 
-  async function pagato(id: string) {
-    if (chiudeRef.current) return;
-    chiudeRef.current = true;
-    setChiudendo(true);
-    setErrorePagato(null);
-    try {
-      await closeGoal(createClient(), id);
-      setChiedePagato(null);
-      router.refresh();
-    } catch {
-      setErrorePagato(ERRORE);
-    } finally {
-      chiudeRef.current = false;
-      setChiudendo(false);
-    }
+  function pagato(id: string) {
+    const cambia = (nascondi: boolean) =>
+      setNascosti((prima) => {
+        const dopo = new Set(prima);
+        if (nascondi) dopo.add(id);
+        else dopo.delete(id);
+        return dopo;
+      });
+    setChiedePagato(null);
+    eliminaConAnnulla({
+      id,
+      testo: 'Segnata come pagata.',
+      nascondi: () => cambia(true),
+      ripristina: () => cambia(false),
+      esegui: async () => {
+        await closeGoal(createClient(), id);
+        router.refresh();
+      },
+    });
   }
 
   const daMettere = voci.filter((v) => v.stato === 'da_mettere' && !fatte.includes(v.item.id));
@@ -190,7 +195,7 @@ export function DaParte({
           <p className="text-[15px] text-ink-2">Ancora niente da pagare una volta.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {unaVolta.map((g) => (
+            {unaVolta.filter((g) => !nascosti.has(g.id)).map((g) => (
               <li
                 key={g.id}
                 className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-rule bg-surface p-4"
@@ -212,9 +217,8 @@ export function DaParte({
                     Prima registra la spesa nei movimenti della casa, collegata a questo fondo. Poi tocca &quot;L&apos;ho pagato&quot;: il fondo si chiude e i soldi tornano disponibili. Non si può annullare da qui.
                     <button
                       type="button"
-                      disabled={chiudendo}
                       onClick={() => pagato(g.id)}
-                      className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark disabled:opacity-50"
+                      className="inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark"
                     >
                       Conferma
                     </button>
@@ -227,11 +231,6 @@ export function DaParte({
             ))}
           </ul>
         )}
-        {errorePagato ? (
-          <p role="alert" className="text-[15px] text-danger">
-            {errorePagato}
-          </p>
-        ) : null}
         <NuovaCosa householdId={householdId} oggi={oggi} />
       </section>
 

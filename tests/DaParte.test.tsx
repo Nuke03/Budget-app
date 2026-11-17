@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { DaParte } from '@/app/casa/da-parte/DaParte';
+import { AnnullaProvider } from '@/app/AnnullaProvider';
 import type { ObiettivoCasa, StatoVoceDaParte } from '@/lib/calculations/casa/fondi';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
@@ -31,8 +32,16 @@ const fondo: ObiettivoCasa = {
 
 function monta(over: Partial<React.ComponentProps<typeof DaParte>> = {}) {
   return render(
-    <DaParte householdId="h1" oggi="2026-11-09" haPiano voci={[tari]} fondi={[]} unaVolta={[]} {...over} />
+    <AnnullaProvider>
+      <DaParte householdId="h1" oggi="2026-11-09" haPiano voci={[tari]} fondi={[]} unaVolta={[]} {...over} />
+    </AnnullaProvider>
   );
+}
+
+// act di React e timer finti non vanno d'accordo: si fa passare il tempo e si lasciano finire le promesse.
+async function passa(ms: number) {
+  await vi.advanceTimersByTimeAsync(ms);
+  for (let i = 0; i < 20; i++) await Promise.resolve();
 }
 
 beforeEach(() => {
@@ -42,6 +51,8 @@ beforeEach(() => {
   vi.mocked(closeGoal).mockReset();
   vi.mocked(closeGoal).mockResolvedValue(undefined);
 });
+
+afterEach(() => vi.useRealTimers());
 
 describe('DaParte', () => {
   it('voce da mettere: anteprima con la scadenza più lontana, niente domanda', () => {
@@ -128,22 +139,47 @@ describe('DaParte', () => {
     assertNessunaParolaVietata(container);
   });
 
-  it("L'ho pagato: conferma sotto il pulsante, poi chiude il fondo e rinfresca", async () => {
+  describe("L'ho pagato (con Annulla)", () => {
     const divano: ObiettivoCasa = {
       ...fondo, id: 'g9', nome: 'Divano', ricorrente: false, frequenzaMesi: null, importoTarget: 600, accantonato: 100,
     };
-    const { container } = monta({ unaVolta: [divano] });
-    expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
-    expect(
-      screen.getByText(/Prima registra la spesa nei movimenti della casa, collegata a questo fondo/)
-    ).toBeInTheDocument();
-    expect(closeGoal).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Conferma' }));
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(closeGoal).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(closeGoal).mock.calls[0][1]).toBe('g9');
-    assertNessunaParolaVietata(container);
+    function segna() {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const utente = monta({ unaVolta: [divano] });
+      expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
+      expect(
+        screen.getByText(/Prima registra la spesa nei movimenti della casa, collegata a questo fondo/)
+      ).toBeInTheDocument();
+      expect(closeGoal).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Conferma' }));
+      return utente;
+    }
+
+    it('conferma sotto il pulsante, poi nasconde il fondo senza scrivere ancora', () => {
+      const { container } = segna();
+      expect(screen.queryByText('Divano: 600 €')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Segnata come pagata.');
+      expect(closeGoal).not.toHaveBeenCalled();
+      assertNessunaParolaVietata(container);
+    });
+
+    it('dopo 5 secondi chiude il fondo una volta e rinfresca', async () => {
+      segna();
+      await passa(5000);
+      expect(closeGoal).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(closeGoal).mock.calls[0][1]).toBe('g9');
+      expect(refresh).toHaveBeenCalled();
+    });
+
+    it('Annulla non chiude mai il fondo e la riga torna', async () => {
+      segna();
+      fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
+      expect(screen.getByText('Divano: 600 €')).toBeInTheDocument();
+      await passa(10000);
+      expect(closeGoal).not.toHaveBeenCalled();
+      expect(refresh).not.toHaveBeenCalled();
+    });
   });
 
   it('piano senza voci da parte', () => {
