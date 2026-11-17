@@ -217,7 +217,6 @@ export default function HistoryPage() {
   const titoloGiorno = (data: string) =>
     Number(data.slice(0, 4)) === annoCorrente ? giornoEMese(data) : `${giornoEMese(data)} ${data.slice(0, 4)}`;
 
-
   const BOTTONE_ICONA =
     'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint';
 
@@ -244,11 +243,11 @@ export default function HistoryPage() {
           <h2 className="sr-only">Movimenti</h2>
           {giorni.map((g) => (
             <div key={g.data} data-giorno={g.data}>
-              <div className="flex items-baseline justify-between gap-3 border-b-2 border-brand px-4 py-2.5">
+              <div className="flex items-baseline justify-between gap-3 border-b border-rule px-4 py-2.5">
                 <h3 className="text-[13px] font-semibold text-ink-2">{titoloGiorno(g.data)}</h3>
                 <p className="num text-[13px] font-semibold">
                   <span className="sr-only">Totale del giorno </span>
-                  {g.totale < 0 ? '−' : '+'}
+                  {g.totale === 0 ? '' : g.totale < 0 ? '−' : '+'}
                   {formatEuro(Math.abs(g.totale))}
                 </p>
               </div>

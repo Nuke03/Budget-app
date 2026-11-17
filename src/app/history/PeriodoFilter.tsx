@@ -12,7 +12,7 @@ const PRESETS: { chiave: Periodo; etichetta: string }[] = [
 ];
 
 const CAMPO =
-  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-[15px] text-foreground outline-none focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-[15px] text-foreground focus-visible:border-brand';
 
 export function PeriodoFilter({
   periodo,

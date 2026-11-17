@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { formatEuro } from '@/lib/format';
 import { computeCategoryShares } from '@/lib/calculations/categoryShares';
 import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
@@ -12,16 +13,17 @@ export function HistoryChartCard({
   chartData: { nome: string; totale: number }[];
   colorByCategoryName: Map<string, string>;
 }) {
+  const idTitolo = useId();
   const shares = computeCategoryShares(chartData);
   const massimo = Math.max(0, ...shares.map((s) => s.totale));
 
   return (
     <section
       data-testid="history-chart-card"
-      aria-labelledby="spese-per-categoria"
+      aria-labelledby={idTitolo}
       className="rounded-[var(--radius-md)] border border-rule bg-surface p-4"
     >
-      <h2 id="spese-per-categoria" className="font-serif text-lg font-semibold">
+      <h2 id={idTitolo} className="font-serif text-lg font-semibold">
         Per categoria
       </h2>
       {shares.length === 0 ? (
