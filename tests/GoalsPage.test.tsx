@@ -74,3 +74,15 @@ describe('Obiettivi: chiudere con Annulla', () => {
     expect(closeGoal).not.toHaveBeenCalled();
   });
 });
+
+describe('Obiettivi: nuovo obiettivo', () => {
+  it('il modulo sta in un foglio che si apre con Nuovo obiettivo', async () => {
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('tutto messo da parte')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Nuovo obiettivo' }));
+    const foglio = screen.getByRole('dialog', { name: 'Nuovo obiettivo' });
+    expect(foglio).toContainElement(screen.getByLabelText('Nome'));
+  });
+});

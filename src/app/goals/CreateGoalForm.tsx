@@ -24,7 +24,7 @@ const FREQUENZA_PRESETS = [
 const FREQUENZA_VALIDE: number[] = FREQUENZA_PRESETS.map((p) => p.mesi);
 
 const fieldClass =
-  'rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
 
 export function CreateGoalForm({
   categories,
@@ -101,9 +101,9 @@ export function CreateGoalForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]"
+      className="flex flex-col gap-4 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2"
     >
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         Nome
         <input
           aria-label="Nome"
@@ -114,7 +114,7 @@ export function CreateGoalForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         Categoria (opzionale)
         <select
           aria-label="Categoria"
@@ -138,7 +138,7 @@ export function CreateGoalForm({
         />
       )}
 
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         Importo target
         <input
           aria-label="Importo target"
@@ -151,7 +151,7 @@ export function CreateGoalForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         Modalità
         <select
           aria-label="Modalità"
@@ -159,12 +159,12 @@ export function CreateGoalForm({
           onChange={(e) => setModalita(e.target.value as GoalModalita)}
           className={fieldClass}
         >
-          <option value="bloccato">Bloccato</option>
-          <option value="dilazionato">Dilazionato</option>
+          <option value="bloccato">Tutto subito</option>
+          <option value="dilazionato">Un po’ alla volta</option>
         </select>
       </label>
 
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+      <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         Scadenza {!richiedeScadenza && '(opzionale)'}
         <input
           aria-label="Scadenza"
@@ -175,18 +175,18 @@ export function CreateGoalForm({
         />
       </label>
 
-      <label className="flex items-center gap-2.5 text-sm font-medium">
+      <label className="flex min-h-11 items-center gap-2.5 text-[15px] font-medium">
         <input
           type="checkbox"
           checked={ricorrente}
           onChange={(e) => setRicorrente(e.target.checked)}
-          className="h-4 w-4 accent-brand"
+          className="h-5 w-5 accent-brand"
         />
         Ricorrente
       </label>
 
       {ricorrente && (
-        <div className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+        <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
           Frequenza
           <select
             aria-label="Frequenza"
@@ -214,11 +214,11 @@ export function CreateGoalForm({
             />
           )}
           {modalita === 'dilazionato' && frequenzaPreset === 1 && (
-            <p className="rounded-[var(--radius-sm)] bg-cat-amber/15 p-2 text-xs text-cat-amber">
-              Con cadenza mensile, &quot;Dilazionato&quot; riserva l&apos;intero importo solo
-              negli ultimi giorni del mese, poi torna a zero. Per un abbonamento a importo fisso
-              come questo, valuta &quot;Bloccato&quot; invece: riserva subito l&apos;intero
-              importo ogni mese.
+            <p className="rounded-[var(--radius-sm)] bg-brand-tint p-3 text-[13px] font-normal text-foreground">
+              Con cadenza mensile, &quot;Un po’ alla volta&quot; mette da parte l’intero importo
+              solo negli ultimi giorni del mese, poi riparte da zero. Per un abbonamento a importo
+              fisso come questo, meglio &quot;Tutto subito&quot;: metti da parte l’intero importo
+              ogni mese.
             </p>
           )}
         </div>
@@ -227,7 +227,7 @@ export function CreateGoalForm({
       <button
         type="submit"
         disabled={!isValid}
-        className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+        className="min-h-12 rounded-[var(--radius-md)] bg-brand py-3 text-base font-semibold text-brand-foreground disabled:opacity-40"
       >
         {submitLabel}
       </button>
@@ -236,7 +236,7 @@ export function CreateGoalForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-[var(--radius-md)] bg-surface-muted py-3 text-sm font-semibold text-foreground"
+          className="min-h-11 rounded-[var(--radius-md)] bg-brand-tint py-3 text-[15px] font-semibold text-foreground"
         >
           Annulla
         </button>

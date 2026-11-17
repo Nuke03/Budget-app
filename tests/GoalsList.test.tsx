@@ -214,7 +214,7 @@ describe('GoalsList variante casa', () => {
 
   it('la variante di default resta com\'è', () => {
     render(<GoalsList goals={[fondo]} categories={[]} />);
-    expect(screen.getByText('Dilazionato')).toBeInTheDocument();
+    expect(screen.getByText('messo da parte finora')).toBeInTheDocument();
     render(<GoalsList goals={[]} categories={[]} />);
     expect(screen.getByText('Nessun obiettivo aperto.')).toBeInTheDocument();
   });
