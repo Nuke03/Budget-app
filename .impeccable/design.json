@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T14:04:14.968Z",
+  "generatedAt": "2026-11-17T12:00:00.000Z",
   "title": "Design System: Budget — Il Libretto",
   "extensions": {
     "colorMeta": {
@@ -267,7 +267,7 @@
       {
         "name": "shadow-hero",
         "value": "0 4px 16px -4px rgb(15 23 42 / 0.08)",
-        "purpose": "Defined token, unused by built surfaces."
+        "purpose": "Used only on the logo tile of the login screens (drift)."
       },
       {
         "name": "shadow-fab",
@@ -290,6 +290,11 @@
         "name": "stamp-fade",
         "value": "0.4s ease after 2.5s",
         "purpose": "The stamp vanishes; reduced motion keeps only this timer."
+      },
+      {
+        "name": "sheet-and-notice",
+        "value": "sheet rise 0.32s ease-out; undo notice waits 5s, error 6s",
+        "purpose": "Bottom sheet entry and the undo notice timing."
       }
     ],
     "breakpoints": []
@@ -372,7 +377,7 @@
       "kind": "card",
       "refersTo": "da-fare-card",
       "description": "Casa: one pending thing as a tappable Cover Tint row.",
-      "html": "<section class=\"ds-df\"><h2>Da fare</h2><a class=\"ds-dfr\"><span>Versa la tua quota di novembre</span><span aria-hidden=\"true\">&rsaquo;</span></a></section>",
+      "html": "<section class=\"ds-df\"><h2>Da fare</h2><a class=\"ds-dfr\"><span>Versa la tua quota di novembre</span><svg aria-hidden=\"true\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg></a></section>",
       "css": ".ds-df h2 { margin: 0 0 6px; font-family: 'Source Serif 4', Georgia, serif; font-size: 1.125rem; font-weight: 600; color: var(--foreground, #14213d); } .ds-dfr { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 16px; background: var(--surface-muted, #e4eaf5); border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; font-size: 15px; color: var(--foreground, #14213d); } .ds-dfr:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; }"
     },
     {
@@ -390,22 +395,63 @@
       "description": "Visible text action opening a Cover Tint explanation with ingredient rows.",
       "html": "<div class=\"ds-cs\"><button>Come si calcola?</button><div class=\"ds-csp\"><p>La quota è la tua parte delle spese diviso le persone.</p><ul><li><span>Spese del mese</span><b>1.200 €</b></li><li><span>Numero di persone</span><b>2</b></li></ul></div></div>",
       "css": ".ds-cs button { min-height: 44px; border: 0; background: none; font-family: 'Work Sans', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: var(--brand-dark, #0e2350); } .ds-cs button:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; } .ds-csp { margin-top: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface-muted, #e4eaf5); border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; font-size: 15px; color: var(--foreground, #14213d); } .ds-csp p { margin: 0; } .ds-csp ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; } .ds-csp li { display: flex; justify-content: space-between; gap: 12px; } .ds-csp li span { color: var(--ink-2, #4d5a73); } .ds-csp li b { font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }"
+    },
+    {
+      "name": "Undo Notice",
+      "kind": "custom",
+      "refersTo": "page-card",
+      "description": "Solid ink notice after a delete, with underlined Annulla.",
+      "html": "<div class=\"ds-un\"><p>Spesa eliminata.</p><button class=\"ds-un-a\">Annulla</button><button class=\"ds-un-x\" aria-label=\"Chiudi l'avviso\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg></button></div>",
+      "css": ".ds-un { display: flex; align-items: center; gap: 4px; padding-left: 16px; background: var(--foreground, #14213d); color: var(--background, #eef2f8); border-radius: 1rem; font-family: 'Work Sans', system-ui, sans-serif; } .ds-un p { flex: 1; margin: 0; padding: 12px 0; font-size: 15px; } .ds-un button { min-height: 44px; min-width: 44px; border: 0; background: none; color: inherit; border-radius: 4px; } .ds-un-a { padding: 0 12px; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; } .ds-un button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }"
+    },
+    {
+      "name": "Confirm Sheet Actions",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Confirm sheet: safe choice filled, destructive outlined in alert red.",
+      "html": "<div class=\"ds-cf\"><button class=\"ds-cf-ok\">Lascia stare</button><button class=\"ds-cf-del\">Elimina</button></div>",
+      "css": ".ds-cf { display: flex; gap: 8px; font-family: 'Work Sans', system-ui, sans-serif; } .ds-cf button { flex: 1; min-height: 44px; padding: 0 16px; border-radius: 1rem; font-size: 15px; font-weight: 600; } .ds-cf-ok { background: var(--brand, #14306b); color: var(--brand-foreground, #fff); border: 0; } .ds-cf-del { background: var(--surface, #fff); color: var(--danger, #dc2626); border: 1px solid var(--danger, #dc2626); } .ds-cf button:focus-visible { outline: 2px solid var(--brand, #14306b); outline-offset: 2px; }"
+    },
+    {
+      "name": "Category Bar",
+      "kind": "custom",
+      "refersTo": "page-card",
+      "description": "Storico per-category row: name, amount and percent, flat 8px bar in the category hue.",
+      "html": "<div class=\"ds-cb\"><div class=\"ds-cb-l\"><span>Spesa</span><b>320,00 € <i>(64%)</i></b></div><div class=\"ds-cb-t\"><div style=\"width:100%;background:#0f9d6b\"></div></div></div>",
+      "css": ".ds-cb { display: flex; flex-direction: column; gap: 6px; font-size: 15px; color: var(--foreground, #14213d); } .ds-cb-l { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; } .ds-cb-l b { font-weight: 600; font-variant-numeric: tabular-nums lining-nums; } .ds-cb-l i { font-style: normal; font-weight: 400; color: var(--ink-2, #4d5a73); } .ds-cb-t { height: 8px; border-radius: 9999px; background: var(--surface-muted, #e4eaf5); } .ds-cb-t div { height: 8px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Day Ledger Group",
+      "kind": "card",
+      "refersTo": "ledger-row",
+      "description": "Storico: day head with total, then 48px rows with dot, amount and ghost icon buttons.",
+      "html": "<section class=\"ds-dl\"><div class=\"ds-dl-h\"><h3>12 novembre</h3><p>−23,40 €</p></div><div class=\"ds-dl-r\"><i></i><span>Spesa</span><b>−23,40 €</b></div></section>",
+      "css": ".ds-dl { background: var(--surface, #fff); border: 1px solid var(--rule, #e3e8f1); border-radius: 1rem; overflow: hidden; color: var(--foreground, #14213d); } .ds-dl-h { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 16px; border-bottom: 1px solid var(--rule, #e3e8f1); } .ds-dl-h h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2, #4d5a73); } .ds-dl-h p { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums lining-nums; } .ds-dl-r { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 16px; font-size: 15px; border-bottom: 1px solid var(--rule, #e3e8f1); } .ds-dl-r i { width: 10px; height: 10px; border-radius: 9999px; background: #0f9d6b; } .ds-dl-r span { flex: 1; } .ds-dl-r b { font-weight: 400; font-variant-numeric: tabular-nums lining-nums; }"
+    },
+    {
+      "name": "App Icon",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Passbook-blue square, white booklet with spine band, red stamp ring (sanctioned brand mark).",
+      "html": "<div class=\"ds-ic\"><div class=\"ds-ic-b\"><i class=\"sp\"></i><i class=\"l1\"></i><i class=\"l2\"></i><i class=\"st\"></i></div></div>",
+      "css": ".ds-ic { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; background: #14306b; border-radius: 22px; } .ds-ic-b { position: relative; width: 56px; height: 75px; background: #fff; border-radius: 6px; } .ds-ic-b i { position: absolute; display: block; } .sp { top: 0; bottom: 0; left: 0; width: 5px; background: #14306b; opacity: .22; border-radius: 6px 0 0 6px; } .l1 { top: 14px; left: 8px; width: 34px; height: 2px; background: #14306b; opacity: .4; } .l2 { top: 22px; left: 8px; width: 24px; height: 2px; background: #14306b; opacity: .4; } .st { bottom: 7px; right: 6px; width: 24px; height: 24px; border: 2px solid #c8102e; border-radius: 9999px; transform: rotate(-10deg); }"
     }
   ],
   "narrative": {
     "northStar": "Il Libretto",
-    "overview": "The money is a savings passbook. A narrow blue cover band sits on top, white pages lie on a pale blue-grey ground, and everything that is a movement is a ruled line with its number in a column. The mood is calm and reliable: ink on paper, nothing glowing, nothing shouting. The headline figure is set in a serif and earns its place by being the total of the lines below it. Density is low and glanceable, built for one thumb on an iPhone installed as a PWA. Identity comes from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp. The Casa section is built in the same world: one headline figure or sentence, one action, details behind a link.",
+    "overview": "The money is a savings passbook. A narrow blue cover band sits on top, white pages lie on a pale blue-grey ground, and everything that is a movement is a ruled line with its number in a column. The mood is calm and reliable: ink on paper, nothing glowing, nothing shouting. The headline figure is set in a serif and earns its place by being the total of the lines below it. Density is low and glanceable, built for one thumb on an iPhone installed as a PWA. Identity comes from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp. The Casa section is built in the same world: one headline figure or sentence, one action, details behind a link. Storico, Obiettivi, Conti, Categorie and P.IVA are rebuilt in the same world. Delete is undone through a flat ink notice rather than a question; only heavy actions open the confirm sheet. The app icon is the passbook itself: blue cover, white booklet with a spine band, red stamp ring.",
     "keyCharacteristics": [
       "Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.",
       "Serif for figures and headings, grotesk for everything else, tabular lining numerals in every amount.",
       "Flat colour. Depth comes from borders and tonal steps, not shadows.",
       "One reserved red, the stamp, for \"registrato\" only.",
-      "Light and dark themes share one token set; dark follows the system setting."
+      "Light and dark themes share one token set; dark follows the system setting.",
+      "Delete is undone, not interrogated: hide at once, undo notice for 5 seconds; heavy actions get the confirm sheet."
     ],
     "rules": [
       {
         "name": "The One Red Rule",
-        "body": "Stamp red marks a movement as registered and has no other use. Errors use alert red; emphasis uses blue or weight.",
+        "body": "Stamp red marks a movement as registered, plus the stamp ring on the app icon, and has no other use. Errors use alert red; emphasis uses blue or weight.",
         "section": "colors"
       },
       {
@@ -421,6 +467,11 @@
       {
         "name": "The Tabular Rule",
         "body": "Every amount, date and running total carries the .num class (tabular, lining numerals) so columns align. A number in a column without it is a bug.",
+        "section": "typography"
+      },
+      {
+        "name": "The Long Date Rule",
+        "body": "A date read inside a sentence is written out with formatDataLunga; the numeric dd/mm/yyyy form stays in columns and ledgers.",
         "section": "typography"
       },
       {
@@ -443,14 +494,20 @@
       "Do give each Casa screen one headline figure or status sentence, one action, and details behind a link.",
       "Do attach \"Come si calcola?\" to computed Casa figures and show ingredients as tabular rows.",
       "Do use radio pills (single selection, arrow keys) for short choices in Casa flows.",
-      "Do respect safe-area insets at the top (cover band) and bottom (tab bar) and honour reduced motion."
+      "Do respect safe-area insets at the top (cover band) and bottom (tab bar) and honour reduced motion.",
+      "Do make delete reversible with the undo notice; keep the confirm sheet for heavy or irreversible actions, with the safe choice (\"Lascia stare\") as the filled button.",
+      "Do write dates inside sentences in long form (formatDataLunga).",
+      "Do draw bars as flat CSS blocks on a Cover Tint track, in the category hue or Passbook Blue.",
+      "Do use lucide icons (18 to 20px) for actions and forward marks, never typed glyphs."
     ],
     "donts": [
       "Don't use a coloured balance card over a feed of icon tiles; this system refuses that category default.",
       "Don't compute or display a backward running balance: balances are edited by hand, so the ledger shows the month-to-date total (\"Nel mese\").",
       "Don't use gradients, glow shadows or a second reserved accent next to the stamp.",
       "Don't set prose, buttons or labels in the serif, or figures in the grotesk.",
-      "Don't use stamp red for errors; errors use alert red."
+      "Don't use stamp red for errors; errors use alert red. Its one non-stamp use is the icon mark.",
+      "Don't put shadows or blur on sheets, scrims or notices.",
+      "Don't leave a balance as an always-open field; edit on tap."
     ]
   }
 }

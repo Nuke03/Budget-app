@@ -153,7 +153,7 @@ The money is a savings passbook. A narrow blue cover band sits on top, white pag
 
 Density is low and glanceable, built for one thumb on an iPhone installed as a PWA: one column, about 28rem wide, cards on a quiet ground, hairlines instead of fills. Colour is flat. The system gets its identity from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp.
 
-This document describes the Home, the quick-add sheet, the "In pari" screen, the "Altro" notification block and the Casa section as built (Casa home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia). The rest of the app (history, goals, accounts, P.IVA) inherits the tokens but has not been rebuilt in this world yet; see Known drift.
+This document describes the whole app as built: Home, the quick-add sheet, "In pari", the "Altro" notification block, the Casa section (home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia), Storico, Obiettivi, Conti, Categorie, P.IVA, the undo notice, the confirm sheet and the app icon. The login and password screens and the older tabbed add form still carry older styling; see Known drift.
 
 **Key Characteristics:**
 - Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.
@@ -161,6 +161,7 @@ This document describes the Home, the quick-add sheet, the "In pari" screen, the
 - Flat colour. Depth comes from borders and tonal steps, not shadows.
 - One reserved red, the stamp, for "registrato" only.
 - Light and dark themes share one token set; dark follows the system setting.
+- Delete is undone, not interrogated: the item hides at once and an undo notice waits 5 seconds; only heavy or irreversible actions ask first.
 
 ## Colors
 
@@ -172,7 +173,7 @@ A navy-and-paper palette with a single red used for one job.
 - **Cover Tint** (#e4eaf5): quiet buttons, the "Prossimo" card, empty bar tracks, the segmented control background. Dark: #1a2a4d (brand tint) and #1a2640 (muted surface).
 
 ### Secondary
-- **Stamp Red** (#c8102e): the round "REGISTRATO" stamp, nothing else. In dark it lifts to #ff7a8c.
+- **Stamp Red** (#c8102e): the round "REGISTRATO" stamp and the stamp ring of the app icon, nothing else. The icon use is sanctioned as a brand mark (hard-coded in `iconaApp.tsx`, since the icon renders outside the theme). In dark the in-app stamp lifts to #ff7a8c.
 
 ### Neutral
 - **Ground** (#eef2f8): the page background behind the cards. Dark: #0c1424.
@@ -182,13 +183,13 @@ A navy-and-paper palette with a single red used for one job.
 - **Hairline** (#e3e8f1): card borders and row rules. Dark: #24314d.
 
 ### Alert
-- **Alert Red** (#dc2626) with **Alert Tint** (#fdecec; dark #2a1414): form errors only. Kept distinct from the stamp on purpose.
+- **Alert Red** (#dc2626) with **Alert Tint** (#fdecec; dark #2a1414): form errors and the outlined "Elimina" button of the confirm sheet (1px alert-red border, alert-red text, page-white fill). Kept distinct from the stamp on purpose.
 
 ### Category palette
-Eight flat hues for user categories, used as chip borders and selected chip fills: coral (#f97362), amber (#f5a524), emerald (#0f9d6b), teal (#14b8a6), sky (#3b9ae1), violet (#8452f5), pink (#e1177b), slate (#64748b). A selected chip picks dark or white text by contrast against its fill. They colour categories and nothing else.
+Eight flat hues for user categories, used as chip borders and selected chip fills: coral (#f97362), amber (#f5a524), emerald (#0f9d6b), teal (#14b8a6), sky (#3b9ae1), violet (#8452f5), pink (#e1177b), slate (#64748b). A selected chip picks dark or white text by contrast against its fill. They colour categories and nothing else: chip borders and fills, the 10px category dot in ledger rows, and the flat bars of the Storico "Per categoria" card.
 
 ### Named Rules
-**The One Red Rule.** Stamp red marks a movement as registered and has no other use. Errors use alert red; emphasis uses blue or weight.
+**The One Red Rule.** Stamp red marks a movement as registered, plus the stamp ring on the app icon, and has no other use. Errors use alert red; emphasis uses blue or weight.
 
 **The Flat Colour Rule.** No gradients, no glow, no coloured balance card. A fill is one solid token.
 
@@ -208,12 +209,14 @@ Eight flat hues for user categories, used as chip borders and selected chip fill
 - **Title** (serif 600, 22px, tracking 0.02em): the cover band heading, "Il mio libretto".
 - **Section** (serif 600, 1.125rem): block headings such as "Promemoria", "Da fare", "Soldi della casa", "La nostra quota".
 - **Body** (Work Sans 400, 15px): sentences, ledger rows; buttons use 15px to 16px semibold.
-- **Body small** (Work Sans 400, 13px): captions, ledger dates, the cover side label, bar labels.
+- **Body small** (Work Sans 400, 13px): captions, ledger dates, the cover side label, bar labels, Storico day headings (600, soft ink).
 - **Label** (Work Sans, 11px, 0.1em tracking, uppercase): the ledger column heads only (Data, Movimento, Importo, Nel mese).
 - **Tab** (Work Sans 500, 12px; 700 when active): bottom bar labels.
 
 ### Named Rules
 **The Tabular Rule.** Every amount, date and running total carries the `.num` class (tabular, lining numerals) so columns align. A number in a column without it is a bug.
+
+**The Long Date Rule.** A date read inside a sentence (a goal deadline, "16 aprile 2027") is written out with `formatDataLunga`; the numeric dd/mm/yyyy form stays in columns and ledgers.
 
 **The Serif For Counted Things Rule.** Serif is for figures and headings. Prose, buttons, chips and labels are always Work Sans.
 
@@ -221,13 +224,15 @@ Eight flat hues for user categories, used as chip borders and selected chip fill
 
 One centred column. Home uses `max-w-md` (28rem) with 12px side padding and a 14px gap between cards; the add sheet and forms use 20px side padding. The cover band spans the full width and respects the iOS safe-area inset at the top; the bottom bar respects it at the bottom, and content reserves 7rem above it. The headline "page" attaches to the cover: square top, rounded bottom (1rem), no top border, so cover and page read as one object.
 
+A row of pills that can outgrow the width (the Storico period row) is a single line that scrolls sideways with snap and no visible scrollbar. It bleeds to the screen edge (-12px) and keeps 12px start padding, so the first pill sits on the page margin.
+
 The ledger is a four-column grid: date 2.75rem, movement flexible, amount 4.5rem, month-to-date 4.5rem, 8px column gap, 16px side padding. Rows are at least 48px tall. Spacing follows Tailwind's 4px scale; the steps in use are 8, 12, 14, 16 and 20, plus 40px above the cover title.
 
 Touch targets are 44px minimum (chips, quiet links, tabs) and 48px for primary actions and fields.
 
 ## Elevation & Depth
 
-Flat by default. Cards are separated from the ground by a 1px hairline border and the white-on-blue-grey step; `--shadow-card` is defined as `none`. Two soft shadows exist as tokens: `--shadow-hero` (0 4px 16px -4px rgb(15 23 42 / 0.08), defined but not used by the built surfaces) and `--shadow-fab` (0 4px 16px -4px rgb(15 23 42 / 0.2), used on the quick-add save button). The + button is lifted by geometry, not shadow: it rises 20px above the bar and wears a 4px ring in the bar's own surface colour, as if punched through the page.
+Flat by default. Cards are separated from the ground by a 1px hairline border and the white-on-blue-grey step; `--shadow-card` is defined as `none`. Two soft shadows exist as tokens: `--shadow-hero` (0 4px 16px -4px rgb(15 23 42 / 0.08), used only on the logo tile of the login screens) and `--shadow-fab` (0 4px 16px -4px rgb(15 23 42 / 0.2), used on the quick-add save button). The + button is lifted by geometry, not shadow: it rises 20px above the bar and wears a 4px ring in the bar's own surface colour, as if punched through the page. The bottom sheet and the undo notice are flat too: the sheet is cut off by a 1px top rule over a flat 40% black scrim (no blur), the notice is a solid ink block.
 
 ### Named Rules
 **The Hairline Depth Rule.** Hierarchy comes from borders, tone and spacing. A shadow is allowed only on a control that must read as pressable above content, and stays soft and low-opacity.
@@ -277,11 +282,26 @@ Dettagli is a stack of white section cards (hairline border, 1rem radius, 16px p
 ### Come si calcola? (explain panel)
 A visible text action ("Come si calcola?", semibold 14px Passbook Blue Deep, 44px tall) toggles (`aria-expanded`) a Cover Tint panel with hairline border, 1rem radius and 12px padding: the formula in sentences, then ingredient rows with the label in soft ink left and a tabular semibold value right.
 
+### Storico: day-grouped ledger
+Movements are grouped by day inside one white card. Each day opens with a head row: 13px semibold soft ink date (the year is added only when it is not the current one), the day total right in tabular semibold, hairline below. Rows are 48px: category dot, truncating description, signed amount (income semibold Passbook Blue Deep), then 44px round ghost icon buttons for edit and delete (lucide Pencil and Trash2, 18px). Above the card sit the scrolling period pills and the "Per categoria" card: serif section heading, then one row per category with name left, amount and percent right, and an 8px full-round bar in the category hue on a Cover Tint track, scaled to the largest category. The bars are CSS and aria-hidden; the figures carry the data.
+
+### Goals and accounts
+Obiettivi and Conti are stacks of white hairline cards (1rem radius, 16px padding). An account card has the name left and the balance in serif 20px semibold right with a 44px ghost pencil; an optional 8px Passbook Blue progress bar on a Cover Tint track with a tabular "saldo / obiettivo" line below. The balance is never an open field: a quiet Cover Tint button "Aggiorna il saldo" (44px, semibold Passbook Blue Deep) reveals the input and a small "Salva" primary on tap. Goal deadlines are read in long dates.
+
+### Undo notice
+A solid ink block (foreground fill, background-colour text, 1rem radius) floating 5.5rem above the bottom bar inside a persistent polite live region, 12px side inset. Sentence left (15px), "Annulla" as semibold underlined text (44px target), a 44px close X (lucide). It appears after a delete and waits 5 seconds before the delete is committed; on failure the item returns and the notice says so for 6 seconds. Flat, no shadow.
+
+### Confirm sheet
+For heavy or irreversible actions only. A bottom sheet with a serif title, one sentence saying what will happen, an optional "Non avvisarmi più" checkbox (44px row, hairline above, brand accent; omitted when the action cannot be undone), and two equal 44px buttons: "Lascia stare" as the filled Passbook Blue primary (the safe choice leads) and "Elimina" outlined in alert red on page white.
+
+### App icon
+A Passbook Blue square carrying a white portrait booklet (3:4, about 58% of the side, corner radius 10% of its width) with a Passbook Blue spine band at 22% opacity down the left edge, two short ruled lines at 40% opacity, and a stamp-red ring tilted -10 degrees at the lower right. The 192 and 512 sizes keep a 10% margin; the maskable 512 keeps 20% so system masks do not cut the mark. The manifest theme colour is Passbook Blue and its background is Ground.
+
 ### Navigation
 A bottom bar, white, 1px hairline on top, safe-area padded. Four tabs (Home, Storico, Casa, Altro) with 20px icons and 12px labels; active is Passbook Blue, bold, heavier stroke, with `aria-current`. The + button sits as a central slot between Storico and Casa, raised 20px.
 
 ### Bottom sheet
-Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, grabber bar, 75vh scrolling body, dimmed backdrop. The quick-add sheet leads with the amount in large serif and asks for nothing else first.
+Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, 1px hairline on top, a 40px grabber at 10% black, a serif 1.125rem semibold heading with a round X, 75vh scrolling body, a flat 40% black scrim that closes on tap. The sheet is a modal dialog: focus moves to its first control, Tab is trapped inside, Escape closes, focus returns to the opener. The quick-add sheet leads with the amount in large serif and asks for nothing else first.
 
 ## Do's and Don'ts
 
@@ -294,6 +314,10 @@ Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, grabber 
 - **Do** give each Casa screen one headline figure or status sentence, one action, and details behind a link.
 - **Do** attach "Come si calcola?" to computed Casa figures and show ingredients as tabular rows.
 - **Do** use radio pills (single selection, arrow keys) for short choices in Casa flows.
+- **Do** make delete reversible with the undo notice; keep the confirm sheet for heavy or irreversible actions, with the safe choice ("Lascia stare") as the filled button.
+- **Do** write dates inside sentences in long form (`formatDataLunga`).
+- **Do** draw bars as flat CSS blocks on a Cover Tint track, in the category hue or Passbook Blue.
+- **Do** use lucide icons (18 to 20px) for actions and forward marks, never typed glyphs.
 - **Do** respect safe-area insets at the top (cover band) and bottom (tab bar) and honour reduced motion.
 
 ### Don't:
@@ -301,15 +325,16 @@ Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, grabber 
 - **Don't** compute or display a backward running balance: balances are edited by hand, so the ledger shows the month-to-date total ("Nel mese").
 - **Don't** use gradients, glow shadows or a second reserved accent next to the stamp.
 - **Don't** set prose, buttons or labels in the serif, or figures in the grotesk.
-- **Don't** use stamp red for errors; errors use alert red.
+- **Don't** use stamp red for errors; errors use alert red. Its one non-stamp use is the icon mark.
+- **Don't** put shadows or blur on sheets, scrims or notices.
+- **Don't** leave a balance as an always-open field; edit on tap.
 
 ## Known drift (not canonical)
 
 Recorded so future work does not inherit these as rules:
-- Storico, goals, accounts and P.IVA screens inherit the tokens but have not been rebuilt in this world (plan B3, still to do). Do not read their layouts as the system. Casa is built in the world and documented above.
-- The glyphs `›` and `‹` are still used as chevron icons (Casa "Dettagli" and Da fare rows, a few back links). They are a defect the build carries, not a vocabulary for new surfaces.
-- Type-ramp advisories remain on large cent figures: the 28px cents beside the 56px figure and the 40px check-in figure sit off a strict ramp. Recorded as built, not as a ramp to extend.
-- `SchedaNotifiche` (Home) and `altro/Notifiche.tsx` still reference `--shadow-card` (it resolves to none); `SchedaNotifiche` also omits the hairline border the other cards carry.
-- `FoglioInferiore` uses `shadow-2xl`, a `backdrop-blur-sm` scrim and a `bg-black/10` grabber; the older tabbed variant inside `AddTransactionForm` still uses `text-muted`, `shadow-[var(--shadow-card)]` and a sans 5xl amount instead of the serif entry figure.
+- Type-ramp advisories remain on large cent figures: the 28px cents beside the 56px figure and the 40px check-in figure sit off a strict ramp. The P.IVA headline (serif 3rem) is also off the ramp. Recorded as built, not as a ramp to extend.
+- The login, forgot-password and reset-password screens still wear a `shadow-[var(--shadow-hero)]` logo tile (a bold sans letter in a blue rounded square). It does not match the app icon; a defect the build carries, not a vocabulary for new surfaces.
+- The older tabbed variant inside `AddTransactionForm` still uses `text-muted`, `shadow-[var(--shadow-card)]` (resolves to none) and a sans `text-5xl` amount instead of the serif entry figure.
+- The `FieldHint` tooltip still references `--shadow-card` (resolves to none).
 - The stamp's 9px text is below the 11px label floor used elsewhere; it is a decorative mark, not a reading size.
 - Type sizes mix px and rem in the source; the values above record what the build uses.
