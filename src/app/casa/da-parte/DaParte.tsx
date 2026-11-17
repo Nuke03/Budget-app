@@ -209,7 +209,7 @@ export function DaParte({
                 <ComeSiCalcola spiegazione={g.spiegazione} />
                 <button
                   type="button"
-                  onClick={() => (serveConferma('movimento_casa') ? setChiedePagato(g.id) : pagato(g.id))}
+                  onClick={() => (serveConferma('fondo_pagato') ? setChiedePagato(g.id) : pagato(g.id))}
                   className={`${CLASSE_LINK} self-start`}
                 >
                   L&apos;ho pagato
@@ -225,7 +225,7 @@ export function DaParte({
         <ConfermaPesante
           titolo="Segnare come pagato?"
           frase="Prima registra la spesa nei movimenti della casa, collegata a questo fondo. Poi il fondo si chiude e i soldi tornano disponibili. Puoi comunque annullare per qualche secondo."
-          tipo="movimento_casa"
+          tipo="fondo_pagato"
           etichettaConferma="Segna come pagato"
           onConferma={() => pagato(chiedePagato)}
           onChiudi={() => setChiedePagato(null)}

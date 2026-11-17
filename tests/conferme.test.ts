@@ -18,7 +18,9 @@ describe('conferme', () => {
   it('riattivaConferme rimette tutto', () => {
     nonAvvisarePiu('movimento_casa');
     nonAvvisarePiu('revoca_invito');
+    nonAvvisarePiu('fondo_pagato');
     riattivaConferme();
+    expect(serveConferma('fondo_pagato')).toBe(true);
     expect(serveConferma('movimento_casa')).toBe(true);
     expect(serveConferma('revoca_invito')).toBe(true);
   });

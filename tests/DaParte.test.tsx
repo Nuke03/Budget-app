@@ -186,11 +186,21 @@ describe('DaParte', () => {
 
     it('con "Non avvisarmi più" si salta il foglio ma resta annullabile', () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-      window.localStorage.setItem('conferme:movimento_casa', 'no');
+      window.localStorage.setItem('conferme:fondo_pagato', 'no');
       monta({ unaVolta: [divano] });
       fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Segnata come pagata.');
+    });
+
+    it('"Non avvisarmi più" qui non tocca la conferma dei movimenti', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      monta({ unaVolta: [divano] });
+      fireEvent.click(screen.getByRole('button', { name: "L'ho pagato" }));
+      fireEvent.click(screen.getByLabelText('Non avvisarmi più'));
+      fireEvent.click(screen.getByRole('button', { name: 'Segna come pagato' }));
+      expect(window.localStorage.getItem('conferme:fondo_pagato')).toBe('no');
+      expect(window.localStorage.getItem('conferme:movimento_casa')).toBeNull();
     });
 
     it('Annulla non chiude mai il fondo e la riga torna', async () => {
