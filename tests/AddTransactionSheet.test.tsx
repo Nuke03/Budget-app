@@ -9,21 +9,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 
+const rpc = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({}),
+  createClient: () => ({ rpc }),
 }));
 
-vi.mock('@/lib/data/transactions', () => ({
-  createTransaction: vi.fn(),
-}));
-
-vi.mock('@/lib/data/accounts', () => ({
-  updateAccountBalance: vi.fn().mockResolvedValue(undefined),
-  adjustAccountBalance: vi.fn().mockResolvedValue(undefined),
-}));
-
-import { createTransaction } from '@/lib/data/transactions';
-import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
+// Tutti i salvataggi passano da una sola rpc: movimento e saldo insieme.
+const parametri = (n = 0) => rpc.mock.calls[n][1] as Record<string, unknown>;
 
 const personale = {
   categories: [{ id: 'cp', nome: 'Personale cat', tipo: 'expense' as const, colore: null, archiviata: false }],
@@ -85,7 +77,7 @@ const contiDue = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(createTransaction).mockResolvedValue({ id: 't-nuova' } as never);
+  rpc.mockResolvedValue({ data: 't-nuova', error: null });
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
@@ -161,23 +153,22 @@ describe('AddTransactionSheet', () => {
     expect(screen.getByText('Lo vedranno anche Anna e Marco')).toBeInTheDocument();
   });
 
-  it('salvare in Casa crea la transazione con scope casa e chiama adjustAccountBalance con -12.5', async () => {
+  it('salvare in Casa chiama crea_movimento con la casa e il conto comune', async () => {
     apri({ modoIniziale: 'casa', storico: storicoCasa });
     compila('12.5');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', -12.5));
-    expect(createTransaction).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ tipo: 'expense', importo: 12.5, accountId: 'ac', categoriaId: 'cc' }),
-      { kind: 'casa', householdId: 'h1' }
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(rpc).toHaveBeenCalledWith(
+      'crea_movimento',
+      expect.objectContaining({ p_tipo: 'expense', p_importo: 12.5, p_account: 'ac', p_categoria: 'cc', p_household: 'h1' })
     );
-    expect(updateAccountBalance).not.toHaveBeenCalled();
   });
 
   it('una entrata di casa aumenta il conto', async () => {
     apri({ modoIniziale: 'casa', casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false }] } });
     scegliEntrata();
     compila('40');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', 40));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(parametri()).toMatchObject({ p_tipo: 'income', p_importo: 40, p_account: 'ac' });
   });
 
   it('una spesa di casa registrata alle 23:30 UTC del 31 ottobre ha data 2026-11-01', async () => {
@@ -185,17 +176,16 @@ describe('AddTransactionSheet', () => {
     vi.setSystemTime(new Date('2026-10-31T23:30:00Z'));
     apri({ modoIniziale: 'casa' });
     compila('5');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ data: '2026-11-01' });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_data: '2026-11-01' });
   });
 
   it('salvare in Personale scala il conto con un delta, mai con un saldo assoluto', async () => {
     apri({ modoIniziale: 'personale' });
     compila('10');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -10));
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
-    expect(updateAccountBalance).not.toHaveBeenCalled();
-    expect(vi.mocked(createTransaction).mock.calls[0]).toHaveLength(2);
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(rpc.mock.calls[0][0]).toBe('crea_movimento');
+    expect(parametri()).toMatchObject({ p_tipo: 'expense', p_importo: 10, p_account: 'ap', p_household: null });
   });
 
   it('in Casa offre il conto comune e "Io, con <conto>"', () => {
@@ -211,14 +201,8 @@ describe('AddTransactionSheet', () => {
     fireEvent.click(pezzo('Conto comune'));
     fireEvent.click(screen.getByRole('button', { name: 'Io, con Conto mio' }));
     compila('30');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -30));
-    expect(createTransaction).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ accountId: 'ap', importo: 30, pagataDaUserId: 'u1' }),
-      { kind: 'casa', householdId: 'h1' }
-    );
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
-    expect(updateAccountBalance).not.toHaveBeenCalled();
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(parametri()).toMatchObject({ p_account: 'ap', p_importo: 30, p_pagata_da: 'u1', p_household: 'h1' });
   });
 
   it('una entrata personale aumenta il conto con delta positivo', async () => {
@@ -232,7 +216,8 @@ describe('AddTransactionSheet', () => {
     });
     scegliEntrata();
     compila('40');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', 40));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(parametri()).toMatchObject({ p_tipo: 'income', p_importo: 40, p_account: 'ap' });
   });
 
   it('senza conto comune "Chi ha pagato" non sceglie da solo la prima carta personale', async () => {
@@ -244,7 +229,8 @@ describe('AddTransactionSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Io, con Conto mio' }));
     expect(screen.getByText('Salva')).not.toBeDisabled();
     fireEvent.click(screen.getByText('Salva'));
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap', -9));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(parametri()).toMatchObject({ p_importo: 9, p_account: 'ap', p_pagata_da: 'u1' });
   });
 
   it('le entrate non offrono i conti personali', () => {
@@ -263,8 +249,8 @@ describe('AddTransactionSheet', () => {
   it('una spesa di casa con conto comune non imposta pagataDaUserId', async () => {
     apri({ modoIniziale: 'casa', contiPersonali: personale.accounts, storico: storicoCasa });
     compila('12');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', -12));
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).not.toHaveProperty('pagataDaUserId');
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(parametri()).toMatchObject({ p_account: 'ac', p_importo: 12, p_pagata_da: null });
   });
 
   it('in Casa una bolletta preseleziona l obiettivo della sua categoria', async () => {
@@ -282,8 +268,8 @@ describe('AddTransactionSheet', () => {
     };
     apri({ modoIniziale: 'casa', casa: { ...casa, obiettivi: [obiettivoBollette] }, storico: storicoCasa });
     compila('12.5');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ categoriaId: 'cc', goalId: 'g-bol' });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_categoria: 'cc', p_goal: 'g-bol' });
   });
 
   it('in Personale non preseleziona obiettivi dalla categoria', async () => {
@@ -310,8 +296,8 @@ describe('AddTransactionSheet', () => {
       },
     });
     compila('10');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ goalId: null });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_goal: null });
   });
 
   it('il fuoco parte sull importo', () => {
@@ -324,14 +310,14 @@ describe('AddTransactionSheet', () => {
     apri({ modoIniziale: 'personale', storico: storicoPersonale });
     expect(screen.getByText('Salva')).toBeDisabled();
     compila('7');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({
-      tipo: 'expense',
-      importo: 7,
-      descrizione: '',
-      categoriaId: 'cp',
-      accountId: 'ap',
-      goalId: null,
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({
+      p_tipo: 'expense',
+      p_importo: 7,
+      p_descrizione: '',
+      p_categoria: 'cp',
+      p_account: 'ap',
+      p_goal: null,
     });
   });
 
@@ -339,8 +325,8 @@ describe('AddTransactionSheet', () => {
     apri({ modoIniziale: 'personale' });
     expect(pezzo('Senza categoria')).toBeInTheDocument();
     compila('7');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ categoriaId: null });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_categoria: null });
   });
 
   it('il riepilogo cambia toccando un pezzo e apre solo la scelta di quel pezzo', () => {
@@ -359,8 +345,8 @@ describe('AddTransactionSheet', () => {
     fireEvent.click(screen.getByText('Aggiungi una nota'));
     fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Pane' } });
     compila('3');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ descrizione: 'Pane' });
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_descrizione: 'Pane' });
   });
 
   it('la categoria segue la descrizione finché non la scegli a mano', () => {
@@ -390,7 +376,8 @@ describe('AddTransactionSheet', () => {
     fireEvent.click(pezzo('Conto mio'));
     fireEvent.click(within(screen.getByRole('group', { name: 'Conto' })).getByRole('button', { name: 'Carta' }));
     compila('4');
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ap2', -4));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(parametri()).toMatchObject({ p_account: 'ap2', p_importo: 4 });
     expect(window.localStorage.getItem('aggiungi:conto:personale')).toBe('ap2');
     unmount();
     apri({ modoIniziale: 'personale', personale: contiDue, casa: null });
@@ -402,9 +389,8 @@ describe('AddTransactionSheet', () => {
     apri({ modoIniziale: 'personale', casa: null });
     expect(pezzo('Contanti')).toBeInTheDocument();
     compila('4');
-    await waitFor(() => expect(createTransaction).toHaveBeenCalled());
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ accountId: null });
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    await waitFor(() => expect(rpc).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_account: null });
   });
 
   it('dopo il salvataggio scrive l id in sessionStorage, chiama onSaved(id) e chiude', async () => {
@@ -430,10 +416,11 @@ describe('AddTransactionSheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('dopo un errore i campi restano e compare il messaggio', async () => {
-    vi.mocked(createTransaction).mockRejectedValue(new Error('rete'));
+  it('un errore al salvataggio lascia il modulo aperto con i campi', async () => {
+    rpc.mockResolvedValue({ data: null, error: new Error('rete') });
     const onSaved = vi.fn();
-    apri({ modoIniziale: 'personale', onSaved });
+    const onClose = vi.fn();
+    apri({ modoIniziale: 'personale', onSaved, onClose });
     fireEvent.click(screen.getByText('Aggiungi una nota'));
     fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Pane' } });
     compila('8');
@@ -441,51 +428,21 @@ describe('AddTransactionSheet', () => {
     expect(screen.getByLabelText('Importo')).toHaveValue(8);
     expect(screen.getByLabelText('Descrizione')).toHaveValue('Pane');
     expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
     expect(window.sessionStorage.getItem('libretto:registrato')).toBeNull();
     expect(screen.getByText('Salva')).not.toBeDisabled();
   });
 
-  it('se il saldo non si aggiorna, riprovare non crea un doppione e finisce il salvataggio', async () => {
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+  it('dopo un errore, riprovare salva con una chiamata riuscita', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: new Error('rete') });
     const onSaved = vi.fn();
-    const onClose = vi.fn();
-    apri({ modoIniziale: 'personale', onSaved, onClose });
+    apri({ modoIniziale: 'personale', onSaved });
     compila('8');
-    await screen.findByText(/il saldo del conto non si è aggiornato/);
-    expect(onSaved).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Importo')).toHaveAttribute('readonly');
-    expect(pezzo('Conto mio')).toBeDisabled();
-    expect(screen.getByText('Aggiungi una nota')).toBeDisabled();
-    fireEvent.click(screen.getByText('Riprova'));
+    await screen.findByText(/Salvataggio fallito/);
+    fireEvent.click(screen.getByText('Salva'));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova', expect.any(String)));
-    expect(createTransaction).toHaveBeenCalledTimes(1);
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
-    expect(adjustAccountBalance).toHaveBeenLastCalledWith(expect.anything(), 'ap', -8);
+    expect(rpc).toHaveBeenCalledTimes(2);
     expect(window.sessionStorage.getItem('libretto:registrato')).toBe('t-nuova');
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('chiudendo con il saldo da aggiornare Home si aggiorna; riaprendo c è il messaggio e Riprova funziona', async () => {
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
-    const onSaved = vi.fn();
-    const onClose = vi.fn();
-    const props = { modoIniziale: 'personale' as const, onSaved, onClose };
-    const { rerender } = apri(props);
-    compila('8');
-    await screen.findByText(/il saldo del conto non si è aggiornato/);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chiudi' })[0]);
-    expect(onSaved).toHaveBeenCalledWith('t-nuova', expect.any(String));
-    expect(onClose).toHaveBeenCalledTimes(1);
-    const el = (aperto: boolean) => (
-      <AddTransactionSheet aperto={aperto} onClose={onClose} personale={personale} casa={casa} meUserId="u1" modoIniziale="personale" onSaved={onSaved} />
-    );
-    rerender(el(false));
-    rerender(el(true));
-    expect(screen.getByText(/il saldo del conto non si è aggiornato/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Riprova'));
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledTimes(2));
-    expect(createTransaction).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
   });
 
   it('cambiando spazio l importo scritto resta', () => {
@@ -518,7 +475,6 @@ describe('AddTransactionSheet', () => {
     apri({ onSaved });
     compila('9');
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('t-nuova', 'casa'));
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ accountId: null, pagataDaUserId: 'u1' });
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    expect(parametri()).toMatchObject({ p_account: null, p_pagata_da: 'u1' });
   });
 });

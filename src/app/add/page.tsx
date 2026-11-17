@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import { getCategories } from '@/lib/data/categories';
 import { getAccounts } from '@/lib/data/accounts';
-import { createTransaction } from '@/lib/data/transactions';
+import { registraMovimento } from '@/lib/registraSpesa';
 import { AddTransactionForm } from './AddTransactionForm';
 import type { Account, Category } from '@/lib/types';
 
@@ -33,12 +32,7 @@ export default function AddTransactionPage() {
     descrizione: string;
   }) {
     const supabase = createClient();
-    await createTransaction(supabase, {
-      ...payload,
-      data: format(new Date(), 'yyyy-MM-dd'),
-      goalId: null,
-      nota: null,
-    });
+    await registraMovimento(supabase, { ...payload, goalId: null }, { tipo: 'personale' });
     router.push('/');
   }
 

@@ -75,6 +75,12 @@ describe('PivaPage', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 0,
       contributiVersatiAnnoPrecedente: 0,
+      contoTasseId: null,
+      preset: null,
+      guidataDal: null,
+      stipendioMensile: null,
+      stipendioRivistoIl: null,
+      incassoMeseMagro: null,
     });
 
     render(<PivaPage />);
@@ -106,6 +112,12 @@ describe('PivaPage', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 0,
       contributiVersatiAnnoPrecedente: 0,
+      contoTasseId: null,
+      preset: null,
+      guidataDal: null,
+      stipendioMensile: null,
+      stipendioRivistoIl: null,
+      incassoMeseMagro: null,
     });
     vi.mocked(getCategories).mockResolvedValue(categories);
     vi.mocked(getTransactions).mockResolvedValue(transactions);
@@ -134,6 +146,12 @@ describe('PivaPage', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 0,
       contributiVersatiAnnoPrecedente: 0,
+      contoTasseId: null,
+      preset: null,
+      guidataDal: null,
+      stipendioMensile: null,
+      stipendioRivistoIl: null,
+      incassoMeseMagro: null,
     });
     vi.mocked(getCategories).mockResolvedValue(categories);
     vi.mocked(getTransactions).mockResolvedValue(transactions);
@@ -148,6 +166,12 @@ describe('PivaPage', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 0,
       contributiVersatiAnnoPrecedente: 0,
+      contoTasseId: null,
+      preset: null,
+      guidataDal: null,
+      stipendioMensile: null,
+      stipendioRivistoIl: null,
+      incassoMeseMagro: null,
     });
 
     render(<PivaPage />);
@@ -179,6 +203,12 @@ describe('PivaPage', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 0,
       contributiVersatiAnnoPrecedente: 0,
+      contoTasseId: null,
+      preset: null,
+      guidataDal: null,
+      stipendioMensile: null,
+      stipendioRivistoIl: null,
+      incassoMeseMagro: null,
     });
     vi.mocked(getCategories).mockResolvedValue(categories);
     vi.mocked(getTransactions).mockResolvedValue(transactions);
@@ -193,6 +223,12 @@ describe('PivaPage', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 900,
       contributiVersatiAnnoPrecedente: 0,
+      contoTasseId: null,
+      preset: null,
+      guidataDal: null,
+      stipendioMensile: null,
+      stipendioRivistoIl: null,
+      incassoMeseMagro: null,
     });
 
     render(<PivaPage />);

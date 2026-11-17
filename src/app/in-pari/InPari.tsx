@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { segnaNessunaSpesa } from '@/lib/data/notifiche';
-import { aggiornaSaldoSpesa, creaSpesa, type SpazioSpesa, type SpesaCreata } from '@/lib/registraSpesa';
+import { registraMovimento, type SpazioSpesa } from '@/lib/registraSpesa';
 import { righeDaRiepilogo, scegliConti, type RigaStima } from '@/lib/calculations/supporto/inPari';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
@@ -25,8 +25,6 @@ function leggi(chiave: string): string | null {
 }
 
 const MESSAGGIO_ERRORE = 'Non sono riuscito a salvare: riprova.';
-const messaggioSaldo = (righe: number) =>
-  `${righe === 1 ? 'Spesa registrata' : 'Spese registrate'}, il saldo del conto non si è aggiornato: riprova.`;
 const MESSAGGIO_PARZIALE = "Una spesa è registrata, l'altra no: riprova.";
 const SCELTE_CONTANTI = [20, 50];
 
@@ -73,8 +71,7 @@ export function InPari({
   const [fatto, setFatto] = useState(false);
   // Le righe già decise e ciò che è già stato scritto: un nuovo tentativo riprende da lì, senza doppioni.
   const righeRef = useRef<RigaStima[] | null>(null);
-  const createRef = useRef<(SpesaCreata | null)[]>([]);
-  const saldoRef = useRef<boolean[]>([]);
+  const createRef = useRef<(string | null)[]>([]);
 
   useEffect(() => {
     if (casa && leggi('aggiungiModo') === 'casa') setModo('casa');
@@ -131,11 +128,10 @@ export function InPari({
     setOccupato(true);
     setErrore(null);
     const supabase = createClient();
-    let fallitoSaldo = false;
     try {
       for (let i = 0; i < righe.length; i++) {
         if (!createRef.current[i]) {
-          createRef.current[i] = await creaSpesa(
+          createRef.current[i] = await registraMovimento(
             supabase,
             {
               tipo: 'expense',
@@ -150,12 +146,6 @@ export function InPari({
           );
           setInSospeso(true);
         }
-        if (!saldoRef.current[i]) {
-          fallitoSaldo = true;
-          await aggiornaSaldoSpesa(supabase, createRef.current[i]!.payload);
-          saldoRef.current[i] = true;
-          fallitoSaldo = false;
-        }
       }
       setInSospeso(false);
       setFatto(true);
@@ -164,7 +154,7 @@ export function InPari({
       // Se non è stato scritto niente, le modifiche successive valgono di nuovo.
       const qualcosaCreato = createRef.current.some(Boolean);
       if (!qualcosaCreato) righeRef.current = null;
-      setErrore(fallitoSaldo ? messaggioSaldo(righe.length) : qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
+      setErrore(qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
     } finally {
       setOccupato(false);
     }

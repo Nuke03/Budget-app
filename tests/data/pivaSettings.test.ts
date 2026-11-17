@@ -13,6 +13,12 @@ const row = {
   aliquota_contributo_integrativo: 4,
   minimale_contributivo_annuo: 856,
   contributi_versati_anno_precedente: 0,
+  conto_tasse_id: null,
+  preset: null,
+  guidata_dal: null,
+  stipendio_mensile: null,
+  stipendio_rivisto_il: null,
+  incasso_mese_magro: null,
 };
 
 const input = {
@@ -25,6 +31,12 @@ const input = {
   aliquotaContributoIntegrativo: 4,
   minimaleContributivoAnnuo: 856,
   contributiVersatiAnnoPrecedente: 0,
+  contoTasseId: null,
+  preset: null,
+  guidataDal: null,
+  stipendioMensile: null,
+  stipendioRivistoIl: null,
+  incassoMeseMagro: null,
 };
 
 const mapped = {
@@ -38,9 +50,38 @@ const mapped = {
   aliquotaContributoIntegrativo: 4,
   minimaleContributivoAnnuo: 856,
   contributiVersatiAnnoPrecedente: 0,
+  contoTasseId: null,
+  preset: null,
+  guidataDal: null,
+  stipendioMensile: null,
+  stipendioRivistoIl: null,
+  incassoMeseMagro: null,
 };
 
 describe('getPivaSettings', () => {
+  it('getPivaSettings legge e mappa le colonne nuove', async () => {
+    const supabase = fakeSelectClient([
+      {
+        ...row,
+        conto_tasse_id: 'vaso',
+        preset: 'enpap',
+        guidata_dal: '2026-11-17',
+        stipendio_mensile: 1500,
+        stipendio_rivisto_il: '2026-11-01',
+        incasso_mese_magro: 300,
+      },
+    ]);
+    const result = await getPivaSettings(supabase);
+    expect(result).toMatchObject({
+      contoTasseId: 'vaso',
+      preset: 'enpap',
+      guidataDal: '2026-11-17',
+      stipendioMensile: 1500,
+      stipendioRivistoIl: '2026-11-01',
+      incassoMeseMagro: 300,
+    });
+  });
+
   it('mappa la riga esistente', async () => {
     const supabase = fakeSelectClient([row]);
     const result = await getPivaSettings(supabase);

@@ -62,6 +62,46 @@ export interface PivaSettings {
   aliquotaContributoIntegrativo: number;
   minimaleContributivoAnnuo: number;
   contributiVersatiAnnoPrecedente: number;
+  contoTasseId: string | null;
+  preset: 'enpap' | 'altro' | null;
+  guidataDal: string | null;
+  stipendioMensile: number | null;
+  stipendioRivistoIl: string | null;
+  incassoMeseMagro: number | null;
+}
+
+export interface PivaFattura {
+  id: string;
+  cliente: string;
+  importo: number;
+  dataEmissione: string;
+  dataIncasso: string | null;
+  transactionId: string | null;
+  nota: string | null;
+}
+
+export interface PivaAccantonamento {
+  id: string;
+  transactionId: string | null;
+  importo: number;
+  data: string;
+  daAccountId: string | null;
+  aAccountId: string | null;
+}
+
+export type ChiaveScadenza = 'f24_giugno' | 'f24_novembre' | 'cassa_acconto' | 'cassa_saldo';
+
+export interface PivaScadenza {
+  id: string;
+  anno: number;
+  chiave: ChiaveScadenza;
+  tipo: 'f24' | 'cassa';
+  descrizione: string;
+  data: string;
+  importo: number | null;
+  pagataIl: string | null;
+  transactionId: string | null;
+  nascosta: boolean;
 }
 
 export type RegolaQuota = 'parti_uguali' | 'proporzionale' | 'pari_residuo' | 'personalizzata';

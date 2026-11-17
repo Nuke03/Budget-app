@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { createGoal } from '@/lib/data/goals';
 import { nomiAltri } from '@/lib/calculations/casa/etichette';
-import { aggiornaSaldoSpesa, creaSpesa, type SpazioSpesa, type SpesaCreata, type SpesaPayload } from '@/lib/registraSpesa';
+import { registraMovimento, type SpazioSpesa, type SpesaPayload } from '@/lib/registraSpesa';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 import { FoglioInferiore } from '../FoglioInferiore';
@@ -53,8 +53,6 @@ function segnaRegistrato(id: string) {
   }
 }
 
-const MESSAGGIO_SALDO = 'Spesa registrata, il saldo del conto non si è aggiornato: riprova.';
-
 function salvaModo(modo: Modo) {
   try {
     window.localStorage.setItem(CHIAVE_MODO, modo);
@@ -95,8 +93,6 @@ export function AddTransactionSheet({
   const [modoScelto, setModoScelto] = useState<Modo | null>(null);
   // L'importo già scritto resta quando si cambia spazio (il modulo si ricrea).
   const [importoBozza, setImportoBozza] = useState('');
-  // La riga è creata ma il saldo del conto non si è aggiornato: i campi si bloccano finché non riesce.
-  const [saldoInSospeso, setSaldoInSospeso] = useState<SpesaCreata | null>(null);
 
   if (!aperto) return null;
 
@@ -123,29 +119,18 @@ export function AddTransactionSheet({
       : { tipo: 'personale' };
   }
 
-  // Chiudendo con il saldo ancora da aggiornare la riga è già salvata: la Home va aggiornata.
   function chiudi() {
-    if (saldoInSospeso?.id) onSaved(saldoInSospeso.id, modo);
-    // Con il saldo da rifare la bozza resta: la riga è già salvata e si riprova dopo.
-    if (!saldoInSospeso) setImportoBozza('');
+    setImportoBozza('');
     onClose();
   }
 
+  // Una sola chiamata: movimento e saldo insieme. Se fallisce il foglio resta aperto con i campi.
   async function handleSubmit(payload: Payload) {
-    // Se la riga è già creata e solo il saldo è fallito, si ripete solo il saldo: niente doppioni.
-    let registrata = saldoInSospeso;
-    if (!registrata) {
-      if (modo === 'casa' ? !casa : !personale) return;
-      registrata = await creaSpesa(createClient(), payload, spazioCorrente());
-      setSaldoInSospeso(registrata);
-    }
-    await aggiornaSaldoSpesa(createClient(), registrata.payload);
-    setSaldoInSospeso(null);
-    salvaConto(modo, registrata.payload.accountId);
-    if (registrata.id) {
-      segnaRegistrato(registrata.id);
-      onSaved(registrata.id, modo);
-    }
+    if (modo === 'casa' ? !casa : !personale) return;
+    const id = await registraMovimento(createClient(), payload, spazioCorrente());
+    salvaConto(modo, payload.accountId);
+    segnaRegistrato(id);
+    onSaved(id, modo);
     setImportoBozza('');
     onClose();
   }
@@ -206,8 +191,6 @@ export function AddTransactionSheet({
           preselezionaObiettivo
           nota={notaCasa}
           veloce
-          bloccato={!!saldoInSospeso}
-          erroreMessaggio={saldoInSospeso ? MESSAGGIO_SALDO : undefined}
           storico={storico}
           contoIniziale={leggiConto('casa')}
           spazio={spazio}
@@ -223,8 +206,6 @@ export function AddTransactionSheet({
           goals={personale.goals}
           onCreateGoal={handleCreateGoal}
           veloce
-          bloccato={!!saldoInSospeso}
-          erroreMessaggio={saldoInSospeso ? MESSAGGIO_SALDO : undefined}
           storico={storico}
           contoIniziale={leggiConto('personale')}
           spazio={spazio}

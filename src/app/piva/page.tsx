@@ -22,6 +22,18 @@ import { PivaSettingsForm, type PivaSettingsFormValues } from './PivaSettingsFor
 import { PivaDashboard } from './PivaDashboard';
 import type { Category, PivaSettings, Transaction } from '@/lib/types';
 
+// I campi della P.IVA guidata, da riscrivere uguali quando si salvano le altre impostazioni.
+function campiGuidata(s: PivaSettings | null) {
+  return {
+    contoTasseId: s?.contoTasseId ?? null,
+    preset: s?.preset ?? null,
+    guidataDal: s?.guidataDal ?? null,
+    stipendioMensile: s?.stipendioMensile ?? null,
+    stipendioRivistoIl: s?.stipendioRivistoIl ?? null,
+    incassoMeseMagro: s?.incassoMeseMagro ?? null,
+  };
+}
+
 export default function PivaPage() {
   const fail = useThrowToBoundary();
   const [settings, setSettings] = useState<PivaSettings | null>(null);
@@ -50,7 +62,8 @@ export default function PivaPage() {
 
   async function handleSave(values: PivaSettingsFormValues) {
     const supabase = createClient();
-    const input = { ...values, attivo: true };
+    // I campi della P.IVA guidata non sono in questo modulo: restano come sono.
+    const input = { ...values, attivo: true, ...campiGuidata(settings) };
     if (settings) {
       await updatePivaSettings(supabase, settings.id, input);
     } else {
@@ -73,6 +86,7 @@ export default function PivaPage() {
       aliquotaContributoIntegrativo: settings.aliquotaContributoIntegrativo,
       minimaleContributivoAnnuo: settings.minimaleContributivoAnnuo,
       contributiVersatiAnnoPrecedente: settings.contributiVersatiAnnoPrecedente,
+      ...campiGuidata(settings),
     });
     await refresh();
   }

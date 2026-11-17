@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PivaSettings } from '../types';
 
+const COLONNE =
+  'id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente, conto_tasse_id, preset, guidata_dal, stipendio_mensile, stipendio_rivisto_il, incasso_mese_magro';
+
 interface PivaSettingsRow {
   id: string;
   attivo: boolean;
@@ -12,6 +15,12 @@ interface PivaSettingsRow {
   aliquota_contributo_integrativo: number;
   minimale_contributivo_annuo: number;
   contributi_versati_anno_precedente: number;
+  conto_tasse_id: string | null;
+  preset: 'enpap' | 'altro' | null;
+  guidata_dal: string | null;
+  stipendio_mensile: number | null;
+  stipendio_rivisto_il: string | null;
+  incasso_mese_magro: number | null;
 }
 
 function mapRow(row: PivaSettingsRow): PivaSettings {
@@ -26,6 +35,12 @@ function mapRow(row: PivaSettingsRow): PivaSettings {
     aliquotaContributoIntegrativo: row.aliquota_contributo_integrativo,
     minimaleContributivoAnnuo: row.minimale_contributivo_annuo,
     contributiVersatiAnnoPrecedente: row.contributi_versati_anno_precedente,
+    contoTasseId: row.conto_tasse_id,
+    preset: row.preset,
+    guidataDal: row.guidata_dal,
+    stipendioMensile: row.stipendio_mensile,
+    stipendioRivistoIl: row.stipendio_rivisto_il,
+    incassoMeseMagro: row.incasso_mese_magro,
   };
 }
 
@@ -39,6 +54,12 @@ export interface PivaSettingsInput {
   aliquotaContributoIntegrativo: number;
   minimaleContributivoAnnuo: number;
   contributiVersatiAnnoPrecedente: number;
+  contoTasseId: string | null;
+  preset: 'enpap' | 'altro' | null;
+  guidataDal: string | null;
+  stipendioMensile: number | null;
+  stipendioRivistoIl: string | null;
+  incassoMeseMagro: number | null;
 }
 
 function toRow(input: PivaSettingsInput) {
@@ -52,11 +73,17 @@ function toRow(input: PivaSettingsInput) {
     aliquota_contributo_integrativo: input.aliquotaContributoIntegrativo,
     minimale_contributivo_annuo: input.minimaleContributivoAnnuo,
     contributi_versati_anno_precedente: input.contributiVersatiAnnoPrecedente,
+    conto_tasse_id: input.contoTasseId,
+    preset: input.preset,
+    guidata_dal: input.guidataDal,
+    stipendio_mensile: input.stipendioMensile,
+    stipendio_rivisto_il: input.stipendioRivistoIl,
+    incasso_mese_magro: input.incassoMeseMagro,
   };
 }
 
 export async function getPivaSettings(supabase: SupabaseClient): Promise<PivaSettings | null> {
-  const { data, error } = await supabase.from('piva_settings').select('id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente').maybeSingle();
+  const { data, error } = await supabase.from('piva_settings').select(COLONNE).maybeSingle();
   if (error) throw error;
   return data ? mapRow(data as PivaSettingsRow) : null;
 }
@@ -68,7 +95,7 @@ export async function createPivaSettings(
   const { data, error } = await supabase
     .from('piva_settings')
     .insert(toRow(input))
-    .select('id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente')
+    .select(COLONNE)
     .single();
 
   if (error) throw error;
@@ -84,7 +111,7 @@ export async function updatePivaSettings(
     .from('piva_settings')
     .update(toRow(input))
     .eq('id', id)
-    .select('id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente')
+    .select(COLONNE)
     .single();
 
   if (error) throw error;

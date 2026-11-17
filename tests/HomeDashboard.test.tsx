@@ -8,21 +8,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace }),
 }));
 
+const rpc = vi.hoisted(() => vi.fn().mockResolvedValue({ data: "t", error: null }));
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({}),
+  createClient: () => ({ rpc }),
 }));
 
-vi.mock('@/lib/data/transactions', () => ({
-  createTransaction: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('@/lib/data/accounts', () => ({
-  updateAccountBalance: vi.fn().mockResolvedValue(undefined),
-  adjustAccountBalance: vi.fn().mockResolvedValue(undefined),
-}));
-
-import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
-import { createTransaction } from '@/lib/data/transactions';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { CasaStato } from '@/lib/loadCasaStato';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
@@ -187,7 +177,7 @@ describe('HomeDashboard', () => {
     expect(screen.getByText(/Fondo emergenza \(non conta nel disponibile\)/)).toBeInTheDocument();
   });
 
-  it('scarica una spesa dal saldo del conto selezionato con un delta quando si aggiunge una transazione', async () => {
+  it('registra la spesa sul conto selezionato con una sola chiamata quando si aggiunge una transazione', async () => {
     render(
       <HomeDashboard
         disponibileLibero={870}
@@ -206,8 +196,14 @@ describe('HomeDashboard', () => {
     fireEvent.click(screen.getByText('Salva'));
 
     await waitFor(() => {
-      expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), '1', -26);
-      expect(updateAccountBalance).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledTimes(1);
+    });
+    expect(rpc).toHaveBeenCalledWith(
+      'crea_movimento',
+      expect.objectContaining({ p_tipo: 'expense', p_importo: 26, p_account: '1' })
+    );
+    await waitFor(() => {
+      expect(rpc).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -229,7 +225,7 @@ describe('HomeDashboard', () => {
   });
 
   it('dopo un salvataggio in Casa dice "Registrato in Casa" per un momento', async () => {
-    vi.mocked(createTransaction).mockResolvedValueOnce({ id: 'c1' } as never);
+    rpc.mockResolvedValueOnce({ data: 'c1', error: null });
     window.localStorage.setItem('aggiungiModo', 'casa');
     window.localStorage.setItem('aggiungi:conto:casa', accounts[0].id);
     try {

@@ -4,14 +4,11 @@ import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
-vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
-vi.mock('@/lib/data/transactions', () => ({ createTransaction: vi.fn() }));
-vi.mock('@/lib/data/accounts', () => ({ adjustAccountBalance: vi.fn() }));
+const rpc = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ rpc }) }));
 vi.mock('@/lib/data/notifiche', () => ({ segnaNessunaSpesa: vi.fn() }));
 
 import { InPari } from '@/app/in-pari/InPari';
-import { createTransaction } from '@/lib/data/transactions';
-import { adjustAccountBalance } from '@/lib/data/accounts';
 import { segnaNessunaSpesa } from '@/lib/data/notifiche';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
@@ -37,11 +34,13 @@ function mostra(extra: Partial<Parameters<typeof InPari>[0]> = {}) {
   );
 }
 
+// I parametri della n-esima chiamata a crea_movimento.
+const par = (n: number) => rpc.mock.calls[n][1] as Record<string, unknown>;
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
-  vi.mocked(createTransaction).mockResolvedValue({ id: 't' } as never);
-  vi.mocked(adjustAccountBalance).mockResolvedValue(undefined);
+  rpc.mockResolvedValue({ data: 't', error: null });
   vi.mocked(segnaNessunaSpesa).mockResolvedValue(undefined);
 });
 
@@ -59,34 +58,31 @@ describe('InPari', () => {
     assertNessunaParolaVietata(document.body);
   });
 
-  it('Fatto con carta 80 e contanti 20: 2 spese stimate, 2 saldi aggiornati sui conti scelti', async () => {
+  it('Fatto con carta 80 e contanti 20: 2 spese stimate, una rpc ciascuna sui conti scelti', async () => {
     mostra();
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
     fireEvent.click(screen.getByRole('button', { name: '20 €' }));
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
 
-    const chiamate = vi.mocked(createTransaction).mock.calls.map((c) => c[1]);
-    expect(chiamate).toHaveLength(2);
-    expect(chiamate[0]).toMatchObject({
-      tipo: 'expense', importo: 80, accountId: 'c', categoriaId: null, descrizione: '', stima: true,
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls.every((c) => c[0] === 'crea_movimento')).toBe(true);
+    expect(par(0)).toMatchObject({
+      p_tipo: 'expense', p_importo: 80, p_account: 'c', p_categoria: null, p_descrizione: '', p_stima: true,
     });
-    expect(chiamate[1]).toMatchObject({ importo: 20, accountId: 'k', stima: true });
-    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'c', -80);
-    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'k', -20);
+    expect(par(1)).toMatchObject({ p_importo: 20, p_account: 'k', p_stima: true });
     expect(refresh).toHaveBeenCalled();
     expect(screen.getByText('Un consiglio di prova')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Torna alla Home' })).toBeTruthy();
   });
 
-  it('un solo conto non contanti: aggiorna 1 conto', async () => {
+  it('un solo conto non contanti: 2 chiamate, nessun saldo a parte', async () => {
     mostra({ conti: [{ id: 'c', nome: 'Carta' }] });
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
     fireEvent.click(screen.getByRole('button', { name: '20 €' }));
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(createTransaction).toHaveBeenCalledTimes(2);
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 
   it('Fatto è spento senza importi', () => {
@@ -99,7 +95,7 @@ describe('InPari', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Non ho speso niente' }));
     await waitFor(() => expect(segnaNessunaSpesa).toHaveBeenCalledWith(expect.anything(), '2026-11-11'));
     await screen.findByText('Fatto: sei in pari.');
-    expect(createTransaction).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it('in Casa la spesa è anticipata da te con il conto personale', async () => {
@@ -109,9 +105,7 @@ describe('InPari', () => {
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '30' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    const [, input, scope] = vi.mocked(createTransaction).mock.calls[0];
-    expect(input).toMatchObject({ importo: 30, accountId: 'c', pagataDaUserId: 'u1', stima: true });
-    expect(scope).toBeDefined();
+    expect(par(0)).toMatchObject({ p_importo: 30, p_account: 'c', p_pagata_da: 'u1', p_stima: true, p_household: 'h1' });
   });
 
   it('senza casa non c è il selettore dello spazio', () => {
@@ -119,22 +113,21 @@ describe('InPari', () => {
     expect(screen.queryByRole('button', { name: 'Di casa' })).toBeNull();
   });
 
-  it('se il saldo fallisce, riprovare non crea doppioni', async () => {
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
+  it('se la rpc fallisce, riprovare non crea doppioni', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: new Error('rete') });
     mostra();
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByRole('alert');
-    fireEvent.click(screen.getByRole('button', { name: 'Riprova' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(createTransaction).toHaveBeenCalledTimes(1);
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 
-  it('se la seconda riga fallisce nella creazione, la prima non si rifà', async () => {
-    vi.mocked(createTransaction)
-      .mockResolvedValueOnce({ id: 't1' } as never)
-      .mockRejectedValueOnce(new Error('rete'));
+  it('se la seconda riga fallisce, la prima non si rifà', async () => {
+    rpc
+      .mockResolvedValueOnce({ data: 't1', error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error('rete') });
     mostra();
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
     fireEvent.click(screen.getByRole('button', { name: '50 €' }));
@@ -142,10 +135,9 @@ describe('InPari', () => {
     expect((await screen.findByRole('alert')).textContent).toBe("Una spesa è registrata, l'altra no: riprova.");
     fireEvent.click(screen.getByRole('button', { name: 'Riprova' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(createTransaction).toHaveBeenCalledTimes(3);
-    expect(vi.mocked(createTransaction).mock.calls[2][1]).toMatchObject({ importo: 50 });
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(adjustAccountBalance).mock.calls.filter((c) => c[1] === 'c')).toHaveLength(1);
+    expect(rpc).toHaveBeenCalledTimes(3);
+    expect(par(2)).toMatchObject({ p_importo: 50 });
+    expect(rpc.mock.calls.filter((c) => (c[1] as { p_account: string }).p_account === 'c')).toHaveLength(1);
   });
 
   it('Altro apre un campo per i contanti', async () => {
@@ -154,7 +146,7 @@ describe('InPari', () => {
     fireEvent.change(screen.getByLabelText('Contanti, altro importo'), { target: { value: '35' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ importo: 35, accountId: 'k' });
+    expect(par(0)).toMatchObject({ p_importo: 35, p_account: 'k' });
   });
 
   it('in Casa i contanti senza conto contanti sono anticipati da te, senza toccare nessun saldo', async () => {
@@ -164,8 +156,7 @@ describe('InPari', () => {
     fireEvent.click(screen.getByRole('button', { name: '20 €' }));
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ importo: 20, accountId: null, pagataDaUserId: 'u1' });
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    expect(par(0)).toMatchObject({ p_importo: 20, p_account: null, p_pagata_da: 'u1' });
   });
 
   it('in Casa la riga con la carta resta sul conto carta, anticipata da te', async () => {
@@ -175,21 +166,11 @@ describe('InPari', () => {
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '40' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(vi.mocked(createTransaction).mock.calls[0][1]).toMatchObject({ importo: 40, accountId: 'c', pagataDaUserId: 'u1' });
-    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'c', -40);
-  });
-
-  it('con una sola riga il messaggio del saldo è al singolare', async () => {
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
-    mostra();
-    fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
-    const avviso = await screen.findByRole('alert');
-    expect(avviso.textContent).toBe('Spesa registrata, il saldo del conto non si è aggiornato: riprova.');
+    expect(par(0)).toMatchObject({ p_importo: 40, p_account: 'c', p_pagata_da: 'u1' });
   });
 
   it('se la prima creazione fallisce, le modifiche successive valgono', async () => {
-    vi.mocked(createTransaction).mockRejectedValueOnce(new Error('rete'));
+    rpc.mockResolvedValueOnce({ data: null, error: new Error('rete') });
     mostra();
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
@@ -198,15 +179,6 @@ describe('InPari', () => {
     fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '55' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
     await screen.findByText('Fatto: sei in pari.');
-    expect(vi.mocked(createTransaction).mock.calls[1][1]).toMatchObject({ importo: 55 });
-  });
-
-  it('se il saldo fallisce il messaggio parla di spese registrate', async () => {
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
-    mostra();
-    fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
-    fireEvent.click(screen.getByRole('button', { name: '20 €' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
-    expect((await screen.findByRole('alert')).textContent).toMatch(/^Spese registrate/);
+    expect(par(1)).toMatchObject({ p_importo: 55 });
   });
 });
