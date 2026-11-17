@@ -6,22 +6,25 @@ import type { RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 export function StoricoCasa({ righe }: { righe: RigaNeutra[] }) {
   if (righe.length === 0) return null;
   return (
-    <section aria-labelledby="movimenti-con-la-casa" className="flex flex-col gap-2">
-      <h2 id="movimenti-con-la-casa" className="text-sm font-semibold text-muted">
+    <section
+      aria-labelledby="movimenti-con-la-casa"
+      className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-surface"
+    >
+      <h2 id="movimenti-con-la-casa" className="px-4 pb-2 pt-4 font-serif text-lg font-semibold">
         Movimenti con la casa
       </h2>
-      <ul className="flex flex-col gap-2">
+      <ul>
         {righe.map((r) => (
           <li
             key={r.id}
-            className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-surface-muted p-3"
+            className="flex min-h-12 items-center justify-between gap-3 border-t border-rule px-4 py-3"
           >
-            <div>
-              <p className="text-sm font-medium">{r.etichetta}</p>
-              <p className="text-xs text-muted">{formatDateIt(r.data)}</p>
+            <div className="min-w-0">
+              <p className="text-[15px]">{r.etichetta}</p>
+              <p className="num text-[13px] text-ink-2">{formatDateIt(r.data)}</p>
             </div>
-            <span className="tabular-nums text-sm text-muted">
-              {r.verso === 'entra' ? '+' : '-'}
+            <span className="num shrink-0 text-[15px] text-ink-2">
+              {r.verso === 'entra' ? '+' : '−'}
               {formatEuro(r.importo)}
             </span>
           </li>

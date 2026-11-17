@@ -90,7 +90,7 @@ async function renderStorico(conCasa: boolean) {
   if (conCasa) {
     await waitFor(() => expect(screen.getByText('Movimenti con la casa')).toBeInTheDocument());
   }
-  const righe = Array.from(container.querySelectorAll('main > ul > li')).map((li) => li.textContent);
+  const righe = Array.from(container.querySelectorAll('[data-riga]')).map((li) => li.textContent);
   const chart = JSON.parse(JSON.stringify(chartProps.last));
   return { chart, righe };
 }
@@ -106,5 +106,18 @@ describe('Storico con la casa', () => {
     expect(con.chart).toEqual(senza.chart);
     expect(con.righe).toEqual(senza.righe);
     expect(con.righe).toHaveLength(2);
+  });
+});
+
+describe("Storico per giorno", () => {
+  it("raggruppa le righe per giorno, con intestazione e totale del giorno", async () => {
+    const { container } = render(<AnnullaProvider><HistoryPage /></AnnullaProvider>);
+    await waitFor(() => expect(screen.getByText("Pane")).toBeInTheDocument());
+    const giorni = Array.from(container.querySelectorAll("[data-giorno]"));
+    expect(giorni.map((g) => g.getAttribute("data-giorno"))).toEqual(["2026-11-04", "2026-11-01"]);
+    expect(giorni[0]).toHaveTextContent("4 novembre");
+    expect(giorni[0]).toHaveTextContent(/−\s*50,00/);
+    expect(giorni[1]).toHaveTextContent(/\+\s*1\.000,00/);
+    expect(screen.getByRole("heading", { name: "Storico" })).toBeInTheDocument();
   });
 });
