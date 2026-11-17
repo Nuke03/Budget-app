@@ -8,9 +8,9 @@ import { getCategories } from '@/lib/data/categories';
 import { getSpecoCollegato } from '@/lib/data/goalSpending';
 import { computeQuotaMensile, computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
-import { CoverHeader } from '../CoverHeader';
 import { FoglioInferiore } from '../FoglioInferiore';
-import { GoalsList, type GoalWithQuotaMensile } from './GoalsList';
+import type { GoalWithQuotaMensile } from './GoalsList';
+import { ObiettiviVista } from './ObiettiviVista';
 import { CreateGoalForm, type GoalPayload } from './CreateGoalForm';
 import type { BudgetGoal, Category } from '@/lib/types';
 
@@ -88,22 +88,13 @@ export default function GoalsPage() {
 
   return (
     <>
-      <CoverHeader titolo="Obiettivi" />
-      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
-        <button
-          type="button"
-          onClick={() => setCreando(true)}
-          className="min-h-12 rounded-[var(--radius-md)] bg-brand px-4 py-3 text-base font-semibold text-brand-foreground"
-        >
-          Nuovo obiettivo
-        </button>
-        <GoalsList
-          goals={goalsConQuota}
-          categories={categories}
-          onEdit={setEditingGoal}
-          onClose={handleClose}
-        />
-      </main>
+      <ObiettiviVista
+        goals={goalsConQuota}
+        categories={categories}
+        onNuovo={() => setCreando(true)}
+        onEdit={setEditingGoal}
+        onClose={handleClose}
+      />
 
       {creando && (
         <FoglioInferiore titolo="Nuovo obiettivo" onClose={() => setCreando(false)}>

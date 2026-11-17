@@ -3,7 +3,8 @@ import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { RigaLibretto } from '@/lib/calculations/supporto/home';
-import type { Account, Category } from '@/lib/types';
+import type { Account, Category, Transaction } from '@/lib/types';
+import type { GoalWithQuotaMensile } from '../goals/GoalsList';
 import { HomeDashboard } from '../HomeDashboard';
 import { InPari } from '../in-pari/InPari';
 import { ApriFoglio } from './ApriFoglio';
@@ -16,6 +17,7 @@ import { VistaSemplice } from '../casa/VistaSemplice';
 import { CasaDettagli } from '../casa/dettagli/CasaDettagli';
 import { finanzeCasa } from '../casa/finanzeCasa';
 import { CheckinMensile } from '../casa/controllo/CheckinMensile';
+import { AvvisoProva, ContiProva, ObiettiviProva, StoricoProva } from './VisteProva';
 import { checkinProva, datiCasaProva } from './casaProva';
 
 // Solo in sviluppo: Home e /in-pari con dati di prova, senza login né Supabase,
@@ -80,6 +82,39 @@ const consiglioVuoto: Consiglio = {
   testo: 'Segna qualche spesa: dopo qualche giorno ti dico come va.',
   perche: 'Non ci sono ancora abbastanza spese per un confronto.',
 };
+
+function movimenti(oggi: string): Transaction[] {
+  const base = { goalId: null, nota: null, createdAt: '2026-01-01T00:00:00.000Z', stima: false, accountId: 'c1' };
+  const t = (id: string, giorno: number, tipo: 'expense' | 'income', importo: number, categoriaId: string, descrizione: string): Transaction => ({
+    ...base,
+    id,
+    data: giorniFa(oggi, giorno),
+    tipo,
+    importo,
+    categoriaId,
+    descrizione,
+  });
+  return [
+    t('t1', 0, 'expense', 1.4, 'k2', 'Caffè'),
+    t('t2', 0, 'expense', 12.8, 'k2', 'Pranzo'),
+    t('t3', 0, 'expense', 54.3, 'k1', 'Spesa settimanale'),
+    t('t4', 1, 'expense', 38.2, 'k1', 'Spesa al supermercato'),
+    t('t5', 1, 'expense', 27.5, 'k3', 'Abbonamento treno'),
+    t('t6', 1, 'expense', 9, 'k2', 'Pizza'),
+    t('t7', 2, 'income', 1450, 'k4', 'Stipendio'),
+    t('t8', 2, 'expense', 62.4, 'k1', 'Spesa'),
+    t('t9', 2, 'expense', 18.9, 'k3', 'Benzina'),
+    t('t10', 2, 'expense', 4.5, 'k2', 'Gelato'),
+  ];
+}
+
+function obiettivi(oggi: string): GoalWithQuotaMensile[] {
+  const base = { categoriaId: null, ricorrente: false, frequenzaMesi: null, stato: 'aperto' as const, createdAt: '2026-01-01T00:00:00.000Z' };
+  return [
+    { ...base, id: 'g1', nome: 'Vacanza estiva', importoTarget: 1200, modalita: 'bloccato', scadenza: null, quotaMensile: null, accantonato: 300 },
+    { ...base, id: 'g2', nome: 'Computer nuovo', importoTarget: 900, modalita: 'dilazionato', scadenza: giorniFa(oggi, -150), quotaMensile: 150, accantonato: 220 },
+  ];
+}
 
 function Banner() {
   return (
@@ -183,6 +218,33 @@ export default async function AnteprimaPage({
     );
   }
 
+  if (scelta === 'storico') {
+    return (
+      <>
+        <Banner />
+        <StoricoProva transactions={movimenti(oggi)} categories={categorie} righeNeutre={[]} />
+      </>
+    );
+  }
+
+  if (scelta === 'obiettivi') {
+    return (
+      <>
+        <Banner />
+        <ObiettiviProva goals={obiettivi(oggi)} categories={categorie} />
+      </>
+    );
+  }
+
+  if (scelta === 'conti') {
+    return (
+      <>
+        <Banner />
+        <ContiProva accounts={[...conti, { id: 'c3', nome: 'Carta prepagata', saldoAttuale: 120.3, contaInDisponibile: true, targetSaldo: 200 }]} />
+      </>
+    );
+  }
+
   const vuota = scelta === 'vuota';
 
   return (
@@ -205,6 +267,7 @@ export default async function AnteprimaPage({
         oggi={oggi}
       />
       {scelta === 'foglio' ? <ApriFoglio /> : null}
+      {scelta === 'annulla' ? <AvvisoProva testo="Spesa eliminata." /> : null}
     </>
   );
 }

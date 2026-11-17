@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
-import { Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/data/transactions';
 import { getCategories } from '@/lib/data/categories';
@@ -14,20 +13,11 @@ import { leggiSessione } from '@/lib/utenteOLogin';
 import { righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 import { getAccounts, adjustAccountBalance } from '@/lib/data/accounts';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
-import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
 import { deltaPerModifica } from '@/lib/calculations/accountBalance';
-import { formatEuro } from '@/lib/format';
-import { CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
-import { CoverHeader } from '../CoverHeader';
 import { FoglioInferiore } from '../FoglioInferiore';
-import { PallinoCategoria } from '../home/PallinoCategoria';
-import { giornoEMese } from '../home/formati';
-import { raggruppaPerGiorno } from './raggruppaPerGiorno';
-import { HistoryChartCard } from './HistoryChartCard';
-import { StoricoCasa } from './StoricoCasa';
-import { PeriodoFilter } from './PeriodoFilter';
+import { StoricoVista } from './StoricoVista';
 import { AddTransactionForm } from '../add/AddTransactionForm';
 import type { Transaction, Category, Account, BudgetGoal, TransactionTipo } from '@/lib/types';
 
@@ -207,95 +197,22 @@ export default function HistoryPage() {
     new Date(),
     rangePersonalizzato
   );
-  const chartData = aggregateByCategory(transactionsFiltrate, categories);
-  const colorByCategoryName = new Map(
-    categories.map((c) => [c.nome, c.colore ?? CATEGORY_COLOR_FALLBACK])
-  );
-  const colorByCategoryId = new Map(categories.map((c) => [c.id, c.colore ?? CATEGORY_COLOR_FALLBACK]));
-  const giorni = raggruppaPerGiorno(transactionsFiltrate);
-  const annoCorrente = new Date().getFullYear();
-  const titoloGiorno = (data: string) =>
-    Number(data.slice(0, 4)) === annoCorrente ? giornoEMese(data) : `${giornoEMese(data)} ${data.slice(0, 4)}`;
-
-  const BOTTONE_ICONA =
-    'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint';
-
   return (
     <>
-      <CoverHeader titolo="Storico" />
-      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
-        {erroreSaldo && (
-          <p role="alert" className="rounded-[var(--radius-md)] bg-danger-tint p-3 text-[15px] text-danger">
-            Spesa eliminata, ma il saldo del conto non si è aggiornato: controllalo in Conti.
-          </p>
-        )}
-
-        <PeriodoFilter
-          periodo={periodo}
-          onChangePeriodo={cambiaPeriodo}
-          rangePersonalizzato={rangePersonalizzato}
-          onChangeRangePersonalizzato={cambiaRange}
-        />
-
-        <HistoryChartCard chartData={chartData} colorByCategoryName={colorByCategoryName} />
-
-        <section className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-surface">
-          <h2 className="sr-only">Movimenti</h2>
-          {giorni.map((g) => (
-            <div key={g.data} data-giorno={g.data}>
-              <div className="flex items-baseline justify-between gap-3 border-b border-rule px-4 py-2.5">
-                <h3 className="text-[13px] font-semibold text-ink-2">{titoloGiorno(g.data)}</h3>
-                <p className="num text-[13px] font-semibold">
-                  <span className="sr-only">Totale del giorno </span>
-                  {g.totale === 0 ? '' : g.totale < 0 ? '−' : '+'}
-                  {formatEuro(Math.abs(g.totale))}
-                </p>
-              </div>
-              <ul>
-                {g.righe.map((t) => (
-                  <li
-                    key={t.id}
-                    data-riga
-                    className="flex min-h-12 items-center gap-2 border-b border-rule py-1 pl-4 pr-1 text-[15px]"
-                  >
-                    <PallinoCategoria colore={t.categoriaId ? (colorByCategoryId.get(t.categoriaId) ?? null) : null} />
-                    <span className="min-w-0 flex-1 truncate">{t.descrizione || '(senza descrizione)'}</span>
-                    <span className={`num shrink-0 ${t.tipo === 'income' ? 'font-semibold text-brand-dark' : ''}`}>
-                      {t.tipo === 'income' ? '+' : '−'}
-                      {formatEuro(t.importo)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingTransaction(t)}
-                      aria-label="Modifica transazione"
-                      className={BOTTONE_ICONA}
-                    >
-                      <Pencil size={18} aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(t)}
-                      aria-label="Elimina transazione"
-                      className={BOTTONE_ICONA}
-                    >
-                      <Trash2 size={18} aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          {caricato && transactionsFiltrate.length === 0 && (
-            <p className="px-4 py-5 text-[15px] text-ink-2">
-              {transactions.length === 0
-                ? 'Il libretto è vuoto: la prima spesa che segni compare qui.'
-                : 'Nessun movimento in questo periodo.'}
-            </p>
-          )}
-        </section>
-
-        <StoricoCasa righe={righeNeutreFiltrate} />
-      </main>
+      <StoricoVista
+        transactionsFiltrate={transactionsFiltrate}
+        transactionsTotali={transactions.length}
+        righeNeutreFiltrate={righeNeutreFiltrate}
+        categories={categories}
+        caricato={caricato}
+        erroreSaldo={erroreSaldo}
+        periodo={periodo}
+        rangePersonalizzato={rangePersonalizzato}
+        onChangePeriodo={cambiaPeriodo}
+        onChangeRange={cambiaRange}
+        onEdit={setEditingTransaction}
+        onDelete={handleDelete}
+      />
 
       {editingTransaction && (
         <FoglioInferiore titolo="Modifica transazione" onClose={() => setEditingTransaction(null)}>
