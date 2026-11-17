@@ -19,11 +19,14 @@ export function SceltePill({
   opzioni,
   valore,
   onChange,
+  scorrevole = false,
 }: {
   legenda: string;
   opzioni: OpzionePill[];
   valore: string | null;
   onChange: (chiave: string) => void;
+  // Una sola riga che scorre di lato, senza barra visibile.
+  scorrevole?: boolean;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const scelta = opzioni.findIndex((o) => o.chiave === valore);
@@ -40,7 +43,12 @@ export function SceltePill({
   }
 
   return (
-    <div role="radiogroup" aria-label={legenda} className="flex flex-wrap gap-2">
+    <div role="radiogroup" aria-label={legenda} className={
+        scorrevole
+          ? '-mx-3 flex snap-x flex-nowrap gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+          : 'flex flex-wrap gap-2'
+      }
+    >
       {opzioni.map((o, i) => {
         const attiva = i === scelta;
         return (
@@ -55,7 +63,7 @@ export function SceltePill({
             tabIndex={i === raggiungibile ? 0 : -1}
             onClick={() => onChange(o.chiave)}
             onKeyDown={(e) => tasto(e, i)}
-            className={`${PILL} ${attiva ? PILL_SCELTA : PILL_LIBERA}`}
+            className={`${PILL} ${scorrevole ? 'shrink-0 snap-start whitespace-nowrap' : ''} ${attiva ? PILL_SCELTA : PILL_LIBERA}`}
           >
             {o.etichetta}
           </button>

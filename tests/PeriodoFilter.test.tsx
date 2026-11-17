@@ -3,6 +3,20 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PeriodoFilter } from '@/app/history/PeriodoFilter';
 
 describe('PeriodoFilter', () => {
+  it('le pillole stanno su una sola riga che scorre', () => {
+    render(
+      <PeriodoFilter
+        periodo="mese"
+        onChangePeriodo={vi.fn()}
+        rangePersonalizzato={{ da: '', a: '' }}
+        onChangeRangePersonalizzato={vi.fn()}
+      />
+    );
+    const gruppo = screen.getByRole('radiogroup', { name: 'Periodo' });
+    expect(gruppo.className).toContain('flex-nowrap');
+    expect(gruppo.className).toContain('overflow-x-auto');
+  });
+
   it('chiama onChangePeriodo cliccando una pillola preimpostata', () => {
     const onChangePeriodo = vi.fn();
     render(

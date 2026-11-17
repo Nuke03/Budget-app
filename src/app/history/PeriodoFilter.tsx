@@ -29,6 +29,7 @@ export function PeriodoFilter({
     <div className="flex flex-col gap-3">
       <SceltePill
         legenda="Periodo"
+        scorrevole
         opzioni={PRESETS}
         valore={periodo}
         onChange={(chiave) => onChangePeriodo(chiave as Periodo)}
