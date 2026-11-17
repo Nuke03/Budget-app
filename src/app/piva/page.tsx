@@ -5,22 +5,16 @@ import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getPivaSettings, createPivaSettings, updatePivaSettings } from '@/lib/data/pivaSettings';
 import { getCategories } from '@/lib/data/categories';
-import { getTransactions } from '@/lib/data/transactions';
-import { PERSONALE } from '@/lib/data/scope';
-import {
-  computeFatturatoAnnuo,
-  computeAliquotaSostitutiva,
-  computeRedditoImponibile,
-  computeImpostaSostitutiva,
-  computeContributoSoggettivo,
-  computeContributoIntegrativo,
-  computeTotaleDaAccantonare,
-  computeQuotaMensileSuggerita,
-} from '@/lib/calculations/piva';
+import { getAccounts } from '@/lib/data/accounts';
+import { computeAliquotaSostitutiva, computePercentualeIncasso } from '@/lib/calculations/piva';
+import { oggiRomaData } from '@/lib/calculations/casa/oggi';
+import { formatNumero } from '@/lib/format';
 import { CoverHeader } from '../CoverHeader';
+import { CLASSE_SECONDARIO } from '../casa/CampiMovimento';
 import { PivaSettingsForm, type PivaSettingsFormValues } from './PivaSettingsForm';
-import { PivaDashboard } from './PivaDashboard';
-import type { Category, PivaSettings, Transaction } from '@/lib/types';
+import { ImpostazioneGuidata } from './ImpostazioneGuidata';
+import type { PivaSettingsInput } from '@/lib/data/pivaSettings';
+import type { Account, Category, PivaSettings } from '@/lib/types';
 
 // I campi della P.IVA guidata, da riscrivere uguali quando si salvano le altre impostazioni.
 function campiGuidata(s: PivaSettings | null) {
@@ -38,21 +32,21 @@ export default function PivaPage() {
   const fail = useThrowToBoundary();
   const [settings, setSettings] = useState<PivaSettings | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [conti, setConti] = useState<Account[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
 
   async function refresh() {
     const supabase = createClient();
-    const [s, cats, txs] = await Promise.all([
+    // getAccounts e getCategories senza scope: sono i conti e le categorie personali.
+    const [s, cats, acc] = await Promise.all([
       getPivaSettings(supabase),
       getCategories(supabase),
-      // Il fatturato è dell'anno in corso: bastano le entrate da gennaio, non tutto lo storico.
-      getTransactions(supabase, PERSONALE, { tipo: 'income', da: `${new Date().getFullYear()}-01-01` }),
+      getAccounts(supabase),
     ]);
     setSettings(s);
     setCategories(cats);
-    setTransactions(txs);
+    setConti(acc);
     setLoaded(true);
   }
 
@@ -70,6 +64,16 @@ export default function PivaPage() {
       await createPivaSettings(supabase, input);
     }
     setEditing(false);
+    await refresh();
+  }
+
+  async function handleGuidata(input: PivaSettingsInput) {
+    const supabase = createClient();
+    if (settings) {
+      await updatePivaSettings(supabase, settings.id, input);
+    } else {
+      await createPivaSettings(supabase, input);
+    }
     await refresh();
   }
 
@@ -93,7 +97,24 @@ export default function PivaPage() {
 
   if (!loaded) return null;
 
-  if (!settings || !settings.attivo || editing) {
+  const contoTasse = settings?.contoTasseId ? conti.find((c) => c.id === settings.contoTasseId) : undefined;
+  const guidaCompleta = !!settings && settings.attivo && !!settings.guidataDal && !!contoTasse;
+
+  if (!guidaCompleta) {
+    // Conto tasse salvato ma sparito (eliminato o spostato in casa): si riparte dalla scelta del conto.
+    const contoSparito = !!settings?.contoTasseId && !contoTasse;
+    return (
+      <ImpostazioneGuidata
+        iniziale={settings}
+        conti={conti}
+        categorie={categories}
+        passoIniziale={contoSparito ? 3 : 1}
+        onFatto={handleGuidata}
+      />
+    );
+  }
+
+  if (editing) {
     return (
       <>
         <CoverHeader titolo="P.IVA" />
@@ -101,61 +122,37 @@ export default function PivaPage() {
           <PivaSettingsForm
             categories={categories}
             initial={settings}
-            submitLabel={settings ? 'Salva modifiche' : 'Attiva gestione P.IVA'}
+            submitLabel="Salva modifiche"
             onSubmit={handleSave}
-            onCancel={settings && settings.attivo ? () => setEditing(false) : undefined}
+            onCancel={() => setEditing(false)}
           />
         </main>
       </>
     );
   }
 
-  const oggi = new Date();
-  const anno = oggi.getFullYear();
-  const fatturatoAnnuo = settings.categoriaFatturatoId
-    ? computeFatturatoAnnuo(transactions, settings.categoriaFatturatoId, anno)
-    : 0;
-  const redditoImponibile = computeRedditoImponibile(
-    fatturatoAnnuo,
+  // Vista provvisoria: l'hub arriva col prossimo passo.
+  const percentuale = computePercentualeIncasso(
     settings.coefficienteRedditivita,
-    settings.contributiVersatiAnnoPrecedente
-  );
-  const aliquotaSostitutiva = computeAliquotaSostitutiva(
-    settings.dataApertura,
-    oggi,
-    settings.aliquotaSostitutivaOverride
-  );
-  const impostaSostitutiva = computeImpostaSostitutiva(redditoImponibile, aliquotaSostitutiva);
-  const contributoSoggettivo = computeContributoSoggettivo(
-    redditoImponibile,
+    computeAliquotaSostitutiva(settings.dataApertura, oggiRomaData(), settings.aliquotaSostitutivaOverride),
     settings.aliquotaContributoSoggettivo,
-    settings.minimaleContributivoAnnuo
-  );
-  const contributoIntegrativo = computeContributoIntegrativo(
-    fatturatoAnnuo,
     settings.aliquotaContributoIntegrativo
   );
-  const totaleDaAccantonare = computeTotaleDaAccantonare(
-    impostaSostitutiva,
-    contributoSoggettivo,
-    contributoIntegrativo
-  );
-  const quotaMensileSuggerita = computeQuotaMensileSuggerita(totaleDaAccantonare, oggi);
 
   return (
     <>
       <CoverHeader titolo="P.IVA" />
-      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
-        <PivaDashboard
-          fatturatoAnnuo={fatturatoAnnuo}
-          impostaSostitutiva={impostaSostitutiva}
-          contributoSoggettivo={contributoSoggettivo}
-          contributoIntegrativo={contributoIntegrativo}
-          totaleDaAccantonare={totaleDaAccantonare}
-          quotaMensileSuggerita={quotaMensileSuggerita}
-          onModifica={() => setEditing(true)}
-          onDisattiva={handleDisattiva}
-        />
+      <main className="mx-auto flex max-w-md flex-col gap-5 px-3 pb-28 pt-5">
+        <p className="num font-serif text-[22px] font-semibold">
+          Metti da parte il {formatNumero(percentuale)}% di ogni incasso.
+        </p>
+        <p className="text-[15px] text-ink-2">Le tasse vanno sul conto: {contoTasse.nome}.</p>
+        <button type="button" onClick={() => setEditing(true)} className={CLASSE_SECONDARIO}>
+          Modifica i parametri
+        </button>
+        <button type="button" onClick={handleDisattiva} className={CLASSE_SECONDARIO}>
+          Disattiva gestione P.IVA
+        </button>
       </main>
     </>
   );

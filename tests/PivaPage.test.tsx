@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PivaPage from '@/app/piva/page';
 
@@ -16,244 +16,118 @@ vi.mock('@/lib/data/categories', () => ({
   getCategories: vi.fn(),
 }));
 
-vi.mock('@/lib/data/transactions', () => ({
-  getTransactions: vi.fn(),
+vi.mock('@/lib/data/accounts', () => ({
+  getAccounts: vi.fn(),
+  createAccount: vi.fn(),
+  updateAccountDetails: vi.fn(),
 }));
 
 import { getPivaSettings, createPivaSettings, updatePivaSettings } from '@/lib/data/pivaSettings';
 import { getCategories } from '@/lib/data/categories';
-import { getTransactions } from '@/lib/data/transactions';
+import { getAccounts } from '@/lib/data/accounts';
 
 const categories = [
   { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false },
 ];
 
-const annoCorrente = new Date().getFullYear();
-
-const transactions = [
-  {
-    id: 't1',
-    tipo: 'income' as const,
-    importo: 6000,
-    data: `${annoCorrente}-02-10`,
-    categoriaId: 'cat-fatt',
-    accountId: null,
-    goalId: null,
-    descrizione: 'Fattura 1',
-    nota: null,
-    createdAt: `${annoCorrente}-02-10T00:00:00Z`,
-    stima: false,
-  },
-  {
-    id: 't2',
-    tipo: 'income' as const,
-    importo: 4000,
-    data: `${annoCorrente}-05-20`,
-    categoriaId: 'cat-fatt',
-    accountId: null,
-    goalId: null,
-    descrizione: 'Fattura 2',
-    nota: null,
-    createdAt: `${annoCorrente}-05-20T00:00:00Z`,
-    stima: false,
-  },
+const conti = [
+  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+  { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null },
 ];
 
+const guidata = {
+  id: '1',
+  attivo: true,
+  dataApertura: '2024-01-10',
+  categoriaFatturatoId: 'cat-fatt',
+  coefficienteRedditivita: 78,
+  aliquotaSostitutivaOverride: 5,
+  aliquotaContributoSoggettivo: 10,
+  aliquotaContributoIntegrativo: 2,
+  minimaleContributivoAnnuo: 856,
+  contributiVersatiAnnoPrecedente: 0,
+  contoTasseId: 'tasse',
+  preset: 'enpap' as const,
+  guidataDal: '2026-11-01',
+  stipendioMensile: null,
+  stipendioRivistoIl: null,
+  incassoMeseMagro: null,
+};
+
+beforeEach(() => {
+  vi.mocked(getCategories).mockResolvedValue(categories);
+  vi.mocked(getAccounts).mockResolvedValue(conti);
+  vi.mocked(updatePivaSettings).mockReset();
+  vi.mocked(createPivaSettings).mockReset();
+});
+
 describe('PivaPage', () => {
-  it('mostra il form di attivazione quando non esistono impostazioni', async () => {
+  it('senza impostazioni parte la guida dal passo 1', async () => {
     vi.mocked(getPivaSettings).mockResolvedValue(null);
-    vi.mocked(getCategories).mockResolvedValue(categories);
-    vi.mocked(getTransactions).mockResolvedValue([]);
-    vi.mocked(createPivaSettings).mockResolvedValue({
-      id: '1',
-      attivo: true,
-      dataApertura: null,
-      categoriaFatturatoId: 'cat-fatt',
-      coefficienteRedditivita: 78,
-      aliquotaSostitutivaOverride: null,
-      aliquotaContributoSoggettivo: 10,
-      aliquotaContributoIntegrativo: 4,
-      minimaleContributivoAnnuo: 0,
-      contributiVersatiAnnoPrecedente: 0,
+    render(<PivaPage />);
+    expect(await screen.findByText('Che lavoro fai?', { selector: 'h2' })).toBeInTheDocument();
+  });
+
+  it('impostazioni vecchie senza conto tasse aprono la guida con i valori salvati', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue({
+      ...guidata,
       contoTasseId: null,
       preset: null,
       guidataDal: null,
-      stipendioMensile: null,
-      stipendioRivistoIl: null,
-      incassoMeseMagro: null,
+      coefficienteRedditivita: 65,
     });
-
     render(<PivaPage />);
+    await screen.findByText('Che lavoro fai?', { selector: 'h2' });
+    // "Altro" non precompila: restano i valori salvati
+    fireEvent.click(screen.getByRole('radio', { name: 'Altro' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Avanti' }));
+    expect(screen.getByLabelText('Quando hai aperto la P.IVA?')).toHaveValue('2024-01-10');
+    fireEvent.click(screen.getByRole('button', { name: 'Avanti' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Avanti' }));
+    expect(screen.getByLabelText('Coefficiente di redditività (%)')).toHaveValue(65);
+  });
 
+  it('conto tasse eliminato (id che non esiste più tra i conti) riapre la guida al passo 3', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue({ ...guidata, contoTasseId: 'sparito' });
+    render(<PivaPage />);
+    expect(await screen.findByText('Su quale conto metti da parte le tasse?')).toBeInTheDocument();
+  });
+
+  it('a guida completata mostra la percentuale e il conto tasse', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue(guidata);
+    render(<PivaPage />);
+    // 78% * (5% + 10%) + 2% = 13,7%
+    expect(await screen.findByText(/13,7% di ogni incasso/)).toBeInTheDocument();
+    expect(screen.getByText(/Conto tasse/)).toBeInTheDocument();
+  });
+
+  it('Modifica i parametri apre il vecchio modulo e salva senza perdere i campi guidati', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue(guidata);
+    vi.mocked(updatePivaSettings).mockResolvedValue(guidata);
+    render(<PivaPage />);
+    fireEvent.click(await screen.findByText('Modifica i parametri'));
+    await waitFor(() => expect(screen.getByText('Salva modifiche')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Minimale contributivo annuo'), { target: { value: '900' } });
+    fireEvent.click(screen.getByText('Salva modifiche'));
     await waitFor(() => {
-      expect(screen.getByText('Attiva gestione P.IVA')).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByLabelText('Categoria fatturato'), { target: { value: 'cat-fatt' } });
-    fireEvent.click(screen.getByText('Attiva gestione P.IVA'));
-
-    await waitFor(() => {
-      expect(createPivaSettings).toHaveBeenCalledWith(
+      expect(updatePivaSettings).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ attivo: true, categoriaFatturatoId: 'cat-fatt' })
+        '1',
+        expect.objectContaining({ minimaleContributivoAnnuo: 900, contoTasseId: 'tasse', guidataDal: '2026-11-01' })
       );
     });
   });
 
-  it('mostra la dashboard con i totali calcolati quando la gestione è attiva', async () => {
-    vi.mocked(getPivaSettings).mockResolvedValue({
-      id: '1',
-      attivo: true,
-      dataApertura: null,
-      categoriaFatturatoId: 'cat-fatt',
-      coefficienteRedditivita: 78,
-      aliquotaSostitutivaOverride: 5,
-      aliquotaContributoSoggettivo: 10,
-      aliquotaContributoIntegrativo: 4,
-      minimaleContributivoAnnuo: 0,
-      contributiVersatiAnnoPrecedente: 0,
-      contoTasseId: null,
-      preset: null,
-      guidataDal: null,
-      stipendioMensile: null,
-      stipendioRivistoIl: null,
-      incassoMeseMagro: null,
-    });
-    vi.mocked(getCategories).mockResolvedValue(categories);
-    vi.mocked(getTransactions).mockResolvedValue(transactions);
-
+  it('disattiva la gestione P.IVA al click', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue(guidata);
+    vi.mocked(updatePivaSettings).mockResolvedValue({ ...guidata, attivo: false });
     render(<PivaPage />);
-
-    // fatturato = 10000, reddito imponibile = 7800, imposta sostitutiva 5% = 390
-    await waitFor(() => {
-      expect(screen.getByText(/390,00/)).toBeInTheDocument();
-    });
-    // contributo soggettivo 10% di 7800 = 780
-    expect(screen.getByText(/780,00/)).toBeInTheDocument();
-    // contributo integrativo 4% di 10000 = 400
-    expect(screen.getByText(/400,00/)).toBeInTheDocument();
-  });
-
-  it('disattiva la gestione P.IVA al click e torna al form', async () => {
-    vi.mocked(getPivaSettings).mockResolvedValue({
-      id: '1',
-      attivo: true,
-      dataApertura: null,
-      categoriaFatturatoId: 'cat-fatt',
-      coefficienteRedditivita: 78,
-      aliquotaSostitutivaOverride: 5,
-      aliquotaContributoSoggettivo: 10,
-      aliquotaContributoIntegrativo: 4,
-      minimaleContributivoAnnuo: 0,
-      contributiVersatiAnnoPrecedente: 0,
-      contoTasseId: null,
-      preset: null,
-      guidataDal: null,
-      stipendioMensile: null,
-      stipendioRivistoIl: null,
-      incassoMeseMagro: null,
-    });
-    vi.mocked(getCategories).mockResolvedValue(categories);
-    vi.mocked(getTransactions).mockResolvedValue(transactions);
-    vi.mocked(updatePivaSettings).mockResolvedValue({
-      id: '1',
-      attivo: false,
-      dataApertura: null,
-      categoriaFatturatoId: 'cat-fatt',
-      coefficienteRedditivita: 78,
-      aliquotaSostitutivaOverride: 5,
-      aliquotaContributoSoggettivo: 10,
-      aliquotaContributoIntegrativo: 4,
-      minimaleContributivoAnnuo: 0,
-      contributiVersatiAnnoPrecedente: 0,
-      contoTasseId: null,
-      preset: null,
-      guidataDal: null,
-      stipendioMensile: null,
-      stipendioRivistoIl: null,
-      incassoMeseMagro: null,
-    });
-
-    render(<PivaPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Disattiva gestione P.IVA')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('Disattiva gestione P.IVA'));
-
+    fireEvent.click(await screen.findByText('Disattiva gestione P.IVA'));
     await waitFor(() => {
       expect(updatePivaSettings).toHaveBeenCalledWith(
         expect.anything(),
         '1',
         expect.objectContaining({ attivo: false })
-      );
-    });
-  });
-
-  it('modifica le impostazioni esistenti tramite "Modifica impostazioni" e salva', async () => {
-    vi.mocked(getPivaSettings).mockResolvedValue({
-      id: '1',
-      attivo: true,
-      dataApertura: null,
-      categoriaFatturatoId: 'cat-fatt',
-      coefficienteRedditivita: 78,
-      aliquotaSostitutivaOverride: 5,
-      aliquotaContributoSoggettivo: 10,
-      aliquotaContributoIntegrativo: 4,
-      minimaleContributivoAnnuo: 0,
-      contributiVersatiAnnoPrecedente: 0,
-      contoTasseId: null,
-      preset: null,
-      guidataDal: null,
-      stipendioMensile: null,
-      stipendioRivistoIl: null,
-      incassoMeseMagro: null,
-    });
-    vi.mocked(getCategories).mockResolvedValue(categories);
-    vi.mocked(getTransactions).mockResolvedValue(transactions);
-    vi.mocked(updatePivaSettings).mockResolvedValue({
-      id: '1',
-      attivo: true,
-      dataApertura: null,
-      categoriaFatturatoId: 'cat-fatt',
-      coefficienteRedditivita: 78,
-      aliquotaSostitutivaOverride: 5,
-      aliquotaContributoSoggettivo: 10,
-      aliquotaContributoIntegrativo: 4,
-      minimaleContributivoAnnuo: 900,
-      contributiVersatiAnnoPrecedente: 0,
-      contoTasseId: null,
-      preset: null,
-      guidataDal: null,
-      stipendioMensile: null,
-      stipendioRivistoIl: null,
-      incassoMeseMagro: null,
-    });
-
-    render(<PivaPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Modifica impostazioni')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('Modifica impostazioni'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Salva modifiche')).toBeInTheDocument();
-    });
-
-    expect(screen.getByLabelText('Minimale contributivo annuo')).toHaveValue(0);
-    fireEvent.change(screen.getByLabelText('Minimale contributivo annuo'), {
-      target: { value: '900' },
-    });
-    fireEvent.click(screen.getByText('Salva modifiche'));
-
-    await waitFor(() => {
-      expect(updatePivaSettings).toHaveBeenCalledWith(
-        expect.anything(),
-        '1',
-        expect.objectContaining({ minimaleContributivoAnnuo: 900 })
       );
     });
   });
