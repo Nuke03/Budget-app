@@ -7,7 +7,15 @@ import { createClient } from '@/lib/supabase/client';
 import { getCategories, createCategory, updateCategory, archiveCategory } from '@/lib/data/categories';
 import { CATEGORY_COLORS, CATEGORY_COLOR_FALLBACK } from '@/lib/categoryColors';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
+import { CoverHeader } from '../CoverHeader';
+import { SceltePill } from '../casa/SceltePill';
+import { PallinoCategoria } from '../home/PallinoCategoria';
 import type { Category, CategoriaTipo } from '@/lib/types';
+
+const TIPI: { chiave: CategoriaTipo; etichetta: string }[] = [
+  { chiave: 'expense', etichetta: 'Spesa' },
+  { chiave: 'income', etichetta: 'Entrata' },
+];
 
 export default function CategoriesPage() {
   const fail = useThrowToBoundary();
@@ -82,133 +90,111 @@ export default function CategoriesPage() {
   const attive = categories.filter((c) => !c.archiviata && c.tipo === filtroTipo && !nascoste.has(c.id));
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">Categorie</h1>
-
-      <div className="flex gap-1.5 rounded-full bg-surface-muted p-1">
-        {(['expense', 'income'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setFiltroTipo(t)}
-            className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors duration-150 ${
-              filtroTipo === t ? 'bg-surface text-foreground shadow-[var(--shadow-card)]' : 'text-muted'
-            }`}
-          >
-            {t === 'expense' ? 'Spesa' : 'Entrata'}
-          </button>
-        ))}
-      </div>
-
-      <ul className="flex flex-col gap-2">
-        {attive.map((c) => (
-          <li
-            key={c.id}
-            className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-surface p-3 shadow-[var(--shadow-card)]"
-          >
-            <div className="flex items-center gap-3">
-              <span
-                className="h-8 w-8 shrink-0 rounded-full"
-                style={{ backgroundColor: c.colore ?? CATEGORY_COLOR_FALLBACK }}
-              />
-              <div>
-                <p className="font-medium">{c.nome}</p>
-                <p className="text-xs text-muted">{c.tipo === 'expense' ? 'Spesa' : 'Entrata'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => startEdit(c)}
-                aria-label={`Modifica ${c.nome}`}
-                className="rounded-full p-2 text-muted hover:bg-surface-muted hover:text-foreground"
-              >
-                <Pencil size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleArchive(c.id)}
-                aria-label={`Archivia ${c.nome}`}
-                className="rounded-full p-2 text-muted hover:bg-surface-muted hover:text-danger"
-              >
-                <Archive size={18} />
-              </button>
-            </div>
-          </li>
-        ))}
-        {attive.length === 0 && (
-          <p className="rounded-[var(--radius-md)] bg-surface p-4 text-center text-sm text-muted shadow-[var(--shadow-card)]">
-            Nessuna categoria ancora — creane una qui sotto.
-          </p>
-        )}
-      </ul>
-
-      <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
-        <h2 className="text-base font-bold">
-          {editingCategory ? 'Modifica categoria' : 'Nuova categoria'}
-        </h2>
-
-        {!editingCategory && (
-          <div className="flex gap-1.5 rounded-full bg-surface-muted p-1">
-            {(['expense', 'income'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTipo(t)}
-                className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors duration-150 ${
-                  tipo === t ? 'bg-surface text-foreground shadow-[var(--shadow-card)]' : 'text-muted'
-                }`}
-              >
-                {t === 'expense' ? 'Spesa' : 'Entrata'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <input
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Nome categoria"
-          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand"
+    <>
+      <CoverHeader titolo="Categorie" />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
+        <SceltePill
+          legenda="Tipo di categorie"
+          opzioni={TIPI}
+          valore={filtroTipo}
+          onChange={(chiave) => setFiltroTipo(chiave as CategoriaTipo)}
         />
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-muted">Colore</span>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORY_COLORS.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                aria-label={c.name}
-                onClick={() => setColore(c.value)}
-                style={{ backgroundColor: c.value }}
-                className={`h-9 w-9 rounded-full transition-transform duration-150 ${
-                  colore === c.value ? 'ring-2 ring-offset-2 ring-offset-surface' : ''
-                }`}
-              />
+        {attive.length > 0 ? (
+          <ul className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-page">
+            {attive.map((c) => (
+              <li key={c.id} className="flex min-h-14 items-center gap-3 border-b border-rule py-1 pl-4 pr-1 last:border-b-0">
+                <PallinoCategoria colore={c.colore ?? CATEGORY_COLOR_FALLBACK} />
+                <span className="min-w-0 flex-1 break-words text-[15px]">{c.nome}</span>
+                <button
+                  type="button"
+                  onClick={() => startEdit(c)}
+                  aria-label={`Modifica ${c.nome}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint"
+                >
+                  <Pencil size={18} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleArchive(c.id)}
+                  aria-label={`Archivia ${c.nome}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint hover:text-danger"
+                >
+                  <Archive size={18} aria-hidden="true" />
+                </button>
+              </li>
             ))}
+          </ul>
+        ) : (
+          <p className="rounded-[var(--radius-md)] border border-rule bg-page p-4 text-center text-[15px] text-ink-2">
+            Nessuna categoria ancora: creane una qui sotto.
+          </p>
+        )}
+
+        <section className="flex flex-col gap-4 rounded-[var(--radius-md)] border border-rule bg-page p-4">
+          <h2 className="font-serif text-lg font-semibold">
+            {editingCategory ? 'Modifica categoria' : 'Nuova categoria'}
+          </h2>
+
+          {!editingCategory && (
+            <SceltePill
+              legenda="Tipo della nuova categoria"
+              opzioni={TIPI}
+              valore={tipo}
+              onChange={(chiave) => setTipo(chiave as CategoriaTipo)}
+            />
+          )}
+
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Nome categoria"
+            aria-label="Nome categoria"
+            className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-medium text-ink-2">Colore</span>
+            <div className="flex flex-wrap gap-1">
+              {CATEGORY_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  aria-label={c.name}
+                  aria-pressed={colore === c.value}
+                  onClick={() => setColore(c.value)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full"
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{ backgroundColor: c.value }}
+                    className={`h-8 w-8 rounded-full ${colore === c.value ? 'ring-2 ring-foreground ring-offset-2 ring-offset-page' : ''}`}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <button
-          type="button"
-          onClick={editingCategory ? handleUpdate : handleCreate}
-          disabled={!nome.trim()}
-          className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
-        >
-          {editingCategory ? 'Salva modifiche' : 'Aggiungi categoria'}
-        </button>
-
-        {editingCategory && (
           <button
             type="button"
-            onClick={cancelEdit}
-            className="rounded-[var(--radius-md)] bg-surface-muted py-3 text-sm font-semibold text-foreground"
+            onClick={editingCategory ? handleUpdate : handleCreate}
+            disabled={!nome.trim()}
+            className="min-h-12 rounded-[var(--radius-md)] bg-brand py-3 text-base font-semibold text-brand-foreground disabled:opacity-40"
           >
-            Annulla
+            {editingCategory ? 'Salva modifiche' : 'Aggiungi categoria'}
           </button>
-        )}
-      </section>
-    </main>
+
+          {editingCategory && (
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="min-h-11 rounded-[var(--radius-md)] bg-brand-tint py-3 text-[15px] font-semibold text-foreground"
+            >
+              Annulla
+            </button>
+          )}
+        </section>
+      </main>
+    </>
   );
 }
