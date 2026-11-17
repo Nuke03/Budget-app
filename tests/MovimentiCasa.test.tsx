@@ -10,10 +10,11 @@ import type { Transaction, Transfer } from '@/lib/types';
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh, push: vi.fn() }),
+  usePathname: () => '/x',
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transactions', () => ({
-  deleteTransaction: vi.fn().mockResolvedValue(undefined),
+  deleteTransaction: vi.fn().mockResolvedValue(1),
   updateTransaction: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/lib/data/transfers', () => ({ deleteTransfer: vi.fn().mockResolvedValue(undefined) }));
@@ -171,7 +172,7 @@ describe('MovimentiCasa', () => {
     apri();
     fireEvent.click(screen.getAllByText('Elimina')[0]);
     await passa(5000);
-    expect(screen.getByRole('status')).toHaveTextContent('Non sono riuscito a eliminarla: riprova.');
+    expect(screen.getByRole('status')).toHaveTextContent('Non è andata: riprova.');
     expect(screen.getByText('Luce')).toBeInTheDocument();
     expect(adjustAccountBalance).not.toHaveBeenCalled();
   });
@@ -229,7 +230,7 @@ describe('MovimentiCasa', () => {
     fireEvent.click(screen.getByText('Annulla'));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Elimina' }));
     await passa(5000);
-    expect(screen.getByRole('status')).toHaveTextContent('Non sono riuscito a eliminarla: riprova.');
+    expect(screen.getByRole('status')).toHaveTextContent('Non è andata: riprova.');
     expect(screen.getByText('Versamento di Fabio')).toBeInTheDocument();
   });
 

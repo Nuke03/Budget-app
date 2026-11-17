@@ -82,7 +82,8 @@ export default function CategoriesPage() {
       esegui: async () => {
         const supabase = createClient();
         await archiveCategory(supabase, id);
-        await refresh();
+        // Dopo la scrittura niente eccezioni: un nuovo tentativo ripeterebbe un'azione già fatta.
+        await refresh().catch(() => {});
       },
     });
   }

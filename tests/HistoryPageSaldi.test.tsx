@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 const dati = vi.hoisted(() => ({ casaFalla: false }));
@@ -46,7 +47,7 @@ vi.mock('@/lib/data/accounts', () => ({
 vi.mock('@/lib/data/goals', () => ({ getOpenGoals: async () => [], createGoal: vi.fn() }));
 vi.mock('@/lib/data/transactions', () => ({
   updateTransaction: vi.fn().mockResolvedValue(undefined),
-  deleteTransaction: vi.fn().mockResolvedValue(undefined),
+  deleteTransaction: vi.fn().mockResolvedValue(1),
   getTransactions: vi.fn(async () => [
     {
       id: 't1', tipo: 'expense', importo: 10, data: '2026-11-04', categoriaId: null, accountId: 'a',
@@ -123,6 +124,27 @@ describe('Storico: saldi personali per differenza', () => {
       expect(deleteTransaction).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('alert')).toHaveTextContent('Spesa eliminata, ma il saldo del conto non si è aggiornato: controllalo in Conti.');
       expect(vi.mocked(getTransactions).mock.calls.length).toBeGreaterThan(prima);
+    });
+
+    it('già cancellata (0 righe): il saldo non si tocca una seconda volta', async () => {
+      vi.mocked(deleteTransaction).mockResolvedValueOnce(0);
+      await apri();
+      fireEvent.click(screen.getByLabelText('Elimina transazione'));
+      await passa(5000);
+      expect(deleteTransaction).toHaveBeenCalledTimes(1);
+      expect(adjustAccountBalance).not.toHaveBeenCalled();
+    });
+
+    it('ricarica fallita dopo la scrittura: nessun errore, nessun secondo tentativo, saldo mosso una volta', async () => {
+      await apri();
+      fireEvent.click(screen.getByLabelText('Elimina transazione'));
+      vi.mocked(getTransactions).mockRejectedValueOnce(new Error('rete'));
+      await passa(5000);
+      await passa(10000);
+      expect(deleteTransaction).toHaveBeenCalledTimes(1);
+      expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(/riprova/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Pane')).not.toBeInTheDocument();
     });
 
     it('Annulla non scrive mai e la riga torna', async () => {

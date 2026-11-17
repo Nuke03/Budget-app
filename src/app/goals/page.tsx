@@ -72,7 +72,8 @@ export default function GoalsPage() {
       esegui: async () => {
         const supabase = createClient();
         await closeGoal(supabase, goal.id);
-        await refresh();
+        // Dopo la scrittura niente eccezioni: un nuovo tentativo ripeterebbe un'azione già fatta.
+        await refresh().catch(() => {});
       },
     });
   }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from 'vitest';
 import { parseISO } from 'date-fns';
 import {
@@ -154,10 +155,25 @@ describe('stima', () => {
   });
 });
 
+// delete().eq().select('id') risolve con le righe davvero cancellate.
+function cancellaClient(righe: { id: string }[]) {
+  const b: any = {
+    delete: () => b,
+    eq: () => b,
+    select: () => Promise.resolve({ data: righe, error: null }),
+  };
+  return { from: () => b } as any;
+}
+
 describe('deleteTransaction', () => {
   it('non lancia errori quando la cancellazione va a buon fine', async () => {
-    const supabase = fakeMutationClient(null);
-    await expect(deleteTransaction(supabase, '1')).resolves.toBeUndefined();
+    const supabase = cancellaClient([{ id: '1' }]);
+    await expect(deleteTransaction(supabase, '1')).resolves.toBe(1);
+  });
+
+  it('ritorna 0 se la riga non c era più (nessun saldo da toccare)', async () => {
+    const supabase = cancellaClient([]);
+    await expect(deleteTransaction(supabase, '1')).resolves.toBe(0);
   });
 });
 

@@ -41,6 +41,9 @@ export default function HistoryPage() {
   const [letteDal, setLetteDal] = useState(() => inizioStorico(new Date()));
   // Solo la lettura più recente aggiorna la pagina: una risposta vecchia arrivata dopo non la sovrascrive.
   const ultimaLettura = useRef(0);
+  // Lo stesso valore, letto al momento di ricaricare: la scrittura rimandata parte dopo qualche secondo.
+  const letteDalRef = useRef(letteDal);
+  letteDalRef.current = letteDal;
 
   async function refresh(da: string = letteDal) {
     const lettura = ++ultimaLettura.current;
@@ -144,20 +147,23 @@ export default function HistoryPage() {
       ripristina: () => cambia(false),
       esegui: async () => {
         const supabase = createClient();
-        await deleteTransaction(supabase, t.id);
-        try {
-          await applicaAggiornamentiSaldo(
-            { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
-            { accountId: null, tipo: t.tipo, importo: 0 }
-          );
-        } catch {
-          // La riga è già cancellata: non va rimessa. Si ricarica lo stato vero e si avvisa.
-          setErroreSaldo(true);
-          await refresh().catch(() => {});
-          return;
+        const cancellate = await deleteTransaction(supabase, t.id);
+        // Da qui la riga è cancellata: niente più eccezioni, o un nuovo tentativo sposterebbe il saldo due volte.
+        if (cancellate > 0) {
+          try {
+            await applicaAggiornamentiSaldo(
+              { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
+              { accountId: null, tipo: t.tipo, importo: 0 }
+            );
+          } catch {
+            // La riga è già cancellata: non va rimessa. Si ricarica lo stato vero e si avvisa.
+            setErroreSaldo(true);
+            await refresh(letteDalRef.current).catch(() => {});
+            return;
+          }
         }
         setErroreSaldo(false);
-        await refresh();
+        await refresh(letteDalRef.current).catch(() => {});
       },
     });
   }

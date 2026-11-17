@@ -169,10 +169,13 @@ export async function updateTransaction(
   return mapRow(data as TransactionRow);
 }
 
-export async function deleteTransaction(supabase: SupabaseClient, id: string): Promise<void> {
+// Quante righe ha cancellato davvero: 0 vuol dire che era già sparita (un secondo tentativo),
+// e allora il saldo non va toccato una seconda volta.
+export async function deleteTransaction(supabase: SupabaseClient, id: string): Promise<number> {
   // household: per id
-  const { error } = await supabase.from('transactions').delete().eq('id', id);
+  const { data, error } = await supabase.from('transactions').delete().eq('id', id).select('id');
   if (error) throw error;
+  return (data as { id: string }[] | null)?.length ?? 0;
 }
 
 export async function getLastIncomeDate(

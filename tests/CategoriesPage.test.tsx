@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CategoriesPage from '@/app/categories/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';

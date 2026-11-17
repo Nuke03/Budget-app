@@ -136,7 +136,6 @@ export function MovimentiCasa({
         }),
       esegui: async () => {
         await deleteTransfer(createClient(), m.id);
-        router.refresh();
       },
     });
   }
@@ -160,21 +159,19 @@ export function MovimentiCasa({
       esegui: async () => {
         try {
           const supabase = createClient();
-          await deleteTransaction(supabase, t.id);
+          const cancellate = await deleteTransaction(supabase, t.id);
           cancellata = true;
-          if (t.accountId) {
+          if (cancellate > 0 && t.accountId) {
             await adjustAccountBalance(
               supabase,
               t.accountId,
               t.tipo === 'expense' ? t.importo : -t.importo,
             );
           }
-          router.refresh();
         } catch (e) {
           // Se la riga e gia stata cancellata e fallisce solo il saldo, non va rimessa.
           if (cancellata) {
             setErrore(true);
-            router.refresh();
             return;
           }
           throw e;

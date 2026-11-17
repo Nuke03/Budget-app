@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));

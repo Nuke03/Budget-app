@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import type { Transaction, Transfer } from '@/lib/types';
 
