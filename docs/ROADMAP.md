@@ -241,11 +241,24 @@ Per provare le schermate senza login: `/anteprima?vista=home|foglio|in-pari|vuot
 
 Revisioni fatte: per ogni task, revisione finale di impeccable (verdetto: da pubblicare) e revisione opus, con le correzioni fatte. `DESIGN.md` è aggiornato.
 
-**Piano B3, da scrivere:**
-- eliminazioni con annullamento;
-- Storico, obiettivi, conti e P.IVA nel nuovo stile;
-- l'icona dell'app;
-- al posto dei caratteri `›` e `‹`, icone vere.
+**Piano B3, fatto (17 novembre 2026). Il blocco 2 è chiuso.** Piano:
+`docs/superpowers/plans/2026-11-17-libretto-b3.md`. Cosa contiene:
+- ogni eliminazione si può annullare per 5 secondi, e il conto alla rovescia si ferma se tocchi l'avviso;
+- cambiando pagina l'eliminazione parte subito, e il saldo non viene mai scalato due volte;
+- le azioni pesanti chiedono conferma, con "Non avvisarmi più" che si riattiva da Altro, mentre chiudere o lasciare la casa chiede sempre;
+- Storico per giorno, obiettivi, conti, categorie e P.IVA sono nel libretto, con icone vere;
+- c'è l'icona dell'app.
+
+Revisioni fatte: impeccable (verdetto: da pubblicare) e opus, con le correzioni fatte. `DESIGN.md` è aggiornato.
+
+**Icona sull'iPhone:** per vederla, togli l'app dalla schermata Home e aggiungila di nuovo da Safari.
+
+**Prossimi passi:** la parte P.IVA guidata (reddito irregolare, dove trovare i dati, stipendio dal cuscinetto, scadenze F24 di giugno e novembre) e il percorso di apprendimento personale, che parte dal "Perché?" del consiglio.
+
+Resti segnati nel piano B3:
+- logo del login e un suggerimento sotto i campi con l'ombra;
+- numero grande della P.IVA fuori scala;
+- se iOS chiude l'app nell'istante di un'eliminazione, la riga può ricomparire: nessun dato si perde.
 
 Resti segnati nel piano B2:
 - calendario a 3 tocchi;
