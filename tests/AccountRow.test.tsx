@@ -20,10 +20,29 @@ describe('AccountRow', () => {
     const onUpdateBalance = vi.fn();
     render(<AccountRow account={account} onUpdateBalance={onUpdateBalance} />);
 
-    fireEvent.change(screen.getByLabelText('Aggiorna saldo'), { target: { value: '1500' } });
-    fireEvent.click(screen.getByText('Aggiorna'));
+    fireEvent.click(screen.getByText('Aggiorna il saldo'));
+    fireEvent.change(screen.getByLabelText('Nuovo saldo'), { target: { value: '1500' } });
+    fireEvent.click(screen.getByText('Salva'));
 
     expect(onUpdateBalance).toHaveBeenCalledWith('1', 1500);
+  });
+
+  it('il campo del saldo compare solo dopo il tocco e parte dal numero formattato', () => {
+    render(<AccountRow account={{ ...account, saldoAttuale: 1890.5 }} onUpdateBalance={vi.fn()} />);
+    expect(screen.queryByLabelText('Nuovo saldo')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Aggiorna il saldo'));
+    expect(screen.getByLabelText('Nuovo saldo')).toHaveValue('1.890,5');
+  });
+
+  it('salva "1.890,50" come 1890.5 e non salva testo che non è un numero', () => {
+    const onUpdateBalance = vi.fn();
+    render(<AccountRow account={account} onUpdateBalance={onUpdateBalance} />);
+    fireEvent.click(screen.getByText('Aggiorna il saldo'));
+    fireEvent.change(screen.getByLabelText('Nuovo saldo'), { target: { value: 'abc' } });
+    expect(screen.getByText('Salva')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Nuovo saldo'), { target: { value: '1.890,50' } });
+    fireEvent.click(screen.getByText('Salva'));
+    expect(onUpdateBalance).toHaveBeenCalledWith('1', 1890.5);
   });
 
   it('non mostra il pulsante di modifica dettagli se onUpdateDetails non è passato', () => {

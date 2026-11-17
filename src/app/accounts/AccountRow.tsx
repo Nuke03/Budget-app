@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Wallet, PiggyBank, Pencil } from 'lucide-react';
-import { formatEuro } from '@/lib/format';
+import { Pencil } from 'lucide-react';
+import { formatEuro, formatNumero } from '@/lib/format';
+import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 import type { Account } from '@/lib/types';
 
 const fieldClass =
@@ -20,7 +21,8 @@ export function AccountRow({
     details: { nome: string; contaInDisponibile: boolean; targetSaldo: number | null }
   ) => void;
 }) {
-  const [saldo, setSaldo] = useState(String(account.saldoAttuale));
+  const [saldo, setSaldo] = useState(formatNumero(account.saldoAttuale));
+  const [aggiornando, setAggiornando] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editNome, setEditNome] = useState(account.nome);
   const [editContaInDisponibile, setEditContaInDisponibile] = useState(account.contaInDisponibile);
@@ -28,15 +30,14 @@ export function AccountRow({
     account.targetSaldo !== null ? String(account.targetSaldo) : ''
   );
 
-  const saldoNumerico = Number(saldo);
-  const isValid = saldo.trim() !== '' && !Number.isNaN(saldoNumerico);
+  const negativo = saldo.trim().startsWith('-');
+  const letto = parseImporto(negativo ? saldo.trim().slice(1) : saldo);
+  const saldoNumerico = letto === null ? null : negativo ? -letto : letto;
 
   const hasTarget = account.targetSaldo !== null;
   const progressPercent = hasTarget
     ? Math.min(100, Math.max(0, (account.saldoAttuale / account.targetSaldo!) * 100))
     : 0;
-
-  const Icon = account.contaInDisponibile ? Wallet : PiggyBank;
 
   function startEdit() {
     setEditNome(account.nome);
@@ -114,24 +115,21 @@ export function AccountRow({
 
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-rule bg-surface p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-dark">
-            <Icon size={18} aria-hidden="true" />
-          </span>
-          <span className="min-w-0 break-words text-[15px] font-semibold">{account.nome}</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 break-words text-[15px] font-semibold">{account.nome}</span>
+        <div className="flex shrink-0 items-center">
+          <span className="num font-serif text-xl font-semibold">{formatEuro(account.saldoAttuale)}</span>
           {onUpdateDetails && (
             <button
               type="button"
               onClick={startEdit}
               aria-label="Modifica conto"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint"
+              className="ml-1 flex h-11 w-11 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint"
             >
               <Pencil size={18} aria-hidden="true" />
             </button>
           )}
         </div>
-        <span className="num shrink-0 pl-2 font-serif text-xl font-semibold">{formatEuro(account.saldoAttuale)}</span>
       </div>
 
       {hasTarget && (
@@ -148,24 +146,42 @@ export function AccountRow({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <input
-          aria-label="Aggiorna saldo"
-          type="number"
-          inputMode="decimal"
-          value={saldo}
-          onChange={(e) => setSaldo(e.target.value)}
-          className={`${fieldClass} w-full min-w-0`}
-        />
+      {aggiornando ? (
+        <div className="flex gap-2">
+          <input
+            aria-label="Nuovo saldo"
+            type="text"
+            inputMode="decimal"
+            autoFocus
+            value={saldo}
+            onChange={(e) => setSaldo(e.target.value)}
+            className={`${fieldClass} w-full min-w-0`}
+          />
+          <button
+            type="button"
+            disabled={saldoNumerico === null}
+            onClick={() => {
+              if (saldoNumerico === null) return;
+              onUpdateBalance(account.id, saldoNumerico);
+              setAggiornando(false);
+            }}
+            className="min-h-11 shrink-0 rounded-[var(--radius-sm)] bg-brand px-4 py-2 text-[15px] font-semibold text-brand-foreground disabled:opacity-40"
+          >
+            Salva
+          </button>
+        </div>
+      ) : (
         <button
           type="button"
-          disabled={!isValid}
-          onClick={() => onUpdateBalance(account.id, saldoNumerico)}
-          className="min-h-11 shrink-0 rounded-[var(--radius-sm)] bg-brand px-4 py-2 text-[15px] font-semibold text-brand-foreground disabled:opacity-40"
+          onClick={() => {
+            setSaldo(formatNumero(account.saldoAttuale));
+            setAggiornando(true);
+          }}
+          className="min-h-11 self-start rounded-[var(--radius-sm)] bg-brand-tint px-4 py-2 text-[15px] font-semibold text-brand-dark"
         >
-          Aggiorna
+          Aggiorna il saldo
         </button>
-      </div>
+      )}
     </div>
   );
 }
