@@ -478,3 +478,94 @@ describe('AddTransactionSheet', () => {
     expect(parametri()).toMatchObject({ p_account: null, p_pagata_da: 'u1' });
   });
 });
+
+describe('AddTransactionSheet: quota delle tasse', () => {
+  const persPiva = {
+    categories: [
+      { id: 'cp', nome: 'Spesa', tipo: 'expense' as const, colore: null, archiviata: false },
+      { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false },
+      { id: 'cat-altro', nome: 'Regali', tipo: 'income' as const, colore: null, archiviata: false },
+    ],
+    accounts: [
+      { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null },
+      { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null },
+    ],
+    goals: [],
+  };
+  const piva = { categoriaFatturatoId: 'cat-fatt', percentuale: 13.7, contoTasseId: 'tasse' };
+
+  function incassa(categoria: string, importo: string) {
+    scegliEntrata();
+    fireEvent.click(pezzo('Senza categoria'));
+    fireEvent.click(pezzo(categoria));
+    compila(importo);
+  }
+
+  it('entrata di categoria fatturato apre il prompt con 82 su 600', async () => {
+    apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale' });
+    incassa('Compensi', '600');
+    expect(await screen.findByText('Di 600 € metti da parte 82 € sul conto tasse')).toBeInTheDocument();
+  });
+
+  it('entrata di altra categoria non apre il prompt', async () => {
+    const onSaved = vi.fn();
+    apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale', onSaved });
+    incassa('Regali', '600');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText(/metti da parte/)).not.toBeInTheDocument();
+  });
+
+  it('una spesa non apre il prompt', async () => {
+    const onSaved = vi.fn();
+    apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale', onSaved });
+    compila('20');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText(/metti da parte/)).not.toBeInTheDocument();
+  });
+
+  it('senza la prop piva non cambia niente', async () => {
+    const onSaved = vi.fn();
+    apri({ casa: null, personale: persPiva, modoIniziale: 'personale', onSaved });
+    incassa('Compensi', '600');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText(/metti da parte/)).not.toBeInTheDocument();
+  });
+
+  it('Fatto chiama accantonaTasse con conto personale e conto tasse', async () => {
+    const onAccantonato = vi.fn();
+    apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale', onAccantonato });
+    incassa('Compensi', '600');
+    fireEvent.click(await screen.findByRole('button', { name: 'Fatto, li ho spostati' }));
+    await waitFor(() => expect(rpc.mock.calls[1]?.[0]).toBe('accantona_tasse'));
+    expect(parametri(1)).toEqual({
+      p_importo: 82,
+      p_data: oggiRomaISO(),
+      p_da_account: 'ap',
+      p_a_account: 'tasse',
+      p_transaction: 't-nuova',
+    });
+    await waitFor(() => expect(screen.queryByText(/metti da parte/)).not.toBeInTheDocument());
+    expect(onAccantonato).toHaveBeenCalled();
+  });
+
+  it('un incasso in contanti sposta dal primo conto che conta nel disponibile', async () => {
+    apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale' });
+    scegliEntrata();
+    fireEvent.click(pezzo('Conto mio'));
+    fireEvent.click(pezzo('Contanti'));
+    fireEvent.click(pezzo('Senza categoria'));
+    fireEvent.click(pezzo('Compensi'));
+    compila('600');
+    fireEvent.click(await screen.findByRole('button', { name: 'Fatto, li ho spostati' }));
+    await waitFor(() => expect(rpc.mock.calls[1]?.[0]).toBe('accantona_tasse'));
+    expect(parametri(1)).toMatchObject({ p_da_account: 'ap', p_a_account: 'tasse' });
+  });
+
+  it('Più tardi chiude e la quota resta in sospeso', async () => {
+    apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale' });
+    incassa('Compensi', '600');
+    fireEvent.click(await screen.findByRole('button', { name: 'Più tardi' }));
+    await waitFor(() => expect(screen.queryByText(/metti da parte/)).not.toBeInTheDocument());
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+});

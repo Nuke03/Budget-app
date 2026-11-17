@@ -6,13 +6,10 @@ import { createClient } from '@/lib/supabase/client';
 import { getPivaSettings, createPivaSettings, updatePivaSettings } from '@/lib/data/pivaSettings';
 import { getCategories } from '@/lib/data/categories';
 import { getAccounts } from '@/lib/data/accounts';
-import { computeAliquotaSostitutiva, computePercentualeIncasso } from '@/lib/calculations/piva';
-import { oggiRomaData } from '@/lib/calculations/casa/oggi';
-import { formatNumero } from '@/lib/format';
 import { CoverHeader } from '../CoverHeader';
-import { CLASSE_SECONDARIO } from '../casa/CampiMovimento';
 import { PivaSettingsForm, type PivaSettingsFormValues } from './PivaSettingsForm';
 import { ImpostazioneGuidata } from './ImpostazioneGuidata';
+import { PivaHub } from './PivaHub';
 import type { PivaSettingsInput } from '@/lib/data/pivaSettings';
 import type { Account, Category, PivaSettings } from '@/lib/types';
 
@@ -131,29 +128,5 @@ export default function PivaPage() {
     );
   }
 
-  // Vista provvisoria: l'hub arriva col prossimo passo.
-  const percentuale = computePercentualeIncasso(
-    settings.coefficienteRedditivita,
-    computeAliquotaSostitutiva(settings.dataApertura, oggiRomaData(), settings.aliquotaSostitutivaOverride),
-    settings.aliquotaContributoSoggettivo,
-    settings.aliquotaContributoIntegrativo
-  );
-
-  return (
-    <>
-      <CoverHeader titolo="P.IVA" />
-      <main className="mx-auto flex max-w-md flex-col gap-5 px-3 pb-28 pt-5">
-        <p className="num font-serif text-[22px] font-semibold">
-          Metti da parte il {formatNumero(percentuale)}% di ogni incasso.
-        </p>
-        <p className="text-[15px] text-ink-2">Le tasse vanno sul conto: {contoTasse.nome}.</p>
-        <button type="button" onClick={() => setEditing(true)} className={CLASSE_SECONDARIO}>
-          Modifica i parametri
-        </button>
-        <button type="button" onClick={handleDisattiva} className={CLASSE_SECONDARIO}>
-          Disattiva gestione P.IVA
-        </button>
-      </main>
-    </>
-  );
+  return <PivaHub settings={settings} categories={categories} onModifica={() => setEditing(true)} onDisattiva={handleDisattiva} />;
 }

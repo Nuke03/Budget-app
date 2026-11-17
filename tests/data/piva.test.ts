@@ -72,6 +72,20 @@ describe('accantonaTasse', () => {
   });
 });
 
+describe('accantonaTasse: violazione di unicità', () => {
+  const args = { importo: 50, data: '2026-11-17', daAccountId: 'a1', aAccountId: 'a2', transactionId: 'tx-9' };
+
+  it('su codice 23505 torna l id dell accantonamento esistente', async () => {
+    const { client } = clientRpc({ data: null, error: { code: '23505', message: 'duplicate key value' } }, { id: 'acc-vecchio' });
+    await expect(accantonaTasse(client, args)).resolves.toBe('acc-vecchio');
+  });
+
+  it('su 23505 senza riga esistente lancia l errore', async () => {
+    const { client } = clientRpc({ data: null, error: { code: '23505', message: 'duplicate key value' } }, null);
+    await expect(accantonaTasse(client, args)).rejects.toMatchObject({ code: '23505' });
+  });
+});
+
 describe('creaFattura', () => {
   it('senza incassaSu passa solo i dati della fattura', async () => {
     const { client, rpc } = clientRpc({ data: 'f-1', error: null });

@@ -1,17 +1,29 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { formatEuro, formatDateIt } from '@/lib/format';
 import type { RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 
-export function StoricoCasa({ righe }: { righe: RigaNeutra[] }) {
+export function StoricoCasa({
+  righe,
+  titolo = 'Movimenti con la casa',
+  id = 'movimenti-con-la-casa',
+  onElimina,
+}: {
+  righe: RigaNeutra[];
+  titolo?: string;
+  id?: string;
+  // Se c'è, ogni riga si può togliere (con Annulla).
+  onElimina?: (r: RigaNeutra) => void;
+}) {
   if (righe.length === 0) return null;
   return (
     <section
-      aria-labelledby="movimenti-con-la-casa"
+      aria-labelledby={id}
       className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-surface"
     >
-      <h2 id="movimenti-con-la-casa" className="px-4 pb-2 pt-4 font-serif text-lg font-semibold">
-        Movimenti con la casa
+      <h2 id={id} className="px-4 pb-2 pt-4 font-serif text-lg font-semibold">
+        {titolo}
       </h2>
       <ul>
         {righe.map((r) => (
@@ -23,10 +35,22 @@ export function StoricoCasa({ righe }: { righe: RigaNeutra[] }) {
               <p className="text-[15px]">{r.etichetta}</p>
               <p className="num text-[13px] text-ink-2">{formatDateIt(r.data)}</p>
             </div>
-            <span className="num shrink-0 text-[15px] text-ink-2">
+            <div className="flex shrink-0 items-center gap-1">
+            <span className="num text-[15px] text-ink-2">
               {r.verso === 'entra' ? '+' : '−'}
               {formatEuro(r.importo)}
             </span>
+            {onElimina ? (
+              <button
+                type="button"
+                onClick={() => onElimina(r)}
+                aria-label={`Elimina: ${r.etichetta}`}
+                className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint"
+              >
+                <Trash2 size={18} aria-hidden="true" />
+              </button>
+            ) : null}
+            </div>
           </li>
         ))}
       </ul>

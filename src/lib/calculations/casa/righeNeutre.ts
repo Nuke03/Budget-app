@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import type { Transaction, Transfer } from '../../types';
+import type { PivaAccantonamento, Transaction, Transfer } from '../../types';
 
 // Un movimento fra i soldi personali e la casa: non è una spesa né un'entrata,
 // quindi nello storico personale sta fuori da totali, grafici e P.IVA.
@@ -65,6 +65,19 @@ function rigaDaTrasferimento(
     }
   }
   return null;
+}
+
+// Il passaggio dal conto personale al conto tasse: soldi tuoi che cambiano conto, non una spesa.
+export function righeNeutreAccantonamenti(acc: PivaAccantonamento[]): RigaNeutra[] {
+  return acc
+    .map((a) => ({
+      id: `pa-${a.id}`,
+      data: a.data,
+      etichetta: 'Spostato sul conto tasse',
+      importo: a.importo,
+      verso: 'esce' as const,
+    }))
+    .sort((a, b) => b.data.localeCompare(a.data));
 }
 
 export function righeNeutreStorico(input: {

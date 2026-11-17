@@ -12,6 +12,12 @@ vi.mock('@/lib/data/pivaSettings', () => ({
   updatePivaSettings: vi.fn(),
 }));
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+
+vi.mock('@/lib/data/transactions', () => ({ getTransactions: vi.fn() }));
+
+vi.mock('@/lib/data/piva', () => ({ getAccantonamenti: vi.fn(), accantonaTasse: vi.fn() }));
+
 vi.mock('@/lib/data/categories', () => ({
   getCategories: vi.fn(),
 }));
@@ -25,6 +31,8 @@ vi.mock('@/lib/data/accounts', () => ({
 import { getPivaSettings, createPivaSettings, updatePivaSettings } from '@/lib/data/pivaSettings';
 import { getCategories } from '@/lib/data/categories';
 import { getAccounts } from '@/lib/data/accounts';
+import { getTransactions } from '@/lib/data/transactions';
+import { getAccantonamenti } from '@/lib/data/piva';
 
 const categories = [
   { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false },
@@ -57,6 +65,8 @@ const guidata = {
 beforeEach(() => {
   vi.mocked(getCategories).mockResolvedValue(categories);
   vi.mocked(getAccounts).mockResolvedValue(conti);
+  vi.mocked(getTransactions).mockResolvedValue([]);
+  vi.mocked(getAccantonamenti).mockResolvedValue([]);
   vi.mocked(updatePivaSettings).mockReset();
   vi.mocked(createPivaSettings).mockReset();
 });
@@ -93,19 +103,21 @@ describe('PivaPage', () => {
     expect(await screen.findByText('Su quale conto metti da parte le tasse?')).toBeInTheDocument();
   });
 
-  it('a guida completata mostra la percentuale e il conto tasse', async () => {
+  it('a guida completata mostra l hub con la percentuale e il conto tasse', async () => {
     vi.mocked(getPivaSettings).mockResolvedValue(guidata);
     render(<PivaPage />);
     // 78% * (5% + 10%) + 2% = 13,7%
     expect(await screen.findByText(/13,7% di ogni incasso/)).toBeInTheDocument();
-    expect(screen.getByText(/Conto tasse/)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Conto tasse' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Da spostare' })).toBeInTheDocument();
   });
 
   it('Modifica i parametri apre il vecchio modulo e salva senza perdere i campi guidati', async () => {
     vi.mocked(getPivaSettings).mockResolvedValue(guidata);
     vi.mocked(updatePivaSettings).mockResolvedValue(guidata);
     render(<PivaPage />);
-    fireEvent.click(await screen.findByText('Modifica i parametri'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Impostazioni' }));
+    fireEvent.click(screen.getByText('Modifica i parametri'));
     await waitFor(() => expect(screen.getByText('Salva modifiche')).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText('Minimale contributivo annuo'), { target: { value: '900' } });
     fireEvent.click(screen.getByText('Salva modifiche'));
@@ -122,7 +134,8 @@ describe('PivaPage', () => {
     vi.mocked(getPivaSettings).mockResolvedValue(guidata);
     vi.mocked(updatePivaSettings).mockResolvedValue({ ...guidata, attivo: false });
     render(<PivaPage />);
-    fireEvent.click(await screen.findByText('Disattiva gestione P.IVA'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Impostazioni' }));
+    fireEvent.click(screen.getByText('Disattiva gestione P.IVA'));
     await waitFor(() => {
       expect(updatePivaSettings).toHaveBeenCalledWith(
         expect.anything(),

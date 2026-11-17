@@ -185,7 +185,9 @@ export async function accantonaTasse(
     p_transaction: input.transactionId,
   });
   if (error) {
-    if (!messaggio(error).includes('già spostata') || !input.transactionId) throw error;
+    // Due tocchi insieme: o l'rpc lo dice a parole, o è la violazione di unicità su transaction_id.
+    const giaSpostata = messaggio(error).includes('già spostata') || (error as { code?: unknown }).code === '23505';
+    if (!giaSpostata || !input.transactionId) throw error;
     const { data: riga, error: e2 } = await supabase
       .from('piva_accantonamenti')
       .select('id')

@@ -5,9 +5,13 @@ import { createClient } from '@/lib/supabase/client';
 import { createGoal } from '@/lib/data/goals';
 import { nomiAltri } from '@/lib/calculations/casa/etichette';
 import { registraMovimento, type SpazioSpesa, type SpesaPayload } from '@/lib/registraSpesa';
+import { accantonaTasse } from '@/lib/data/piva';
+import { computeQuotaIncasso } from '@/lib/calculations/piva';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
-import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
+import type { Account, BudgetGoal, Category, Transaction, TransactionTipo } from '@/lib/types';
 import { FoglioInferiore } from '../FoglioInferiore';
+import { PromptQuota, contoDaCuiSpostare } from '../piva/PromptQuota';
 import { AddTransactionForm } from './AddTransactionForm';
 
 type Modo = 'personale' | 'casa';
@@ -72,6 +76,9 @@ export function AddTransactionSheet({
   modoIniziale = 'ricorda',
   meUserId,
   storico,
+  piva = null,
+  iniziale,
+  onAccantonato,
   onSaved,
 }: {
   aperto: boolean;
@@ -88,11 +95,48 @@ export function AddTransactionSheet({
   meUserId?: string;
   // Le spese passate, da cui indovinare la categoria. Dove non c'è, nessun suggerimento.
   storico?: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
+  // Solo per chi ha la P.IVA guidata: un'entrata nella categoria del fatturato propone la quota delle tasse.
+  piva?: { categoriaFatturatoId: string; percentuale: number; contoTasseId: string } | null;
+  // Punto di partenza del modulo personale (es. "+ Incasso" nella pagina P.IVA).
+  iniziale?: { tipo: TransactionTipo; categoriaId: string | null };
+  // Dopo che la quota è stata spostata sul conto tasse: chi apre il foglio aggiorna i suoi dati.
+  onAccantonato?: () => void;
   onSaved: (id: string, spazio: Modo) => void;
 }) {
   const [modoScelto, setModoScelto] = useState<Modo | null>(null);
   // L'importo già scritto resta quando si cambia spazio (il modulo si ricrea).
   const [importoBozza, setImportoBozza] = useState('');
+  // L'incasso appena salvato di cui proporre la quota: sopravvive alla chiusura del foglio.
+  const [quotaDaSpostare, setQuotaDaSpostare] = useState<{
+    transactionId: string;
+    importo: number;
+    quota: number;
+    daAccountId: string;
+    aAccountId: string;
+    nomeConto: string;
+  } | null>(null);
+
+  if (quotaDaSpostare) {
+    return (
+      <PromptQuota
+        importo={quotaDaSpostare.importo}
+        quota={quotaDaSpostare.quota}
+        contoTasse={quotaDaSpostare.nomeConto}
+        onPiuTardi={() => setQuotaDaSpostare(null)}
+        onFatto={async (importoSpostato) => {
+          await accantonaTasse(createClient(), {
+            importo: importoSpostato,
+            data: oggiRomaISO(),
+            daAccountId: quotaDaSpostare.daAccountId,
+            aAccountId: quotaDaSpostare.aAccountId,
+            transactionId: quotaDaSpostare.transactionId,
+          });
+          setQuotaDaSpostare(null);
+          onAccantonato?.();
+        }}
+      />
+    );
+  }
 
   if (!aperto) return null;
 
@@ -130,6 +174,27 @@ export function AddTransactionSheet({
     const id = await registraMovimento(createClient(), payload, spazioCorrente());
     salvaConto(modo, payload.accountId);
     segnaRegistrato(id);
+    // Un incasso del lavoro (spazio personale): si propone la quota delle tasse.
+    if (
+      piva &&
+      personale &&
+      modo === 'personale' &&
+      payload.tipo === 'income' &&
+      payload.categoriaId === piva.categoriaFatturatoId
+    ) {
+      const da = contoDaCuiSpostare(payload.accountId, personale.accounts, piva.contoTasseId);
+      const conto = personale.accounts.find((a) => a.id === piva.contoTasseId);
+      if (da && conto) {
+        setQuotaDaSpostare({
+          transactionId: id,
+          importo: payload.importo,
+          quota: computeQuotaIncasso(payload.importo, piva.percentuale),
+          daAccountId: da,
+          aAccountId: conto.id,
+          nomeConto: conto.nome,
+        });
+      }
+    }
     onSaved(id, modo);
     setImportoBozza('');
     onClose();
@@ -205,6 +270,8 @@ export function AddTransactionSheet({
           accounts={personale.accounts}
           goals={personale.goals}
           onCreateGoal={handleCreateGoal}
+          tipoIniziale={iniziale?.tipo}
+          categoriaIniziale={iniziale?.categoriaId}
           veloce
           storico={storico}
           contoIniziale={leggiConto('personale')}

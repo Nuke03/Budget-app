@@ -4,6 +4,8 @@ import { getCategories } from '@/lib/data/categories';
 import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import { computeFatturatoAnnuo } from '@/lib/calculations/piva';
 import { createFakeDb } from './helpers/fakeDb';
+import { righeNeutreAccantonamenti } from '@/lib/calculations/casa/righeNeutre';
+import { getAccantonamenti } from '@/lib/data/piva';
 
 const MEMBRI = { H1: ['A', 'B', 'C'] };
 const FATTURATO = 'cat-fatturato';
@@ -86,5 +88,26 @@ describe('isolamento di Storico e P.IVA', () => {
     expect(con.fatturato).toBe(6000);
     expect(con.aggregato).toEqual(senza.aggregato);
     expect(con.transactions).toEqual(senza.transactions);
+  });
+
+  it('lo storico mostra Spostato sul conto tasse e non lo conta nei totali', async () => {
+    const db = createFakeDb(
+      {
+        ...personali,
+        piva_accantonamenti: [
+          { id: 'pa1', user_id: 'A', transaction_id: 't1', importo: 548, data: '2026-05-11', da_account_id: 'a1', a_account_id: 'tasse' },
+        ],
+      },
+      { userId: 'A', membri: MEMBRI }
+    );
+    const righe = righeNeutreAccantonamenti(await getAccantonamenti(db.client, { da: '2026-01-01' }));
+    expect(righe).toEqual([
+      { id: 'pa-pa1', data: '2026-05-11', etichetta: 'Spostato sul conto tasse', importo: 548, verso: 'esce' },
+    ]);
+    // Né le transazioni né gli aggregati vedono lo spostamento.
+    const { transactions, aggregato, fatturato } = await calcola({ ...personali, piva_accantonamenti: db.tables.piva_accantonamenti });
+    expect(transactions.map((t) => t.id).sort()).toEqual(['t1', 't2', 't3']);
+    expect(fatturato).toBe(6000);
+    expect(aggregato).toEqual((await calcola(personali)).aggregato);
   });
 });

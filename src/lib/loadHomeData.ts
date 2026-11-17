@@ -10,7 +10,7 @@ import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
-import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { calcolaAndamento, type Andamento } from '@/lib/calculations/supporto/andamento';
 import { scegliConsiglio, obiettiviCorti, type Consiglio } from '@/lib/calculations/supporto/consiglio';
 import { periodoDaRecuperare } from '@/lib/calculations/supporto/notifiche';
@@ -22,15 +22,37 @@ import {
   type Prossimo,
 } from '@/lib/calculations/supporto/home';
 import { getMyHousehold } from '@/lib/data/households';
+import { getPivaSettings } from '@/lib/data/pivaSettings';
+import { getAccantonamenti } from '@/lib/data/piva';
+import {
+  computeAliquotaSostitutiva,
+  computePercentualeIncasso,
+  quoteInSospeso,
+  totaleInSospeso,
+  type QuotaInSospeso,
+} from '@/lib/calculations/piva';
 import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
-import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
+import type { Account, BudgetGoal, Category, PivaSettings, Transaction } from '@/lib/types';
 
 // Le due parti si leggono a parte: se manca lo stato, la casa esiste ma il disponibile
 // personale non tiene conto della quota (la home lo dice).
 export interface CasaPerHome {
   aggiunta: CasaAggiunta | null;
   stato: CasaStato | null;
+}
+
+// Lo stipendio mensile della P.IVA: lo definisce il passo dello stipendio, qui non c'è ancora.
+export type StipendioHome = Record<string, never>;
+
+// La P.IVA guidata vista dalla home: dove vanno le tasse, quanto mettere da parte, quali quote
+// aspettano ancora di essere spostate.
+export interface PivaHome {
+  contoTasseId: string;
+  categoriaFatturatoId: string;
+  percentuale: number;
+  inSospeso: QuotaInSospeso[];
+  stipendio: StipendioHome | null;
 }
 
 export interface HomeData {
@@ -41,6 +63,8 @@ export interface HomeData {
   categories: Category[];
   goals: (BudgetGoal & { accantonato: number })[];
   casa: CasaPerHome | null;
+  // null: P.IVA non attiva o guida non completata.
+  piva: PivaHome | null;
   righe: RigaLibretto[];
   // Le transazioni dei 3 mesi già lette per la Home: da qui si indovina la categoria di una nuova spesa.
   storico: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
@@ -82,6 +106,39 @@ async function casaOpzionale(
   return { aggiunta, stato };
 }
 
+// La P.IVA non deve mai rompere la home: se non si legge, la home si apre come senza P.IVA.
+// Le entrate e gli accantonamenti si leggono dal giorno della guida, anche oltre la finestra dei 3 mesi,
+// e solo se la guida è completata: per gli altri nessuna lettura in più.
+async function pivaOpzionale(
+  supabase: SupabaseClient,
+  settings: Promise<PivaSettings | null>,
+  today: Date
+): Promise<PivaHome | null> {
+  try {
+    const s = await settings;
+    if (!s || !s.attivo || !s.guidataDal || !s.contoTasseId || !s.categoriaFatturatoId) return null;
+    const [incassi, accantonamenti] = await Promise.all([
+      getTransactions(supabase, PERSONALE, { da: s.guidataDal, tipo: 'income' }),
+      getAccantonamenti(supabase, { da: s.guidataDal }),
+    ]);
+    const percentuale = computePercentualeIncasso(
+      s.coefficienteRedditivita,
+      computeAliquotaSostitutiva(s.dataApertura, oggiRomaData(today), s.aliquotaSostitutivaOverride),
+      s.aliquotaContributoSoggettivo,
+      s.aliquotaContributoIntegrativo
+    );
+    return {
+      contoTasseId: s.contoTasseId,
+      categoriaFatturatoId: s.categoriaFatturatoId,
+      percentuale,
+      inSospeso: quoteInSospeso(incassi, accantonamenti, percentuale, s.categoriaFatturatoId, s.guidataDal),
+      stipendio: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // Una sola riga leggera: la creazione più recente fra le righe di cui sono autore (personali e di casa).
 async function ultimaCreazioneUtente(supabase: SupabaseClient, userId: string | null): Promise<string | null> {
   if (!userId) return null;
@@ -109,7 +166,9 @@ export async function loadHomeData(
   // (una sola query per tutti), senza aspettare la parte di casa.
   const obiettivi = getOpenGoals(supabase);
   const oggi = oggiRomaISO(today);
-  const [accounts, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia] = await Promise.all([
+  // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
+  const pivaSettings = getPivaSettings(supabase).catch(() => null);
+  const [accounts, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, piva] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     obiettivi,
@@ -125,6 +184,7 @@ export async function loadHomeData(
     leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null })),
     // L'ultima riga scritta da te in qualunque spazio (anche Casa): conta per "in pari".
     ultimaCreazioneUtente(supabase, userId),
+    pivaOpzionale(supabase, pivaSettings, today),
   ]);
   const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
@@ -133,7 +193,8 @@ export async function loadHomeData(
     goalsConSpeso,
     today,
     casa?.stato?.riservaVersamento ?? 0,
-    casa?.stato?.debitoDaRestituire ?? 0
+    casa?.stato?.debitoDaRestituire ?? 0,
+    piva ? totaleInSospeso(piva.inSospeso) : 0
   );
   const dataTarget = stimaDataTarget(ultimaEntrata, today);
   const margineGiornaliero = computeMargineGiornaliero(disponibileLibero, dataTarget, today);
@@ -179,6 +240,7 @@ export async function loadHomeData(
     categories,
     goals: goalsWithAccantonato,
     casa,
+    piva,
     righe: righeLibretto(transazioni, oggi, 4, categories),
     storico: transazioni.map((t) => ({
       descrizione: t.descrizione,

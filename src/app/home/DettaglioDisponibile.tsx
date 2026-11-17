@@ -40,10 +40,13 @@ export function DettaglioDisponibile({
   accounts,
   goals,
   casa,
+  riservaPiva = 0,
 }: {
   accounts: Account[];
   goals: Obiettivo[];
   casa: CasaPerHome | null;
+  // Le quote delle tasse degli incassi che non hai ancora spostato sul conto tasse.
+  riservaPiva?: number;
 }) {
   const conti = accounts.filter((a) => a.contaInDisponibile);
   const esclusi = accounts.filter((a) => !a.contaInDisponibile);
@@ -87,6 +90,16 @@ export function DettaglioDisponibile({
               valore={`-${formatEuro(g.accantonato)}`}
             />
           ))}
+        </Gruppo>
+      ) : null}
+
+      {riservaPiva > 0 ? (
+        <Gruppo titolo="Tasse da mettere da parte" subtotale={-riservaPiva}>
+          <Riga
+            nome="Quote degli incassi non ancora spostate"
+            nota="Sono sul conto, ma vanno sul conto tasse"
+            valore={`-${formatEuro(riservaPiva)}`}
+          />
         </Gruppo>
       ) : null}
 

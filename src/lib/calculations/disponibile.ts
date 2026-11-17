@@ -6,7 +6,9 @@ export function computeDisponibileLibero(
   goals: GoalForCalc[],
   today: Date,
   riservaVersamento = 0,
-  riservaDebiti = 0
+  riservaDebiti = 0,
+  // Le quote delle tasse degli incassi non ancora spostate sul conto tasse.
+  riservaPiva = 0
 ): number {
   const saldoDisponibile = accounts
     .filter((a) => a.contaInDisponibile)
@@ -17,5 +19,6 @@ export function computeDisponibileLibero(
     .reduce((sum, g) => sum + computeAccantonatoFinora(g, today, g.specoCollegato ?? 0), 0);
 
   // Il versamento alla casa e i debiti verso gli altri membri sono già "usati": si tolgono come gli obiettivi.
-  return saldoDisponibile - riservato - riservaVersamento - riservaDebiti;
+  // Anche le quote delle tasse ancora sul conto sono già "usate".
+  return saldoDisponibile - riservato - riservaVersamento - riservaDebiti - riservaPiva;
 }

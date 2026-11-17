@@ -10,7 +10,9 @@ import { getTransfers } from '@/lib/data/transfers';
 import { casa, PERSONALE } from '@/lib/data/scope';
 import { inizioStorico } from '@/lib/calculations/filterTransactionsByPeriodo';
 import { leggiSessione } from '@/lib/utenteOLogin';
-import { righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
+import { righeNeutreAccantonamenti, righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
+import { getPivaSettings } from '@/lib/data/pivaSettings';
+import { annullaAccantonamento, getAccantonamenti } from '@/lib/data/piva';
 import { getAccounts, adjustAccountBalance } from '@/lib/data/accounts';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
@@ -32,6 +34,7 @@ export default function HistoryPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [goals, setGoals] = useState<BudgetGoal[]>([]);
   const [righeNeutre, setRigheNeutre] = useState<RigaNeutra[]>([]);
+  const [righeTasse, setRigheTasse] = useState<RigaNeutra[]>([]);
   const [periodo, setPeriodo] = useState<Periodo>('mese');
   const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -51,6 +54,7 @@ export default function HistoryPage() {
     // La parte di casa è solo un di più: se non si legge, lo storico personale resta intero.
     // Parte insieme a quella personale, senza aspettarla.
     const casaInCorso = caricaRigheCasa(supabase, da).catch(() => [] as RigaNeutra[]);
+    const tasseInCorso = caricaRigheTasse(supabase, da).catch(() => [] as RigaNeutra[]);
     const [tx, cats, accs, openGoals] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da }),
       getCategories(supabase),
@@ -66,6 +70,15 @@ export default function HistoryPage() {
     setCaricato(true);
     const righeCasa = await casaInCorso;
     if (lettura === ultimaLettura.current) setRigheNeutre(righeCasa);
+    const righeDelleTasse = await tasseInCorso;
+    if (lettura === ultimaLettura.current) setRigheTasse(righeDelleTasse);
+  }
+
+  // Solo chi ha la P.IVA attiva legge gli spostamenti sul conto tasse; per gli altri una lettura sola, delle impostazioni.
+  async function caricaRigheTasse(supabase: ReturnType<typeof createClient>, da: string): Promise<RigaNeutra[]> {
+    const settings = await getPivaSettings(supabase);
+    if (!settings?.attivo) return [];
+    return righeNeutreAccantonamenti(await getAccantonamenti(supabase, { da: da || '0001-01-01' }));
   }
 
   async function caricaRigheCasa(supabase: ReturnType<typeof createClient>, da: string): Promise<RigaNeutra[]> {
@@ -168,6 +181,27 @@ export default function HistoryPage() {
     });
   }
 
+  // Annullare uno spostamento rimette i soldi sul conto di partenza (lo fa l'rpc).
+  function handleEliminaTasse(r: RigaNeutra) {
+    const cambia = (nascondi: boolean) =>
+      setNascoste((prima) => {
+        const dopo = new Set(prima);
+        if (nascondi) dopo.add(r.id);
+        else dopo.delete(r.id);
+        return dopo;
+      });
+    eliminaConAnnulla({
+      id: r.id,
+      testo: 'Spostamento annullato.',
+      nascondi: () => cambia(true),
+      ripristina: () => cambia(false),
+      esegui: async () => {
+        await annullaAccantonamento(createClient(), r.id.replace(/^pa-/, ''));
+        await refresh(letteDalRef.current).catch(() => {});
+      },
+    });
+  }
+
   async function handleUpdate(payload: {
     tipo: TransactionTipo;
     importo: number;
@@ -203,12 +237,20 @@ export default function HistoryPage() {
     new Date(),
     rangePersonalizzato
   );
+  const righeTasseFiltrate = filterTransactionsByPeriodo(
+    righeTasse.filter((r) => !nascoste.has(r.id)),
+    periodo,
+    new Date(),
+    rangePersonalizzato
+  );
   return (
     <>
       <StoricoVista
         transactionsFiltrate={transactionsFiltrate}
         transactionsTotali={transactions.length}
         righeNeutreFiltrate={righeNeutreFiltrate}
+        righeTasse={righeTasseFiltrate}
+        onEliminaTasse={handleEliminaTasse}
         categories={categories}
         caricato={caricato}
         erroreSaldo={erroreSaldo}

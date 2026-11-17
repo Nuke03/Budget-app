@@ -17,7 +17,8 @@ import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
-import type { CasaPerHome } from '@/lib/loadHomeData';
+import type { CasaPerHome, PivaHome } from '@/lib/loadHomeData';
+import { totaleInSospeso } from '@/lib/calculations/piva';
 import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
@@ -43,6 +44,7 @@ export function HomeDashboard({
   categories,
   goals,
   casa = null,
+  piva = null,
   meUserId,
   oggi = oggiRomaISO(),
   righe,
@@ -60,6 +62,7 @@ export function HomeDashboard({
   categories: Category[];
   goals: GoalWithAccantonato[];
   casa?: CasaPerHome | null;
+  piva?: PivaHome | null;
   meUserId?: string;
   oggi?: string;
   righe: RigaLibretto[];
@@ -112,6 +115,7 @@ export function HomeDashboard({
   const saldoConti = accounts.filter((a) => a.contaInDisponibile).reduce((t, a) => t + a.saldoAttuale, 0);
   const riservato = Math.round((saldoConti - disponibileLibero) * 100) / 100;
   const contaCasa = (casa?.stato?.riservaVersamento ?? 0) + (casa?.stato?.debitoDaRestituire ?? 0) > 0;
+  const riservaPiva = piva ? totaleInSospeso(piva.inSospeso) : 0;
   const { intero, resto } = dividiCifra(formatEuro(disponibileLibero));
 
   return (
@@ -151,7 +155,7 @@ export function HomeDashboard({
           </button>
           {showBreakdown ? (
             <div className="mt-1">
-              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} />
+              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} riservaPiva={riservaPiva} />
             </div>
           ) : null}
         </section>
@@ -188,6 +192,12 @@ export function HomeDashboard({
         contiPersonali={accounts}
         meUserId={meUserId}
         storico={storico}
+        piva={
+          piva
+            ? { categoriaFatturatoId: piva.categoriaFatturatoId, percentuale: piva.percentuale, contoTasseId: piva.contoTasseId }
+            : null
+        }
+        onAccantonato={() => router.refresh()}
         onSaved={(_id, spazio) => {
           if (spazio === 'casa') setRegistratoInCasa(true);
           router.refresh();

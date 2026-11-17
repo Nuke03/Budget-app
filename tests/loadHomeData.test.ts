@@ -67,3 +67,76 @@ describe('loadHomeData: libretto', () => {
     expect(d.inPari).toBeNull();
   });
 });
+
+const IMPOSTAZIONI_PIVA = {
+  id: 'ps1', user_id: 'A', attivo: true, data_apertura: '2024-01-10', categoria_fatturato_id: 'cat-fatt',
+  coefficiente_redditivita: 78, aliquota_sostitutiva_override: 5, aliquota_contributo_soggettivo: 10,
+  aliquota_contributo_integrativo: 2, minimale_contributivo_annuo: 856, contributi_versati_anno_precedente: 0,
+  conto_tasse_id: 'tasse', preset: 'enpap', guidata_dal: '2026-08-01', stipendio_mensile: null,
+  stipendio_rivisto_il: null, incasso_mese_magro: null,
+};
+
+const entrata = (id: string, data: string, importo: number, categoria = 'cat-fatt') => ({
+  id, user_id: 'A', household_id: null, tipo: 'income', importo, data, categoria_id: categoria,
+  account_id: 'a1', goal_id: null, descrizione: id, nota: null, created_at: `${data}T10:00:00Z`, stima: false,
+});
+
+const contiPiva = [
+  { id: 'a1', user_id: 'A', household_id: null, nome: 'Corrente', saldo_attuale: 1000, conta_in_disponibile: true, target_saldo: null },
+  { id: 'tasse', user_id: 'A', household_id: null, nome: 'Tasse', saldo_attuale: 0, conta_in_disponibile: false, target_saldo: null },
+];
+
+describe('loadHomeData: P.IVA', () => {
+  it('con P.IVA spenta: piva null e nessuna lettura di piva_accantonamenti', async () => {
+    const db = createFakeDb(
+      { accounts: [], budget_goals: [], transactions: [], categories: [], piva_settings: [{ ...IMPOSTAZIONI_PIVA, attivo: false }] },
+      { userId: 'A', membri: {} }
+    );
+    const from = vi.spyOn(db.client, 'from');
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva).toBeNull();
+    expect(from.mock.calls.map((c) => c[0])).not.toContain('piva_accantonamenti');
+  });
+
+  it('senza impostazioni: piva null', async () => {
+    const db = createFakeDb({ accounts: [], budget_goals: [], transactions: [], categories: [] }, { userId: 'A', membri: {} });
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva).toBeNull();
+  });
+
+  it('con P.IVA guidata: inSospeso dalle entrate dal guidataDal, anche oltre la finestra di 3 mesi', async () => {
+    // La finestra della home parte dal 1 agosto: un guidataDal di marzo la supera.
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [],
+        transactions: [entrata('vecchia', '2026-03-10', 1000), entrata('recente', '2026-11-10', 600), entrata('altra', '2026-11-11', 50, 'cat-x')],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, guidata_dal: '2026-03-01' }],
+        piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.contoTasseId).toBe('tasse');
+    expect(d.piva?.categoriaFatturatoId).toBe('cat-fatt');
+    expect(d.piva?.percentuale).toBe(13.7);
+    expect(d.piva?.stipendio).toBeNull();
+    expect(d.piva?.inSospeso.map((q) => q.transactionId).sort()).toEqual(['recente', 'vecchia']);
+    expect(d.piva?.inSospeso.find((q) => q.transactionId === 'recente')?.quota).toBe(82);
+  });
+
+  it('sottrae totaleInSospeso dal disponibile come riservaPiva', async () => {
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [],
+        transactions: [entrata('e1', '2026-11-10', 600), entrata('e2', '2026-11-11', 400)],
+        piva_settings: [IMPOSTAZIONI_PIVA],
+        // e2 è già stata spostata: resta in sospeso solo e1 (82)
+        piva_accantonamenti: [{ id: 'pa1', user_id: 'A', transaction_id: 'e2', importo: 55, data: '2026-11-11', da_account_id: 'a1', a_account_id: 'tasse' }],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.inSospeso).toEqual([{ transactionId: 'e1', importo: 600, quota: 82 }]);
+    expect(d.disponibileLibero).toBe(1000 - 82);
+  });
+});

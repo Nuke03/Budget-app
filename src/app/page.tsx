@@ -20,6 +20,7 @@ export default async function HomePage() {
       categories={data.categories}
       goals={data.goals}
       casa={data.casa}
+      piva={data.piva}
       righe={data.righe}
       storico={data.storico}
       andamento={data.andamento}

@@ -108,6 +108,11 @@ describe('computeDisponibileLibero', () => {
     expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 777, 603)).toBe(-380);
   });
 
+  it('sottrae riservaPiva: saldo 1000, quote in sospeso 82 dà 918', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 0, 0, 82)).toBe(918);
+  });
+
   it('i parametri omessi valgono 0', () => {
     const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
     expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1))).toBe(1000);

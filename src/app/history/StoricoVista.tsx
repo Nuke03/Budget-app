@@ -20,6 +20,7 @@ export function StoricoVista({
   transactionsFiltrate,
   transactionsTotali,
   righeNeutreFiltrate,
+  righeTasse = [],
   categories,
   caricato,
   erroreSaldo,
@@ -29,10 +30,13 @@ export function StoricoVista({
   onChangeRange,
   onEdit,
   onDelete,
+  onEliminaTasse,
 }: {
   transactionsFiltrate: Transaction[];
   transactionsTotali: number;
   righeNeutreFiltrate: RigaNeutra[];
+  // Gli spostamenti sul conto tasse (solo per chi ha la P.IVA): fuori da totali e grafici.
+  righeTasse?: RigaNeutra[];
   categories: Category[];
   caricato: boolean;
   erroreSaldo: boolean;
@@ -42,6 +46,7 @@ export function StoricoVista({
   onChangeRange: (range: { da: string; a: string }) => void;
   onEdit: (t: Transaction) => void;
   onDelete: (t: Transaction) => void;
+  onEliminaTasse?: (r: RigaNeutra) => void;
 }) {
   const chartData = aggregateByCategory(transactionsFiltrate, categories);
   const colorByCategoryName = new Map(
@@ -131,6 +136,12 @@ export function StoricoVista({
         </section>
 
         <StoricoCasa righe={righeNeutreFiltrate} />
+        <StoricoCasa
+          righe={righeTasse}
+          titolo="Tasse messe da parte"
+          id="tasse-messe-da-parte"
+          onElimina={onEliminaTasse}
+        />
       </main>
     </>
   );

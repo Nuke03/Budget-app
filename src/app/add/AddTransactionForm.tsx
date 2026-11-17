@@ -64,6 +64,8 @@ export function AddTransactionForm({
   accounts,
   goals = NESSUN_GOAL,
   initial,
+  tipoIniziale,
+  categoriaIniziale,
   submitLabel = 'Salva',
   onCancel,
   onCreateGoal,
@@ -89,6 +91,9 @@ export function AddTransactionForm({
   accounts: Account[];
   goals?: BudgetGoal[];
   initial?: AddTransactionFormValues | null;
+  // Aggiunta con un punto di partenza (es. un incasso del lavoro): tipo e categoria già scelti.
+  tipoIniziale?: TransactionTipo;
+  categoriaIniziale?: string | null;
   submitLabel?: string;
   onCancel?: () => void;
   onCreateGoal?: (payload: NuovoGoalPayload) => Promise<BudgetGoal>;
@@ -116,18 +121,19 @@ export function AddTransactionForm({
   bloccato?: boolean;
   erroreMessaggio?: string;
 }) {
-  const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? 'expense');
+  const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? tipoIniziale ?? 'expense');
   const [importo, setImporto] = useState(initial ? String(initial.importo) : importoIniziale);
   const [descrizione, setDescrizione] = useState(initial?.descrizione ?? '');
   const [categoriaId, setCategoriaId] = useState<string | null>(() => {
     if (initial?.categoriaId != null) return initial.categoriaId;
+    if (categoriaIniziale != null) return categoriaIniziale;
     if (veloce && !initial) {
       const guess = indovinaCategoria('', storico, oggi);
       return categories.some((c) => c.id === guess && !c.archiviata && c.tipo === 'expense') ? guess : null;
     }
     return categories[0]?.id ?? null;
   });
-  const [categoriaToccata, setCategoriaToccata] = useState(initial != null);
+  const [categoriaToccata, setCategoriaToccata] = useState(initial != null || categoriaIniziale != null);
   const [accountId, setAccountId] = useState<string | null>(() => {
     if (initial?.accountId != null) return initial.accountId;
     if (veloce && contoIniziale !== undefined) {
