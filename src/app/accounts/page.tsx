@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount } from '@/lib/data/accounts';
+import { ChevronRight } from 'lucide-react';
+import { CoverHeader } from '../CoverHeader';
 import { AccountRow } from './AccountRow';
 import type { Account } from '@/lib/types';
 
@@ -52,50 +54,56 @@ export default function AccountsPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-5 pt-8">
-      <h1 className="text-2xl font-bold">Conti</h1>
+    <>
+      <CoverHeader titolo="Conti" />
+      <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
+        <div className="flex flex-col gap-3.5">
+          {accounts.map((a) => (
+            <AccountRow
+              key={a.id}
+              account={a}
+              onUpdateBalance={handleUpdateBalance}
+              onUpdateDetails={handleUpdateDetails}
+            />
+          ))}
+        </div>
 
-      <div className="flex flex-col gap-3">
-        {accounts.map((a) => (
-          <AccountRow
-            key={a.id}
-            account={a}
-            onUpdateBalance={handleUpdateBalance}
-            onUpdateDetails={handleUpdateDetails}
-          />
-        ))}
-      </div>
-
-      <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-5 shadow-[var(--shadow-card)]">
-        <h2 className="text-base font-bold">Nuovo conto</h2>
-        <input
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Es. Conto corrente"
-          className="rounded-[var(--radius-md)] border border-black/5 bg-surface-muted px-4 py-3 text-base outline-none focus-visible:border-brand"
-        />
-        <label className="flex items-center gap-2.5 text-sm font-medium">
+        <section className="flex flex-col gap-4 rounded-[var(--radius-md)] border border-rule bg-page p-4">
+          <h2 className="font-serif text-lg font-semibold">Nuovo conto</h2>
           <input
-            type="checkbox"
-            checked={contaInDisponibile}
-            onChange={(e) => setContaInDisponibile(e.target.checked)}
-            className="h-4 w-4 accent-brand"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Es. Conto corrente"
+            aria-label="Nome del nuovo conto"
+            className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
           />
-          Conta nel disponibile libero
-        </label>
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={!nome.trim()}
-          className="rounded-[var(--radius-md)] bg-brand py-3 text-sm font-semibold text-brand-foreground disabled:opacity-40"
-        >
-          Aggiungi conto
-        </button>
-      </section>
+          <label className="flex min-h-11 items-center gap-2.5 text-[15px] font-medium">
+            <input
+              type="checkbox"
+              checked={contaInDisponibile}
+              onChange={(e) => setContaInDisponibile(e.target.checked)}
+              className="h-5 w-5 accent-brand"
+            />
+            Conta nel disponibile libero
+          </label>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={!nome.trim()}
+            className="min-h-12 rounded-[var(--radius-md)] bg-brand py-3 text-base font-semibold text-brand-foreground disabled:opacity-40"
+          >
+            Aggiungi conto
+          </button>
+        </section>
 
-      <Link href="/categories" className="text-sm font-semibold text-brand-dark">
-        Gestisci categorie
-      </Link>
-    </main>
+        <Link
+          href="/categories"
+          className="flex min-h-12 items-center justify-between rounded-[var(--radius-md)] border border-rule bg-page px-4 text-[15px] font-semibold text-brand-dark"
+        >
+          Gestisci categorie
+          <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-ink-2" />
+        </Link>
+      </main>
+    </>
   );
 }
