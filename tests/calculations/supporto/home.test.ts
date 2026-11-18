@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { righeLibretto, prossimaCosa } from '@/lib/calculations/supporto/home';
-import type { Transaction } from '@/lib/types';
+import { righeLibretto, prossimaCosa, promemoriaPiva } from '@/lib/calculations/supporto/home';
+import type { PivaScadenza, Transaction } from '@/lib/types';
 
 function tx(id: string, data: string, tipo: 'expense' | 'income', importo: number, ora = '10'): Transaction {
   return {
@@ -67,5 +67,58 @@ describe('prossimaCosa', () => {
   });
   it('null se non c\'è niente', () => {
     expect(prossimaCosa({ inPari: null, promemoriaCasa: [] })).toBeNull();
+  });
+});
+
+describe('promemoriaPiva', () => {
+  const OGGI = '2026-11-18';
+  const sc = (o: Partial<PivaScadenza>): PivaScadenza => ({
+    id: 's1', anno: 2026, chiave: 'f24_novembre', tipo: 'f24', descrizione: 'F24 di novembre',
+    data: '2026-11-30', importo: null, pagataIl: null, transactionId: null, nascosta: false, ...o,
+  });
+  const vuoto = { fatture: [], inSospeso: 0, revisioneStipendio: null };
+
+  it('scadenza fra 10 giorni è urgente e passa davanti alla casa', () => {
+    const piva = promemoriaPiva({ ...vuoto, scadenze: [sc({ data: '2026-11-28' })] }, OGGI);
+    expect(piva).toEqual([{ testo: 'F24 di novembre entro il 28 novembre', href: '/piva', urgente: true }]);
+    const p = prossimaCosa({ inPari: null, promemoriaCasa: [{ testo: 'Versa la quota' }], promemoriaPiva: piva });
+    expect(p).toEqual({ testo: 'F24 di novembre entro il 28 novembre', href: '/piva', tipo: 'piva' });
+  });
+  it('scadenza fra 20 giorni non compare', () => {
+    expect(promemoriaPiva({ ...vuoto, scadenze: [sc({ data: '2026-12-08' })] }, OGGI)).toEqual([]);
+  });
+  it('pagata, nascosta o passata: non compare; oggi e +15 compaiono', () => {
+    const scadenze = [
+      sc({ id: 'a', pagataIl: '2026-11-10' }),
+      sc({ id: 'b', nascosta: true }),
+      sc({ id: 'c', data: '2026-11-17' }),
+    ];
+    expect(promemoriaPiva({ ...vuoto, scadenze }, OGGI)).toEqual([]);
+    expect(promemoriaPiva({ ...vuoto, scadenze: [sc({ data: OGGI })] }, OGGI)).toHaveLength(1);
+    expect(promemoriaPiva({ ...vuoto, scadenze: [sc({ data: '2026-12-03' })] }, OGGI)).toHaveLength(1);
+  });
+  it('quota da spostare e fatture ferme: non urgenti, dopo la casa', () => {
+    const fattura = (id: string, emessa: string, incasso: string | null = null) => ({
+      id, cliente: 'X', importo: 100, dataEmissione: emessa, dataIncasso: incasso, transactionId: null, nota: null,
+    });
+    const piva = promemoriaPiva(
+      {
+        scadenze: [],
+        fatture: [fattura('a', '2026-09-01'), fattura('b', '2026-09-02'), fattura('c', '2026-11-01'), fattura('d', '2026-08-01', '2026-09-01')],
+        inSospeso: 120.5,
+        revisioneStipendio: null,
+      },
+      OGGI,
+    );
+    expect(piva.map((p) => p.urgente)).toEqual([false, false]);
+    expect(piva[0].testo).toMatch(/^Da spostare sul conto tasse: /);
+    expect(piva[1].testo).toBe('2 fatture aspettano da più di 60 giorni');
+    const p = prossimaCosa({ inPari: null, promemoriaCasa: [{ testo: 'Versa la quota' }], promemoriaPiva: piva });
+    expect(p?.tipo).toBe('casa');
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], promemoriaPiva: piva })?.tipo).toBe('piva');
+  });
+  it('in pari batte tutto', () => {
+    const piva = promemoriaPiva({ ...vuoto, scadenze: [sc({ data: '2026-11-20' })] }, OGGI);
+    expect(prossimaCosa({ inPari: { dal: '2026-11-15', al: OGGI }, promemoriaCasa: [], promemoriaPiva: piva })?.tipo).toBe('in_pari');
   });
 });

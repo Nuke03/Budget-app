@@ -36,6 +36,13 @@ interface RigaPromemoria {
   ultimo_versamento_mese: string | null;
   nessuna_spesa_fino_al: string | null;
   ultima_notifica_il: string | null;
+  ultima_scadenza_avvisata: string | null;
+}
+interface RigaScadenza {
+  id: string;
+  user_id: string;
+  descrizione: string;
+  data: string;
 }
 interface RigaMembro {
   household_id: string;
@@ -146,7 +153,7 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
     const { data, error } = await admin
       .from('promemoria_utente')
       .select(
-        'user_id, notifiche_attive, ultima_spese_il, ultima_checkin_il, ultimo_versamento_mese, nessuna_spesa_fino_al, ultima_notifica_il',
+        'user_id, notifiche_attive, ultima_spese_il, ultima_checkin_il, ultimo_versamento_mese, nessuna_spesa_fino_al, ultima_notifica_il, ultima_scadenza_avvisata',
       )
       .in('user_id', blocco);
     if (error) throw error;
@@ -156,6 +163,30 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
 
   const ultime = await Promise.all(utenti.map((id) => ultimaCreazioneDi(admin, id)));
   const ultimaCreazione = new Map(utenti.map((id, i) => [id, ultime[i]] as const));
+
+  // La prossima scadenza P.IVA (entro 7 giorni, non pagata né nascosta) di chi ha la P.IVA attiva.
+  const conPiva = await aBlocchi(utenti, async (blocco) => {
+    const { data, error } = await admin.from('piva_settings').select('user_id, attivo').in('user_id', blocco);
+    if (error) throw error;
+    return (data ?? []) as { user_id: string; attivo: boolean }[];
+  });
+  const attivi = conPiva.filter((r) => r.attivo).map((r) => r.user_id);
+  const fra7 = new Date(Date.parse(`${oggi}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  const righeScadenze = await aBlocchi(attivi, async (blocco) => {
+    const { data, error } = await admin
+      .from('piva_scadenze')
+      .select('id, user_id, descrizione, data')
+      .in('user_id', blocco)
+      .is('pagata_il', null)
+      .eq('nascosta', false)
+      .gte('data', oggi)
+      .lte('data', fra7)
+      .order('data', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as RigaScadenza[];
+  });
+  const scadenzaPerUtente = new Map<string, RigaScadenza>();
+  for (const r of righeScadenze) if (!scadenzaPerUtente.has(r.user_id)) scadenzaPerUtente.set(r.user_id, r);
 
   // Le case attive degli iscritti, con tutti i loro membri attivi (serve a sapere chi gestisce).
   const datiPerUtente = new Map<string, DatiCasa>();
@@ -234,6 +265,8 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
         ultimoVersamentoMese: p?.ultimo_versamento_mese ?? null,
         ultimaNotificaIl: p?.ultima_notifica_il ?? null,
         nessunaSpesaFinoAl: p?.nessuna_spesa_fino_al ?? null,
+        scadenza: ((r) => (r ? { id: r.id, descrizione: r.descrizione, data: r.data } : null))(scadenzaPerUtente.get(userId)),
+        ultimaScadenzaAvvisata: p?.ultima_scadenza_avvisata ?? null,
         ...(datiPerUtente.get(userId) ?? SENZA_CASA),
       },
       iscrizioni: perUtente.get(userId) ?? [],

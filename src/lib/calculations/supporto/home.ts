@@ -1,8 +1,8 @@
 import { computeReminders, statoPromemoria } from '../casa/promemoria';
 import { riferimentoControllo } from '../casa/controlloSaldo';
-import { nomeMese } from '@/lib/format';
+import { formatEuro, nomeMese } from '@/lib/format';
 import type { CasaPerHome } from '@/lib/loadHomeData';
-import type { Category, Transaction } from '@/lib/types';
+import type { Category, PivaFattura, PivaScadenza, Transaction } from '@/lib/types';
 
 export interface RigaLibretto {
   id: string;
@@ -20,7 +20,7 @@ export interface RigaLibretto {
 export interface Prossimo {
   testo: string;
   href: string;
-  tipo: 'in_pari' | 'casa';
+  tipo: 'in_pari' | 'casa' | 'piva';
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -67,9 +67,55 @@ function giornoEMese(giorno: string, riferimento: string): string {
   return giorno.slice(0, 4) === riferimento.slice(0, 4) ? base : `${base} ${giorno.slice(0, 4)}`;
 }
 
+export interface PromemoriaPiva {
+  testo: string;
+  href: string;
+  urgente: boolean;
+}
+
+const GIORNI_SCADENZA_URGENTE = 15;
+const GIORNI_FATTURA_FERMA = 60;
+
+// Giorni di calendario fra due date YYYY-MM-DD, via UTC: nessun fuso li sposta.
+function giorniTra(da: string, a: string): number {
+  return (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${da}T00:00:00Z`)) / 86_400_000;
+}
+
+// I promemoria della P.IVA guidata. Le scadenze entro 15 giorni sono urgenti; il resto aspetta.
+// La revisione dello stipendio arriva già scritta (la produce il passo dello stipendio).
+export function promemoriaPiva(
+  input: { scadenze: PivaScadenza[]; fatture: PivaFattura[]; inSospeso: number; revisioneStipendio: string | null },
+  oggi: string
+): PromemoriaPiva[] {
+  const out: PromemoriaPiva[] = [];
+  for (const s of input.scadenze) {
+    if (s.pagataIl || s.nascosta) continue;
+    const giorni = giorniTra(oggi, s.data);
+    if (giorni < 0 || giorni > GIORNI_SCADENZA_URGENTE) continue;
+    out.push({ testo: `${s.descrizione} entro il ${giornoEMese(s.data, oggi)}`, href: '/piva', urgente: true });
+  }
+  if (input.inSospeso > 0) {
+    out.push({ testo: `Da spostare sul conto tasse: ${formatEuro(input.inSospeso)}`, href: '/piva', urgente: false });
+  }
+  const ferme = input.fatture.filter(
+    (f) => !f.dataIncasso && giorniTra(f.dataEmissione, oggi) > GIORNI_FATTURA_FERMA
+  ).length;
+  if (ferme > 0) {
+    out.push({
+      testo: ferme === 1 ? '1 fattura aspetta da più di 60 giorni' : `${ferme} fatture aspettano da più di 60 giorni`,
+      href: '/piva',
+      urgente: false,
+    });
+  }
+  if (input.revisioneStipendio) out.push({ testo: input.revisioneStipendio, href: '/piva', urgente: false });
+  return out;
+}
+
+// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA.
 export function prossimaCosa(input: {
   inPari: { dal: string; al: string } | null;
   promemoriaCasa: { testo: string; href?: string }[];
+  promemoriaPiva?: PromemoriaPiva[];
 }): Prossimo | null {
   if (input.inPari) {
     return {
@@ -78,8 +124,13 @@ export function prossimaCosa(input: {
       tipo: 'in_pari',
     };
   }
+  const piva = input.promemoriaPiva ?? [];
+  const urgente = piva.find((p) => p.urgente);
+  if (urgente) return { testo: urgente.testo, href: urgente.href, tipo: 'piva' };
   const primo = input.promemoriaCasa[0];
   if (primo) return { testo: primo.testo, href: primo.href ?? '/casa', tipo: 'casa' };
+  const resto = piva[0];
+  if (resto) return { testo: resto.testo, href: resto.href, tipo: 'piva' };
   return null;
 }
 

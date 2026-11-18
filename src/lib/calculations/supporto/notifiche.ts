@@ -1,6 +1,6 @@
 import { formatEuro, nomeMese } from '@/lib/format';
 
-export type TipoNotifica = 'spese' | 'checkin' | 'versamento';
+export type TipoNotifica = 'spese' | 'checkin' | 'versamento' | 'scadenza';
 export interface Notifica {
   tipo: TipoNotifica;
   titolo: string;
@@ -22,8 +22,12 @@ export interface StatoPersona {
   gestisce: boolean;
   checkinDaFare: string | null;
   versamento: { giorno: number; importo: number; versato: number; mese: string } | null;
+  // La prima scadenza P.IVA non pagata né nascosta nei prossimi 7 giorni (null se la P.IVA è spenta).
+  scadenza: { id: string; descrizione: string; data: string } | null;
+  ultimaScadenzaAvvisata: string | null;
 }
 
+const GIORNI_SCADENZA_PREAVVISO = 7;
 const GIORNI_VERSAMENTO_PREAVVISO = 3;
 const GIORNI_TRA_RIPETIZIONI = 3;
 const GIORNI_SENZA_SPESE = 2;
@@ -58,11 +62,24 @@ export function periodoDaRecuperare(
 const passatiAlmeno3 = (giorno: string | null, oggi: string): boolean =>
   giorno === null || giorniTra(giorno, oggi) >= GIORNI_TRA_RIPETIZIONI;
 
-// Al massimo una notifica al giorno per persona, in quest'ordine: versamento, check-in, spese.
+// Al massimo una notifica al giorno per persona, in quest'ordine: scadenza P.IVA, versamento, check-in, spese.
 export function decidiNotifica(p: StatoPersona, oggi: string): Notifica | null {
   if (!p.iscritta || p.notificheAttive !== true) return null;
   if (p.ultimaNotificaIl === oggi || p.ultimaSpeseIl === oggi || p.ultimaCheckinIl === oggi) {
     return null;
+  }
+
+  const sc = p.scadenza;
+  if (sc && p.ultimaScadenzaAvvisata !== sc.id) {
+    const giorni = giorniTra(oggi, sc.data);
+    if (giorni >= 0 && giorni <= GIORNI_SCADENZA_PREAVVISO) {
+      return {
+        tipo: 'scadenza',
+        titolo: TITOLO,
+        testo: `${sc.descrizione}: scade il ${Number(sc.data.slice(8, 10))} ${nomeMese(sc.data)}. Controlla il vaso tasse.`,
+        url: '/piva',
+      };
+    }
   }
 
   const v = p.versamento;

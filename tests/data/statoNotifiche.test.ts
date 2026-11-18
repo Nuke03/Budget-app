@@ -80,3 +80,32 @@ describe('leggiStatiPersone', () => {
     expect(u1.stato).toMatchObject({ gestisce: false, checkinDaFare: null, versamento: null });
   });
 });
+
+describe('leggiStatiPersone: scadenze P.IVA', () => {
+  it('leggiStatiPersone filtra le scadenze per utente', async () => {
+    const db = casaConDue();
+    const sc = (id: string, user: string, data: string, o: Record<string, unknown> = {}) => ({
+      id, user_id: user, descrizione: `D-${id}`, data, pagata_il: null, nascosta: false, ...o,
+    });
+    db.tables.piva_settings = [
+      { id: 'p1', user_id: 'U1', attivo: true },
+      { id: 'p2', user_id: 'U2', attivo: false },
+    ];
+    db.tables.piva_scadenze = [
+      sc('x', 'U1', '2026-11-30'),
+      sc('b', 'U1', '2026-11-16'),
+      sc('a', 'U1', '2026-11-14'),
+      sc('pag', 'U1', '2026-11-12', { pagata_il: '2026-11-11' }),
+      sc('nas', 'U1', '2026-11-12', { nascosta: true }),
+      sc('u2', 'U2', '2026-11-13'),
+    ];
+    db.tables.promemoria_utente[0].ultima_scadenza_avvisata = 'a';
+    const out = await leggiStatiPersone(db.client, OGGI);
+    const u1 = out.find((p) => p.stato.userId === 'U1')!;
+    const u2 = out.find((p) => p.stato.userId === 'U2')!;
+    expect(u1.stato.scadenza).toEqual({ id: 'a', descrizione: 'D-a', data: '2026-11-14' });
+    expect(u1.stato.ultimaScadenzaAvvisata).toBe('a');
+    expect(u2.stato.scadenza).toBeNull();
+    expect(u2.stato.ultimaScadenzaAvvisata).toBeNull();
+  });
+});

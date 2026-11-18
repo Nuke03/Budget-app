@@ -250,3 +250,22 @@ describe('GET /api/promemoria', () => {
     expect(sendNotification).not.toHaveBeenCalled();
   });
 });
+
+describe('GET /api/promemoria: scadenze P.IVA', () => {
+  it('la route segna ultima_scadenza_avvisata', async () => {
+    seed({
+      piva_settings: [{ id: 'p1', user_id: 'U1', attivo: true }],
+      piva_scadenze: [
+        { id: 'sc1', user_id: 'U1', descrizione: 'F24 di novembre', data: '2026-11-15', pagata_il: null, nascosta: false },
+      ],
+    });
+    const r = await chiama();
+    expect(await r.json()).toEqual({ inviate: 2, rimosse: 0 });
+    expect(JSON.parse(sendNotification.mock.calls[0][1]).url).toBe('/piva');
+    expect(db.tables.promemoria_utente[0]).toMatchObject({
+      ultima_scadenza_avvisata: 'sc1',
+      ultima_notifica_il: OGGI,
+    });
+    expect(db.tables.promemoria_utente[0].ultima_spese_il).toBeUndefined();
+  });
+});

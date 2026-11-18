@@ -17,6 +17,8 @@ const base: StatoPersona = {
   gestisce: false,
   checkinDaFare: null,
   versamento: null,
+  scadenza: null,
+  ultimaScadenzaAvvisata: null,
 };
 const st = (o: Partial<StatoPersona>): StatoPersona => ({ ...base, ...o });
 const vers = (giorno: number, o: Partial<{ importo: number; versato: number }> = {}) => ({
@@ -155,5 +157,33 @@ describe('testi', () => {
       const t = `${n!.titolo} ${n!.testo}`.toLowerCase();
       for (const p of PAROLE_VIETATE) expect(t).not.toContain(p);
     }
+  });
+});
+
+describe('decidiNotifica: scadenza P.IVA', () => {
+  const scad = (data: string, id = 'sc1') => ({ id, descrizione: 'F24 di novembre', data });
+  it('notifica scadenza a 7 giorni', () => {
+    const n = decidiNotifica(st({ scadenza: scad('2026-11-18') }), OGGI);
+    expect(n).toEqual({
+      tipo: 'scadenza',
+      titolo: 'Budget',
+      testo: 'F24 di novembre: scade il 18 novembre. Controlla il vaso tasse.',
+      url: '/piva',
+    });
+  });
+  it('oltre 7 giorni o già passata: niente', () => {
+    expect(decidiNotifica(st({ scadenza: scad('2026-11-19') }), OGGI)).toBeNull();
+    expect(decidiNotifica(st({ scadenza: scad('2026-11-10') }), OGGI)).toBeNull();
+  });
+  it('notifica scadenza non ripetuta per la stessa scadenza', () => {
+    expect(decidiNotifica(st({ scadenza: scad('2026-11-15'), ultimaScadenzaAvvisata: 'sc1' }), OGGI)).toBeNull();
+    expect(decidiNotifica(st({ scadenza: scad('2026-11-15'), ultimaScadenzaAvvisata: 'altra' }), OGGI)?.tipo).toBe('scadenza');
+  });
+  it('scadenza batte versamento lo stesso giorno', () => {
+    const n = decidiNotifica(st({ scadenza: scad('2026-11-15'), versamento: vers(12) }), OGGI);
+    expect(n?.tipo).toBe('scadenza');
+  });
+  it('una notifica al giorno: già mandata oggi, niente scadenza', () => {
+    expect(decidiNotifica(st({ scadenza: scad('2026-11-15'), ultimaNotificaIl: OGGI }), OGGI)).toBeNull();
   });
 });
