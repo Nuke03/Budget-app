@@ -50,7 +50,7 @@ nessun senso di colpa e nessuna gamification. Base dei contenuti:
 - stati vuoti e di errore della parte Casa, e un test che vieta le parole non volute nei testi.
 
 Rimandati dalle revisioni, ancora aperti, da fare in un compito dedicato:
-- una sola funzione SQL che scrive insieme la riga e il saldo, così una spesa non resta mai a metà se cade la connessione;
+- **Fatto (18 novembre 2026):** una sola funzione SQL (`crea_movimento`) scrive insieme la riga e il saldo, così una spesa non resta mai a metà se cade la connessione;
 - modificare una spesa di casa pagata con la carta personale (oggi si cancella e si reinserisce);
 - `id` dell'obiettivo nel feed del calendario, per eventi stabili quando si rinomina un obiettivo;
 - avviso nel percorso guidato su iOS 18 se il menu per il calendario in abbonamento ha parole diverse;
@@ -253,7 +253,19 @@ Revisioni fatte: impeccable (verdetto: da pubblicare) e opus, con le correzioni 
 
 **Icona sull'iPhone:** per vederla, togli l'app dalla schermata Home e aggiungila di nuovo da Safari.
 
-**Prossimi passi:** la parte P.IVA guidata (reddito irregolare, dove trovare i dati, stipendio dal cuscinetto, scadenze F24 di giugno e novembre) e il percorso di apprendimento personale, che parte dal "Perché?" del consiglio.
+**P.IVA guidata (pezzo 2), fatta (18 novembre 2026).** Piano: `docs/superpowers/plans/2026-11-17-piva-guidata.md`. Spec: `docs/superpowers/specs/2026-11-17-piva-guidata-design.md`. Commit da `e2843f3` a `bc6b247` su master, più eventuali correzioni finali. Cosa contiene:
+- migrazione 0010: tabelle per fatture, accantonamenti e scadenze, con funzioni atomiche;
+- impostazione guidata in 4 passi, con preset ENPAP;
+- percentuale per incasso, e il prompt "metti da parte" a ogni incasso;
+- conto tasse come vaso, con il confronto sul totale dell'anno;
+- scadenze F24 ed ENPAP con confronto cumulativo sul vaso. Compaiono nel "Da fare" 15 giorni prima, con notifica 7 giorni prima;
+- fatture in attesa, con "Pagata" a un tocco;
+- stipendio fisso con cuscinetto, anche in Home;
+- viste di prova: `/anteprima?vista=piva`, `piva-guida`, `piva-scadenze`.
+
+Debito chiuso: l'aggiunta di un movimento è atomica. La funzione `crea_movimento` scrive riga e saldo in un'operazione.
+
+**Prossimi passi:** il percorso di apprendimento personale ("pezzo 3"), che parte dal "Perché?" del consiglio.
 
 Resti segnati nel piano B3:
 - logo del login e un suggerimento sotto i campi con l'ombra;
@@ -266,7 +278,7 @@ Resti segnati nel piano B2:
 - "La tua quota parte da…" non copre chi entra in casa a metà mese.
 
 Resti segnati nel piano B1:
-- il saldo del conto si aggiorna in due passi separati: andrebbe fatto in un passo solo, insieme alla spesa, da una funzione nel database;
+- **Fatto (18 novembre 2026):** il saldo del conto si aggiornava in due passi separati. Ora riga e saldo li scrive insieme la funzione `crea_movimento` nel database;
 - un aggiornamento del saldo rimasto in sospeso si perde se si cambia pagina;
 - il testo del timbro è piccolo (9px).
 
@@ -315,6 +327,16 @@ Da fare nel piano B:
 - **Caso limite:** una transazione datata esattamente sul confine di ciclo di
   un obiettivo ricorrente può finire nella finestra adiacente.
 - **Prestazioni:** Storico e P.IVA caricano tutte le transazioni senza limite.
+
+### Da controllare per Fabio
+
+- La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Da provare dal vivo con l'account di Miriam: guida, un incasso, una fattura pagata, una scadenza.
+- I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
+- Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
+- Idea rimandata: un'impostazione "metti da parte di più" (punti percentuali extra) quando il vaso non basta per una scadenza. Oggi l'app dice di spostare la differenza prima della scadenza.
+- Piccole cose rimaste:
+  - il "Pagata" di una scadenza usa la data di oggi come proposta;
+  - la Home legge solo le scadenze dell'anno in corso.
 
 ## Come lavorare per risparmiare token
 
