@@ -8,11 +8,20 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transactions', () => ({ getTransactions: vi.fn() }));
 vi.mock('@/lib/data/accounts', () => ({ getAccounts: vi.fn() }));
-vi.mock('@/lib/data/piva', () => ({ getAccantonamenti: vi.fn(), accantonaTasse: vi.fn() }));
+vi.mock('@/lib/data/piva', () => ({
+  getAccantonamenti: vi.fn(),
+  accantonaTasse: vi.fn(),
+  assicuraScadenze: vi.fn(),
+  getScadenze: vi.fn(),
+  updateScadenza: vi.fn(),
+  pagaScadenza: vi.fn(),
+  nascondiScadenza: vi.fn(),
+}));
+vi.mock('@/app/AnnullaProvider', () => ({ useEliminaConAnnulla: () => vi.fn() }));
 
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccounts } from '@/lib/data/accounts';
-import { getAccantonamenti, accantonaTasse } from '@/lib/data/piva';
+import { getAccantonamenti, accantonaTasse, assicuraScadenze, getScadenze } from '@/lib/data/piva';
 
 const categorie: Category[] = [{ id: 'cat-fatt', nome: 'Compensi', tipo: 'income', colore: null, archiviata: false }];
 
@@ -58,6 +67,13 @@ beforeEach(() => {
   vi.mocked(getAccantonamenti).mockReset();
   vi.mocked(getAccantonamenti).mockResolvedValue([
     { id: 'pa1', transactionId: 'i0', importo: 400, data: '2026-11-12', daAccountId: 'a1', aAccountId: 'tasse' },
+  ]);
+  vi.mocked(assicuraScadenze).mockReset().mockResolvedValue(undefined);
+  vi.mocked(getScadenze).mockReset().mockResolvedValue([
+    {
+      id: 'sc1', anno: 2026, chiave: 'f24_novembre', tipo: 'f24', descrizione: 'F24 di novembre: secondo acconto',
+      data: '2026-11-30', importo: null, pagataIl: null, transactionId: null, nascosta: false,
+    },
   ]);
   vi.mocked(accantonaTasse).mockReset();
   vi.mocked(accantonaTasse).mockResolvedValue('pa-nuovo');
@@ -107,6 +123,10 @@ describe('PivaHub', () => {
     expect(within(lista).getByText(/82 €/)).toBeInTheDocument();
     expect(within(lista).getAllByRole('button', { name: 'Fatto' })).toHaveLength(1);
     fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+    // Fatto apre il foglio con la quota modificabile
+    const importoSpostato = await screen.findByLabelText('Importo spostato (€)');
+    expect(importoSpostato).toHaveValue(82);
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto, li ho spostati' }));
     await waitFor(() =>
       expect(accantonaTasse).toHaveBeenCalledWith(expect.anything(), {
         importo: 82,
@@ -125,12 +145,25 @@ describe('PivaHub', () => {
     vi.mocked(accantonaTasse).mockReturnValue(new Promise<string>((r) => (finisci = r)));
     apri();
     const lista = await screen.findByRole('region', { name: 'Da spostare' });
-    const fatto = within(lista).getByRole('button', { name: 'Fatto' });
-    fireEvent.click(fatto);
-    fireEvent.click(fatto);
+    fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+    const conferma = await screen.findByRole('button', { name: 'Fatto, li ho spostati' });
+    fireEvent.click(conferma);
+    fireEvent.click(conferma);
     expect(accantonaTasse).toHaveBeenCalledTimes(1);
-    expect(fatto).toBeDisabled();
+    expect(conferma).toBeDisabled();
     finisci('x');
+  });
+
+  it('all apertura crea le scadenze mancanti e mostra la prossima nel vaso', async () => {
+    apri();
+    const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
+    expect(assicuraScadenze).toHaveBeenCalledWith(expect.anything(), [
+      expect.objectContaining({ anno: 2026, chiave: 'f24_novembre', data: '2026-11-30' }),
+    ]);
+    expect(getScadenze).toHaveBeenCalledWith(expect.anything(), 2026);
+    expect(within(vaso).getByText('prossima F24 30/11')).toBeInTheDocument();
+    const sezione = screen.getByRole('region', { name: "Scadenze dell'anno" });
+    expect(within(sezione).getByText('F24 di novembre: secondo acconto')).toBeInTheDocument();
   });
 
   it('senza quote in sospeso dice che non c è niente da spostare', async () => {

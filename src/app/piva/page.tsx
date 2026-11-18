@@ -33,7 +33,8 @@ export default function PivaPage() {
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  async function refresh() {
+  // Legge senza toccare lo stato: l'effetto lo imposta solo dopo l'attesa.
+  async function leggi() {
     const supabase = createClient();
     // getAccounts e getCategories senza scope: sono i conti e le categorie personali.
     const [s, cats, acc] = await Promise.all([
@@ -41,14 +42,23 @@ export default function PivaPage() {
       getCategories(supabase),
       getAccounts(supabase),
     ]);
-    setSettings(s);
-    setCategories(cats);
-    setConti(acc);
+    return { s, cats, acc };
+  }
+
+  function applica(d: Awaited<ReturnType<typeof leggi>>) {
+    setSettings(d.s);
+    setCategories(d.cats);
+    setConti(d.acc);
     setLoaded(true);
   }
 
+  async function refresh() {
+    applica(await leggi());
+  }
+
   useEffect(() => {
-    refresh().catch(fail);
+    leggi().then(applica).catch(fail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fail]);
 
   async function handleSave(values: PivaSettingsFormValues) {

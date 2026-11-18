@@ -5,7 +5,8 @@ import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccounts } from '@/lib/data/accounts';
-import { accantonaTasse, getAccantonamenti } from '@/lib/data/piva';
+import { accantonaTasse, assicuraScadenze, getAccantonamenti, getScadenze } from '@/lib/data/piva';
+import { prossimaScadenza, scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
 import {
   computeAliquotaSostitutiva,
   computeFatturatoAnnuo,
@@ -20,8 +21,9 @@ import { CoverHeader } from '../CoverHeader';
 import { AddTransactionSheet } from '../add/AddTransactionSheet';
 import { CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
 import { PercheQuote, PerchePercentuale, PercheSaldoVaso, PercheVaso } from './PerchePiva';
-import { contoDaCuiSpostare, euroInFrase } from './PromptQuota';
-import type { Account, Category, PivaAccantonamento, PivaSettings, Transaction } from '@/lib/types';
+import { contoDaCuiSpostare, euroInFrase, PromptQuota } from './PromptQuota';
+import { ScadenzePiva } from './ScadenzePiva';
+import type { Account, Category, PivaAccantonamento, PivaScadenza, PivaSettings, Transaction } from '@/lib/types';
 
 // Il primo giorno da cui servono i dati: l'inizio dell'anno (per "messi quest'anno") o, se prima, il giorno della guida.
 function leggiDal(guidataDal: string | null, anno: number): string {
@@ -45,7 +47,10 @@ export function PivaHub({
   const [conti, setConti] = useState<Account[]>([]);
   const [incassi, setIncassi] = useState<Transaction[]>([]);
   const [accantonamenti, setAccantonamenti] = useState<PivaAccantonamento[]>([]);
+  const [scadenze, setScadenze] = useState<PivaScadenza[]>([]);
   const [caricato, setCaricato] = useState(false);
+  // La quota per cui è aperto il foglio "Fatto" (importo modificabile).
+  const [quotaAperta, setQuotaAperta] = useState<string | null>(null);
   const [aggiungi, setAggiungi] = useState(false);
   const [impostazioni, setImpostazioni] = useState(false);
   // Le quote con "Fatto" in corso: un solo tocco conta.
@@ -57,23 +62,36 @@ export function PivaHub({
   const categoriaId = settings.categoriaFatturatoId;
   const contoTasseId = settings.contoTasseId;
 
-  async function carica() {
+  // Legge tutto senza toccare lo stato: così l'effetto imposta lo stato solo dopo l'attesa.
+  async function leggi() {
     const supabase = createClient();
     const da = leggiDal(settings.guidataDal, anno);
+    // Le scadenze mancanti si creano all'apertura; quelle tolte non tornano (il database ignora i doppioni).
+    if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(anno, settings.guidataDal));
     // getAccounts senza scope: i conti personali.
-    const [acc, tx, accant] = await Promise.all([
+    const [acc, tx, accant, scad] = await Promise.all([
       getAccounts(supabase),
       getTransactions(supabase, undefined, { da, tipo: 'income' }),
       getAccantonamenti(supabase, { da }),
+      getScadenze(supabase, anno),
     ]);
-    setConti(acc);
-    setIncassi(tx);
-    setAccantonamenti(accant);
+    return { acc, tx, accant, scad };
+  }
+
+  function applica(d: Awaited<ReturnType<typeof leggi>>) {
+    setConti(d.acc);
+    setIncassi(d.tx);
+    setAccantonamenti(d.accant);
+    setScadenze(d.scad);
     setCaricato(true);
   }
 
+  async function carica() {
+    applica(await leggi());
+  }
+
   useEffect(() => {
-    carica().catch(fail);
+    leggi().then(applica).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fail]);
 
@@ -94,17 +112,19 @@ export function PivaHub({
     .filter((a) => a.data.slice(0, 4) === String(anno))
     .reduce((tot, a) => tot + a.importo, 0);
   const confronto = confrontoAnno(stima.totale, messi);
+  const prossima = prossimaScadenza(scadenze, oggiRomaISO());
   const inSospeso = categoriaId
     ? quoteInSospeso(incassi, accantonamenti, percentuale, categoriaId, settings.guidataDal)
     : [];
 
-  async function sposta(transactionId: string, quota: number) {
-    if (inCorso.has(transactionId) || !contoTasseId) return;
+  // true se i soldi sono stati registrati come spostati.
+  async function sposta(transactionId: string, quota: number): Promise<boolean> {
+    if (inCorso.has(transactionId) || !contoTasseId) return false;
     const incasso = incassi.find((t) => t.id === transactionId);
     const da = contoDaCuiSpostare(incasso?.accountId ?? null, conti, contoTasseId);
     if (!da) {
       setErrore('Non trovo un conto da cui spostare i soldi.');
-      return;
+      return false;
     }
     setErrore(null);
     setInCorso((prima) => new Set(prima).add(transactionId));
@@ -117,8 +137,10 @@ export function PivaHub({
         transactionId,
       });
       await carica();
+      return true;
     } catch {
       setErrore('Non è riuscito. Riprova.');
+      return false;
     } finally {
       setInCorso((prima) => {
         const dopo = new Set(prima);
@@ -147,6 +169,11 @@ export function PivaHub({
             Quest&apos;anno servono circa {euroInFrase(Math.round(confronto.servono))}, ne hai messi da parte{' '}
             {euroInFrase(Math.round(confronto.messi))}.
           </p>
+          {prossima ? (
+            <p className="num text-[15px] text-ink-2">
+              prossima {prossima.tipo === 'f24' ? 'F24' : 'ENPAP'} {prossima.data.slice(8)}/{prossima.data.slice(5, 7)}
+            </p>
+          ) : null}
           <PercheVaso settings={settings} fatturato={fatturato} stima={stima} messi={messi} />
         </section>
 
@@ -174,7 +201,7 @@ export function PivaHub({
                       </div>
                       <button
                         type="button"
-                        onClick={() => sposta(q.transactionId, q.quota)}
+                        onClick={() => setQuotaAperta(q.transactionId)}
                         disabled={inCorso.has(q.transactionId)}
                         className={`${CLASSE_SECONDARIO} shrink-0`}
                       >
@@ -193,6 +220,20 @@ export function PivaHub({
             </p>
           ) : null}
         </section>
+
+        {settings.guidataDal ? (
+          <section aria-label="Scadenze dell'anno" className={CLASSE_SCHEDA}>
+            <ScadenzePiva
+              scadenze={scadenze}
+              saldoVaso={contoTasse.saldoAttuale}
+              contoTasseId={contoTasseId}
+              guidataDal={settings.guidataDal}
+              anno={anno}
+              oggi={oggiRomaISO()}
+              onCambiato={carica}
+            />
+          </section>
+        ) : null}
 
         <button type="button" onClick={() => setAggiungi(true)} className={CLASSE_PRIMARIO}>
           + Incasso
@@ -219,6 +260,25 @@ export function PivaHub({
           ) : null}
         </section>
       </main>
+
+      {quotaAperta
+        ? (() => {
+            const q = inSospeso.find((x) => x.transactionId === quotaAperta);
+            if (!q) return null;
+            return (
+              <PromptQuota
+                importo={q.importo}
+                quota={q.quota}
+                contoTasse={contoTasse.nome}
+                onFatto={async (spostato) => {
+                  if (!(await sposta(q.transactionId, spostato))) throw new Error('non spostato');
+                  setQuotaAperta(null);
+                }}
+                onPiuTardi={() => setQuotaAperta(null)}
+              />
+            );
+          })()
+        : null}
 
       <AddTransactionSheet
         aperto={aggiungi}

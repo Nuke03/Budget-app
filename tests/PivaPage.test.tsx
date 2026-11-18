@@ -16,7 +16,13 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 
 vi.mock('@/lib/data/transactions', () => ({ getTransactions: vi.fn() }));
 
-vi.mock('@/lib/data/piva', () => ({ getAccantonamenti: vi.fn(), accantonaTasse: vi.fn() }));
+vi.mock('@/lib/data/piva', () => ({
+  getAccantonamenti: vi.fn(),
+  accantonaTasse: vi.fn(),
+  assicuraScadenze: vi.fn().mockResolvedValue(undefined),
+  getScadenze: vi.fn().mockResolvedValue([]),
+}));
+vi.mock('@/app/AnnullaProvider', () => ({ useEliminaConAnnulla: () => vi.fn() }));
 
 vi.mock('@/lib/data/categories', () => ({
   getCategories: vi.fn(),

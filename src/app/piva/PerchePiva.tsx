@@ -118,6 +118,19 @@ export function PercheVaso({
   );
 }
 
+// Perché il vaso può non bastare per una scadenza: gli acconti guardano l'anno prima.
+export function PercheScadenza() {
+  return (
+    <Perche>
+      <p>
+        Gli acconti si calcolano sulle tasse dell&apos;anno prima, non su quello che incassi adesso: possono essere
+        più alti di quanto hai messo da parte.
+      </p>
+      <p>La percentuale che ti proponiamo è prudente: alzandola, la prossima volta ci arrivi.</p>
+    </Perche>
+  );
+}
+
 export function PercheQuote({ percentuale }: { percentuale: number }) {
   return (
     <Perche>
