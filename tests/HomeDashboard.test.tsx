@@ -575,6 +575,31 @@ describe('il libretto', () => {
     expect(classi).not.toMatch(/green|emerald|teal|lime/);
   });
 
+  describe('cuscinetto separato', () => {
+    it('il cuscinetto non è fra i soldi messi da parte e i conti tornano', () => {
+      // conti 870, disponibile mostrato 500, cuscinetto 370: nessun obiettivo conta qui
+      render(
+        <HomeDashboard
+          disponibileLibero={500}
+          margineGiornaliero={20}
+          dataTarget="2026-11-30T00:00:00Z"
+          accounts={accounts}
+          categories={[]}
+          goals={[]}
+          piva={{ contoTasseId: 't', categoriaFatturatoId: 'c', percentuale: 13.7, inSospeso: [], scadenze: [], fatture: [],
+            stipendio: { stipendio: 800, rimasto: 500, cuscinetto: 370, mesiCoperti: 0.5 } }}
+        />
+      );
+      expect(screen.getByText(/Hai 870 € sui conti, 370 € di cuscinetto/)).toBeInTheDocument();
+      expect(screen.queryByText(/messi da parte/)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Come si calcola?' }));
+      const gruppo = screen.getByRole('region', { name: 'Cuscinetto' });
+      expect(within(gruppo).getByText('Cuscinetto (oltre lo stipendio di questo mese)')).toBeInTheDocument();
+      // 870 (conti) - 370 (cuscinetto) = 500 (cifra grande)
+      expect(within(gruppo).getAllByText('-370,00 €').length).toBeGreaterThan(0);
+    });
+  });
+
   describe('cuscinetto vuoto', () => {
     const pivaCon = (stipendio: { stipendio: number; rimasto: number; cuscinetto: number; mesiCoperti: number } | null) => ({
       contoTasseId: 't', categoriaFatturatoId: 'c', percentuale: 13.7, inSospeso: [], scadenze: [], fatture: [], stipendio,

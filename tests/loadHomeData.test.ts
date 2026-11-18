@@ -242,6 +242,21 @@ describe('loadHomeData: stipendio', () => {
     expect(d.piva?.stipendio).toEqual({ stipendio: 5000, rimasto: 5000, cuscinetto: 0, mesiCoperti: 0 });
   });
 
+  it('il conto tasse non conta fra le spese dello stipendio, anche se contaInDisponibile', async () => {
+    const conti = contiPiva.map((c) => (c.id === 'tasse' ? { ...c, conta_in_disponibile: true } : c));
+    const db = createFakeDb(
+      {
+        accounts: conti, budget_goals: [], categories: [],
+        transactions: [spesa('s1', '2026-11-05', 300), { ...spesa('s2', '2026-11-06', 100), account_id: 'tasse' }],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, stipendio_mensile: 800, stipendio_rivisto_il: '2026-11-01' }],
+        piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.stipendio?.rimasto).toBe(500);
+  });
+
   it('dopo 3 mesi la Home propone di rivedere lo stipendio', async () => {
     const incassi = ['2026-05-10', '2026-06-10', '2026-07-10', '2026-08-10', '2026-09-10', '2026-10-10'].map((d, i) =>
       entrata(`e${i}`, d, 1000)

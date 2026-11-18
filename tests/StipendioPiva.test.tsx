@@ -28,6 +28,13 @@ describe('StipendioPiva', () => {
     expect(screen.getByText('Il resto, 200 € al mese, riempie il cuscinetto.')).toBeInTheDocument();
   });
 
+  it('senza B non lo mostra come 0 ma dice che mancano spese', () => {
+    apri({ calcolo: { a: 800, b: 0, proposta: 800, serveMeseMagro: false } });
+    expect(screen.queryByText('Quanto ti serve al mese')).not.toBeInTheDocument();
+    expect(screen.getByText('Non vedo ancora abbastanza spese: parto da quanto incassi.')).toBeInTheDocument();
+    expect(screen.getByText(/Ti propongo 800 € al mese/)).toBeInTheDocument();
+  });
+
   it('senza resto non parla del cuscinetto', () => {
     apri({ calcolo: { a: 500, b: 600, proposta: 500, serveMeseMagro: false } });
     expect(screen.queryByText(/riempie il cuscinetto/)).not.toBeInTheDocument();

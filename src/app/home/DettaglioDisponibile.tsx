@@ -41,12 +41,15 @@ export function DettaglioDisponibile({
   goals,
   casa,
   riservaPiva = 0,
+  cuscinetto = 0,
 }: {
   accounts: Account[];
   goals: Obiettivo[];
   casa: CasaPerHome | null;
   // Le quote delle tasse degli incassi che non hai ancora spostato sul conto tasse.
   riservaPiva?: number;
+  // Quanto hai oltre lo stipendio di questo mese: la Home non lo mostra come disponibile.
+  cuscinetto?: number;
 }) {
   const conti = accounts.filter((a) => a.contaInDisponibile);
   const esclusi = accounts.filter((a) => !a.contaInDisponibile);
@@ -99,6 +102,16 @@ export function DettaglioDisponibile({
             nome="Quote degli incassi non ancora spostate"
             nota="Sono sul conto, ma vanno sul conto tasse"
             valore={`-${formatEuro(riservaPiva)}`}
+          />
+        </Gruppo>
+      ) : null}
+
+      {cuscinetto > 0 ? (
+        <Gruppo titolo="Cuscinetto" subtotale={-cuscinetto}>
+          <Riga
+            nome="Cuscinetto (oltre lo stipendio di questo mese)"
+            nota="Ce l'hai, ma non lo conto nel disponibile"
+            valore={`-${formatEuro(cuscinetto)}`}
           />
         </Gruppo>
       ) : null}

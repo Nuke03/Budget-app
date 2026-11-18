@@ -85,7 +85,9 @@ export function propostaStipendio(i: {
     serveMeseMagro = true;
   }
   const b = giu10(media(i.speseMensili) + i.quotaCasaMensile);
-  const proposta = a === null ? null : giu10(Math.min(a, b));
+  // b <= 0: spese non ancora abbastanza, B non c'è e si parte da A. Mai una proposta a 0.
+  let proposta = a === null ? null : giu10(b <= 0 ? a : Math.min(a, b));
+  if (proposta !== null && proposta <= 0) proposta = null;
   return { a, b, proposta, serveMeseMagro };
 }
 

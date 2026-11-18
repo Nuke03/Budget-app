@@ -197,15 +197,19 @@ export function StipendioPiva({
           <p>È la media di quanto hai incassato negli ultimi mesi, tolto quello che metti da parte per le tasse.</p>
         </Perche>
       </div>
-      <div className="flex flex-col">
-        <div className="flex justify-between gap-3">
-          <span className="text-ink-2">Quanto ti serve al mese</span>
-          <span className="num font-semibold">{euroInFrase(b)}</span>
+      {b > 0 ? (
+        <div className="flex flex-col">
+          <div className="flex justify-between gap-3">
+            <span className="text-ink-2">Quanto ti serve al mese</span>
+            <span className="num font-semibold">{euroInFrase(b)}</span>
+          </div>
+          <Perche>
+            <p>È la media delle tue spese dei mesi scorsi, più la quota della casa se ce l&apos;hai.</p>
+          </Perche>
         </div>
-        <Perche>
-          <p>È la media delle tue spese dei mesi scorsi, più la quota della casa se ce l&apos;hai.</p>
-        </Perche>
-      </div>
+      ) : (
+        <p className="text-[15px] text-ink-2">Non vedo ancora abbastanza spese: parto da quanto incassi.</p>
+      )}
       {a > proposta ? (
         <p className="num text-[15px]">Il resto, {euroInFrase(a - proposta)} al mese, riempie il cuscinetto.</p>
       ) : null}

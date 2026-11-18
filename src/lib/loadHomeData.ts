@@ -244,7 +244,10 @@ export async function loadHomeData(
   if (pivaLetta && piva && pivaLetta.settings.stipendioMensile !== null) {
     const { settings } = pivaLetta;
     const stipendio = settings.stipendioMensile as number;
-    const contiDisponibile = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
+    // Il conto tasse non entra mai fra i conti delle spese, anche se risultasse nel disponibile.
+    const contiDisponibile = new Set(
+      accounts.filter((a) => a.contaInDisponibile && a.id !== piva.contoTasseId).map((a) => a.id)
+    );
     const { quotaCasaMensile, versatoCasaMese } = casaDelMese(casa?.stato?.righe ?? null, oggi);
     const home = homeConStipendio({
       disponibileLibero: disponibileReale,

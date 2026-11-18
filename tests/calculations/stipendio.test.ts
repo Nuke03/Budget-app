@@ -102,6 +102,23 @@ describe('homeConStipendio', () => {
   });
 });
 
+describe('proposta senza spese', () => {
+  it('senza spese né casa B non c è: la proposta è A, mai 0, e la revisione non dice 0 €', () => {
+    const r = propostaStipendio({
+      incassiMensili: [1000, 1000, 1000], mesiConIncassi: 3, percentuale: 13.7,
+      speseMensili: [], quotaCasaMensile: 0, incassoMeseMagro: null,
+    });
+    expect(r.b).toBe(0);
+    expect(r.proposta).toBe(860);
+    const nulla = propostaStipendio({
+      incassiMensili: [0, 0, 0], mesiConIncassi: 3, percentuale: 13.7,
+      speseMensili: [], quotaCasaMensile: 0, incassoMeseMagro: null,
+    });
+    expect(nulla.proposta).toBeNull();
+    expect(revisioneStipendio(500, nulla.proposta, '2026-01-01', '2026-11-30')).toBeNull();
+  });
+});
+
 describe('revisioneStipendio', () => {
   it('niente prima di 3 mesi', () => {
     expect(revisioneStipendio(1000, 1500, '2026-09-01', '2026-11-30')).toBeNull();

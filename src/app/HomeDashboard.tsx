@@ -113,7 +113,9 @@ export function HomeDashboard({
   }, [righe]);
 
   const saldoConti = accounts.filter((a) => a.contaInDisponibile).reduce((t, a) => t + a.saldoAttuale, 0);
-  const riservato = Math.round((saldoConti - disponibileLibero) * 100) / 100;
+  // Il cuscinetto dello stipendio si mostra a parte: non è "messo da parte" come obiettivi, casa e tasse.
+  const cuscinetto = piva?.stipendio?.cuscinetto ?? 0;
+  const riservato = Math.round((saldoConti - disponibileLibero - cuscinetto) * 100) / 100;
   const contaCasa = (casa?.stato?.riservaVersamento ?? 0) + (casa?.stato?.debitoDaRestituire ?? 0) > 0;
   const riservaPiva = piva ? totaleInSospeso(piva.inSospeso) : 0;
   const { intero, resto } = dividiCifra(formatEuro(disponibileLibero));
@@ -147,6 +149,7 @@ export function HomeDashboard({
             {riservato > 0
               ? `, ${euroInFrase(riservato)} ${contaCasa ? 'sono messi da parte o da versare' : 'sono già messi da parte'}`
               : ''}
+            {cuscinetto > 0 ? `, ${euroInFrase(cuscinetto)} di cuscinetto` : ''}
           </p>
           {cuscinettoVuoto ? (
             <Link href="/piva" className="mt-1 block min-h-11 py-2 text-[15px] font-semibold text-brand-dark">
@@ -163,7 +166,7 @@ export function HomeDashboard({
           </button>
           {showBreakdown ? (
             <div className="mt-1">
-              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} riservaPiva={riservaPiva} />
+              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} riservaPiva={riservaPiva} cuscinetto={cuscinetto} />
             </div>
           ) : null}
         </section>

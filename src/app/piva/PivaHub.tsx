@@ -212,7 +212,7 @@ export function PivaHub({
 
   // Lo stipendio, con le stesse funzioni della Home: la proposta, e se c'è già quanto resta e il cuscinetto.
   const oggiISO = oggiRomaISO();
-  const contiDisponibile = new Set(conti.filter((c) => c.contaInDisponibile).map((c) => c.id));
+  const contiDisponibile = new Set(conti.filter((c) => c.contaInDisponibile && c.id !== contoTasseId).map((c) => c.id));
   let calcoloStipendio: ReturnType<typeof propostaStipendio> | null = null;
   let rigaStipendio: { rimasto: number; cuscinetto: number; mesiCoperti: number } | null = null;
   if (datiStipendio && categoriaId) {
