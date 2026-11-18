@@ -1,5 +1,5 @@
 import { addMonths, endOfMonth, parseISO } from 'date-fns';
-import { formatEuro } from '@/lib/format';
+import { euroInFrase } from '@/lib/format';
 import type { Transaction } from '@/lib/types';
 
 function mesePrefisso(anno: number, meseIndex0: number): string {
@@ -114,8 +114,8 @@ export function revisioneStipendio(
   if (parseISO(oggi) < addMonths(parseISO(rivistoIl), 3)) return null;
   if (Math.abs(proposta - attuale) / attuale <= 0.1) return null;
   return proposta > attuale
-    ? `Negli ultimi mesi hai incassato di più: puoi alzare lo stipendio a ${formatEuro(proposta)}`
-    : `Negli ultimi mesi sono entrati meno soldi: conviene abbassare lo stipendio a ${formatEuro(proposta)}`;
+    ? `Negli ultimi mesi hai incassato di più: puoi alzare lo stipendio a ${euroInFrase(proposta)}`
+    : `Negli ultimi mesi sono entrati meno soldi: conviene abbassare lo stipendio a ${euroInFrase(proposta)}`;
 }
 
 // Ultimo giorno del mese di `oggi`, mezzanotte locale: da usare come

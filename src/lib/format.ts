@@ -43,3 +43,8 @@ export function nomeMese(meseISO: string): string {
     new Date(`${meseISO.slice(0, 10)}T12:00:00Z`)
   );
 }
+
+// Nelle frasi gli importi tondi si scrivono senza decimali: "1.200 €".
+export function euroInFrase(n: number): string {
+  return formatEuro(n).replace(',00', '');
+}

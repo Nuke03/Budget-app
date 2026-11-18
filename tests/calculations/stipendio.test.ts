@@ -7,7 +7,6 @@ import {
   revisioneStipendio,
   fineMese,
 } from '@/lib/calculations/stipendio';
-import { formatEuro } from '@/lib/format';
 import type { Transaction } from '@/lib/types';
 
 function tx(o: Partial<Transaction>): Transaction {
@@ -109,12 +108,12 @@ describe('revisioneStipendio', () => {
   });
   it('dopo 3 mesi e oltre il 10% sale', () => {
     expect(revisioneStipendio(1000, 1500, '2026-08-18', '2026-11-18')).toBe(
-      `Negli ultimi mesi hai incassato di più: puoi alzare lo stipendio a ${formatEuro(1500)}`,
+      `Negli ultimi mesi hai incassato di più: puoi alzare lo stipendio a 1.500 €`,
     );
   });
   it('dopo 3 mesi e oltre il 10% scende', () => {
     expect(revisioneStipendio(1000, 800, '2026-01-01', '2026-11-18')).toBe(
-      `Negli ultimi mesi sono entrati meno soldi: conviene abbassare lo stipendio a ${formatEuro(800)}`,
+      `Negli ultimi mesi sono entrati meno soldi: conviene abbassare lo stipendio a 800 €`,
     );
   });
   it('entro il 10% niente', () => {

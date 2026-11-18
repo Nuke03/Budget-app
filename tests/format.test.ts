@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatEuro, formatDateIt, formatDataLunga, formatNumero } from '@/lib/format';
+import { formatEuro, formatDateIt, formatDataLunga, formatNumero, euroInFrase } from '@/lib/format';
 
 describe('formatEuro', () => {
   it('formats a positive amount as Italian euros', () => {
@@ -41,5 +41,14 @@ describe('formatNumero', () => {
   });
   it('formatNumero(59) è "59"', () => {
     expect(formatNumero(59)).toBe('59');
+  });
+});
+
+describe('euroInFrase', () => {
+  it('toglie i decimali agli importi tondi', () => {
+    expect(euroInFrase(1500)).toBe('1.500 €');
+  });
+  it('tiene i decimali agli altri', () => {
+    expect(euroInFrase(12.5)).toBe('12,50 €');
   });
 });
