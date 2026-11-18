@@ -6,7 +6,7 @@ import { euroInFrase } from './PromptQuota';
 import type { PivaSettings } from '@/lib/types';
 
 // Il "Perché?" di ogni numero della pagina: un tocco, e il numero si spiega con le sue parti.
-function Perche({ children }: { children: ReactNode }) {
+export function Perche({ children }: { children: ReactNode }) {
   const [aperto, setAperto] = useState(false);
   const pannelloId = useId();
   return (

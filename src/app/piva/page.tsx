@@ -9,7 +9,7 @@ import { getAccounts } from '@/lib/data/accounts';
 import { CoverHeader } from '../CoverHeader';
 import { PivaSettingsForm, type PivaSettingsFormValues } from './PivaSettingsForm';
 import { ImpostazioneGuidata } from './ImpostazioneGuidata';
-import { PivaHub } from './PivaHub';
+import { PivaHub, type CampiStipendio } from './PivaHub';
 import type { PivaSettingsInput } from '@/lib/data/pivaSettings';
 import type { Account, Category, PivaSettings } from '@/lib/types';
 
@@ -84,6 +84,25 @@ export default function PivaPage() {
     await refresh();
   }
 
+  // Salva solo i campi dello stipendio: il resto delle impostazioni resta com'è.
+  async function handleStipendio(campi: CampiStipendio) {
+    if (!settings) return;
+    await updatePivaSettings(createClient(), settings.id, {
+      attivo: settings.attivo,
+      dataApertura: settings.dataApertura,
+      categoriaFatturatoId: settings.categoriaFatturatoId,
+      coefficienteRedditivita: settings.coefficienteRedditivita,
+      aliquotaSostitutivaOverride: settings.aliquotaSostitutivaOverride,
+      aliquotaContributoSoggettivo: settings.aliquotaContributoSoggettivo,
+      aliquotaContributoIntegrativo: settings.aliquotaContributoIntegrativo,
+      minimaleContributivoAnnuo: settings.minimaleContributivoAnnuo,
+      contributiVersatiAnnoPrecedente: settings.contributiVersatiAnnoPrecedente,
+      ...campiGuidata(settings),
+      ...campi,
+    });
+    await refresh();
+  }
+
   async function handleDisattiva() {
     if (!settings) return;
     const supabase = createClient();
@@ -138,5 +157,12 @@ export default function PivaPage() {
     );
   }
 
-  return <PivaHub settings={settings} categories={categories} onModifica={() => setEditing(true)} onDisattiva={handleDisattiva} />;
+  return (
+    <PivaHub
+      settings={settings}
+      onModifica={() => setEditing(true)}
+      onDisattiva={handleDisattiva}
+      onSalvaStipendio={handleStipendio}
+    />
+  );
 }

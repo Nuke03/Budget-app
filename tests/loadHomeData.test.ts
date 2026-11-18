@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as transactions from '@/lib/data/transactions';
 import { loadHomeData } from '@/lib/loadHomeData';
 import { createFakeDb } from './helpers/fakeDb';
+import { computeMargineGiornaliero } from '@/lib/calculations/margine';
+import { fineMese } from '@/lib/calculations/stipendio';
 
 const TODAY = new Date('2026-11-15T12:00:00Z');
 
@@ -174,5 +176,91 @@ describe('loadHomeData: P.IVA', () => {
     }) as typeof db.client.from);
     const d = await loadHomeData(db.client, TODAY, 'A');
     expect(d.piva?.contoTasseId).toBe('tasse');
+  });
+});
+
+const spesa = (id: string, data: string, importo: number) => ({
+  id, user_id: 'A', household_id: null, tipo: 'expense', importo, data, categoria_id: null,
+  account_id: 'a1', goal_id: null, descrizione: id, nota: null, created_at: `${data}T10:00:00Z`, stima: false,
+});
+
+describe('loadHomeData: stipendio', () => {
+  it('senza stipendio la Home è identica a prima', async () => {
+    const seed = (piva: Record<string, unknown>[]) => ({
+      accounts: contiPiva, budget_goals: [], categories: [],
+      transactions: [spesa('s1', '2026-11-05', 300)],
+      piva_settings: piva, piva_accantonamenti: [],
+    });
+    const spenta = await loadHomeData(
+      createFakeDb(seed([{ ...IMPOSTAZIONI_PIVA, attivo: false }]), { userId: 'A', membri: {} }).client, TODAY, 'A'
+    );
+    const senzaStipendio = await loadHomeData(
+      createFakeDb(seed([IMPOSTAZIONI_PIVA]), { userId: 'A', membri: {} }).client, TODAY, 'A'
+    );
+    expect(spenta.piva).toBeNull();
+    expect(senzaStipendio.piva?.stipendio).toBeNull();
+    for (const d of [spenta, senzaStipendio]) {
+      expect(d.disponibileLibero).toBe(1000);
+      expect(d.margineGiornaliero).toBe(computeMargineGiornaliero(1000, d.dataTarget, TODAY));
+    }
+    expect(senzaStipendio.dataTarget).toEqual(spenta.dataTarget);
+    expect(senzaStipendio.margineGiornaliero).toBe(spenta.margineGiornaliero);
+  });
+
+  it('con stipendio il disponibile è il minore e il margine va a fine mese', async () => {
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [],
+        transactions: [spesa('s1', '2026-11-05', 300)],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, stipendio_mensile: 800, stipendio_rivisto_il: '2026-11-01' }],
+        piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const spia = vi.spyOn(transactions, 'getTransactions');
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    // rimasto = 800 - 300 = 500; sul conto ci sono 1000
+    expect(d.disponibileLibero).toBe(500);
+    expect(d.piva?.stipendio).toEqual({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 });
+    expect(d.dataTarget).toEqual(fineMese('2026-11-15'));
+    expect(d.margineGiornaliero).toBe(computeMargineGiornaliero(500, fineMese('2026-11-15'), TODAY));
+    // le entrate si leggono una volta sola, anche con la finestra più lunga
+    expect(spia).toHaveBeenCalledTimes(2);
+  });
+
+  it('con stipendio più alto di quello che c è, il disponibile resta quello vero e il cuscinetto è 0', async () => {
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [], transactions: [],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, stipendio_mensile: 5000, stipendio_rivisto_il: '2026-11-01' }],
+        piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.disponibileLibero).toBe(1000);
+    expect(d.piva?.stipendio).toEqual({ stipendio: 5000, rimasto: 5000, cuscinetto: 0, mesiCoperti: 0 });
+  });
+
+  it('dopo 3 mesi la Home propone di rivedere lo stipendio', async () => {
+    const incassi = ['2026-05-10', '2026-06-10', '2026-07-10', '2026-08-10', '2026-09-10', '2026-10-10'].map((d, i) =>
+      entrata(`e${i}`, d, 1000)
+    );
+    const spese = ['2026-08-05', '2026-09-05', '2026-10-05'].map((d, i) => spesa(`s${i}`, d, 300));
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [],
+        transactions: [...incassi, ...spese, spesa('oggi', '2026-11-15', 1)],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, guidata_dal: '2026-05-01', stipendio_mensile: 500, stipendio_rivisto_il: '2026-05-01' }],
+        piva_accantonamenti: incassi.map((e, i) => ({
+          id: `pa${i}`, user_id: 'A', transaction_id: e.id, importo: 100, data: e.data, da_account_id: 'a1', a_account_id: 'tasse',
+        })),
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    // A = 1000 al netto del 13,7% = 860; B = 300: proposta 300, 40% sotto lo stipendio
+    expect(d.prossimo?.tipo).toBe('piva');
+    expect(d.prossimo?.testo).toContain('conviene abbassare lo stipendio a 300 €');
   });
 });

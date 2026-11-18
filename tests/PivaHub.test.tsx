@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { PivaHub } from '@/app/piva/PivaHub';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
-import type { Category, PivaSettings, Transaction } from '@/lib/types';
+import type { PivaSettings, Transaction } from '@/lib/types';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
@@ -23,14 +23,18 @@ vi.mock('@/lib/data/piva', () => ({
   deleteFattura: vi.fn(),
 }));
 vi.mock('@/app/AnnullaProvider', () => ({ useEliminaConAnnulla: () => vi.fn() }));
+vi.mock('@/lib/pivaHome', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/pivaHome')>()),
+  leggiCasaPerStipendio: vi.fn(),
+  leggiGoalsConSpeso: vi.fn(),
+}));
 
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccounts } from '@/lib/data/accounts';
+import { leggiCasaPerStipendio, leggiGoalsConSpeso } from '@/lib/pivaHome';
 import {
   getAccantonamenti, accantonaTasse, assicuraScadenze, getScadenze, getFatture, creaFattura, incassaFattura,
 } from '@/lib/data/piva';
-
-const categorie: Category[] = [{ id: 'cat-fatt', nome: 'Compensi', tipo: 'income', colore: null, archiviata: false }];
 
 const settings: PivaSettings = {
   id: '1',
@@ -61,11 +65,30 @@ const incasso = (id: string, data: string, importo: number): Transaction => ({
   descrizione: id, nota: null, createdAt: `${data}T10:00:00Z`, stima: false,
 });
 
-function apri(over: { onModifica?: () => void; onDisattiva?: () => Promise<void> } = {}) {
-  const props = { onModifica: vi.fn(), onDisattiva: vi.fn().mockResolvedValue(undefined), ...over };
-  render(<PivaHub settings={settings} categories={categorie} {...props} />);
+function apri(
+  over: { onModifica?: () => void; onDisattiva?: () => Promise<void> } = {},
+  impostazioni: Partial<PivaSettings> = {}
+) {
+  const props = {
+    onModifica: vi.fn(),
+    onDisattiva: vi.fn().mockResolvedValue(undefined),
+    onSalvaStipendio: vi.fn().mockResolvedValue(undefined),
+    ...over,
+  };
+  render(<PivaHub settings={{ ...settings, ...impostazioni }} {...props} />);
   return props;
 }
+
+const spesa = (id: string, data: string, importo: number): Transaction => ({
+  id, tipo: 'expense', importo, data, categoriaId: null, accountId: 'a1', goalId: null,
+  descrizione: id, nota: null, createdAt: `${data}T10:00:00Z`, stima: false,
+});
+
+// 6 mesi pieni di incassi (mag-ott) e 3 di spese (ago-ott) per avere una proposta.
+const STORICO = [
+  ...['2026-05-10', '2026-06-10', '2026-07-10', '2026-08-10', '2026-09-10', '2026-10-10'].map((d, i) => incasso(`s${i}`, d, 1000)),
+  ...['2026-08-05', '2026-09-05', '2026-10-05'].map((d, i) => spesa(`x${i}`, d, 300)),
+];
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-17T12:00:00Z') });
@@ -90,6 +113,8 @@ beforeEach(() => {
   vi.mocked(incassaFattura).mockReset().mockResolvedValue('i-nuovo');
   vi.mocked(accantonaTasse).mockReset();
   vi.mocked(accantonaTasse).mockResolvedValue('pa-nuovo');
+  vi.mocked(leggiCasaPerStipendio).mockReset().mockResolvedValue(null);
+  vi.mocked(leggiGoalsConSpeso).mockReset().mockResolvedValue([]);
 });
 
 afterEach(() => vi.useRealTimers());
@@ -311,5 +336,69 @@ describe('PivaHub', () => {
     apri();
     await screen.findByText(/13,7% di ogni incasso/);
     assertNessunaParolaVietata(document.body);
+  });
+
+  describe('stipendio', () => {
+    it('senza storico fa la sola domanda del mese magro', async () => {
+      apri();
+      expect(await screen.findByLabelText('In un mese magro, quanto incassi più o meno?')).toBeInTheDocument();
+    });
+
+    it('con lo storico propone lo stipendio e Va bene lo salva con la data di oggi', async () => {
+      vi.mocked(getTransactions).mockResolvedValue(STORICO);
+      const { onSalvaStipendio } = apri();
+      // A = 1000 al netto del 13,7% = 860; B = 300: proposta 300, il resto 560 va nel cuscinetto
+      expect(await screen.findByText('Ti propongo 300 € al mese.')).toBeInTheDocument();
+      expect(screen.getByText('Il resto, 560 € al mese, riempie il cuscinetto.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Va bene' }));
+      await waitFor(() =>
+        expect(onSalvaStipendio).toHaveBeenCalledWith({ stipendioMensile: 300, stipendioRivistoIl: '2026-11-17' })
+      );
+    });
+
+    it('il mese magro si salva', async () => {
+      const { onSalvaStipendio } = apri();
+      fireEvent.change(await screen.findByLabelText('In un mese magro, quanto incassi più o meno?'), { target: { value: '900' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Continua' }));
+      await waitFor(() => expect(onSalvaStipendio).toHaveBeenCalledWith({ incassoMeseMagro: 900 }));
+    });
+
+    it('con lo stipendio mostra quanto resta e il cuscinetto, calcolati come nella Home', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      // conto a 900; incassi dalla guida (1/11): nessuno nel fatturato di novembre, quindi niente quote in sospeso.
+      // rimasto = 800 - 200 = 600; cuscinetto = 900 - 600 = 300 (0,4 mesi)
+      expect(await screen.findByText('Stipendio di questo mese 800 € (te ne restano 600 €)')).toBeInTheDocument();
+      expect(screen.getByText('Cuscinetto 300 € copre 0,4 mesi')).toBeInTheDocument();
+    });
+
+    it('se la casa non si legge non propone uno stipendio sbagliato', async () => {
+      vi.mocked(getTransactions).mockResolvedValue(STORICO);
+      vi.mocked(leggiCasaPerStipendio).mockRejectedValue(new Error('rete'));
+      apri();
+      expect(await screen.findByText('Lo stipendio non si calcola ora. Riprova tra poco.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Va bene' })).not.toBeInTheDocument();
+      expect(screen.getByText(/13,7% di ogni incasso/)).toBeInTheDocument();
+    });
+  });
+
+  it('se la ricarica dopo un incasso fallisce non resta una quota aperta che salta fuori dopo', async () => {
+    apri();
+    const sezione = await screen.findByRole('region', { name: 'Fatture in attesa' });
+    vi.mocked(getTransactions).mockRejectedValue(new Error('rete'));
+    fireEvent.click(within(within(sezione).getByText('Rossi').closest('li') as HTMLElement).getByRole('button', { name: 'Pagata' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
+    expect(await screen.findByText(/non riesco ad aggiornare/)).toBeInTheDocument();
+    // più tardi la lettura torna e l'incasso c'è: il foglio della quota non deve comparire da solo
+    vi.mocked(getTransactions).mockResolvedValue([
+      incasso('i-nuovo', '2026-11-17', 900), incasso('i2', '2026-11-10', 600), incasso('i1', '2026-03-10', 5000),
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: '+ Fattura' }));
+    const foglio = await screen.findByRole('dialog', { name: 'Nuova fattura' });
+    fireEvent.change(within(foglio).getByLabelText('Chi'), { target: { value: 'Bianchi' } });
+    fireEvent.change(within(foglio).getByLabelText('Importo (€)'), { target: { value: '500' } });
+    fireEvent.click(within(foglio).getByRole('button', { name: 'Salva' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuova fattura' })).not.toBeInTheDocument());
+    expect(screen.queryByText(/metti da parte .* sul conto tasse/)).not.toBeInTheDocument();
   });
 });

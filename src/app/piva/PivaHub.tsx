@@ -13,6 +13,17 @@ import {
   getFatture,
   getScadenze,
 } from '@/lib/data/piva';
+import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
+import { homeConStipendio, propostaStipendio, speseDelMese } from '@/lib/calculations/stipendio';
+import {
+  casaDelMese,
+  finestraIncassi,
+  inizioMesiFa,
+  leggiCasaPerStipendio,
+  leggiGoalsConSpeso,
+  speseUltimiMesi,
+} from '@/lib/pivaHome';
+import type { CasaStato } from '@/lib/loadCasaStato';
 import { contoPerIncasso } from '@/lib/calculations/pivaFatture';
 import { prossimaScadenza, scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
 import {
@@ -22,9 +33,11 @@ import {
   computeStimaAnno,
   confrontoAnno,
   quoteInSospeso,
+  totaleInSospeso,
 } from '@/lib/calculations/piva';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { formatDateIt, formatEuro, formatNumero } from '@/lib/format';
+import type { PivaSettingsInput } from '@/lib/data/pivaSettings';
 import { CoverHeader } from '../CoverHeader';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
@@ -33,9 +46,10 @@ import { FattureInAttesa } from './FattureInAttesa';
 import { NuovaFattura, type ValoriFattura } from './NuovaFattura';
 import { contoDaCuiSpostare, euroInFrase, PromptQuota } from './PromptQuota';
 import { ScadenzePiva } from './ScadenzePiva';
+import { StipendioPiva } from './StipendioPiva';
 import type {
   Account,
-  Category,
+  BudgetGoal,
   PivaAccantonamento,
   PivaFattura,
   PivaScadenza,
@@ -49,17 +63,30 @@ function leggiDal(guidataDal: string | null, anno: number): string {
   return guidataDal && guidataDal < inizioAnno ? guidataDal : inizioAnno;
 }
 
+// I campi dello stipendio che la pagina sa salvare.
+export type CampiStipendio = Partial<
+  Pick<PivaSettingsInput, 'stipendioMensile' | 'stipendioRivistoIl' | 'incassoMeseMagro'>
+>;
+
+// Quello che serve per lo stipendio oltre ai conti e agli incassi: le spese dei mesi scorsi e di questo,
+// la casa e gli obiettivi (per il cuscinetto). null: non si leggono, e lo stipendio non si calcola.
+interface DatiStipendio {
+  spese: Transaction[];
+  casa: CasaStato | null;
+  goals: (BudgetGoal & { specoCollegato: number })[];
+}
+
 // La pagina P.IVA a guida finita: quanto mettere da parte, il conto tasse, le quote ancora da spostare.
 export function PivaHub({
   settings,
   onModifica,
   onDisattiva,
+  onSalvaStipendio,
 }: {
   settings: PivaSettings;
-  // Le categorie non servono più qui: l'incasso diretto passa da una fattura sul fatturato delle impostazioni.
-  categories?: Category[];
   onModifica: () => void;
   onDisattiva: () => Promise<void>;
+  onSalvaStipendio: (campi: CampiStipendio) => Promise<void>;
 }) {
   const fail = useThrowToBoundary();
   const [conti, setConti] = useState<Account[]>([]);
@@ -69,6 +96,7 @@ export function PivaHub({
   const [scadenzeNonCaricate, setScadenzeNonCaricate] = useState(false);
   const [fatture, setFatture] = useState<PivaFattura[]>([]);
   const [fattureNonCaricate, setFattureNonCaricate] = useState(false);
+  const [datiStipendio, setDatiStipendio] = useState<DatiStipendio | null>(null);
   const [caricato, setCaricato] = useState(false);
   // La quota per cui è aperto il foglio "Fatto" (importo modificabile).
   const [quotaAperta, setQuotaAperta] = useState<string | null>(null);
@@ -88,6 +116,10 @@ export function PivaHub({
   async function leggi() {
     const supabase = createClient();
     const da = leggiDal(settings.guidataDal, anno);
+    const oggiISO = oggiRomaISO();
+    const adesso = new Date();
+    // Per la media degli incassi servono gli ultimi 6 mesi interi, anche se l'anno è appena iniziato.
+    const daIncassi = da < inizioMesiFa(oggiISO, 6) ? da : inizioMesiFa(oggiISO, 6);
     // Le scadenze mancanti si creano all'apertura; quelle tolte non tornano (il database ignora i doppioni).
     // Un errore sulle scadenze non deve fermare vaso e quote: la lista resta vuota con una riga calma.
     const leggiScadenze = async (): Promise<PivaScadenza[] | null> => {
@@ -106,15 +138,29 @@ export function PivaHub({
         return null;
       }
     };
+    // Le letture dello stipendio non fermano il resto: se falliscono lo stipendio non si calcola.
+    const leggiStipendio = async (): Promise<DatiStipendio | null> => {
+      try {
+        const [spese, casa, goals] = await Promise.all([
+          getTransactions(supabase, undefined, { da: inizioMesiFa(oggiISO, 3), tipo: 'expense' }),
+          leggiCasaPerStipendio(supabase, adesso),
+          leggiGoalsConSpeso(supabase, adesso),
+        ]);
+        return { spese, casa, goals };
+      } catch {
+        return null;
+      }
+    };
     // getAccounts senza scope: i conti personali.
-    const [acc, tx, accant, scad, fatt] = await Promise.all([
+    const [acc, tx, accant, scad, fatt, stip] = await Promise.all([
       getAccounts(supabase),
-      getTransactions(supabase, undefined, { da, tipo: 'income' }),
+      getTransactions(supabase, undefined, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da }),
       leggiScadenze(),
       leggiFatture(),
+      leggiStipendio(),
     ]);
-    return { acc, tx, accant, scad, fatt };
+    return { acc, tx, accant, scad, fatt, stip };
   }
 
   function applica(d: Awaited<ReturnType<typeof leggi>>) {
@@ -125,6 +171,7 @@ export function PivaHub({
     setScadenzeNonCaricate(d.scad === null);
     setFatture(d.fatt ?? []);
     setFattureNonCaricate(d.fatt === null);
+    setDatiStipendio(d.stip);
     setCaricato(true);
   }
 
@@ -163,12 +210,52 @@ export function PivaHub({
   const contiIncasso = conti.filter((c) => c.id !== contoTasseId);
   const contoIniziale = contoPerIncasso(incassi, conti, categoriaId, contoTasseId);
 
+  // Lo stipendio, con le stesse funzioni della Home: la proposta, e se c'è già quanto resta e il cuscinetto.
+  const oggiISO = oggiRomaISO();
+  const contiDisponibile = new Set(conti.filter((c) => c.contaInDisponibile).map((c) => c.id));
+  let calcoloStipendio: ReturnType<typeof propostaStipendio> | null = null;
+  let rigaStipendio: { rimasto: number; cuscinetto: number; mesiCoperti: number } | null = null;
+  if (datiStipendio && categoriaId) {
+    const { incassiMensili, mesiConIncassi } = finestraIncassi(incassi, categoriaId, oggiISO);
+    const { quotaCasaMensile, versatoCasaMese } = casaDelMese(datiStipendio.casa?.righe ?? null, oggiISO);
+    calcoloStipendio = propostaStipendio({
+      incassiMensili,
+      mesiConIncassi,
+      percentuale,
+      speseMensili: speseUltimiMesi(datiStipendio.spese, contiDisponibile, oggiISO),
+      quotaCasaMensile,
+      incassoMeseMagro: settings.incassoMeseMagro,
+    });
+    if (settings.stipendioMensile !== null) {
+      const riservaVersamento = datiStipendio.casa?.riservaVersamento ?? 0;
+      const disponibile = computeDisponibileLibero(
+        conti,
+        datiStipendio.goals,
+        oggi,
+        riservaVersamento,
+        datiStipendio.casa?.debitoDaRestituire ?? 0,
+        totaleInSospeso(inSospeso)
+      );
+      const { rimasto, cuscinetto, mesiCoperti } = homeConStipendio({
+        disponibileLibero: disponibile,
+        stipendio: settings.stipendioMensile,
+        speseMese: speseDelMese(datiStipendio.spese, contiDisponibile, oggiISO.slice(0, 7)),
+        versatoCasaMese,
+        riservaVersamento,
+      });
+      rigaStipendio = { rimasto, cuscinetto, mesiCoperti };
+    }
+  }
+
   // Dopo un'azione riuscita la ricarica può fallire: non è un'azione fallita, si segnala a parte.
-  async function ricarica() {
+  // true se la pagina è stata riletta.
+  async function ricarica(): Promise<boolean> {
     try {
       await carica();
+      return true;
     } catch {
       setErrore('Fatto, ma non riesco ad aggiornare la pagina. Riaprila tra poco.');
+      return false;
     }
   }
 
@@ -297,6 +384,17 @@ export function PivaHub({
           ) : null}
         </section>
 
+        <section aria-label="Stipendio" className={CLASSE_SCHEDA}>
+          <StipendioPiva
+            stipendio={settings.stipendioMensile}
+            oggi={oggiISO}
+            calcolo={calcoloStipendio}
+            riga={rigaStipendio}
+            onSalva={onSalvaStipendio}
+            onMeseMagro={(incassoMeseMagro) => onSalvaStipendio({ incassoMeseMagro })}
+          />
+        </section>
+
         <section aria-label="Fatture in attesa" className={CLASSE_SCHEDA}>
           {fattureNonCaricate ? (
             <>
@@ -311,10 +409,10 @@ export function PivaHub({
               contoIniziale={contoIniziale}
               categoriaId={categoriaId}
               onIncassata={async (transazione) => {
-                await ricarica();
-                setQuotaAperta(transazione);
+                // Se la pagina non si è riletta la quota non c'è ancora: non si tiene un id che potrebbe saltare fuori dopo.
+                if (await ricarica()) setQuotaAperta(transazione);
               }}
-              onCambiato={ricarica}
+              onCambiato={async () => { await ricarica(); }}
               onTolta={(id) => setFatture((prima) => prima.filter((f) => f.id !== id))}
             />
           )}
@@ -330,7 +428,7 @@ export function PivaHub({
               anno={anno}
               oggi={oggiRomaISO()}
               nonCaricate={scadenzeNonCaricate}
-              onCambiato={ricarica}
+              onCambiato={async () => { await ricarica(); }}
               onNascosta={(id) => setScadenze((prima) => prima.map((x) => (x.id === id ? { ...x, nascosta: true } : x)))}
             />
           </section>

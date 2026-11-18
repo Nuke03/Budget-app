@@ -117,6 +117,9 @@ export function HomeDashboard({
   const contaCasa = (casa?.stato?.riservaVersamento ?? 0) + (casa?.stato?.debitoDaRestituire ?? 0) > 0;
   const riservaPiva = piva ? totaleInSospeso(piva.inSospeso) : 0;
   const { intero, resto } = dividiCifra(formatEuro(disponibileLibero));
+  // Il cuscinetto è finito e lo stipendio fisso è più alto di quello che c'è: si invita a rivederlo, senza allarmi.
+  const cuscinettoVuoto =
+    !!piva?.stipendio && piva.stipendio.cuscinetto === 0 && piva.stipendio.rimasto > disponibileLibero;
 
   return (
     <>
@@ -145,6 +148,11 @@ export function HomeDashboard({
               ? `, ${euroInFrase(riservato)} ${contaCasa ? 'sono messi da parte o da versare' : 'sono già messi da parte'}`
               : ''}
           </p>
+          {cuscinettoVuoto ? (
+            <Link href="/piva" className="mt-1 block min-h-11 py-2 text-[15px] font-semibold text-brand-dark">
+              Il cuscinetto è vuoto: questo mese lo stipendio supera quello che hai. Rivediamolo?
+            </Link>
+          ) : null}
           <button
             type="button"
             aria-expanded={showBreakdown}

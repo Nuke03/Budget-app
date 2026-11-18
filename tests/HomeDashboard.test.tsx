@@ -574,4 +574,42 @@ describe('il libretto', () => {
       .join(' ');
     expect(classi).not.toMatch(/green|emerald|teal|lime/);
   });
+
+  describe('cuscinetto vuoto', () => {
+    const pivaCon = (stipendio: { stipendio: number; rimasto: number; cuscinetto: number; mesiCoperti: number } | null) => ({
+      contoTasseId: 't', categoriaFatturatoId: 'c', percentuale: 13.7, inSospeso: [], scadenze: [], fatture: [], stipendio,
+    });
+    const home = (piva: ReturnType<typeof pivaCon>, disponibile: number) =>
+      render(
+        <HomeDashboard
+          disponibileLibero={disponibile}
+          margineGiornaliero={20}
+          dataTarget="2026-11-30T00:00:00Z"
+          accounts={accounts}
+          categories={[]}
+          goals={goals}
+          piva={piva}
+        />
+      );
+
+    it('cuscinetto vuoto mostra l avviso con link a /piva', () => {
+      home(pivaCon({ stipendio: 1500, rimasto: 900, cuscinetto: 0, mesiCoperti: 0 }), 700);
+      const link = screen.getByRole('link', {
+        name: 'Il cuscinetto è vuoto: questo mese lo stipendio supera quello che hai. Rivediamolo?',
+      });
+      expect(link).toHaveAttribute('href', '/piva');
+    });
+
+    it('non compare se il cuscinetto c è, se lo stipendio non c è, o se lo stipendio non supera quello che hai', () => {
+      const avviso = /Il cuscinetto è vuoto/;
+      home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 }), 500);
+      expect(screen.queryByText(avviso)).not.toBeInTheDocument();
+      cleanup();
+      home(pivaCon(null), 700);
+      expect(screen.queryByText(avviso)).not.toBeInTheDocument();
+      cleanup();
+      home(pivaCon({ stipendio: 800, rimasto: 700, cuscinetto: 0, mesiCoperti: 0 }), 700);
+      expect(screen.queryByText(avviso)).not.toBeInTheDocument();
+    });
+  });
 });
