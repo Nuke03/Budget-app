@@ -152,8 +152,13 @@ export async function updateFattura(
   if (error) throw error;
 }
 
+// Come per la modifica: una fattura incassata ha un movimento e un saldo, non si elimina da qui.
 export async function deleteFattura(supabase: SupabaseClient, id: string): Promise<number> {
-  const { error, count } = await supabase.from('piva_fatture').delete({ count: 'exact' }).eq('id', id);
+  const { error, count } = await supabase
+    .from('piva_fatture')
+    .delete({ count: 'exact' })
+    .eq('id', id)
+    .is('data_incasso', null);
   if (error) throw error;
   return count ?? 0;
 }

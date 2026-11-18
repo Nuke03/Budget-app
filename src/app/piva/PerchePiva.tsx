@@ -142,3 +142,15 @@ export function PercheQuote({ percentuale }: { percentuale: number }) {
     </Perche>
   );
 }
+
+// Perché una fattura non pagata non è ancora un costo di tasse.
+export function PercheFatture() {
+  return (
+    <Perche>
+      <p>
+        Nel forfettario le tasse si pagano su quello che incassi, non su quello che fatturi. Questa fattura non è ancora
+        soldi tuoi, ma neanche tasse da pagare.
+      </p>
+    </Perche>
+  );
+}

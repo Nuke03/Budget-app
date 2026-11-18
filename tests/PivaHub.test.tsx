@@ -16,12 +16,19 @@ vi.mock('@/lib/data/piva', () => ({
   updateScadenza: vi.fn(),
   pagaScadenza: vi.fn(),
   nascondiScadenza: vi.fn(),
+  getFatture: vi.fn(),
+  creaFattura: vi.fn(),
+  incassaFattura: vi.fn(),
+  updateFattura: vi.fn(),
+  deleteFattura: vi.fn(),
 }));
 vi.mock('@/app/AnnullaProvider', () => ({ useEliminaConAnnulla: () => vi.fn() }));
 
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccounts } from '@/lib/data/accounts';
-import { getAccantonamenti, accantonaTasse, assicuraScadenze, getScadenze } from '@/lib/data/piva';
+import {
+  getAccantonamenti, accantonaTasse, assicuraScadenze, getScadenze, getFatture, creaFattura, incassaFattura,
+} from '@/lib/data/piva';
 
 const categorie: Category[] = [{ id: 'cat-fatt', nome: 'Compensi', tipo: 'income', colore: null, archiviata: false }];
 
@@ -75,6 +82,12 @@ beforeEach(() => {
       data: '2026-11-30', importo: null, pagataIl: null, transactionId: null, nascosta: false,
     },
   ]);
+  vi.mocked(getFatture).mockReset().mockResolvedValue([
+    { id: 'f1', cliente: 'Rossi', importo: 900, dataEmissione: '2026-08-18', dataIncasso: null, transactionId: null, nota: null },
+    { id: 'f2', cliente: 'Verdi', importo: 300, dataEmissione: '2026-11-01', dataIncasso: null, transactionId: null, nota: null },
+  ]);
+  vi.mocked(creaFattura).mockReset().mockResolvedValue('f-nuova');
+  vi.mocked(incassaFattura).mockReset().mockResolvedValue('i-nuovo');
   vi.mocked(accantonaTasse).mockReset();
   vi.mocked(accantonaTasse).mockResolvedValue('pa-nuovo');
 });
@@ -194,12 +207,92 @@ describe('PivaHub', () => {
     expect(await screen.findByText('Niente da spostare: sei in pari con gli incassi.')).toBeInTheDocument();
   });
 
-  it('+ Incasso apre il modulo con entrata e categoria del fatturato', async () => {
+  it('mostra Ti devono con totale, numero e fattura vecchia', async () => {
+    apri();
+    const sezione = await screen.findByRole('region', { name: 'Fatture in attesa' });
+    expect(within(sezione).getByText('Ti devono 1.200 €')).toBeInTheDocument();
+    expect(within(sezione).getByText('2 fatture, 1 da 91 giorni')).toBeInTheDocument();
+  });
+
+  it('se le fatture non si leggono il resto della pagina funziona', async () => {
+    vi.mocked(getFatture).mockRejectedValue(new Error('rete'));
+    apri();
+    const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
+    expect(within(vaso).getByText('400,00 €')).toBeInTheDocument();
+    expect(screen.getByText('Le fatture non si caricano ora.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Da spostare' })).toBeInTheDocument();
+  });
+
+  it('+ Incasso apre la nuova fattura già pagata, con Incasso diretto', async () => {
     apri();
     fireEvent.click(await screen.findByRole('button', { name: '+ Incasso' }));
-    const foglio = await screen.findByRole('dialog', { name: 'Nuova transazione' });
-    expect(within(foglio).getByRole('button', { name: 'Entrata' })).toBeInTheDocument();
-    expect(within(foglio).getByRole('button', { name: 'Compensi' })).toBeInTheDocument();
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo incasso' });
+    expect(within(foglio).getByRole('checkbox', { name: 'Pagata adesso' })).toBeChecked();
+    expect(within(foglio).getByLabelText('Chi')).toHaveValue('Incasso diretto');
+    // il conto di partenza è quello dell'ultimo incasso del fatturato
+    expect(within(foglio).getByLabelText('Conto')).toHaveValue('a1');
+    expect(within(foglio).queryByRole('option', { name: 'Conto tasse' })).not.toBeInTheDocument();
+  });
+
+  it('+ Fattura apre la nuova fattura con Pagata adesso spento', async () => {
+    apri();
+    fireEvent.click(await screen.findByRole('button', { name: '+ Fattura' }));
+    const foglio = await screen.findByRole('dialog', { name: 'Nuova fattura' });
+    expect(within(foglio).getByRole('checkbox', { name: 'Pagata adesso' })).not.toBeChecked();
+    expect(within(foglio).getByLabelText('Chi')).toHaveValue('');
+  });
+
+  it('Pagata adesso chiama creaFattura con incassaSu e apre il prompt della quota', async () => {
+    apri();
+    fireEvent.click(await screen.findByRole('button', { name: '+ Incasso' }));
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo incasso' });
+    // dopo il salvataggio l'entrata nuova è fra gli incassi riletti
+    vi.mocked(getTransactions).mockResolvedValue([
+      incasso('i-nuovo', '2026-11-17', 1000), incasso('i2', '2026-11-10', 600), incasso('i1', '2026-03-10', 5000),
+    ]);
+    vi.mocked(creaFattura).mockResolvedValue('f-nuova');
+    vi.mocked(getFatture).mockResolvedValue([
+      { id: 'f-nuova', cliente: 'Incasso diretto', importo: 1000, dataEmissione: '2026-11-17', dataIncasso: '2026-11-17', transactionId: 'i-nuovo', nota: null },
+    ]);
+    fireEvent.change(within(foglio).getByLabelText('Importo (€)'), { target: { value: '1000' } });
+    fireEvent.click(within(foglio).getByRole('button', { name: 'Salva' }));
+    await waitFor(() =>
+      expect(creaFattura).toHaveBeenCalledWith(expect.anything(), {
+        cliente: 'Incasso diretto', importo: 1000, dataEmissione: '2026-11-17', nota: null,
+        incassaSu: { accountId: 'a1', categoriaId: 'cat-fatt' },
+      })
+    );
+    expect(await screen.findByText('Di 1.000 € metti da parte 137 € sul conto tasse')).toBeInTheDocument();
+  });
+
+  it('una fattura senza Pagata adesso crea solo la fattura, senza prompt', async () => {
+    apri();
+    fireEvent.click(await screen.findByRole('button', { name: '+ Fattura' }));
+    const foglio = await screen.findByRole('dialog', { name: 'Nuova fattura' });
+    fireEvent.change(within(foglio).getByLabelText('Chi'), { target: { value: 'Bianchi' } });
+    fireEvent.change(within(foglio).getByLabelText('Importo (€)'), { target: { value: '500' } });
+    fireEvent.click(within(foglio).getByRole('button', { name: 'Salva' }));
+    await waitFor(() =>
+      expect(creaFattura).toHaveBeenCalledWith(expect.anything(), {
+        cliente: 'Bianchi', importo: 500, dataEmissione: '2026-11-17', nota: null,
+      })
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuova fattura' })).not.toBeInTheDocument());
+    expect(screen.queryByText(/sul conto tasse$/)).not.toBeInTheDocument();
+  });
+
+  it('dopo Pagata si apre il prompt della quota con l importo della fattura', async () => {
+    apri();
+    const sezione = await screen.findByRole('region', { name: 'Fatture in attesa' });
+    vi.mocked(getTransactions).mockResolvedValue([
+      incasso('i-nuovo', '2026-11-17', 900), incasso('i2', '2026-11-10', 600), incasso('i1', '2026-03-10', 5000),
+    ]);
+    fireEvent.click(within(within(sezione).getByText('Rossi').closest('li') as HTMLElement).getByRole('button', { name: 'Pagata' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
+    await waitFor(() =>
+      expect(incassaFattura).toHaveBeenCalledWith(expect.anything(), 'f1', { data: '2026-11-17', accountId: 'a1', categoriaId: 'cat-fatt' })
+    );
+    expect(await screen.findByText('Di 900 € metti da parte 123 € sul conto tasse')).toBeInTheDocument();
   });
 
   it('Modifica i parametri e Disattiva stanno sotto Impostazioni', async () => {

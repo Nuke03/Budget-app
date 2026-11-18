@@ -24,7 +24,7 @@ import {
 } from '@/lib/calculations/supporto/home';
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
-import { getAccantonamenti, getScadenze } from '@/lib/data/piva';
+import { getAccantonamenti, getFatture, getScadenze } from '@/lib/data/piva';
 import {
   computeAliquotaSostitutiva,
   computePercentualeIncasso,
@@ -34,7 +34,7 @@ import {
 } from '@/lib/calculations/piva';
 import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
-import type { Account, BudgetGoal, Category, PivaScadenza, PivaSettings, Transaction } from '@/lib/types';
+import type { Account, BudgetGoal, Category, PivaFattura, PivaScadenza, PivaSettings, Transaction } from '@/lib/types';
 
 // Le due parti si leggono a parte: se manca lo stato, la casa esiste ma il disponibile
 // personale non tiene conto della quota (la home lo dice).
@@ -56,6 +56,8 @@ export interface PivaHome {
   stipendio: StipendioHome | null;
   // Le scadenze dell'anno corrente; vuote se non si leggono (la home si apre lo stesso).
   scadenze: PivaScadenza[];
+  // Le fatture dell'utente; vuote se non si leggono (la home si apre lo stesso).
+  fatture: PivaFattura[];
 }
 
 export interface HomeData {
@@ -120,11 +122,13 @@ async function pivaOpzionale(
   try {
     const s = await settings;
     if (!s || !s.attivo || !s.guidataDal || !s.contoTasseId || !s.categoriaFatturatoId) return null;
-    const [incassi, accantonamenti, scadenze] = await Promise.all([
+    const [incassi, accantonamenti, scadenze, fatture] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da: s.guidataDal, tipo: 'income' }),
       getAccantonamenti(supabase, { da: s.guidataDal }),
       // Una scadenza che non si legge non toglie la P.IVA dalla home: niente promemoria di scadenza.
       getScadenze(supabase, oggiRomaData(today).getFullYear()).catch(() => [] as PivaScadenza[]),
+      // Come le scadenze: una fattura che non si legge non toglie la P.IVA dalla home.
+      getFatture(supabase).catch(() => [] as PivaFattura[]),
     ]);
     const percentuale = computePercentualeIncasso(
       s.coefficienteRedditivita,
@@ -139,6 +143,7 @@ async function pivaOpzionale(
       inSospeso: quoteInSospeso(incassi, accantonamenti, percentuale, s.categoriaFatturatoId, s.guidataDal),
       stipendio: null,
       scadenze,
+      fatture,
     };
   } catch {
     return null;
@@ -236,10 +241,10 @@ export async function loadHomeData(
   const prossimo = prossimaCosa({
     inPari,
     promemoriaCasa: promemoriaDaCasa(casa, oggi).map((p) => ({ testo: p.testo, href: p.azione?.href })),
-    // Le fatture le legge il passo delle fatture in attesa; la revisione dello stipendio, quello dello stipendio.
+    // La revisione dello stipendio la produce il passo dello stipendio.
     promemoriaPiva: piva
       ? promemoriaPiva(
-          { scadenze: piva.scadenze, fatture: [], inSospeso: totaleInSospeso(piva.inSospeso), revisioneStipendio: null },
+          { scadenze: piva.scadenze, fatture: piva.fatture, inSospeso: totaleInSospeso(piva.inSospeso), revisioneStipendio: null },
           oggi
         )
       : [],

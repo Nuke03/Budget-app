@@ -6,6 +6,7 @@ import {
   accantonaTasse,
   assicuraScadenze,
   getFatture,
+  deleteFattura,
 } from '@/lib/data/piva';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -132,5 +133,21 @@ describe('getFatture', () => {
     };
     const out = await getFatture({ from: () => builder } as any);
     expect(out).toEqual([{ id: 'f1', cliente: 'R', importo: 10, dataEmissione: '2026-01-01', dataIncasso: null, transactionId: null, nota: null }]);
+  });
+});
+
+describe('deleteFattura', () => {
+  it('toglie solo una fattura non incassata (data_incasso nulla) e dice quante righe ha tolto', async () => {
+    const chiamate: unknown[][] = [];
+    const builder: any = {
+      delete: (...a: unknown[]) => { chiamate.push(['delete', ...a]); return builder; },
+      eq: (...a: unknown[]) => { chiamate.push(['eq', ...a]); return builder; },
+      is: (...a: unknown[]) => { chiamate.push(['is', ...a]); return builder; },
+      then: (r: any) => r({ error: null, count: 0 }),
+    };
+    const n = await deleteFattura({ from: () => builder } as any, 'f1');
+    expect(chiamate).toContainEqual(['eq', 'id', 'f1']);
+    expect(chiamate).toContainEqual(['is', 'data_incasso', null]);
+    expect(n).toBe(0);
   });
 });

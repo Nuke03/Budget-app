@@ -5,7 +5,15 @@ import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccounts } from '@/lib/data/accounts';
-import { accantonaTasse, assicuraScadenze, getAccantonamenti, getScadenze } from '@/lib/data/piva';
+import {
+  accantonaTasse,
+  assicuraScadenze,
+  creaFattura,
+  getAccantonamenti,
+  getFatture,
+  getScadenze,
+} from '@/lib/data/piva';
+import { contoPerIncasso } from '@/lib/calculations/pivaFatture';
 import { prossimaScadenza, scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
 import {
   computeAliquotaSostitutiva,
@@ -18,12 +26,22 @@ import {
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { formatDateIt, formatEuro, formatNumero } from '@/lib/format';
 import { CoverHeader } from '../CoverHeader';
-import { AddTransactionSheet } from '../add/AddTransactionSheet';
+import { FoglioInferiore } from '../FoglioInferiore';
 import { CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
 import { PercheQuote, PerchePercentuale, PercheSaldoVaso, PercheVaso } from './PerchePiva';
+import { FattureInAttesa } from './FattureInAttesa';
+import { NuovaFattura, type ValoriFattura } from './NuovaFattura';
 import { contoDaCuiSpostare, euroInFrase, PromptQuota } from './PromptQuota';
 import { ScadenzePiva } from './ScadenzePiva';
-import type { Account, Category, PivaAccantonamento, PivaScadenza, PivaSettings, Transaction } from '@/lib/types';
+import type {
+  Account,
+  Category,
+  PivaAccantonamento,
+  PivaFattura,
+  PivaScadenza,
+  PivaSettings,
+  Transaction,
+} from '@/lib/types';
 
 // Il primo giorno da cui servono i dati: l'inizio dell'anno (per "messi quest'anno") o, se prima, il giorno della guida.
 function leggiDal(guidataDal: string | null, anno: number): string {
@@ -34,12 +52,12 @@ function leggiDal(guidataDal: string | null, anno: number): string {
 // La pagina P.IVA a guida finita: quanto mettere da parte, il conto tasse, le quote ancora da spostare.
 export function PivaHub({
   settings,
-  categories,
   onModifica,
   onDisattiva,
 }: {
   settings: PivaSettings;
-  categories: Category[];
+  // Le categorie non servono più qui: l'incasso diretto passa da una fattura sul fatturato delle impostazioni.
+  categories?: Category[];
   onModifica: () => void;
   onDisattiva: () => Promise<void>;
 }) {
@@ -49,10 +67,13 @@ export function PivaHub({
   const [accantonamenti, setAccantonamenti] = useState<PivaAccantonamento[]>([]);
   const [scadenze, setScadenze] = useState<PivaScadenza[]>([]);
   const [scadenzeNonCaricate, setScadenzeNonCaricate] = useState(false);
+  const [fatture, setFatture] = useState<PivaFattura[]>([]);
+  const [fattureNonCaricate, setFattureNonCaricate] = useState(false);
   const [caricato, setCaricato] = useState(false);
   // La quota per cui è aperto il foglio "Fatto" (importo modificabile).
   const [quotaAperta, setQuotaAperta] = useState<string | null>(null);
-  const [aggiungi, setAggiungi] = useState(false);
+  // Il foglio della nuova fattura: dal "+ Incasso" parte già pagata.
+  const [nuova, setNuova] = useState<'fattura' | 'incasso' | null>(null);
   const [impostazioni, setImpostazioni] = useState(false);
   // Le quote con "Fatto" in corso: un solo tocco conta.
   const [inCorso, setInCorso] = useState<Set<string>>(new Set());
@@ -77,14 +98,23 @@ export function PivaHub({
         return null;
       }
     };
+    // Come le scadenze: se le fatture non si leggono, il resto della pagina funziona.
+    const leggiFatture = async (): Promise<PivaFattura[] | null> => {
+      try {
+        return await getFatture(supabase);
+      } catch {
+        return null;
+      }
+    };
     // getAccounts senza scope: i conti personali.
-    const [acc, tx, accant, scad] = await Promise.all([
+    const [acc, tx, accant, scad, fatt] = await Promise.all([
       getAccounts(supabase),
       getTransactions(supabase, undefined, { da, tipo: 'income' }),
       getAccantonamenti(supabase, { da }),
       leggiScadenze(),
+      leggiFatture(),
     ]);
-    return { acc, tx, accant, scad };
+    return { acc, tx, accant, scad, fatt };
   }
 
   function applica(d: Awaited<ReturnType<typeof leggi>>) {
@@ -93,6 +123,8 @@ export function PivaHub({
     setAccantonamenti(d.accant);
     setScadenze(d.scad ?? []);
     setScadenzeNonCaricate(d.scad === null);
+    setFatture(d.fatt ?? []);
+    setFattureNonCaricate(d.fatt === null);
     setCaricato(true);
   }
 
@@ -127,6 +159,9 @@ export function PivaHub({
     ? quoteInSospeso(incassi, accantonamenti, percentuale, categoriaId, settings.guidataDal)
     : [];
   const quotaDaSpostare = inSospeso.find((x) => x.transactionId === quotaAperta) ?? null;
+  // Sul conto tasse non entrano incassi: gli altri conti sono personali (getAccounts senza scope).
+  const contiIncasso = conti.filter((c) => c.id !== contoTasseId);
+  const contoIniziale = contoPerIncasso(incassi, conti, categoriaId, contoTasseId);
 
   // Dopo un'azione riuscita la ricarica può fallire: non è un'azione fallita, si segnala a parte.
   async function ricarica() {
@@ -168,6 +203,27 @@ export function PivaHub({
     }
     await ricarica();
     return true;
+  }
+
+  // Crea la fattura; con "Pagata adesso" nasce già incassata e subito dopo compare la quota tasse.
+  // Dopo che la fattura esiste nulla deve lanciare: un secondo tentativo ne farebbe un doppione.
+  async function salvaNuova(v: ValoriFattura) {
+    const id = await creaFattura(createClient(), {
+      cliente: v.cliente,
+      importo: v.importo,
+      dataEmissione: v.dataEmissione,
+      nota: v.nota,
+      ...(v.pagataAdesso && v.accountId ? { incassaSu: { accountId: v.accountId, categoriaId } } : {}),
+    });
+    setNuova(null);
+    try {
+      const d = await leggi();
+      applica(d);
+      const transazione = d.fatt?.find((f) => f.id === id)?.transactionId;
+      if (v.pagataAdesso && transazione) setQuotaAperta(transazione);
+    } catch {
+      setErrore('Fatto, ma non riesco ad aggiornare la pagina. Riaprila tra poco.');
+    }
   }
 
   return (
@@ -241,6 +297,29 @@ export function PivaHub({
           ) : null}
         </section>
 
+        <section aria-label="Fatture in attesa" className={CLASSE_SCHEDA}>
+          {fattureNonCaricate ? (
+            <>
+              <h2 className="font-serif text-lg font-semibold">Fatture in attesa</h2>
+              <p className="text-[15px] text-ink-2">Le fatture non si caricano ora.</p>
+            </>
+          ) : (
+            <FattureInAttesa
+              fatture={fatture}
+              oggi={oggiRomaISO()}
+              conti={contiIncasso}
+              contoIniziale={contoIniziale}
+              categoriaId={categoriaId}
+              onIncassata={async (transazione) => {
+                await ricarica();
+                setQuotaAperta(transazione);
+              }}
+              onCambiato={ricarica}
+              onTolta={(id) => setFatture((prima) => prima.filter((f) => f.id !== id))}
+            />
+          )}
+        </section>
+
         {settings.guidataDal ? (
           <section aria-label="Scadenze dell'anno" className={CLASSE_SCHEDA}>
             <ScadenzePiva
@@ -257,9 +336,14 @@ export function PivaHub({
           </section>
         ) : null}
 
-        <button type="button" onClick={() => setAggiungi(true)} className={CLASSE_PRIMARIO}>
-          + Incasso
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setNuova('incasso')} className={CLASSE_PRIMARIO}>
+            + Incasso
+          </button>
+          <button type="button" onClick={() => setNuova('fattura')} className={CLASSE_SECONDARIO}>
+            + Fattura
+          </button>
+        </div>
 
         <section className="flex flex-col gap-2">
           <button
@@ -296,23 +380,17 @@ export function PivaHub({
               />
       ) : null}
 
-      <AddTransactionSheet
-        aperto={aggiungi}
-        onClose={() => setAggiungi(false)}
-        personale={{ categories, accounts: conti, goals: [] }}
-        casa={null}
-        modoIniziale="personale"
-        iniziale={{ tipo: 'income', categoriaId: categoriaId }}
-        piva={
-          categoriaId ? { categoriaFatturatoId: categoriaId, percentuale, contoTasseId } : null
-        }
-        onSaved={() => {
-          carica().catch(fail);
-        }}
-        onAccantonato={() => {
-          carica().catch(fail);
-        }}
-      />
+      {nuova ? (
+        <FoglioInferiore titolo={nuova === 'incasso' ? 'Nuovo incasso' : 'Nuova fattura'} onClose={() => setNuova(null)}>
+          <NuovaFattura
+            pagataAdessoIniziale={nuova === 'incasso'}
+            conti={contiIncasso}
+            contoIniziale={contoIniziale}
+            oggi={oggiRomaISO()}
+            onSalva={salvaNuova}
+          />
+        </FoglioInferiore>
+      ) : null}
     </>
   );
 }

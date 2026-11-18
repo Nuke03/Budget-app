@@ -139,4 +139,40 @@ describe('loadHomeData: P.IVA', () => {
     expect(d.piva?.inSospeso).toEqual([{ transactionId: 'e1', importo: 600, quota: 82 }]);
     expect(d.disponibileLibero).toBe(1000 - 82);
   });
+
+  it('le fatture ferme da più di 60 giorni entrano nel Da fare', async () => {
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [], transactions: [],
+        piva_settings: [IMPOSTAZIONI_PIVA],
+        piva_accantonamenti: [],
+        piva_fatture: [
+          { id: 'f1', user_id: 'A', cliente: 'Rossi', importo: 900, data_emissione: '2026-08-01', data_incasso: null, transaction_id: null, nota: null },
+          { id: 'f2', user_id: 'A', cliente: 'Verdi', importo: 100, data_emissione: '2026-11-01', data_incasso: null, transaction_id: null, nota: null },
+        ],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    const testo = JSON.stringify(d.prossimo);
+    expect(testo).toContain('1 fattura aspetta da più di 60 giorni');
+  });
+
+  it('se le fatture non si leggono la home si apre lo stesso', async () => {
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [], transactions: [],
+        piva_settings: [IMPOSTAZIONI_PIVA],
+        piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const from = db.client.from.bind(db.client);
+    vi.spyOn(db.client, 'from').mockImplementation(((t: string) => {
+      if (t === 'piva_fatture') throw new Error('rete');
+      return from(t);
+    }) as typeof db.client.from);
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.contoTasseId).toBe('tasse');
+  });
 });
