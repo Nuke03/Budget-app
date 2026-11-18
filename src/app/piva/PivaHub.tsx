@@ -70,10 +70,20 @@ export type CampiStipendio = Partial<
 
 // Quello che serve per lo stipendio oltre ai conti e agli incassi: le spese dei mesi scorsi e di questo,
 // la casa e gli obiettivi (per il cuscinetto). null: non si leggono, e lo stipendio non si calcola.
-interface DatiStipendio {
+export interface DatiStipendio {
   spese: Transaction[];
   casa: CasaStato | null;
   goals: (BudgetGoal & { specoCollegato: number })[];
+}
+
+// Tutto quello che la pagina legge. Si passa già pronto solo per l'anteprima, senza rete.
+export interface DatiPivaHub {
+  acc: Account[];
+  tx: Transaction[];
+  accant: PivaAccantonamento[];
+  scad: PivaScadenza[] | null;
+  fatt: PivaFattura[] | null;
+  stip: DatiStipendio | null;
 }
 
 // La pagina P.IVA a guida finita: quanto mettere da parte, il conto tasse, le quote ancora da spostare.
@@ -82,11 +92,14 @@ export function PivaHub({
   onModifica,
   onDisattiva,
   onSalvaStipendio,
+  datiIniziali,
 }: {
   settings: PivaSettings;
   onModifica: () => void;
   onDisattiva: () => Promise<void>;
   onSalvaStipendio: (campi: CampiStipendio) => Promise<void>;
+  // Se c'è, la pagina non legge dal database: usa questi dati (anteprima).
+  datiIniziali?: DatiPivaHub;
 }) {
   const fail = useThrowToBoundary();
   const [conti, setConti] = useState<Account[]>([]);
@@ -113,7 +126,8 @@ export function PivaHub({
   const contoTasseId = settings.contoTasseId;
 
   // Legge tutto senza toccare lo stato: così l'effetto imposta lo stato solo dopo l'attesa.
-  async function leggi() {
+  async function leggi(): Promise<DatiPivaHub> {
+    if (datiIniziali) return datiIniziali;
     const supabase = createClient();
     const da = leggiDal(settings.guidataDal, anno);
     const oggiISO = oggiRomaISO();

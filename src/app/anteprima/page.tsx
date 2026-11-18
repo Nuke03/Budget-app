@@ -17,7 +17,8 @@ import { VistaSemplice } from '../casa/VistaSemplice';
 import { CasaDettagli } from '../casa/dettagli/CasaDettagli';
 import { finanzeCasa } from '../casa/finanzeCasa';
 import { CheckinMensile } from '../casa/controllo/CheckinMensile';
-import { AvvisoProva, ContiProva, ObiettiviProva, StoricoProva } from './VisteProva';
+import { AvvisoProva, ContiProva, GuidaPivaProva, ObiettiviProva, PivaHubProva, ScadenzePivaProva, StoricoProva } from './VisteProva';
+import { categoriePivaProva, contiPivaProva, datiPivaProva, impostazioniPivaProva, scadenzePivaProva } from './pivaProva';
 import { checkinProva, datiCasaProva } from './casaProva';
 
 // Solo in sviluppo: Home e /in-pari con dati di prova, senza login né Supabase,
@@ -241,6 +242,40 @@ export default async function AnteprimaPage({
       <>
         <Banner />
         <ContiProva accounts={[...conti, { id: 'c3', nome: 'Carta prepagata', saldoAttuale: 120.3, contaInDisponibile: true, targetSaldo: 200 }]} />
+      </>
+    );
+  }
+
+  if (scelta === 'piva') {
+    return (
+      <>
+        <Banner />
+        <PivaHubProva settings={impostazioniPivaProva(oggi)} dati={datiPivaProva(oggi)} />
+      </>
+    );
+  }
+
+  if (scelta === 'piva-guida') {
+    return (
+      <>
+        <Banner />
+        <GuidaPivaProva conti={contiPivaProva} categorie={categoriePivaProva} />
+      </>
+    );
+  }
+
+  if (scelta === 'piva-scadenze') {
+    const impostazioni = impostazioniPivaProva(oggi);
+    return (
+      <>
+        <Banner />
+        <ScadenzePivaProva
+          scadenze={scadenzePivaProva(oggi)}
+          saldoVaso={3100}
+          guidataDal={impostazioni.guidataDal ?? oggi}
+          anno={Number(oggi.slice(0, 4))}
+          oggi={oggi}
+        />
       </>
     );
   }
