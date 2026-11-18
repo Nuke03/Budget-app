@@ -16,9 +16,17 @@ function apri(over: Partial<React.ComponentProps<typeof PromptQuota>> = {}) {
 }
 
 describe('PromptQuota', () => {
-  it('dice quanto mettere da parte con la frase esatta', () => {
+  it('dice la quota in grande e poi su quanto incassato', () => {
     apri();
-    expect(screen.getByText('Di 600 € metti da parte 82 € sul conto tasse')).toBeInTheDocument();
+    expect(screen.getByText('82 €')).toHaveClass('num', 'font-serif');
+    expect(screen.getByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+  });
+
+  it('il campo importo sta dietro il link Ho spostato una cifra diversa', () => {
+    apri();
+    expect(screen.queryByLabelText('Importo spostato (€)')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ho spostato una cifra diversa' }));
+    expect(screen.getByLabelText('Importo spostato (€)')).toHaveValue(82);
   });
 
   it('Fatto passa l importo proposto', async () => {
@@ -29,6 +37,7 @@ describe('PromptQuota', () => {
 
   it('l importo spostato si può cambiare prima di confermare', async () => {
     const { props } = apri();
+    fireEvent.click(screen.getByRole('button', { name: 'Ho spostato una cifra diversa' }));
     fireEvent.change(screen.getByLabelText('Importo spostato (€)'), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, li ho spostati' }));
     await waitFor(() => expect(props.onFatto).toHaveBeenCalledWith(100));
@@ -36,6 +45,7 @@ describe('PromptQuota', () => {
 
   it('un importo vuoto o zero blocca il pulsante', () => {
     apri();
+    fireEvent.click(screen.getByRole('button', { name: 'Ho spostato una cifra diversa' }));
     fireEvent.change(screen.getByLabelText('Importo spostato (€)'), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Fatto, li ho spostati' })).toBeDisabled();
   });

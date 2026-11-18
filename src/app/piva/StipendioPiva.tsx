@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Campo, CLASSE_CAMPO, CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
-import { formatNumero } from '@/lib/format';
+import { formatNumero, nomeMese } from '@/lib/format';
 import { Perche } from './PerchePiva';
 import { euroInFrase } from './PromptQuota';
 
@@ -141,19 +141,37 @@ export function StipendioPiva({
   if (stipendio !== null) {
     return (
       <>
-        <h2 className="font-serif text-lg font-semibold">Stipendio</h2>
-        <p className="num text-[15px]">
-          Stipendio di questo mese {euroInFrase(stipendio)}
-          {riga ? ` (te ne restano ${euroInFrase(Math.max(0, riga.rimasto))})` : ''}
-        </p>
+        <div>
+          <h2 className="text-[13px] text-ink-2">Stipendio di {nomeMese(oggi)}</h2>
+          <p className="num font-serif text-[40px] font-bold leading-none">{euroInFrase(stipendio)}</p>
+          {riga ? (
+            <p className="num mt-1 text-[15px] text-ink-2">Te ne restano {euroInFrase(Math.max(0, riga.rimasto))}</p>
+          ) : null}
+        </div>
         {riga ? (
-          <p className="num text-[15px]">
-            Cuscinetto {euroInFrase(riga.cuscinetto)} copre {formatNumero(riga.mesiCoperti)}{' '}
-            {riga.mesiCoperti === 1 ? 'mese' : 'mesi'}
-          </p>
+          <div className="flex flex-col border-t border-rule pt-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[15px]">Cuscinetto</span>
+              <span className="num font-serif text-[22px] font-semibold">{euroInFrase(riga.cuscinetto)}</span>
+            </div>
+            <p className="num text-[15px] text-ink-2">
+              Copre {formatNumero(riga.mesiCoperti)} {riga.mesiCoperti === 1 ? 'mese' : 'mesi'}
+            </p>
+          </div>
         ) : (
           <p className="text-[15px] text-ink-2">Il cuscinetto non si calcola ora.</p>
         )}
+        <Perche tema="lo stipendio">
+          <p>
+            Lo stipendio è la cifra fissa che puoi spendere ogni mese, anche quando gli incassi arrivano a strappi. Tra
+            parentesi vedi quanto te ne resta dopo le spese di questo mese.
+          </p>
+          <p>
+            Il cuscinetto è quello che hai sui conti oltre lo stipendio di questo mese: serve per i mesi con pochi
+            incassi. «Copre {riga ? formatNumero(riga.mesiCoperti) : 'n'} mesi» vuol dire che potresti pagare{' '}
+            {riga ? formatNumero(riga.mesiCoperti) : 'n'} stipendi anche senza incassare niente.
+          </p>
+        </Perche>
         {cambia ? (
           campoCambia
         ) : (
@@ -178,6 +196,9 @@ export function StipendioPiva({
     return (
       <>
         <h2 className="font-serif text-lg font-semibold">Stipendio</h2>
+        <p className="text-[13px] text-ink-2">
+          Mi serve per proporti uno stipendio: non ho ancora abbastanza mesi di incassi.
+        </p>
         <CampoNumero etichetta="In un mese magro, quanto incassi più o meno?" azione="Continua" onInvia={onMeseMagro} />
       </>
     );
@@ -187,13 +208,16 @@ export function StipendioPiva({
   return (
     <>
       <h2 className="font-serif text-lg font-semibold">Stipendio</h2>
-      <p className="num font-serif text-[22px] font-semibold">Ti propongo {euroInFrase(proposta)} al mese.</p>
+      <p className="text-[13px] text-ink-2">Lo stipendio è la cifra fissa che puoi spendere ogni mese.</p>
+      <p className="num text-[15px]">
+        Ti propongo <span className="font-serif text-[28px] font-bold">{euroInFrase(proposta)}</span> al mese.
+      </p>
       <div className="flex flex-col">
         <div className="flex justify-between gap-3">
           <span className="text-ink-2">Incassi netti medi</span>
           <span className="num font-semibold">{euroInFrase(a)}</span>
         </div>
-        <Perche>
+        <Perche tema="gli incassi netti">
           <p>È la media di quanto hai incassato negli ultimi mesi, tolto quello che metti da parte per le tasse.</p>
         </Perche>
       </div>
@@ -203,15 +227,18 @@ export function StipendioPiva({
             <span className="text-ink-2">Quanto ti serve al mese</span>
             <span className="num font-semibold">{euroInFrase(b)}</span>
           </div>
-          <Perche>
+          <Perche tema="quanto ti serve">
             <p>È la media delle tue spese dei mesi scorsi, più la quota della casa se ce l&apos;hai.</p>
           </Perche>
         </div>
       ) : (
         <p className="text-[15px] text-ink-2">Non vedo ancora abbastanza spese: parto da quanto incassi.</p>
       )}
+      {b > 0 ? <p className="text-[15px]">Ti propongo la più bassa delle due, per stare tranquilli.</p> : null}
       {a > proposta ? (
-        <p className="num text-[15px]">Il resto, {euroInFrase(a - proposta)} al mese, riempie il cuscinetto.</p>
+        <p className="num text-[15px]">
+          Il resto, {euroInFrase(a - proposta)} al mese, va nel cuscinetto: una riserva per i mesi con pochi incassi.
+        </p>
       ) : null}
       {cambia ? (
         campoCambia

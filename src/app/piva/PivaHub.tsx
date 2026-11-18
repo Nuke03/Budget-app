@@ -36,7 +36,8 @@ import {
   totaleInSospeso,
 } from '@/lib/calculations/piva';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
-import { formatDateIt, formatEuro, formatNumero } from '@/lib/format';
+import { formatDataLunga, formatEuro, formatNumero, giornoEMeseScadenza } from '@/lib/format';
+import { dividiCifra } from '../home/formati';
 import type { PivaSettingsInput } from '@/lib/data/pivaSettings';
 import { CoverHeader } from '../CoverHeader';
 import { FoglioInferiore } from '../FoglioInferiore';
@@ -216,6 +217,14 @@ export function PivaHub({
     .reduce((tot, a) => tot + a.importo, 0);
   const confronto = confrontoAnno(stima.totale, messi);
   const prossima = prossimaScadenza(scadenze, oggiRomaISO());
+  const frasePossima = prossima
+    ? prossima.tipo === 'f24'
+      ? `Prossima scadenza: F24 (il modulo per pagare le tasse), ${giornoEMeseScadenza(prossima.data, Number(prossima.data.slice(8, 10)))}.`
+      : `Prossimo versamento ${settings.preset === 'enpap' ? "all'ENPAP" : 'alla cassa'}: ${giornoEMeseScadenza(prossima.data, Number(prossima.data.slice(8, 10)))}.`
+    : null;
+  // Il saldo grande senza ",00" se è tondo; altrimenti i centesimi più piccoli, come in Home.
+  const saldoTondo = Math.round(contoTasse.saldoAttuale * 100) % 100 === 0;
+  const saldoVaso = saldoTondo ? { intero: euroInFrase(contoTasse.saldoAttuale), resto: '' } : dividiCifra(formatEuro(contoTasse.saldoAttuale));
   const inSospeso = categoriaId
     ? quoteInSospeso(incassi, accantonamenti, percentuale, categoriaId, settings.guidataDal)
     : [];
@@ -331,26 +340,34 @@ export function PivaHub({
     <>
       <CoverHeader titolo="P.IVA" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
-        <section aria-label="Quanto mettere da parte" className={CLASSE_SCHEDA}>
-          <p className="num font-serif text-[22px] font-semibold">
-            Metti da parte il {formatNumero(percentuale)}% di ogni incasso.
-          </p>
-          <PerchePercentuale settings={settings} aliquota={aliquota} percentuale={percentuale} />
+        <section aria-label="Stipendio" className={CLASSE_SCHEDA}>
+          <StipendioPiva
+            stipendio={settings.stipendioMensile}
+            oggi={oggiISO}
+            calcolo={calcoloStipendio}
+            riga={rigaStipendio}
+            onSalva={onSalvaStipendio}
+            onMeseMagro={(incassoMeseMagro) => onSalvaStipendio({ incassoMeseMagro })}
+          />
         </section>
 
         <section aria-label="Conto tasse" className={CLASSE_SCHEDA}>
           <h2 className="text-[13px] text-ink-2">{contoTasse.nome}</h2>
-          <p className="num font-serif text-[40px] font-bold leading-none">{formatEuro(contoTasse.saldoAttuale)}</p>
-          <PercheSaldoVaso nomeConto={contoTasse.nome} />
-          <p className="text-[15px]">
-            Quest&apos;anno servono circa {euroInFrase(Math.round(confronto.servono))}, ne hai messi da parte{' '}
-            {euroInFrase(Math.round(confronto.messi))}.
+          <p data-testid="saldo-vaso" className="num font-serif text-[40px] font-bold leading-none">
+            {saldoVaso.intero}
+            {saldoVaso.resto ? <span className="text-[22px]">{saldoVaso.resto}</span> : null}
           </p>
-          {prossima ? (
-            <p className="num text-[15px] text-ink-2">
-              prossima {prossima.tipo === 'f24' ? 'F24' : 'ENPAP'} {prossima.data.slice(8)}/{prossima.data.slice(5, 7)}
+          <PercheSaldoVaso nomeConto={contoTasse.nome} />
+          <p className="num text-[15px]">Di ogni incasso metti da parte il {formatNumero(percentuale)}%.</p>
+          <PerchePercentuale settings={settings} aliquota={aliquota} percentuale={percentuale} />
+          <div>
+            <p className="text-[15px]">
+              Quest&apos;anno servono circa {euroInFrase(Math.round(confronto.servono))}, ne hai messi da parte{' '}
+              {euroInFrase(Math.round(confronto.messi))}.
             </p>
-          ) : null}
+            <p className="text-[13px] text-ink-2">Sono stime: le cifre vere le conferma il commercialista.</p>
+          </div>
+          {frasePossima ? <p className="num text-[15px] text-ink-2">{frasePossima}</p> : null}
           <PercheVaso settings={settings} fatturato={fatturato} stima={stima} messi={messi} />
         </section>
 
@@ -369,12 +386,11 @@ export function PivaHub({
                       className="flex min-h-12 items-center justify-between gap-3 border-t border-rule py-2 first:border-t-0"
                     >
                       <div className="min-w-0">
-                        <p className="num text-[15px]">
-                          {euroInFrase(q.quota)} da {euroInFrase(q.importo)}
+                        <p className="num text-[15px] font-medium">Metti da parte {euroInFrase(q.quota)}</p>
+                        <p className="num text-[13px] text-ink-2">
+                          Incasso di {euroInFrase(q.importo)}
+                          {incasso ? ` del ${formatDataLunga(incasso.data)}` : ''}
                         </p>
-                        {incasso ? (
-                          <p className="num text-[13px] text-ink-2">Incasso del {formatDateIt(incasso.data)}</p>
-                        ) : null}
                       </div>
                       <button
                         type="button"
@@ -396,17 +412,6 @@ export function PivaHub({
               {errore}
             </p>
           ) : null}
-        </section>
-
-        <section aria-label="Stipendio" className={CLASSE_SCHEDA}>
-          <StipendioPiva
-            stipendio={settings.stipendioMensile}
-            oggi={oggiISO}
-            calcolo={calcoloStipendio}
-            riga={rigaStipendio}
-            onSalva={onSalvaStipendio}
-            onMeseMagro={(incassoMeseMagro) => onSalvaStipendio({ incassoMeseMagro })}
-          />
         </section>
 
         <section aria-label="Fatture in attesa" className={CLASSE_SCHEDA}>
@@ -432,6 +437,15 @@ export function PivaHub({
           )}
         </section>
 
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setNuova('incasso')} className={CLASSE_PRIMARIO}>
+            + Incasso
+          </button>
+          <button type="button" onClick={() => setNuova('fattura')} className={CLASSE_SECONDARIO}>
+            + Fattura
+          </button>
+        </div>
+
         {settings.guidataDal ? (
           <section aria-label="Scadenze dell'anno" className={CLASSE_SCHEDA}>
             <ScadenzePiva
@@ -447,15 +461,6 @@ export function PivaHub({
             />
           </section>
         ) : null}
-
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => setNuova('incasso')} className={CLASSE_PRIMARIO}>
-            + Incasso
-          </button>
-          <button type="button" onClick={() => setNuova('fattura')} className={CLASSE_SECONDARIO}>
-            + Fattura
-          </button>
-        </div>
 
         <section className="flex flex-col gap-2">
           <button

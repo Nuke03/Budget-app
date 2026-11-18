@@ -4,6 +4,9 @@ import { StipendioPiva } from '@/app/piva/StipendioPiva';
 
 const OGGI = '2026-11-17';
 
+// Una frase con la cifra in un elemento a parte: si cerca sul testo intero del paragrafo.
+const frase = (testo: string) => screen.getByText((_, el) => el?.tagName === 'P' && el.textContent === testo);
+
 function apri(over: Partial<React.ComponentProps<typeof StipendioPiva>> = {}) {
   const props = {
     stipendio: null,
@@ -21,29 +24,35 @@ function apri(over: Partial<React.ComponentProps<typeof StipendioPiva>> = {}) {
 describe('StipendioPiva', () => {
   it('propone lo stipendio con A, B e il resto che va nel cuscinetto', () => {
     apri();
-    expect(screen.getByText(/Ti propongo 600 € al mese/)).toBeInTheDocument();
+    expect(screen.getAllByText('600 €').some((e) => e.classList.contains('font-serif'))).toBe(true);
+    expect(frase('Ti propongo 600 € al mese.')).toBeInTheDocument();
+    expect(screen.getByText('Lo stipendio è la cifra fissa che puoi spendere ogni mese.')).toBeInTheDocument();
+    expect(screen.getByText('Ti propongo la più bassa delle due, per stare tranquilli.')).toBeInTheDocument();
     expect(screen.getByText('Incassi netti medi')).toBeInTheDocument();
     expect(screen.getByText('800 €')).toBeInTheDocument();
     expect(screen.getByText('Quanto ti serve al mese')).toBeInTheDocument();
-    expect(screen.getByText('Il resto, 200 € al mese, riempie il cuscinetto.')).toBeInTheDocument();
+    expect(screen.getByText('Il resto, 200 € al mese, va nel cuscinetto: una riserva per i mesi con pochi incassi.')).toBeInTheDocument();
   });
 
   it('senza B non lo mostra come 0 ma dice che mancano spese', () => {
     apri({ calcolo: { a: 800, b: 0, proposta: 800, serveMeseMagro: false } });
     expect(screen.queryByText('Quanto ti serve al mese')).not.toBeInTheDocument();
     expect(screen.getByText('Non vedo ancora abbastanza spese: parto da quanto incassi.')).toBeInTheDocument();
-    expect(screen.getByText(/Ti propongo 800 € al mese/)).toBeInTheDocument();
+    expect(frase('Ti propongo 800 € al mese.')).toBeInTheDocument();
+    expect(screen.queryByText(/la più bassa delle due/)).not.toBeInTheDocument();
   });
 
   it('senza resto non parla del cuscinetto', () => {
     apri({ calcolo: { a: 500, b: 600, proposta: 500, serveMeseMagro: false } });
-    expect(screen.queryByText(/riempie il cuscinetto/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/va nel cuscinetto/)).not.toBeInTheDocument();
   });
 
   it('ogni numero ha il suo Perché', () => {
     apri();
-    const perche = screen.getAllByRole('button', { name: 'Perché?' });
+    const perche = screen.getAllByRole('button', { name: /^Perché\?/ });
     expect(perche).toHaveLength(2);
+    expect(perche[0]).toHaveAccessibleName('Perché? gli incassi netti');
+    expect(perche[1]).toHaveAccessibleName('Perché? quanto ti serve');
     fireEvent.click(perche[0]);
     expect(screen.getByText(/media di quanto hai incassato/)).toBeInTheDocument();
     fireEvent.click(perche[1]);
@@ -74,6 +83,9 @@ describe('StipendioPiva', () => {
 
   it('senza storico chiede il mese magro, una domanda sola', async () => {
     const p = apri({ calcolo: { a: null, b: 600, proposta: null, serveMeseMagro: true } });
+    expect(
+      screen.getByText('Mi serve per proporti uno stipendio: non ho ancora abbastanza mesi di incassi.')
+    ).toBeInTheDocument();
     const campo = screen.getByLabelText('In un mese magro, quanto incassi più o meno?');
     expect(screen.queryByRole('button', { name: 'Va bene' })).not.toBeInTheDocument();
     fireEvent.change(campo, { target: { value: '900' } });
@@ -81,11 +93,22 @@ describe('StipendioPiva', () => {
     await waitFor(() => expect(p.onMeseMagro).toHaveBeenCalledWith(900));
   });
 
-  it('con lo stipendio mostra le due righe', () => {
+  it('con lo stipendio mostra la cifra grande, quanto resta e il cuscinetto', () => {
     apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 1200, mesiCoperti: 1.5 } });
-    expect(screen.getByText('Stipendio di questo mese 800 € (te ne restano 450 €)')).toBeInTheDocument();
-    expect(screen.getByText('Cuscinetto 1.200 € copre 1,5 mesi')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stipendio di novembre' })).toBeInTheDocument();
+    expect(screen.getByText('800 €')).toHaveClass('num', 'font-serif');
+    expect(screen.getByText('Te ne restano 450 €')).toBeInTheDocument();
+    expect(screen.getByText('Cuscinetto')).toBeInTheDocument();
+    expect(screen.getByText('1.200 €')).toHaveClass('font-serif');
+    expect(screen.getByText('Copre 1,5 mesi')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Va bene' })).not.toBeInTheDocument();
+  });
+
+  it('il Perché dello stipendio spiega stipendio e cuscinetto', () => {
+    apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 1200, mesiCoperti: 1.5 } });
+    fireEvent.click(screen.getByRole('button', { name: 'Perché? lo stipendio' }));
+    expect(screen.getByText(/Lo stipendio è la cifra fissa che puoi spendere ogni mese, anche quando gli incassi arrivano a strappi/)).toBeInTheDocument();
+    expect(screen.getByText(/«Copre 1,5 mesi» vuol dire che potresti pagare 1,5 stipendi anche senza incassare niente/)).toBeInTheDocument();
   });
 
   it('con lo stipendio si può cambiare', async () => {

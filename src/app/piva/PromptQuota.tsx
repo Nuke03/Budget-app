@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FoglioInferiore } from '../FoglioInferiore';
-import { Campo, CLASSE_CAMPO, CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
+import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
 import { formatEuro } from '@/lib/format';
 import type { Account } from '@/lib/types';
 
@@ -33,6 +33,7 @@ export function PromptQuota({
   const [spostato, setSpostato] = useState(String(quota));
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState(false);
+  const [diversa, setDiversa] = useState(false);
 
   const valore = Number(spostato);
   const valido = spostato.trim() !== '' && Number.isFinite(valore) && valore > 0;
@@ -52,20 +53,29 @@ export function PromptQuota({
   return (
     <FoglioInferiore titolo="Metti da parte le tasse" onClose={onPiuTardi}>
       <div className="flex flex-col gap-4 px-5 pb-5">
-        <p className="font-serif text-[20px] font-semibold">
-          Di {euroInFrase(importo)} metti da parte {euroInFrase(quota)} sul conto tasse
-        </p>
+        <div>
+          <p className="num font-serif text-[40px] font-bold leading-none">{euroInFrase(quota)}</p>
+          <p className="mt-1 text-[15px]">
+            da mettere da parte sul conto tasse (su {euroInFrase(importo)} incassati)
+          </p>
+        </div>
         <p className="text-[15px] text-ink-2">Il conto è «{contoTasse}». Sposta i soldi con la tua banca, poi tocca il pulsante.</p>
-        <Campo etichetta="Importo spostato (€)">
-          <input
-            type="number"
-            inputMode="decimal"
-            step="any"
-            value={spostato}
-            onChange={(e) => setSpostato(e.target.value)}
-            className={CLASSE_CAMPO}
-          />
-        </Campo>
+        {diversa ? (
+          <Campo etichetta="Importo spostato (€)">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              value={spostato}
+              onChange={(e) => setSpostato(e.target.value)}
+              className={CLASSE_CAMPO}
+            />
+          </Campo>
+        ) : (
+          <button type="button" onClick={() => setDiversa(true)} className={`${CLASSE_LINK} self-start`}>
+            Ho spostato una cifra diversa
+          </button>
+        )}
         {errore ? (
           <p role="alert" className="text-[15px] text-danger">
             Non è riuscito. Riprova.

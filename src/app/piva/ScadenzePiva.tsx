@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { nascondiScadenza, pagaScadenza, updateScadenza } from '@/lib/data/piva';
-import { confrontoScadenza, eIlPrimoAnno } from '@/lib/calculations/pivaScadenze';
-import { formatDateIt } from '@/lib/format';
+import { confrontoScadenza, eIlPrimoAnno, prossimaScadenza } from '@/lib/calculations/pivaScadenze';
+import { formatDataLunga, formatDateIt } from '@/lib/format';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { Campo, CLASSE_CAMPO, CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
 import { PercheScadenza } from './PerchePiva';
@@ -22,6 +22,7 @@ export function ScadenzePiva({
   anno,
   oggi,
   nonCaricate = false,
+  apertaIniziale = false,
   onCambiato,
   onNascosta,
 }: {
@@ -32,10 +33,13 @@ export function ScadenzePiva({
   anno: number;
   oggi: string;
   nonCaricate?: boolean;
+  // La lista parte chiusa; l'anteprima la mostra già aperta.
+  apertaIniziale?: boolean;
   onCambiato: () => void | Promise<void>;
   onNascosta?: (id: string) => void;
 }) {
   const eliminaConAnnulla = useEliminaConAnnulla();
+  const [aperta, setAperta] = useState(apertaIniziale);
   const [nascosti, setNascosti] = useState<Set<string>>(new Set());
   const [modulo, setModulo] = useState<Modulo | null>(null);
   const [importo, setImporto] = useState('');
@@ -44,6 +48,7 @@ export function ScadenzePiva({
   const [errore, setErrore] = useState<string | null>(null);
 
   const visibili = scadenze.filter((s) => !s.nascosta && !nascosti.has(s.id));
+  const prossima = nonCaricate ? null : prossimaScadenza(visibili, oggi);
 
   function apri(s: PivaScadenza, modo: Modulo['modo']) {
     setErrore(null);
@@ -116,9 +121,8 @@ export function ScadenzePiva({
     });
   }
 
-  return (
+  const corpo = (
     <>
-      <h2 className="font-serif text-lg font-semibold">Scadenze dell&apos;anno</h2>
       {nonCaricate ? (
         <p className="text-[15px] text-ink-2">Le scadenze non si caricano ora.</p>
       ) : visibili.length === 0 ? (
@@ -251,6 +255,25 @@ export function ScadenzePiva({
           {errore}
         </p>
       ) : null}
+    </>
+  );
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={aperta}
+        onClick={() => setAperta((v) => !v)}
+        className="flex min-h-11 w-full flex-col items-start justify-center text-left"
+      >
+        <span className="font-serif text-lg font-semibold">Scadenze dell&apos;anno</span>
+        {prossima ? (
+          <span className="num text-[15px] text-ink-2">
+            Prossima: {prossima.descrizione.split(':')[0]}, {formatDataLunga(prossima.data)}
+          </span>
+        ) : null}
+      </button>
+      {aperta ? corpo : null}
     </>
   );
 }

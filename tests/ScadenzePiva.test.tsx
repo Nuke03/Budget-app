@@ -28,7 +28,7 @@ const nov = (over: Partial<PivaScadenza> = {}): PivaScadenza => ({
   ...over,
 });
 
-function apri(scadenze: PivaScadenza[], over: { saldoVaso?: number; guidataDal?: string; anno?: number } = {}) {
+function apri(scadenze: PivaScadenza[], over: { saldoVaso?: number; guidataDal?: string; anno?: number; aperta?: boolean } = {}) {
   const onCambiato = vi.fn();
   const r = render(
     <ScadenzePiva
@@ -38,6 +38,7 @@ function apri(scadenze: PivaScadenza[], over: { saldoVaso?: number; guidataDal?:
       guidataDal={over.guidataDal ?? '2026-11-17'}
       anno={over.anno ?? 2026}
       oggi="2026-11-17"
+      apertaIniziale={over.aperta ?? true}
       onCambiato={onCambiato}
     />
   );
@@ -52,6 +53,25 @@ beforeEach(() => {
 });
 
 describe('ScadenzePiva', () => {
+  it('parte chiusa: riga con la prossima scadenza in breve e data lunga, lista dietro il toggle', () => {
+    apri([nov({ importo: 3400 })], { aperta: false });
+    const toggle = screen.getByRole('button', { name: /Scadenze dell'anno/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('Prossima: F24 di novembre, 30 novembre 2026');
+    expect(screen.queryByRole('button', { name: 'Pagata' })).not.toBeInTheDocument();
+    expect(screen.queryByText('F24 di novembre: secondo acconto')).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('F24 di novembre: secondo acconto')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pagata' })).toBeInTheDocument();
+  });
+
+  it('chiusa e senza scadenze da fare non scrive nessuna prossima', () => {
+    apri([nov({ pagataIl: '2026-11-18', importo: 100 })], { aperta: false });
+    expect(screen.getByRole('button', { name: "Scadenze dell'anno" })).toBeInTheDocument();
+    expect(screen.queryByText(/Prossima:/)).not.toBeInTheDocument();
+  });
+
   it('una scadenza senza importo mostra "cifra in arrivo dal commercialista" e nessuna cifra', () => {
     apri([nov()]);
     expect(screen.getByText('F24 di novembre: secondo acconto')).toBeInTheDocument();
@@ -76,6 +96,13 @@ describe('ScadenzePiva', () => {
     apri([nov({ importo: 3400 })]);
     expect(screen.getByText(/Nel vaso ci sono 3\.100 €, servono 3\.400 €/)).toBeInTheDocument();
     expect(screen.getByText(/mancano 300 €: alziamo la percentuale/)).toBeInTheDocument();
+  });
+
+  it('il Perché della scadenza non ripete l avviso sulla stima, che sta nel hub', () => {
+    apri([nov({ importo: 3400 })]);
+    fireEvent.click(screen.getByRole('button', { name: 'Perché? la scadenza' }));
+    expect(screen.getByText(/Gli acconti si calcolano sulle tasse dell'anno prima, non su quello/)).toBeInTheDocument();
+    expect(screen.queryByText(/commercialista/)).not.toBeInTheDocument();
   });
 
   it('con la cifra e il vaso pieno: niente mancante', () => {
@@ -163,6 +190,7 @@ describe('ScadenzePiva', () => {
         guidataDal="2026-11-17"
         anno={2026}
         oggi="2026-11-17"
+        apertaIniziale
         onCambiato={vi.fn()}
         onNascosta={onNascosta}
       />

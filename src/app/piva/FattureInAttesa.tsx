@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { deleteFattura, incassaFattura, updateFattura } from '@/lib/data/piva';
 import { fattureInAttesa, riassuntoInAttesa } from '@/lib/calculations/pivaFatture';
-import { formatDateIt } from '@/lib/format';
+import { formatDataLunga } from '@/lib/format';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
 import {
@@ -23,7 +23,7 @@ import { PercheFatture } from './PerchePiva';
 import { euroInFrase } from './PromptQuota';
 import type { PivaFattura } from '@/lib/types';
 
-type Foglio = { id: string; modo: 'pagata' | 'modifica' };
+type Foglio = { id: string; modo: 'pagata' | 'modifica' | 'azioni' };
 
 const INCASSATE_VISIBILI = 3;
 
@@ -51,6 +51,7 @@ export function FattureInAttesa({
 }) {
   const eliminaConAnnulla = useEliminaConAnnulla();
   const [nascoste, setNascoste] = useState<Set<string>>(new Set());
+  const [aperte, setAperte] = useState(false);
   const [foglio, setFoglio] = useState<Foglio | null>(null);
   const [data, setData] = useState(oggi);
   const [conto, setConto] = useState(contoIniziale ?? conti[0]?.id ?? '');
@@ -124,48 +125,57 @@ export function FattureInAttesa({
       ) : (
         <>
           <div>
-            <p className="num font-serif text-[22px] font-semibold">Ti devono {euroInFrase(attesa.totale)}</p>
+            <p className="num text-[15px]">
+              Ti devono <span className="font-serif text-[22px] font-semibold">{euroInFrase(attesa.totale)}</span>
+            </p>
             <p className="text-[15px] text-ink-2">{riassuntoInAttesa(attesa)}</p>
           </div>
           <PercheFatture />
-          <ul>
-            {attesa.righe.map((f) => (
-              <li key={f.id} className="flex flex-col gap-2 border-t border-rule py-3 first:border-t-0">
-                <div>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-[15px] font-medium">{f.cliente}</p>
-                    <p className="num font-serif text-[18px] font-semibold">{euroInFrase(f.importo)}</p>
-                  </div>
-                  <p className="num text-[13px] text-ink-2">
-                    Emessa il {formatDateIt(f.dataEmissione)}
-                    {f.vecchia ? <span className="font-semibold text-foreground">, da {f.giorni} giorni</span> : null}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => apriPagata(f)} className={CLASSE_SECONDARIO}>
-                    Pagata
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setErrore(null);
-                      setFoglio({ id: f.id, modo: 'modifica' });
-                    }}
-                    className={CLASSE_NEUTRO}
-                  >
-                    Modifica
-                  </button>
-                  <button type="button" onClick={() => elimina(f)} className={CLASSE_NEUTRO}>
-                    Elimina
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
         </>
       )}
 
-      {incassate.length > 0 ? (
+      {attesa.righe.length > 0 || incassate.length > 0 ? (
+        <button
+          type="button"
+          aria-expanded={aperte}
+          onClick={() => setAperte((v) => !v)}
+          className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-brand-dark"
+        >
+          Le fatture una per una
+        </button>
+      ) : null}
+
+      {aperte && attesa.righe.length > 0 ? (
+        <ul>
+          {attesa.righe.map((f) => (
+            <li key={f.id} className="flex items-center justify-between gap-3 border-t border-rule py-2 first:border-t-0">
+              <button
+                type="button"
+                aria-label={`Dettagli della fattura di ${f.cliente}`}
+                onClick={() => {
+                  setErrore(null);
+                  setFoglio({ id: f.id, modo: 'azioni' });
+                }}
+                className="min-h-11 min-w-0 flex-1 text-left"
+              >
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="text-[15px] font-medium">{f.cliente}</span>
+                  <span className="num font-serif text-[18px] font-semibold">{euroInFrase(f.importo)}</span>
+                </span>
+                <span className="num block text-[13px] text-ink-2">
+                  Emessa il {formatDataLunga(f.dataEmissione)}
+                  {f.vecchia ? <span className="font-semibold text-foreground">, da {f.giorni} giorni</span> : null}
+                </span>
+              </button>
+              <button type="button" onClick={() => apriPagata(f)} className={`${CLASSE_SECONDARIO} shrink-0`}>
+                Pagata
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {aperte && incassate.length > 0 ? (
         <div className="flex flex-col">
           <h3 className="text-[13px] text-ink-2">Incassate da poco</h3>
           <ul>
@@ -176,7 +186,7 @@ export function FattureInAttesa({
                   <p className="num text-[15px]">{euroInFrase(f.importo)}</p>
                 </div>
                 <p className="num text-[13px] text-ink-2">
-                  incassata il {formatDateIt(f.dataIncasso as string)}: la trovi nello{' '}
+                  Incassata il {formatDataLunga(f.dataIncasso as string)}: la trovi nello{' '}
                   <Link href="/history" className="font-semibold text-brand-dark underline">
                     Storico
                   </Link>
@@ -188,6 +198,31 @@ export function FattureInAttesa({
       ) : null}
 
       <ErroreMovimento testo={foglio ? null : errore} />
+
+      {foglio?.modo === 'azioni' && aperta && aperta.dataIncasso === null ? (
+        <FoglioInferiore titolo={`Fattura di ${aperta.cliente}`} onClose={() => setFoglio(null)}>
+          <div className="flex flex-col gap-3 px-5 pb-5">
+            <p className="num text-[15px]">
+              <span className="font-serif text-[22px] font-semibold">{euroInFrase(aperta.importo)}</span>
+              {', emessa il '}
+              {formatDataLunga(aperta.dataEmissione)}
+            </p>
+            <button type="button" onClick={() => setFoglio({ id: aperta.id, modo: 'modifica' })} className={CLASSE_SECONDARIO}>
+              Modifica
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFoglio(null);
+                elimina(aperta);
+              }}
+              className={CLASSE_NEUTRO}
+            >
+              Elimina
+            </button>
+          </div>
+        </FoglioInferiore>
+      ) : null}
 
       {foglio?.modo === 'pagata' && aperta ? (
         <FoglioInferiore titolo="Fattura pagata" onClose={() => !inCorso && setFoglio(null)}>

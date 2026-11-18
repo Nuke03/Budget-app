@@ -18,6 +18,10 @@ const fattura = (id: string, dataEmissione: string, importo: number, dataIncasso
   id, cliente: `Cliente ${id}`, importo, dataEmissione, dataIncasso, transactionId: dataIncasso ? `t-${id}` : null, nota: null,
 });
 
+// Ti devono: etichetta e cifra serif in due pezzi, si cerca sul paragrafo intero.
+const frase = (testo: string) => screen.getByText((_, el) => el?.tagName === 'P' && el.textContent === testo);
+const apriElenco = () => fireEvent.click(screen.getByRole('button', { name: 'Le fatture una per una' }));
+
 const conti = [
   { id: 'a1', nome: 'Corrente' },
   { id: 'a2', nome: 'Risparmi' },
@@ -55,12 +59,26 @@ beforeEach(() => {
 describe('FattureInAttesa', () => {
   it('mostra il totale e il riassunto con la fattura vecchia', () => {
     apri();
-    expect(screen.getByText('Ti devono 1.400 €')).toBeInTheDocument();
+    expect(frase('Ti devono 1.400 €')).toBeInTheDocument();
     expect(screen.getByText('3 fatture, 1 da 91 giorni')).toBeInTheDocument();
+  });
+
+  it('la lista parte chiusa e si apre col toggle', () => {
+    apri();
+    const toggle = screen.getByRole('button', { name: 'Le fatture una per una' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Cliente a')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pagata' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Cliente a')).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.queryByText('Cliente a')).not.toBeInTheDocument();
   });
 
   it('ordina dalla più vecchia', () => {
     apri();
+    apriElenco();
     const righe = screen.getAllByRole('listitem');
     expect(within(righe[0]).getByText('Cliente a')).toBeInTheDocument();
     expect(within(righe[2]).getByText('Cliente c')).toBeInTheDocument();
@@ -68,7 +86,7 @@ describe('FattureInAttesa', () => {
 
   it('il Perché della lista ha il testo della spec', () => {
     apri();
-    fireEvent.click(screen.getByRole('button', { name: 'Perché?' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Perché? le fatture' }));
     expect(
       screen.getByText(
         'Nel forfettario le tasse si pagano su quello che incassi, non su quello che fatturi. Questa fattura non è ancora soldi tuoi, ma neanche tasse da pagare.'
@@ -83,6 +101,7 @@ describe('FattureInAttesa', () => {
 
   it('Pagata chiede data e conto, poi incassa e passa l entrata creata', async () => {
     const { props } = apri();
+    apriElenco();
     const prima = screen.getAllByRole('listitem')[1];
     fireEvent.click(within(prima).getByRole('button', { name: 'Pagata' }));
     expect(screen.getByLabelText('Data')).toHaveValue('2026-11-17');
@@ -99,6 +118,7 @@ describe('FattureInAttesa', () => {
     let finisci: (v: string) => void = () => {};
     vi.mocked(incassaFattura).mockReturnValue(new Promise<string>((r) => (finisci = r)));
     apri();
+    apriElenco();
     fireEvent.click(within(screen.getAllByRole('listitem')[0]).getByRole('button', { name: 'Pagata' }));
     const conferma = screen.getByRole('button', { name: 'Segna incassata' });
     fireEvent.click(conferma);
@@ -111,19 +131,39 @@ describe('FattureInAttesa', () => {
   it('se incassare fallisce lo dice e non apre nulla', async () => {
     vi.mocked(incassaFattura).mockRejectedValue(new Error('x'));
     const { props } = apri();
+    apriElenco();
     fireEvent.click(within(screen.getAllByRole('listitem')[0]).getByRole('button', { name: 'Pagata' }));
     fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Non è riuscito. Riprova.');
     expect(props.onIncassata).not.toHaveBeenCalled();
   });
 
-  it('una fattura incassata non si modifica: dice quando e rimanda allo Storico', () => {
+  it('una fattura incassata non si modifica: dice quando in lettere e rimanda allo Storico', () => {
     apri([fattura('z', '2026-10-01', 250, '2026-10-20'), fattura('b', '2026-10-20', 300)]);
-    expect(screen.getByText('Ti devono 300 €')).toBeInTheDocument();
+    expect(frase('Ti devono 300 €')).toBeInTheDocument();
+    apriElenco();
     const riga = screen.getByText('Cliente z').closest('li') as HTMLElement;
-    expect(within(riga).getByText(/incassata il 20\/10\/2026/)).toBeInTheDocument();
+    expect(within(riga).getByText(/Incassata il 20 ottobre 2026/)).toBeInTheDocument();
     expect(within(riga).getByRole('link', { name: /Storico/ })).toHaveAttribute('href', '/history');
     expect(within(riga).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('la data di emissione è in lettere', () => {
+    apri();
+    apriElenco();
+    expect(screen.getByText(/Emessa il 18 agosto 2026/)).toBeInTheDocument();
+  });
+
+  it('ogni riga ha solo Pagata; Modifica ed Elimina stanno nel foglio della riga', () => {
+    apri();
+    apriElenco();
+    const riga = screen.getAllByRole('listitem')[0];
+    expect(within(riga).queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument();
+    expect(within(riga).queryByRole('button', { name: 'Elimina' })).not.toBeInTheDocument();
+    fireEvent.click(within(riga).getByRole('button', { name: 'Dettagli della fattura di Cliente a' }));
+    const foglio = screen.getByRole('dialog', { name: 'Fattura di Cliente a' });
+    expect(within(foglio).getByRole('button', { name: 'Modifica' })).toBeInTheDocument();
+    expect(within(foglio).getByRole('button', { name: 'Elimina' })).toBeInTheDocument();
   });
 
   it('eliminare l entrata nello storico riporta la fattura in attesa', () => {
@@ -131,20 +171,23 @@ describe('FattureInAttesa', () => {
     expect(screen.getByText('Nessuna fattura in attesa.')).toBeInTheDocument();
     // il trigger del database riapre la fattura: il dato riletto ha dataIncasso null
     rerender(<FattureInAttesa {...props} fatture={[fattura('z', '2026-11-10', 250, null)]} />);
-    expect(screen.getByText('Ti devono 250 €')).toBeInTheDocument();
+    expect(frase('Ti devono 250 €')).toBeInTheDocument();
+    apriElenco();
     expect(within(screen.getByText('Cliente z').closest('li') as HTMLElement).getByRole('button', { name: 'Pagata' })).toBeInTheDocument();
   });
 
   it('Elimina passa da annulla e toglie la fattura solo dopo l attesa', async () => {
     const { props } = apri();
-    fireEvent.click(within(screen.getAllByRole('listitem')[0]).getByRole('button', { name: 'Elimina' }));
+    apriElenco();
+    fireEvent.click(within(screen.getAllByRole('listitem')[0]).getByRole('button', { name: 'Dettagli della fattura di Cliente a' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     expect(elimina).toHaveBeenCalledTimes(1);
     const richiesta = elimina.mock.calls[0][0];
     expect(richiesta.id).toBe('a');
     expect(deleteFattura).not.toHaveBeenCalled();
     richiesta.nascondi();
     await waitFor(() => expect(screen.queryByText('Cliente a')).not.toBeInTheDocument());
-    expect(screen.getByText('Ti devono 400 €')).toBeInTheDocument();
+    expect(frase('Ti devono 400 €')).toBeInTheDocument();
     richiesta.ripristina();
     await waitFor(() => expect(screen.getByText('Cliente a')).toBeInTheDocument());
     await richiesta.esegui();
@@ -154,7 +197,9 @@ describe('FattureInAttesa', () => {
 
   it('Modifica cambia chi, quanto e data della fattura in attesa', async () => {
     const { props } = apri();
-    fireEvent.click(within(screen.getAllByRole('listitem')[1]).getByRole('button', { name: 'Modifica' }));
+    apriElenco();
+    fireEvent.click(within(screen.getAllByRole('listitem')[1]).getByRole('button', { name: 'Dettagli della fattura di Cliente b' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Modifica' }));
     fireEvent.change(screen.getByLabelText('Importo (€)'), { target: { value: '350' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
     await waitFor(() =>

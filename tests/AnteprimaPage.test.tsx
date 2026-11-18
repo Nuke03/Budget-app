@@ -56,12 +56,14 @@ describe('/anteprima', () => {
 
     it('piva: il hub con i dati di Miriam', async () => {
       await mostra('piva');
-      expect(await screen.findByText(/Metti da parte il 13,7% di ogni incasso/)).toBeTruthy();
+      expect(await screen.findByText('Di ogni incasso metti da parte il 13,7%.')).toBeTruthy();
       expect(screen.getByText(/servono circa 4\.300 €, ne hai messi da parte 3\.100 €/)).toBeTruthy();
-      expect(screen.getByText(/Stipendio di questo mese 1\.300 € \(te ne restano 640 €\)/)).toBeTruthy();
-      expect(screen.getByText(/Cuscinetto 2\.900 €/)).toBeTruthy();
+      expect(screen.getByText('Stipendio di novembre')).toBeTruthy();
+      expect(screen.getByText('Te ne restano 640 €')).toBeTruthy();
+      expect(screen.getByText('Cuscinetto')).toBeTruthy();
+      expect(screen.getByText('2.900 €')).toBeTruthy();
       expect(screen.getByText(/3 fatture, 1 da 90 giorni/)).toBeTruthy();
-      expect(screen.getByText(/prossima F24 30\/11/)).toBeTruthy();
+      expect(screen.getByText(/Prossima scadenza: F24 \(il modulo per pagare le tasse\), 30 novembre\./)).toBeTruthy();
       expect(screen.getByText(/^\+ Incasso$/)).toBeTruthy();
       expect(screen.getByText(/^\+ Fattura$/)).toBeTruthy();
     });

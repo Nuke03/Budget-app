@@ -109,6 +109,7 @@ export function ScadenzePivaProva({
           guidataDal={guidataDal}
           anno={anno}
           oggi={oggi}
+          apertaIniziale
           onCambiato={niente}
         />
       </section>

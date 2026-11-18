@@ -504,7 +504,8 @@ describe('AddTransactionSheet: quota delle tasse', () => {
   it('entrata di categoria fatturato apre il prompt con 82 su 600', async () => {
     apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale' });
     incassa('Compensi', '600');
-    expect(await screen.findByText('Di 600 € metti da parte 82 € sul conto tasse')).toBeInTheDocument();
+    expect(await screen.findByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+    expect(screen.getByText('82 €')).toBeInTheDocument();
   });
 
   it('entrata di altra categoria non apre il prompt', async () => {

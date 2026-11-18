@@ -6,7 +6,7 @@ import { euroInFrase } from './PromptQuota';
 import type { PivaSettings } from '@/lib/types';
 
 // Il "Perché?" di ogni numero della pagina: un tocco, e il numero si spiega con le sue parti.
-export function Perche({ children }: { children: ReactNode }) {
+export function Perche({ tema, children }: { tema: string; children: ReactNode }) {
   const [aperto, setAperto] = useState(false);
   const pannelloId = useId();
   return (
@@ -15,6 +15,7 @@ export function Perche({ children }: { children: ReactNode }) {
         type="button"
         aria-expanded={aperto}
         aria-controls={pannelloId}
+        aria-label={`Perché? ${tema}`}
         onClick={() => setAperto((a) => !a)}
         className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-dark"
       >
@@ -56,7 +57,7 @@ export function PerchePercentuale({
   const soggettivo = (coef * settings.aliquotaContributoSoggettivo) / 100;
   const integrativo = settings.aliquotaContributoIntegrativo;
   return (
-    <Perche>
+    <Perche tema="la percentuale">
       <p>
         Di ogni incasso solo il {formatNumero(coef)}% conta come reddito. Su quella parte paghi l&apos;imposta sostitutiva
         (la tassa unica del regime forfettario, al posto dell&apos;Irpef) e il contributo soggettivo (la tua pensione
@@ -77,7 +78,7 @@ export function PerchePercentuale({
 
 export function PercheSaldoVaso({ nomeConto }: { nomeConto: string }) {
   return (
-    <Perche>
+    <Perche tema="il conto tasse">
       <p>
         È il saldo del conto «{nomeConto}». Sale quando sposti la quota di un incasso e scende quando paghi tasse e
         contributi.
@@ -99,10 +100,10 @@ export function PercheVaso({
   messi: number;
 }) {
   return (
-    <Perche>
+    <Perche tema="le tasse di quest'anno">
       <p>
         Parto da quanto hai incassato quest&apos;anno e applico le regole del regime forfettario: l&apos;imposta
-        sostitutiva sul reddito, il contributo soggettivo (non meno del minimale di{' '}
+        sostitutiva sul reddito, il contributo soggettivo (non meno del minimo che la cassa chiede ogni anno,{' '}
         {euroInFrase(settings.minimaleContributivoAnnuo)}) e il contributo integrativo.
       </p>
       <ul className="flex flex-col gap-1">
@@ -121,20 +122,19 @@ export function PercheVaso({
 // Perché il vaso può non bastare per una scadenza: gli acconti guardano l'anno prima.
 export function PercheScadenza() {
   return (
-    <Perche>
+    <Perche tema="la scadenza">
       <p>
         Gli acconti si calcolano sulle tasse dell&apos;anno prima, non su quello che incassi adesso: possono essere
         più alti di quanto hai messo da parte.
       </p>
       <p>La percentuale che ti proponiamo è prudente: alzandola, la prossima volta ci arrivi.</p>
-      <p>È una stima: la conferma è del commercialista.</p>
     </Perche>
   );
 }
 
 export function PercheQuote({ percentuale }: { percentuale: number }) {
   return (
-    <Perche>
+    <Perche tema="da spostare">
       <p>
         Ogni quota è il {formatNumero(percentuale)}% dell&apos;incasso, arrotondato all&apos;euro. Quando sposti i soldi
         sul conto tasse tocca «Fatto» e la quota esce da questa lista.
@@ -146,7 +146,7 @@ export function PercheQuote({ percentuale }: { percentuale: number }) {
 // Perché una fattura non pagata non è ancora un costo di tasse.
 export function PercheFatture() {
   return (
-    <Perche>
+    <Perche tema="le fatture">
       <p>
         Nel forfettario le tasse si pagano su quello che incassi, non su quello che fatturi. Questa fattura non è ancora
         soldi tuoi, ma neanche tasse da pagare.

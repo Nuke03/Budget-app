@@ -119,16 +119,37 @@ beforeEach(() => {
 
 afterEach(() => vi.useRealTimers());
 
+const frase = (testo: string) => screen.getByText((_, el) => el?.tagName === 'P' && el.textContent === testo);
+
 describe('PivaHub', () => {
-  it('dice la percentuale di ogni incasso', async () => {
+  it('dice la percentuale di ogni incasso, in una riga sans dentro la scheda del conto tasse', async () => {
     apri();
-    expect(await screen.findByText(/13,7% di ogni incasso/)).toBeInTheDocument();
+    const riga = await screen.findByText('Di ogni incasso metti da parte il 13,7%.');
+    expect(riga.closest('section')).toHaveAttribute('aria-label', 'Conto tasse');
+    expect(riga).not.toHaveClass('font-serif');
+  });
+
+  it('l ordine: stipendio, conto tasse, da spostare, ti devono, azioni, scadenze, impostazioni', async () => {
+    apri();
+    await screen.findByRole('region', { name: 'Conto tasse' });
+    const ordine = [
+      screen.getByRole('region', { name: 'Stipendio' }),
+      screen.getByRole('region', { name: 'Conto tasse' }),
+      screen.getByRole('region', { name: 'Da spostare' }),
+      screen.getByRole('region', { name: 'Fatture in attesa' }),
+      screen.getByRole('button', { name: '+ Incasso' }),
+      screen.getByRole('region', { name: "Scadenze dell'anno" }),
+      screen.getByRole('button', { name: 'Impostazioni' }),
+    ];
+    for (let i = 1; i < ordine.length; i++) {
+      expect(ordine[i - 1].compareDocumentPosition(ordine[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
   it('il vaso mostra il saldo del conto tasse e il confronto dell anno', async () => {
     apri();
     const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
-    expect(within(vaso).getByText('400,00 €')).toBeInTheDocument();
+    expect(within(vaso).getByTestId('saldo-vaso')).toHaveTextContent('400 €');
     // 5600 incassati: 4368 di reddito, 218 + 856 + 112 = 1186 di stima
     expect(within(vaso).getByText(/Quest'anno servono circa 1\.186 €, ne hai messi da parte 400 €/)).toBeInTheDocument();
   });
@@ -137,17 +158,19 @@ describe('PivaHub', () => {
     apri();
     const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
     expect(screen.queryByText(/la conferma è del commercialista/)).not.toBeInTheDocument();
-    const bottoni = within(vaso).getAllByRole('button', { name: 'Perché?' });
-    fireEvent.click(bottoni[bottoni.length - 1]);
+    // la frase sulla stima è visibile una volta nel hub; nel Perché resta l'avviso a parole sue
+    expect(within(vaso).getByText('Sono stime: le cifre vere le conferma il commercialista.')).toBeInTheDocument();
+    fireEvent.click(within(vaso).getByRole('button', { name: "Perché? le tasse di quest'anno" }));
     expect(screen.getAllByText(/la conferma è del commercialista/)).toHaveLength(1);
+    expect(within(vaso).getByText(/non meno del minimo che la cassa chiede ogni anno, 856 €/)).toBeInTheDocument();
     expect(within(vaso).getByText('Imposta sostitutiva')).toBeInTheDocument();
     expect(within(vaso).getByText("Incassato quest'anno")).toBeInTheDocument();
   });
 
   it('il Perché della percentuale la divide in imposta, soggettivo e integrativo', async () => {
     apri();
-    const sezione = await screen.findByRole('region', { name: 'Quanto mettere da parte' });
-    fireEvent.click(within(sezione).getByRole('button', { name: 'Perché?' }));
+    const sezione = await screen.findByRole('region', { name: 'Conto tasse' });
+    fireEvent.click(within(sezione).getByRole('button', { name: 'Perché? la percentuale' }));
     expect(within(sezione).getByText(/Imposta sostitutiva \(78% × 5%\)/)).toBeInTheDocument();
     expect(within(sezione).getByText(/Contributo soggettivo \(78% × 10%\)/)).toBeInTheDocument();
     expect(within(sezione).getByText('Contributo integrativo')).toBeInTheDocument();
@@ -158,10 +181,13 @@ describe('PivaHub', () => {
     apri();
     const lista = await screen.findByRole('region', { name: 'Da spostare' });
     // solo l'incasso dal giorno della guida (10 novembre): 13,7% di 600 = 82
-    expect(within(lista).getByText(/82 €/)).toBeInTheDocument();
+    expect(within(lista).getByText('Metti da parte 82 €')).toBeInTheDocument();
+    expect(within(lista).getByText('Incasso di 600 € del 10 novembre 2026')).toBeInTheDocument();
+    expect(within(lista).getByRole('button', { name: 'Perché? da spostare' })).toBeInTheDocument();
     expect(within(lista).getAllByRole('button', { name: 'Fatto' })).toHaveLength(1);
     fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
-    // Fatto apre il foglio con la quota modificabile
+    // Fatto apre il foglio: il campo importo sta dietro il link
+    fireEvent.click(await screen.findByRole('button', { name: 'Ho spostato una cifra diversa' }));
     const importoSpostato = await screen.findByLabelText('Importo spostato (€)');
     expect(importoSpostato).toHaveValue(82);
     fireEvent.click(screen.getByRole('button', { name: 'Fatto, li ho spostati' }));
@@ -199,16 +225,43 @@ describe('PivaHub', () => {
       expect.objectContaining({ anno: 2026, chiave: 'f24_novembre', data: '2026-11-30' }),
     ]);
     expect(getScadenze).toHaveBeenCalledWith(expect.anything(), 2026);
-    expect(within(vaso).getByText('prossima F24 30/11')).toBeInTheDocument();
+    expect(
+      within(vaso).getByText('Prossima scadenza: F24 (il modulo per pagare le tasse), 30 novembre.')
+    ).toBeInTheDocument();
     const sezione = screen.getByRole('region', { name: "Scadenze dell'anno" });
+    // chiusa: la riga dice la prossima in breve, la lista sta dietro il toggle
+    const toggle = within(sezione).getByRole('button', { name: /Scadenze dell'anno/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('Prossima: F24 di novembre, 30 novembre 2026');
+    expect(within(sezione).queryByText('F24 di novembre: secondo acconto')).not.toBeInTheDocument();
+    fireEvent.click(toggle);
     expect(within(sezione).getByText('F24 di novembre: secondo acconto')).toBeInTheDocument();
+  });
+
+  it('per la cassa dice il prossimo versamento con il nome della cassa o "alla cassa"', async () => {
+    vi.mocked(getScadenze).mockResolvedValue([
+      {
+        id: 'sc2', anno: 2026, chiave: 'cassa_acconto', tipo: 'cassa', descrizione: 'ENPAP: primo acconto',
+        data: '2026-12-01', importo: null, pagataIl: null, transactionId: null, nascosta: false,
+      },
+    ]);
+    const { unmount } = render(
+      <PivaHub settings={settings} onModifica={vi.fn()} onDisattiva={vi.fn()} onSalvaStipendio={vi.fn()} />
+    );
+    expect(await screen.findByText("Prossimo versamento all'ENPAP: 1° dicembre.")).toBeInTheDocument();
+    unmount();
+    render(
+      <PivaHub settings={{ ...settings, preset: 'altro' }} onModifica={vi.fn()} onDisattiva={vi.fn()} onSalvaStipendio={vi.fn()} />
+    );
+    expect(await screen.findByText('Prossimo versamento alla cassa: 1° dicembre.')).toBeInTheDocument();
   });
 
   it('se le scadenze non si caricano il vaso e le quote restano usabili', async () => {
     vi.mocked(assicuraScadenze).mockRejectedValue(new Error('rete'));
     apri();
     const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
-    expect(within(vaso).getByText('400,00 €')).toBeInTheDocument();
+    expect(within(vaso).getByTestId('saldo-vaso')).toHaveTextContent('400 €');
+    fireEvent.click(screen.getByRole('button', { name: "Scadenze dell'anno" }));
     expect(screen.getByText('Le scadenze non si caricano ora.')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Da spostare' })).toBeInTheDocument();
   });
@@ -235,7 +288,13 @@ describe('PivaHub', () => {
   it('mostra Ti devono con totale, numero e fattura vecchia', async () => {
     apri();
     const sezione = await screen.findByRole('region', { name: 'Fatture in attesa' });
-    expect(within(sezione).getByText('Ti devono 1.200 €')).toBeInTheDocument();
+    expect(
+      within(sezione).getByText((_, el) => el?.tagName === 'P' && el.textContent === 'Ti devono 1.200 €')
+    ).toBeInTheDocument();
+    // la lista una per una sta dietro il toggle
+    expect(within(sezione).queryByText('Rossi')).not.toBeInTheDocument();
+    fireEvent.click(within(sezione).getByRole('button', { name: 'Le fatture una per una' }));
+    expect(within(sezione).getByText('Rossi')).toBeInTheDocument();
     expect(within(sezione).getByText('2 fatture, 1 da 91 giorni')).toBeInTheDocument();
   });
 
@@ -243,17 +302,20 @@ describe('PivaHub', () => {
     vi.mocked(getFatture).mockRejectedValue(new Error('rete'));
     apri();
     const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
-    expect(within(vaso).getByText('400,00 €')).toBeInTheDocument();
+    expect(within(vaso).getByTestId('saldo-vaso')).toHaveTextContent('400 €');
     expect(screen.getByText('Le fatture non si caricano ora.')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Da spostare' })).toBeInTheDocument();
   });
 
-  it('+ Incasso apre la nuova fattura già pagata, con Incasso diretto', async () => {
+  it('+ Incasso apre la modalità incasso: importo a fuoco, conto, Chi facoltativo, niente Pagata adesso', async () => {
     apri();
     fireEvent.click(await screen.findByRole('button', { name: '+ Incasso' }));
     const foglio = await screen.findByRole('dialog', { name: 'Nuovo incasso' });
-    expect(within(foglio).getByRole('checkbox', { name: 'Pagata adesso' })).toBeChecked();
-    expect(within(foglio).getByLabelText('Chi')).toHaveValue('Incasso diretto');
+    expect(within(foglio).queryByRole('checkbox', { name: 'Pagata adesso' })).not.toBeInTheDocument();
+    expect(within(foglio).getByLabelText('Importo (€)')).toHaveFocus();
+    expect(within(foglio).getByLabelText('Chi')).toHaveValue('');
+    expect(within(foglio).getByPlaceholderText('Chi ti ha pagato (se vuoi)')).toBeInTheDocument();
+    expect(within(foglio).getByLabelText("Data dell'incasso")).toBeInTheDocument();
     // il conto di partenza è quello dell'ultimo incasso del fatturato
     expect(within(foglio).getByLabelText('Conto')).toHaveValue('a1');
     expect(within(foglio).queryByRole('option', { name: 'Conto tasse' })).not.toBeInTheDocument();
@@ -265,9 +327,10 @@ describe('PivaHub', () => {
     const foglio = await screen.findByRole('dialog', { name: 'Nuova fattura' });
     expect(within(foglio).getByRole('checkbox', { name: 'Pagata adesso' })).not.toBeChecked();
     expect(within(foglio).getByLabelText('Chi')).toHaveValue('');
+    expect(within(foglio).getByLabelText('Data di emissione')).toBeInTheDocument();
   });
 
-  it('Pagata adesso chiama creaFattura con incassaSu e apre il prompt della quota', async () => {
+  it('+ Incasso salva già pagata con Incasso in studio e apre il prompt della quota', async () => {
     apri();
     fireEvent.click(await screen.findByRole('button', { name: '+ Incasso' }));
     const foglio = await screen.findByRole('dialog', { name: 'Nuovo incasso' });
@@ -277,17 +340,18 @@ describe('PivaHub', () => {
     ]);
     vi.mocked(creaFattura).mockResolvedValue('f-nuova');
     vi.mocked(getFatture).mockResolvedValue([
-      { id: 'f-nuova', cliente: 'Incasso diretto', importo: 1000, dataEmissione: '2026-11-17', dataIncasso: '2026-11-17', transactionId: 'i-nuovo', nota: null },
+      { id: 'f-nuova', cliente: 'Incasso in studio', importo: 1000, dataEmissione: '2026-11-17', dataIncasso: '2026-11-17', transactionId: 'i-nuovo', nota: null },
     ]);
     fireEvent.change(within(foglio).getByLabelText('Importo (€)'), { target: { value: '1000' } });
     fireEvent.click(within(foglio).getByRole('button', { name: 'Salva' }));
     await waitFor(() =>
       expect(creaFattura).toHaveBeenCalledWith(expect.anything(), {
-        cliente: 'Incasso diretto', importo: 1000, dataEmissione: '2026-11-17', nota: null,
+        cliente: 'Incasso in studio', importo: 1000, dataEmissione: '2026-11-17', nota: null,
         incassaSu: { accountId: 'a1', categoriaId: 'cat-fatt' },
       })
     );
-    expect(await screen.findByText('Di 1.000 € metti da parte 137 € sul conto tasse')).toBeInTheDocument();
+    expect(await screen.findByText('da mettere da parte sul conto tasse (su 1.000 € incassati)')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Metti da parte le tasse' })).toHaveTextContent('137 €');
   });
 
   it('una fattura senza Pagata adesso crea solo la fattura, senza prompt', async () => {
@@ -303,7 +367,7 @@ describe('PivaHub', () => {
       })
     );
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuova fattura' })).not.toBeInTheDocument());
-    expect(screen.queryByText(/sul conto tasse$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/da mettere da parte sul conto tasse/)).not.toBeInTheDocument();
   });
 
   it('dopo Pagata si apre il prompt della quota con l importo della fattura', async () => {
@@ -312,17 +376,19 @@ describe('PivaHub', () => {
     vi.mocked(getTransactions).mockResolvedValue([
       incasso('i-nuovo', '2026-11-17', 900), incasso('i2', '2026-11-10', 600), incasso('i1', '2026-03-10', 5000),
     ]);
+    fireEvent.click(within(sezione).getByRole('button', { name: 'Le fatture una per una' }));
     fireEvent.click(within(within(sezione).getByText('Rossi').closest('li') as HTMLElement).getByRole('button', { name: 'Pagata' }));
     fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
     await waitFor(() =>
       expect(incassaFattura).toHaveBeenCalledWith(expect.anything(), 'f1', { data: '2026-11-17', accountId: 'a1', categoriaId: 'cat-fatt' })
     );
-    expect(await screen.findByText('Di 900 € metti da parte 123 € sul conto tasse')).toBeInTheDocument();
+    expect(await screen.findByText('da mettere da parte sul conto tasse (su 900 € incassati)')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Metti da parte le tasse' })).toHaveTextContent('123 €');
   });
 
   it('Modifica i parametri e Disattiva stanno sotto Impostazioni', async () => {
     const { onModifica, onDisattiva } = apri();
-    await screen.findByText(/13,7% di ogni incasso/);
+    await screen.findByText(/Di ogni incasso metti da parte il 13,7%/);
     expect(screen.queryByText('Modifica i parametri')).not.toBeInTheDocument();
     expect(screen.queryByText('Disattiva gestione P.IVA')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Impostazioni' }));
@@ -334,8 +400,24 @@ describe('PivaHub', () => {
 
   it('nessuna parola vietata', async () => {
     apri();
-    await screen.findByText(/13,7% di ogni incasso/);
+    await screen.findByText(/Di ogni incasso metti da parte il 13,7%/);
     assertNessunaParolaVietata(document.body);
+  });
+
+  it('ogni Perché dice di cosa parla nel nome accessibile', async () => {
+    apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+    await screen.findByRole('region', { name: 'Conto tasse' });
+    for (const nome of [
+      'Perché? la percentuale',
+      'Perché? il conto tasse',
+      "Perché? le tasse di quest'anno",
+      'Perché? da spostare',
+      'Perché? lo stipendio',
+      'Perché? le fatture',
+    ]) {
+      expect(screen.getByRole('button', { name: nome })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('button', { name: 'Perché?' })).not.toBeInTheDocument();
   });
 
   describe('stipendio', () => {
@@ -348,8 +430,8 @@ describe('PivaHub', () => {
       vi.mocked(getTransactions).mockResolvedValue(STORICO);
       const { onSalvaStipendio } = apri();
       // A = 1000 al netto del 13,7% = 860; B = 300: proposta 300, il resto 560 va nel cuscinetto
-      expect(await screen.findByText('Ti propongo 300 € al mese.')).toBeInTheDocument();
-      expect(screen.getByText('Il resto, 560 € al mese, riempie il cuscinetto.')).toBeInTheDocument();
+      expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === 'Ti propongo 300 € al mese.')).toBeInTheDocument();
+      expect(screen.getByText('Il resto, 560 € al mese, va nel cuscinetto: una riserva per i mesi con pochi incassi.')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Va bene' }));
       await waitFor(() =>
         expect(onSalvaStipendio).toHaveBeenCalledWith({ stipendioMensile: 300, stipendioRivistoIl: '2026-11-17' })
@@ -368,8 +450,12 @@ describe('PivaHub', () => {
       apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
       // conto a 900; incassi dalla guida (1/11): nessuno nel fatturato di novembre, quindi niente quote in sospeso.
       // rimasto = 800 - 200 = 600; cuscinetto = 900 - 600 = 300 (0,4 mesi)
-      expect(await screen.findByText('Stipendio di questo mese 800 € (te ne restano 600 €)')).toBeInTheDocument();
-      expect(screen.getByText('Cuscinetto 300 € copre 0,4 mesi')).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Stipendio di novembre' })).toBeInTheDocument();
+      const stip = screen.getByRole('region', { name: 'Stipendio' });
+      expect(within(stip).getByText('800 €')).toHaveClass('num', 'font-serif');
+      expect(within(stip).getByText('Te ne restano 600 €')).toBeInTheDocument();
+      expect(within(stip).getByText('300 €')).toBeInTheDocument();
+      expect(within(stip).getByText('Copre 0,4 mesi')).toBeInTheDocument();
     });
 
     it('se la casa non si legge non propone uno stipendio sbagliato', async () => {
@@ -378,7 +464,7 @@ describe('PivaHub', () => {
       apri();
       expect(await screen.findByText('Lo stipendio non si calcola ora. Riprova tra poco.')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Va bene' })).not.toBeInTheDocument();
-      expect(screen.getByText(/13,7% di ogni incasso/)).toBeInTheDocument();
+      expect(screen.getByText(/Di ogni incasso metti da parte il 13,7%/)).toBeInTheDocument();
     });
   });
 
@@ -386,6 +472,7 @@ describe('PivaHub', () => {
     apri();
     const sezione = await screen.findByRole('region', { name: 'Fatture in attesa' });
     vi.mocked(getTransactions).mockRejectedValue(new Error('rete'));
+    fireEvent.click(within(sezione).getByRole('button', { name: 'Le fatture una per una' }));
     fireEvent.click(within(within(sezione).getByText('Rossi').closest('li') as HTMLElement).getByRole('button', { name: 'Pagata' }));
     fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
     expect(await screen.findByText(/non riesco ad aggiornare/)).toBeInTheDocument();
@@ -399,6 +486,6 @@ describe('PivaHub', () => {
     fireEvent.change(within(foglio).getByLabelText('Importo (€)'), { target: { value: '500' } });
     fireEvent.click(within(foglio).getByRole('button', { name: 'Salva' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nuova fattura' })).not.toBeInTheDocument());
-    expect(screen.queryByText(/metti da parte .* sul conto tasse/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/da mettere da parte sul conto tasse/)).not.toBeInTheDocument();
   });
 });

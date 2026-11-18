@@ -113,7 +113,7 @@ describe('PivaPage', () => {
     vi.mocked(getPivaSettings).mockResolvedValue(guidata);
     render(<PivaPage />);
     // 78% * (5% + 10%) + 2% = 13,7%
-    expect(await screen.findByText(/13,7% di ogni incasso/)).toBeInTheDocument();
+    expect(await screen.findByText(/Di ogni incasso metti da parte il 13,7%/)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Conto tasse' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Da spostare' })).toBeInTheDocument();
   });
