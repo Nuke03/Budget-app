@@ -48,6 +48,7 @@ export function PivaHub({
   const [incassi, setIncassi] = useState<Transaction[]>([]);
   const [accantonamenti, setAccantonamenti] = useState<PivaAccantonamento[]>([]);
   const [scadenze, setScadenze] = useState<PivaScadenza[]>([]);
+  const [scadenzeNonCaricate, setScadenzeNonCaricate] = useState(false);
   const [caricato, setCaricato] = useState(false);
   // La quota per cui è aperto il foglio "Fatto" (importo modificabile).
   const [quotaAperta, setQuotaAperta] = useState<string | null>(null);
@@ -67,13 +68,21 @@ export function PivaHub({
     const supabase = createClient();
     const da = leggiDal(settings.guidataDal, anno);
     // Le scadenze mancanti si creano all'apertura; quelle tolte non tornano (il database ignora i doppioni).
-    if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(anno, settings.guidataDal));
+    // Un errore sulle scadenze non deve fermare vaso e quote: la lista resta vuota con una riga calma.
+    const leggiScadenze = async (): Promise<PivaScadenza[] | null> => {
+      try {
+        if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(anno, settings.guidataDal));
+        return await getScadenze(supabase, anno);
+      } catch {
+        return null;
+      }
+    };
     // getAccounts senza scope: i conti personali.
     const [acc, tx, accant, scad] = await Promise.all([
       getAccounts(supabase),
       getTransactions(supabase, undefined, { da, tipo: 'income' }),
       getAccantonamenti(supabase, { da }),
-      getScadenze(supabase, anno),
+      leggiScadenze(),
     ]);
     return { acc, tx, accant, scad };
   }
@@ -82,7 +91,8 @@ export function PivaHub({
     setConti(d.acc);
     setIncassi(d.tx);
     setAccantonamenti(d.accant);
-    setScadenze(d.scad);
+    setScadenze(d.scad ?? []);
+    setScadenzeNonCaricate(d.scad === null);
     setCaricato(true);
   }
 
@@ -116,6 +126,16 @@ export function PivaHub({
   const inSospeso = categoriaId
     ? quoteInSospeso(incassi, accantonamenti, percentuale, categoriaId, settings.guidataDal)
     : [];
+  const quotaDaSpostare = inSospeso.find((x) => x.transactionId === quotaAperta) ?? null;
+
+  // Dopo un'azione riuscita la ricarica può fallire: non è un'azione fallita, si segnala a parte.
+  async function ricarica() {
+    try {
+      await carica();
+    } catch {
+      setErrore('Fatto, ma non riesco ad aggiornare la pagina. Riaprila tra poco.');
+    }
+  }
 
   // true se i soldi sono stati registrati come spostati.
   async function sposta(transactionId: string, quota: number): Promise<boolean> {
@@ -136,8 +156,6 @@ export function PivaHub({
         aAccountId: contoTasseId,
         transactionId,
       });
-      await carica();
-      return true;
     } catch {
       setErrore('Non è riuscito. Riprova.');
       return false;
@@ -148,6 +166,8 @@ export function PivaHub({
         return dopo;
       });
     }
+    await ricarica();
+    return true;
   }
 
   return (
@@ -230,7 +250,9 @@ export function PivaHub({
               guidataDal={settings.guidataDal}
               anno={anno}
               oggi={oggiRomaISO()}
-              onCambiato={carica}
+              nonCaricate={scadenzeNonCaricate}
+              onCambiato={ricarica}
+              onNascosta={(id) => setScadenze((prima) => prima.map((x) => (x.id === id ? { ...x, nascosta: true } : x)))}
             />
           </section>
         ) : null}
@@ -261,24 +283,18 @@ export function PivaHub({
         </section>
       </main>
 
-      {quotaAperta
-        ? (() => {
-            const q = inSospeso.find((x) => x.transactionId === quotaAperta);
-            if (!q) return null;
-            return (
+      {quotaDaSpostare ? (
               <PromptQuota
-                importo={q.importo}
-                quota={q.quota}
+                importo={quotaDaSpostare.importo}
+                quota={quotaDaSpostare.quota}
                 contoTasse={contoTasse.nome}
                 onFatto={async (spostato) => {
-                  if (!(await sposta(q.transactionId, spostato))) throw new Error('non spostato');
+                  if (!(await sposta(quotaDaSpostare.transactionId, spostato))) throw new Error('non spostato');
                   setQuotaAperta(null);
                 }}
                 onPiuTardi={() => setQuotaAperta(null)}
               />
-            );
-          })()
-        : null}
+      ) : null}
 
       <AddTransactionSheet
         aperto={aggiungi}

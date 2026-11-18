@@ -127,6 +127,7 @@ export function PercheScadenza() {
         più alti di quanto hai messo da parte.
       </p>
       <p>La percentuale che ti proponiamo è prudente: alzandola, la prossima volta ci arrivi.</p>
+      <p>È una stima: la conferma è del commercialista.</p>
     </Perche>
   );
 }

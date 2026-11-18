@@ -166,6 +166,26 @@ describe('PivaHub', () => {
     expect(within(sezione).getByText('F24 di novembre: secondo acconto')).toBeInTheDocument();
   });
 
+  it('se le scadenze non si caricano il vaso e le quote restano usabili', async () => {
+    vi.mocked(assicuraScadenze).mockRejectedValue(new Error('rete'));
+    apri();
+    const vaso = await screen.findByRole('region', { name: 'Conto tasse' });
+    expect(within(vaso).getByText('400,00 €')).toBeInTheDocument();
+    expect(screen.getByText('Le scadenze non si caricano ora.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Da spostare' })).toBeInTheDocument();
+  });
+
+  it('se dopo Fatto la ricarica fallisce non dice che l azione è fallita', async () => {
+    apri();
+    const lista = await screen.findByRole('region', { name: 'Da spostare' });
+    fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+    vi.mocked(getAccounts).mockRejectedValue(new Error('rete'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fatto, li ho spostati' }));
+    await waitFor(() => expect(accantonaTasse).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/non riesco ad aggiornare/)).toBeInTheDocument();
+    expect(screen.queryByText('Non è riuscito. Riprova.')).not.toBeInTheDocument();
+  });
+
   it('senza quote in sospeso dice che non c è niente da spostare', async () => {
     vi.mocked(getAccantonamenti).mockResolvedValue([
       { id: 'pa1', transactionId: 'i2', importo: 82, data: '2026-11-12', daAccountId: 'a1', aAccountId: 'tasse' },

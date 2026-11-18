@@ -145,6 +145,33 @@ describe('ScadenzePiva', () => {
     await waitFor(() => expect(screen.getByText('F24 di novembre: secondo acconto')).toBeInTheDocument());
   });
 
+  it('Pagata riuscita ma ricarica fallita: nessun errore dell azione', async () => {
+    const { onCambiato } = apri([nov({ importo: 3400 })]);
+    onCambiato.mockRejectedValue(new Error('rete'));
+    fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
+    await waitFor(() => expect(onCambiato).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('Togli confermato avvisa il hub', async () => {
+    const onNascosta = vi.fn();
+    render(
+      <ScadenzePiva
+        scadenze={[nov()]}
+        saldoVaso={0}
+        contoTasseId="tasse"
+        guidataDal="2026-11-17"
+        anno={2026}
+        oggi="2026-11-17"
+        onCambiato={vi.fn()}
+        onNascosta={onNascosta}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Togli' }));
+    await elimina.mock.calls[0][0].esegui();
+    expect(onNascosta).toHaveBeenCalledWith('s1');
+  });
+
   it("la nota del primo anno compare solo nell'anno di guidataDal", () => {
     const nota =
       "Gli acconti si calcolano sulle tasse dell'anno prima: quest'anno le cifre possono non coincidere con quanto hai messo da parte.";

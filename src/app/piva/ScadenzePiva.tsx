@@ -21,7 +21,9 @@ export function ScadenzePiva({
   guidataDal,
   anno,
   oggi,
+  nonCaricate = false,
   onCambiato,
+  onNascosta,
 }: {
   scadenze: PivaScadenza[];
   saldoVaso: number;
@@ -29,7 +31,9 @@ export function ScadenzePiva({
   guidataDal: string;
   anno: number;
   oggi: string;
+  nonCaricate?: boolean;
   onCambiato: () => void | Promise<void>;
+  onNascosta?: (id: string) => void;
 }) {
   const eliminaConAnnulla = useEliminaConAnnulla();
   const [nascosti, setNascosti] = useState<Set<string>>(new Set());
@@ -54,10 +58,21 @@ export function ScadenzePiva({
     setInCorso((p) => new Set(p).add(id));
     try {
       await lavoro();
-      setModulo(null);
-      await onCambiato();
     } catch {
       setErrore('Non è riuscito. Riprova.');
+      setInCorso((p) => {
+        const d = new Set(p);
+        d.delete(id);
+        return d;
+      });
+      return;
+    }
+    setModulo(null);
+    try {
+      // L'azione è riuscita: se la ricarica fallisce non è un errore dell'azione (la gestisce chi ricarica).
+      await onCambiato();
+    } catch {
+      // niente
     } finally {
       setInCorso((p) => {
         const d = new Set(p);
@@ -96,6 +111,7 @@ export function ScadenzePiva({
       ripristina: () => cambia(false),
       esegui: async () => {
         await nascondiScadenza(createClient(), s.id, true);
+        onNascosta?.(s.id);
       },
     });
   }
@@ -103,7 +119,9 @@ export function ScadenzePiva({
   return (
     <>
       <h2 className="font-serif text-lg font-semibold">Scadenze dell&apos;anno</h2>
-      {visibili.length === 0 ? (
+      {nonCaricate ? (
+        <p className="text-[15px] text-ink-2">Le scadenze non si caricano ora.</p>
+      ) : visibili.length === 0 ? (
         <p className="text-[15px] text-ink-2">Nessuna scadenza in vista.</p>
       ) : (
         <>
