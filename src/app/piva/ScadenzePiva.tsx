@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { nascondiScadenza, pagaScadenza, updateScadenza } from '@/lib/data/piva';
-import { confrontoScadenza, eIlPrimoAnno, prossimaScadenza } from '@/lib/calculations/pivaScadenze';
+import { confrontoCumulativo, eIlPrimoAnno, prossimaScadenza } from '@/lib/calculations/pivaScadenze';
 import { formatDataLunga, formatDateIt } from '@/lib/format';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { Campo, CLASSE_CAMPO, CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
@@ -136,7 +136,7 @@ export function ScadenzePiva({
             {visibili.map((s) => {
               const lavorando = inCorso.has(s.id);
               const aperto = modulo?.id === s.id ? modulo : null;
-              const confronto = s.importo != null ? confrontoScadenza(saldoVaso, s.importo) : null;
+              const confronto = s.importo != null && !s.pagataIl ? confrontoCumulativo(saldoVaso, visibili, s.id) : null;
               return (
                 <li key={s.id} className="flex flex-col gap-2 border-t border-rule py-3 first:border-t-0">
                   <div>
@@ -156,10 +156,11 @@ export function ScadenzePiva({
                       {confronto && s.importo != null ? (
                         <div>
                           <p className="text-[15px]">
-                            Nel vaso ci sono {euroInFrase(saldoVaso)}, servono {euroInFrase(s.importo)}
                             {confronto.basta
-                              ? '.'
-                              : `: mancano ${euroInFrase(confronto.mancano)}: alziamo la percentuale.`}
+                              ? `Nel vaso ci sono ${euroInFrase(saldoVaso)}, ne servono ${euroInFrase(confronto.totale)}.`
+                              : confronto.conPrecedenti
+                                ? `Con le scadenze prima di questa servono in tutto ${euroInFrase(confronto.totale)}: mancano ${euroInFrase(confronto.mancano)}. Spostali sul conto tasse prima della scadenza.`
+                                : `Nel vaso ci sono ${euroInFrase(saldoVaso)}, ne servono ${euroInFrase(confronto.totale)}. Mancano ${euroInFrase(confronto.mancano)}: spostali sul conto tasse prima della scadenza.`}
                           </p>
                           {!confronto.basta ? <PercheScadenza /> : null}
                         </div>
@@ -201,7 +202,7 @@ export function ScadenzePiva({
                               disabled={!importoValido || !data || lavorando}
                               className={CLASSE_PRIMARIO}
                             >
-                              Pagata, registra
+                              Conferma il pagamento
                             </button>
                           )}
                           <button
@@ -220,7 +221,7 @@ export function ScadenzePiva({
                           </button>
                           <button
                             type="button"
-                            onClick={() => (s.importo != null ? paga(s, s.importo, oggi) : apri(s, 'paga'))}
+                            onClick={() => apri(s, 'paga')}
                             disabled={lavorando}
                             className={CLASSE_SECONDARIO}
                           >

@@ -102,7 +102,7 @@ describe('isolamento di Storico e P.IVA', () => {
     );
     const righe = righeNeutreAccantonamenti(await getAccantonamenti(db.client, { da: '2026-01-01' }));
     expect(righe).toEqual([
-      { id: 'pa-pa1', data: '2026-05-11', etichetta: 'Spostato sul conto tasse', importo: 548, verso: 'esce' },
+      { id: 'pa-pa1', data: '2026-05-11', etichetta: 'Spostato sul conto tasse', importo: 548, verso: 'neutro' },
     ]);
     // Né le transazioni né gli aggregati vedono lo spostamento.
     const { transactions, aggregato, fatturato } = await calcola({ ...personali, piva_accantonamenti: db.tables.piva_accantonamenti });

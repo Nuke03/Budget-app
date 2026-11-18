@@ -140,6 +140,7 @@ export function StoricoVista({
           righe={righeTasse}
           titolo="Tasse messe da parte"
           id="tasse-messe-da-parte"
+          nota="Sono sempre soldi tuoi: cambiano solo conto."
           onElimina={onEliminaTasse}
         />
       </main>

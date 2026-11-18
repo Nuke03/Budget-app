@@ -3,6 +3,7 @@ import {
   scadenzeDaCreare,
   prossimaScadenza,
   confrontoScadenza,
+  confrontoCumulativo,
   eIlPrimoAnno,
 } from '@/lib/calculations/pivaScadenze';
 import type { PivaScadenza } from '@/lib/types';
@@ -89,5 +90,27 @@ describe('eIlPrimoAnno', () => {
   it("solo nell'anno di guidataDal", () => {
     expect(eIlPrimoAnno('2026-11-17', 2026)).toBe(true);
     expect(eIlPrimoAnno('2026-11-17', 2027)).toBe(false);
+  });
+});
+
+describe('confrontoCumulativo', () => {
+  const vaso = 3100;
+  const a = riga({ id: 'a', data: '2026-10-01', importo: 480 });
+  const b = riga({ id: 'b', data: '2026-11-30', importo: 3400 });
+
+  it('la prima scadenza si confronta da sola', () => {
+    expect(confrontoCumulativo(vaso, [b, a], 'a')).toEqual({ basta: true, mancano: 0, totale: 480, conPrecedenti: false });
+  });
+
+  it('la seconda somma la prima: 480 poi 3.400 con 3.100 nel vaso, mancano 780', () => {
+    expect(confrontoCumulativo(vaso, [b, a], 'b')).toEqual({ basta: false, mancano: 780, totale: 3880, conPrecedenti: true });
+  });
+
+  it('ignora le scadenze pagate, tolte o senza cifra', () => {
+    const pagata = riga({ id: 'p', data: '2026-03-01', importo: 750, pagataIl: '2026-02-27' });
+    const tolta = riga({ id: 't', data: '2026-04-01', importo: 100, nascosta: true });
+    const senza = riga({ id: 's', data: '2026-06-30', importo: null });
+    expect(confrontoCumulativo(vaso, [pagata, tolta, senza, a, b], 'b')?.totale).toBe(3880);
+    expect(confrontoCumulativo(vaso, [pagata, tolta, senza, a, b], 'p')).toBeNull();
   });
 });

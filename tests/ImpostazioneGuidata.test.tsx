@@ -60,7 +60,7 @@ function percorsoFinoAlRiepilogo(data = dueAnniFa) {
   avanti();
   fireEvent.change(screen.getByLabelText('Quando hai aperto la P.IVA?'), { target: { value: data } });
   avanti();
-  avanti(); // conto e categoria di default
+  avanti(); // conto di default
 }
 
 beforeEach(() => {
@@ -163,6 +163,23 @@ describe('ImpostazioneGuidata', () => {
     await waitFor(() => expect(onFatto).toHaveBeenCalled());
     expect(createCategory).toHaveBeenCalledWith(fakeClient, { nome: 'Fatture', tipo: 'income', colore: null });
     expect(onFatto).toHaveBeenCalledWith(expect.objectContaining({ categoriaFatturatoId: 'cnuova' }));
+  });
+
+  it('il passo 3 chiede solo il conto; la categoria sta nel riepilogo con Cambia', () => {
+    render(<ImpostazioneGuidata iniziale={null} conti={conti} categorie={categorie} onFatto={vi.fn()} />);
+    percorsoFinoAlRiepilogo();
+    expect(screen.getByText(/Incassi registrati in:/).parentElement).toHaveTextContent('Incassi registrati in: Fatture studio');
+    expect(screen.queryByLabelText('Dove registri i tuoi incassi?')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cambia' }));
+    expect(screen.getByLabelText('Dove registri i tuoi incassi?')).toBeInTheDocument();
+  });
+
+  it('al passo 3 non compare la scelta della categoria', () => {
+    render(
+      <ImpostazioneGuidata iniziale={base({ preset: 'enpap' })} passoIniziale={3} conti={conti} categorie={categorie} onFatto={vi.fn()} />
+    );
+    expect(screen.queryByLabelText('Dove registri i tuoi incassi?')).not.toBeInTheDocument();
+    expect(screen.getByText('Passo 3 di 4')).toBeInTheDocument();
   });
 
   it('Confermo salva guidataDal di oggi solo se era vuoto', async () => {

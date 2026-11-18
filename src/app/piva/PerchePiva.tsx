@@ -125,9 +125,10 @@ export function PercheScadenza() {
     <Perche tema="la scadenza">
       <p>
         Gli acconti si calcolano sulle tasse dell&apos;anno prima, non su quello che incassi adesso: possono essere
-        più alti di quanto hai messo da parte.
+        più alti di quanto hai messo da parte. La percentuale che ti proponiamo è prudente, ma non può prevedere ogni
+        scadenza.
       </p>
-      <p>La percentuale che ti proponiamo è prudente: alzandola, la prossima volta ci arrivi.</p>
+      <p>Se capita spesso, chiedi al commercialista se conviene mettere da parte un po&apos; di più.</p>
     </Perche>
   );
 }

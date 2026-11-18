@@ -94,26 +94,50 @@ describe('ScadenzePiva', () => {
 
   it('con la cifra: confronto col vaso, 3100 su 3400 mancano 300', () => {
     apri([nov({ importo: 3400 })]);
-    expect(screen.getByText(/Nel vaso ci sono 3\.100 €, servono 3\.400 €/)).toBeInTheDocument();
-    expect(screen.getByText(/mancano 300 €: alziamo la percentuale/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Nel vaso ci sono 3.100 €, ne servono 3.400 €. Mancano 300 €: spostali sul conto tasse prima della scadenza.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/alziamo/)).not.toBeInTheDocument();
   });
 
-  it('il Perché della scadenza non ripete l avviso sulla stima, che sta nel hub', () => {
+  it('il Perché della scadenza spiega senza colpa e rimanda al commercialista, senza avviso sulla stima', () => {
     apri([nov({ importo: 3400 })]);
     fireEvent.click(screen.getByRole('button', { name: 'Perché? la scadenza' }));
     expect(screen.getByText(/Gli acconti si calcolano sulle tasse dell'anno prima, non su quello/)).toBeInTheDocument();
-    expect(screen.queryByText(/commercialista/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Se capita spesso, chiedi al commercialista se conviene mettere da parte un po' di più.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/stima/)).not.toBeInTheDocument();
+  });
+
+  it('confronto cumulativo: 480 poi 3.400 con 3.100 nel vaso, la seconda manca 780', () => {
+    apri([
+      nov({ id: 's3', chiave: 'cassa_saldo', tipo: 'cassa', descrizione: 'ENPAP: saldo', data: '2026-10-01', importo: 480 }),
+      nov({ importo: 3400 }),
+    ]);
+    expect(screen.getByText('Nel vaso ci sono 3.100 €, ne servono 480 €.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Con le scadenze prima di questa servono in tutto 3.880 €: mancano 780 €. Spostali sul conto tasse prima della scadenza.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('con la cifra e il vaso pieno: niente mancante', () => {
     apri([nov({ importo: 3000 })]);
-    expect(screen.getByText(/Nel vaso ci sono 3\.100 €, servono 3\.000 €/)).toBeInTheDocument();
+    expect(screen.getByText('Nel vaso ci sono 3.100 €, ne servono 3.000 €.')).toBeInTheDocument();
     expect(screen.queryByText(/mancano/)).not.toBeInTheDocument();
   });
 
-  it('Pagata paga dal conto tasse con la cifra della scadenza', async () => {
+  it('Pagata con la cifra nota non registra a un tocco: apre il form già compilato', async () => {
     const { onCambiato } = apri([nov({ importo: 3400 })]);
     fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
+    expect(pagaScadenza).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Importo (€)')).toHaveValue(3400);
+    expect(screen.getByLabelText('Data')).toHaveValue('2026-11-17');
+    fireEvent.click(screen.getByRole('button', { name: 'Conferma il pagamento' }));
     await waitFor(() =>
       expect(pagaScadenza).toHaveBeenCalledWith(expect.anything(), 's1', {
         importo: 3400,
@@ -124,15 +148,16 @@ describe('ScadenzePiva', () => {
     await waitFor(() => expect(onCambiato).toHaveBeenCalled());
   });
 
-  it('Pagata due volte non registra due uscite', () => {
+  it('Conferma il pagamento due volte non registra due uscite e resta disabilitato in corso', () => {
     let finisci: (v: string) => void = () => {};
     vi.mocked(pagaScadenza).mockReturnValue(new Promise<string>((r) => (finisci = r)));
     apri([nov({ importo: 3400 })]);
-    const pagata = screen.getByRole('button', { name: 'Pagata' });
-    fireEvent.click(pagata);
-    fireEvent.click(pagata);
+    fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
+    const conferma = screen.getByRole('button', { name: 'Conferma il pagamento' });
+    fireEvent.click(conferma);
+    fireEvent.click(conferma);
     expect(pagaScadenza).toHaveBeenCalledTimes(1);
-    expect(pagata).toBeDisabled();
+    expect(conferma).toBeDisabled();
     finisci('tx1');
   });
 
@@ -141,7 +166,7 @@ describe('ScadenzePiva', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
     expect(pagaScadenza).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('Importo (€)'), { target: { value: '2500' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Pagata, registra' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conferma il pagamento' }));
     await waitFor(() =>
       expect(pagaScadenza).toHaveBeenCalledWith(expect.anything(), 's1', {
         importo: 2500,
@@ -176,6 +201,7 @@ describe('ScadenzePiva', () => {
     const { onCambiato } = apri([nov({ importo: 3400 })]);
     onCambiato.mockRejectedValue(new Error('rete'));
     fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conferma il pagamento' }));
     await waitFor(() => expect(onCambiato).toHaveBeenCalled());
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

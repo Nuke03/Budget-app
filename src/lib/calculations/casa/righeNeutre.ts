@@ -9,7 +9,8 @@ export interface RigaNeutra {
   data: string;
   etichetta: string;
   importo: number;
-  verso: 'esce' | 'entra';
+  // 'neutro': solo i soldi spostati sul conto tasse, che restano tuoi e si mostrano senza segno.
+  verso: 'esce' | 'entra' | 'neutro';
 }
 
 function meseIt(iso: string | null): string {
@@ -75,7 +76,7 @@ export function righeNeutreAccantonamenti(acc: PivaAccantonamento[]): RigaNeutra
       data: a.data,
       etichetta: 'Spostato sul conto tasse',
       importo: a.importo,
-      verso: 'esce' as const,
+      verso: 'neutro' as const,
     }))
     .sort((a, b) => b.data.localeCompare(a.data));
 }

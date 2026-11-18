@@ -73,10 +73,10 @@ describe('/anteprima', () => {
       expect(screen.getByText(/ENPAP/)).toBeTruthy();
     });
 
-    it('piva-scadenze: pagata, mancano 300, cifra in arrivo, nota del primo anno', async () => {
+    it('piva-scadenze: pagata, mancano 780 col cumulativo, cifra in arrivo, nota del primo anno', async () => {
       await mostra('piva-scadenze');
       expect(screen.getByText(/Pagata il/)).toBeTruthy();
-      expect(screen.getByText(/mancano 300/)).toBeTruthy();
+      expect(screen.getByText(/servono in tutto 3\.880 €: mancano 780 €/)).toBeTruthy();
       expect(screen.getByText('cifra in arrivo dal commercialista')).toBeTruthy();
       expect(screen.getByText(/Gli acconti si calcolano sulle tasse dell.anno prima/)).toBeTruthy();
     });

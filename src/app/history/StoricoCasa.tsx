@@ -8,11 +8,14 @@ export function StoricoCasa({
   righe,
   titolo = 'Movimenti con la casa',
   id = 'movimenti-con-la-casa',
+  nota,
   onElimina,
 }: {
   righe: RigaNeutra[];
   titolo?: string;
   id?: string;
+  // Una riga sotto il titolo, per spiegare cosa sono questi movimenti.
+  nota?: string;
   // Se c'è, ogni riga si può togliere (con Annulla).
   onElimina?: (r: RigaNeutra) => void;
 }) {
@@ -25,6 +28,7 @@ export function StoricoCasa({
       <h2 id={id} className="px-4 pb-2 pt-4 font-serif text-lg font-semibold">
         {titolo}
       </h2>
+      {nota ? <p className="px-4 pb-2 text-[13px] text-ink-2">{nota}</p> : null}
       <ul>
         {righe.map((r) => (
           <li
@@ -37,7 +41,7 @@ export function StoricoCasa({
             </div>
             <div className="flex shrink-0 items-center gap-1">
             <span className="num text-[15px] text-ink-2">
-              {r.verso === 'entra' ? '+' : '−'}
+              {r.verso === 'entra' ? '+' : r.verso === 'esce' ? '−' : ''}
               {formatEuro(r.importo)}
             </span>
             {onElimina ? (

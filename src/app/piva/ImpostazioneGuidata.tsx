@@ -75,8 +75,14 @@ export function ImpostazioneGuidata({
     }
     return categoriaProbabile(categorieEntrate)?.id ?? NUOVO;
   });
+  const [cambiaCategoria, setCambiaCategoria] = useState(false);
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+
+  const nomeCategoria =
+    categoria === NUOVO
+      ? `${NOME_CATEGORIA_NUOVA} (la creo io)`
+      : (categorieEntrate.find((c) => c.id === categoria)?.nome ?? NOME_CATEGORIA_NUOVA);
 
   const oggi = oggiRomaData();
   const aliquotaAuto = dataApertura
@@ -168,7 +174,7 @@ export function ImpostazioneGuidata({
         incassoMeseMagro: iniziale?.incassoMeseMagro ?? null,
       });
     } catch {
-      setErrore('Non sono riuscita a salvare. Riprova.');
+      setErrore('Non è riuscito. Riprova.');
       setInCorso(false);
     }
   }
@@ -273,22 +279,6 @@ export function ImpostazioneGuidata({
                   : 'Quei soldi non contano nel tuo disponibile.'}
               </p>
             </div>
-            <div className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
-              <label htmlFor="g-categoria">Dove registri i tuoi incassi?</label>
-              <select
-                id="g-categoria"
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-                className={CLASSE_CAMPO}
-              >
-                {categorieEntrate.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-                <option value={NUOVO}>Creane una: “{NOME_CATEGORIA_NUOVA}”</option>
-              </select>
-            </div>
           </section>
         )}
 
@@ -312,6 +302,37 @@ export function ImpostazioneGuidata({
                   <p className="text-[13px] text-ink-2">{DOVE_TROVARLO[c.chiave]}</p>
                 </div>
               ))}
+            </div>
+            <div className="flex flex-col gap-1.5 border-t border-rule py-3">
+              {cambiaCategoria ? (
+                <>
+                  <label htmlFor="g-categoria" className="text-[15px] font-semibold">
+                    Dove registri i tuoi incassi?
+                  </label>
+                  <select
+                    id="g-categoria"
+                    value={categoria}
+                    onChange={(e) => setCategoria(e.target.value)}
+                    className={CLASSE_CAMPO}
+                  >
+                    {categorieEntrate.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                    <option value={NUOVO}>Creane una: “{NOME_CATEGORIA_NUOVA}”</option>
+                  </select>
+                </>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[15px]">
+                    <span className="font-semibold">Incassi registrati in:</span> {nomeCategoria}
+                  </p>
+                  <button type="button" onClick={() => setCambiaCategoria(true)} className={CLASSE_SECONDARIO}>
+                    Cambia
+                  </button>
+                </div>
+              )}
             </div>
             {percentuale !== null && (
               <p className="num border-t border-rule pt-4 font-serif text-[22px] font-semibold">

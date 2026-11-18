@@ -129,7 +129,7 @@ export function HomeDashboard({
 
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
         <section className="rounded-b-[var(--radius-md)] border border-t-0 border-rule bg-page px-[18px] pb-4 pt-5">
-          <p className="text-[13px] text-ink-2">Disponibile libero</p>
+          <p className="text-[13px] text-ink-2">{piva?.stipendio ? 'Ti restano per questo mese' : 'Disponibile libero'}</p>
           <p data-testid="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
             {intero}
             {resto ? <span className="text-[28px]">{resto}</span> : null}
@@ -153,7 +153,7 @@ export function HomeDashboard({
           </p>
           {cuscinettoVuoto ? (
             <Link href="/piva" className="mt-1 block min-h-11 py-2 text-[15px] font-semibold text-brand-dark">
-              Il cuscinetto è vuoto: questo mese lo stipendio supera quello che hai. Rivediamolo?
+              Il cuscinetto per ora è finito: questo mese lo stipendio è più di quello che hai. Lo rivediamo insieme?
             </Link>
           ) : null}
           <button

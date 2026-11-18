@@ -620,13 +620,23 @@ describe('il libretto', () => {
     it('cuscinetto vuoto mostra l avviso con link a /piva', () => {
       home(pivaCon({ stipendio: 1500, rimasto: 900, cuscinetto: 0, mesiCoperti: 0 }), 700);
       const link = screen.getByRole('link', {
-        name: 'Il cuscinetto è vuoto: questo mese lo stipendio supera quello che hai. Rivediamolo?',
+        name: 'Il cuscinetto per ora è finito: questo mese lo stipendio è più di quello che hai. Lo rivediamo insieme?',
       });
       expect(link).toHaveAttribute('href', '/piva');
     });
 
+    it('con lo stipendio la cifra grande si chiama "Ti restano per questo mese", senza resta "Disponibile libero"', () => {
+      home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 }), 500);
+      expect(screen.getByText('Ti restano per questo mese')).toBeInTheDocument();
+      expect(screen.queryByText('Disponibile libero')).not.toBeInTheDocument();
+      cleanup();
+      home(pivaCon(null), 500);
+      expect(screen.getByText('Disponibile libero')).toBeInTheDocument();
+      expect(screen.queryByText('Ti restano per questo mese')).not.toBeInTheDocument();
+    });
+
     it('non compare se il cuscinetto c è, se lo stipendio non c è, o se lo stipendio non supera quello che hai', () => {
-      const avviso = /Il cuscinetto è vuoto/;
+      const avviso = /Il cuscinetto per ora è finito/;
       home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 }), 500);
       expect(screen.queryByText(avviso)).not.toBeInTheDocument();
       cleanup();

@@ -40,6 +40,23 @@ export function confrontoScadenza(saldoVaso: number, importo: number): { basta: 
   return { basta: mancano === 0, mancano };
 }
 
+// Confronto per riga: lo stesso euro nel vaso non basta due volte, quindi ogni scadenza si misura
+// contro la somma di quelle ancora da pagare (con cifra, non tolte) fino a lei, in ordine di data.
+export function confrontoCumulativo(
+  saldoVaso: number,
+  scadenze: PivaScadenza[],
+  id: string
+): { basta: boolean; mancano: number; totale: number; conPrecedenti: boolean } | null {
+  const da = [...scadenze]
+    .filter((s) => !s.pagataIl && !s.nascosta && s.importo != null)
+    .sort((a, b) => a.data.localeCompare(b.data));
+  const indice = da.findIndex((s) => s.id === id);
+  if (indice === -1) return null;
+  const totale = Math.round(da.slice(0, indice + 1).reduce((t, s) => t + (s.importo ?? 0), 0) * 100) / 100;
+  const { basta, mancano } = confrontoScadenza(saldoVaso, totale);
+  return { basta, mancano: Math.round(mancano * 100) / 100, totale, conPrecedenti: indice > 0 };
+}
+
 export function eIlPrimoAnno(guidataDal: string, anno: number): boolean {
   return Number(guidataDal.slice(0, 4)) === anno;
 }
