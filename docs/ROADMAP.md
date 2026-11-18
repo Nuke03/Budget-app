@@ -330,13 +330,21 @@ Da fare nel piano B:
 
 ### Da controllare per Fabio
 
-- La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Da provare dal vivo con l'account di Miriam: guida, un incasso, una fattura pagata, una scadenza.
+- La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
 - I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
 - Idea rimandata: un'impostazione "metti da parte di più" (punti percentuali extra) quando il vaso non basta per una scadenza. Oggi l'app dice di spostare la differenza prima della scadenza.
 - Piccole cose rimaste:
   - il "Pagata" di una scadenza usa la data di oggi come proposta;
-  - la Home legge solo le scadenze dell'anno in corso.
+  - la Home legge solo le scadenze dell'anno in corso;
+  - se si elimina un incasso, la quota già spostata resta nel vaso: reinserendo l'incasso, l'app chiede di nuovo di spostarla;
+  - una quota "da spostare" non si può scartare, e un incasso arrivato su un conto fuori dal disponibile viene comunque riservato;
+  - cambiare la categoria del fatturato in "Modifica i parametri" mette "da spostare" gli incassi di quella categoria dalla data di attivazione;
+  - se due scadenze cadono nella stessa settimana arriva una sola notifica;
+  - se la lettura dei dati P.IVA fallisce, la Home mostra il disponibile senza la riserva per le tasse;
+  - un incasso diretto nello Storico si chiama "Fattura Incasso in studio";
+  - quando lo stipendio supera quello che hai, il hub mostra 0 € rimasti e la Home una cifra negativa.
+- Per una futura migrazione 0011: indice unico su `piva_fatture.transaction_id` (oggi due schede aperte potrebbero collegare lo stesso incasso a due fatture); controllo che la data d'incasso non sia prima dell'emissione; descrizione dell'incasso diretto senza "Fattura"; tabelle P.IVA in sola lettura dal client, scritture solo dalle funzioni.
 
 ## Come lavorare per risparmiare token
 
