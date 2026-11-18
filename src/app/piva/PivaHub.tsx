@@ -252,7 +252,8 @@ export function PivaHub({
     if (settings.stipendioMensile !== null) {
       const riservaVersamento = datiStipendio.casa?.riservaVersamento ?? 0;
       const disponibile = computeDisponibileLibero(
-        conti,
+        // Il conto tasse non conta mai nel disponibile, anche se il suo interruttore fosse acceso.
+        conti.map((c) => (c.id === contoTasseId ? { ...c, contaInDisponibile: false } : c)),
         datiStipendio.goals,
         oggi,
         riservaVersamento,
@@ -427,6 +428,7 @@ export function PivaHub({
               conti={contiIncasso}
               contoIniziale={contoIniziale}
               categoriaId={categoriaId}
+              incassi={incassi}
               onIncassata={async (transazione) => {
                 // Se la pagina non si è riletta la quota non c'è ancora: non si tiene un id che potrebbe saltare fuori dopo.
                 if (await ricarica()) setQuotaAperta(transazione);

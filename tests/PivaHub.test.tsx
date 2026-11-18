@@ -458,6 +458,15 @@ describe('PivaHub', () => {
       expect(within(stip).getByText('Copre 0,4 mesi')).toBeInTheDocument();
     });
 
+    it('il conto tasse con l interruttore acceso non gonfia il cuscinetto', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
+      vi.mocked(getAccounts).mockResolvedValue(conti.map((c) => (c.id === 'tasse' ? { ...c, contaInDisponibile: true } : c)));
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      const stip = await screen.findByRole('region', { name: 'Stipendio' });
+      expect(await within(stip).findByText('Copre 0,4 mesi')).toBeInTheDocument();
+      expect(within(stip).getByText('300 €')).toBeInTheDocument();
+    });
+
     it('se la casa non si legge non propone uno stipendio sbagliato', async () => {
       vi.mocked(getTransactions).mockResolvedValue(STORICO);
       vi.mocked(leggiCasaPerStipendio).mockRejectedValue(new Error('rete'));

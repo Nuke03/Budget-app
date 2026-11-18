@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { FattureInAttesa } from '@/app/piva/FattureInAttesa';
-import type { PivaFattura } from '@/lib/types';
+import type { PivaFattura, Transaction } from '@/lib/types';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/piva', () => ({
   incassaFattura: vi.fn(),
+  collegaIncasso: vi.fn(),
   updateFattura: vi.fn(),
   deleteFattura: vi.fn(),
 }));
 const elimina = vi.fn();
 vi.mock('@/app/AnnullaProvider', () => ({ useEliminaConAnnulla: () => elimina }));
 
-import { incassaFattura, updateFattura, deleteFattura } from '@/lib/data/piva';
+import { incassaFattura, collegaIncasso, updateFattura, deleteFattura } from '@/lib/data/piva';
 
 const fattura = (id: string, dataEmissione: string, importo: number, dataIncasso: string | null = null): PivaFattura => ({
   id, cliente: `Cliente ${id}`, importo, dataEmissione, dataIncasso, transactionId: dataIncasso ? `t-${id}` : null, nota: null,
@@ -51,6 +52,7 @@ function apri(fatture: PivaFattura[] = tre, over: Partial<React.ComponentProps<t
 
 beforeEach(() => {
   vi.mocked(incassaFattura).mockReset().mockResolvedValue('tx-nuova');
+  vi.mocked(collegaIncasso).mockReset().mockResolvedValue(1);
   vi.mocked(updateFattura).mockReset().mockResolvedValue(undefined);
   vi.mocked(deleteFattura).mockReset().mockResolvedValue(1);
   elimina.mockReset();
@@ -208,5 +210,69 @@ describe('FattureInAttesa', () => {
       })
     );
     await waitFor(() => expect(props.onCambiato).toHaveBeenCalled());
+  });
+
+  describe('entrata gemella', () => {
+    const gemella = { id: 'tx-gemella', tipo: 'income', importo: 300, data: '2026-11-05', categoriaId: 'cat', accountId: 'a1' } as Transaction;
+    const apriPagataB = (over: Partial<React.ComponentProps<typeof FattureInAttesa>> = {}) => {
+      const r = apri(tre, { incassi: [gemella], ...over });
+      apriElenco();
+      fireEvent.click(within(screen.getAllByRole('listitem')[1]).getByRole('button', { name: 'Pagata' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
+      return r;
+    };
+
+    it('se c è già un entrata uguale chiede se è questa, senza incassare', async () => {
+      apriPagataB();
+      expect(await screen.findByText('Hai già registrato 300 € il 5 novembre 2026: è questo?')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Sì, è questo' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'No, è un altro incasso' })).toBeInTheDocument();
+      expect(incassaFattura).not.toHaveBeenCalled();
+    });
+
+    it('Sì collega l entrata: nessun incasso nuovo, nessun prompt quota', async () => {
+      const { props } = apriPagataB();
+      fireEvent.click(await screen.findByRole('button', { name: 'Sì, è questo' }));
+      await waitFor(() => expect(collegaIncasso).toHaveBeenCalledWith(expect.anything(), 'b', 'tx-gemella', '2026-11-05'));
+      await waitFor(() => expect(props.onCambiato).toHaveBeenCalled());
+      expect(incassaFattura).not.toHaveBeenCalled();
+      expect(props.onIncassata).not.toHaveBeenCalled();
+    });
+
+    it('No incassa come sempre e propone la quota', async () => {
+      const { props } = apriPagataB();
+      fireEvent.click(await screen.findByRole('button', { name: 'No, è un altro incasso' }));
+      await waitFor(() =>
+        expect(incassaFattura).toHaveBeenCalledWith(expect.anything(), 'b', { data: '2026-11-17', accountId: 'a1', categoriaId: 'cat' })
+      );
+      await waitFor(() => expect(props.onIncassata).toHaveBeenCalledWith('tx-nuova'));
+      expect(collegaIncasso).not.toHaveBeenCalled();
+    });
+
+    it('Sì non si ripete mentre è in corso', async () => {
+      let finisci: (v: number) => void = () => {};
+      vi.mocked(collegaIncasso).mockReturnValue(new Promise<number>((r) => (finisci = r)));
+      apriPagataB();
+      const si = await screen.findByRole('button', { name: 'Sì, è questo' });
+      fireEvent.click(si);
+      fireEvent.click(si);
+      expect(collegaIncasso).toHaveBeenCalledTimes(1);
+      expect(si).toBeDisabled();
+      finisci(1);
+    });
+
+    it('se collegare fallisce lo dice e non incassa', async () => {
+      vi.mocked(collegaIncasso).mockRejectedValue(new Error('x'));
+      apriPagataB();
+      fireEvent.click(await screen.findByRole('button', { name: 'Sì, è questo' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Non è riuscito. Riprova.');
+      expect(incassaFattura).not.toHaveBeenCalled();
+    });
+
+    it('senza gemella (importo diverso o già collegata) incassa subito', async () => {
+      apriPagataB({ incassi: [{ ...gemella, importo: 299 }] });
+      await waitFor(() => expect(incassaFattura).toHaveBeenCalled());
+      expect(screen.queryByText(/Hai già registrato/)).not.toBeInTheDocument();
+    });
   });
 });

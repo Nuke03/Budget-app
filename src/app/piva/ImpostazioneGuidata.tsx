@@ -168,7 +168,8 @@ export function ImpostazioneGuidata({
         contributiVersatiAnnoPrecedente: iniziale?.contributiVersatiAnnoPrecedente ?? 0,
         contoTasseId,
         preset,
-        guidataDal: iniziale?.guidataDal ?? oggiRomaISO(),
+        // Riattivando dopo una disattivazione si riparte da oggi: gli incassi di prima non generano quote.
+        guidataDal: iniziale && iniziale.attivo && iniziale.guidataDal ? iniziale.guidataDal : oggiRomaISO(),
         stipendioMensile: iniziale?.stipendioMensile ?? null,
         stipendioRivistoIl: iniziale?.stipendioRivistoIl ?? null,
         incassoMeseMagro: iniziale?.incassoMeseMagro ?? null,
@@ -273,11 +274,8 @@ export function ImpostazioneGuidata({
                 valore={conto}
                 onChange={setConto}
               />
-              <p className="text-[13px] text-ink-2">
-                {conto === NUOVO
-                  ? `Creiamo “${NOME_CONTO_NUOVO}”. Quei soldi non contano nel tuo disponibile.`
-                  : 'Quei soldi non contano nel tuo disponibile.'}
-              </p>
+              {conto === NUOVO ? <p className="text-[13px] text-ink-2">{`Creiamo “${NOME_CONTO_NUOVO}”.`}</p> : null}
+              <p className="text-[13px] text-ink-2">Lo tolgo dal disponibile: sono soldi delle tasse.</p>
             </div>
           </section>
         )}

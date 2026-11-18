@@ -13,6 +13,7 @@ import {
   computeStimaAnno,
   confrontoAnno,
   quoteInSospeso,
+  differenzaMinimale,
   totaleInSospeso,
 } from '@/lib/calculations/piva';
 import type { PivaAccantonamento, PivaSettings, Transaction } from '@/lib/types';
@@ -176,5 +177,34 @@ describe('quota per incasso e stima dell anno', () => {
   it('quoteInSospeso con guidataDal null è vuota', () => {
     const incassi = [tx({ id: 'n', categoriaId: 'cat-fatt', data: '2026-03-10', importo: 600 })];
     expect(quoteInSospeso(incassi, [], 13.7, 'cat-fatt', null)).toEqual([]);
+  });
+});
+
+describe('quote nulle e minimale', () => {
+  const s: PivaSettings = {
+    id: 's', attivo: true, dataApertura: '2024-01-01', categoriaFatturatoId: 'cat-fatt', coefficienteRedditivita: 78,
+    aliquotaSostitutivaOverride: 5, aliquotaContributoSoggettivo: 10, aliquotaContributoIntegrativo: 2,
+    minimaleContributivoAnnuo: 856, contributiVersatiAnnoPrecedente: 0, contoTasseId: null, preset: 'enpap',
+    guidataDal: '2026-03-01', stipendioMensile: null, stipendioRivistoIl: null, incassoMeseMagro: null,
+  };
+
+  it('quoteInSospeso non propone quote di 0 euro (incasso piccolo, quota arrotondata a zero)', () => {
+    const incassi = [
+      tx({ id: 'piccolo', categoriaId: 'cat-fatt', data: '2026-03-10', importo: 3 }),
+      tx({ id: 'ok', categoriaId: 'cat-fatt', data: '2026-03-10', importo: 600 }),
+    ];
+    expect(quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01').map((q) => q.transactionId)).toEqual(['ok']);
+    expect(quoteInSospeso(incassi, [], 0, 'cat-fatt', '2026-03-01')).toEqual([]);
+  });
+
+  it('differenzaMinimale: soggettivo da percentuale sotto il minimale, dice quanto manca', () => {
+    // reddito 10000 * 78% = 7800; 10% = 780 < 856 -> mancano 76
+    expect(differenzaMinimale(s, 10000)).toBe(76);
+  });
+  it('differenzaMinimale: se la percentuale supera il minimale, null', () => {
+    expect(differenzaMinimale(s, 20000)).toBeNull();
+  });
+  it('differenzaMinimale: arrotondata all euro', () => {
+    expect(differenzaMinimale(s, 10100)).toBe(Math.round(856 - 7878 * 0.1));
   });
 });

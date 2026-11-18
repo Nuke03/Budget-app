@@ -16,8 +16,11 @@ export function ContiVista({
   onUpdateBalance,
   onUpdateDetails,
   onCreate,
+  contoTasseId = null,
 }: {
   accounts: Account[];
+  // Il conto tasse della P.IVA guidata, se c'è.
+  contoTasseId?: string | null;
   nome: string;
   onNome: (v: string) => void;
   contaInDisponibile: boolean;
@@ -35,6 +38,7 @@ export function ContiVista({
             <AccountRow
               key={a.id}
               account={a}
+              contoTasse={a.id === contoTasseId}
               onUpdateBalance={onUpdateBalance}
               onUpdateDetails={onUpdateDetails}
             />

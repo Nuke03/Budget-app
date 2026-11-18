@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import { formatNumero } from '@/lib/format';
+import { differenzaMinimale } from '@/lib/calculations/piva';
 import { euroInFrase } from './PromptQuota';
 import type { PivaSettings } from '@/lib/types';
 
@@ -99,6 +100,7 @@ export function PercheVaso({
   stima: { imposta: number; soggettivo: number; integrativo: number; totale: number };
   messi: number;
 }) {
+  const mancaAlMinimo = differenzaMinimale(settings, fatturato);
   return (
     <Perche tema="le tasse di quest'anno">
       <p>
@@ -114,6 +116,12 @@ export function PercheVaso({
         <Parte nome="Servono circa" valore={euroInFrase(Math.round(stima.totale))} />
         <Parte nome="Messi da parte quest'anno" valore={euroInFrase(Math.round(messi))} />
       </ul>
+      {mancaAlMinimo !== null ? (
+        <p className="num">
+          Il minimo {settings.preset === 'enpap' ? "dell'ENPAP" : 'della cassa'} è {euroInFrase(settings.minimaleContributivoAnnuo)}:
+          aggiungi {euroInFrase(mancaAlMinimo)} entro l&apos;anno.
+        </p>
+      ) : null}
       <p>È una stima, la conferma è del commercialista.</p>
     </Perche>
   );

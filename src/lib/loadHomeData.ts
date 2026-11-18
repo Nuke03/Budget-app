@@ -206,7 +206,7 @@ export async function loadHomeData(
   const oggi = oggiRomaISO(today);
   // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
   const pivaSettings = getPivaSettings(supabase).catch(() => null);
-  const [accounts, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta] = await Promise.all([
+  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     obiettivi,
@@ -225,6 +225,11 @@ export async function loadHomeData(
     pivaOpzionale(supabase, pivaSettings, today),
   ]);
   const piva = pivaLetta?.piva ?? null;
+  // Con la P.IVA guidata il conto tasse non conta mai nel disponibile, qualunque sia il suo interruttore:
+  // sono soldi delle tasse, e contarli due volte (nel saldo e nelle quote) gonfierebbe il numero.
+  const accounts = piva
+    ? contiLetti.map((a) => (a.id === piva.contoTasseId ? { ...a, contaInDisponibile: false } : a))
+    : contiLetti;
   const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
   const disponibileReale = computeDisponibileLibero(

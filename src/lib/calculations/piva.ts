@@ -116,6 +116,19 @@ export function computeStimaAnno(
   };
 }
 
+// Se il contributo soggettivo della stima è salito al minimale della cassa (la percentuale darebbe meno),
+// di quanti euro manca per arrivarci. null: la percentuale supera il minimo, o non c'è nulla da aggiungere.
+export function differenzaMinimale(settings: PivaSettings, fatturato: number): number | null {
+  const reddito = computeRedditoImponibile(
+    fatturato,
+    settings.coefficienteRedditivita,
+    settings.contributiVersatiAnnoPrecedente
+  );
+  const daPercentuale = (reddito * settings.aliquotaContributoSoggettivo) / 100;
+  const differenza = Math.round(settings.minimaleContributivoAnnuo - daPercentuale);
+  return daPercentuale < settings.minimaleContributivoAnnuo && differenza > 0 ? differenza : null;
+}
+
 export function confrontoAnno(
   stimaTotale: number,
   messoDaParte: number
@@ -156,7 +169,9 @@ export function quoteInSospeso(
       transactionId: t.id,
       importo: t.importo,
       quota: computeQuotaIncasso(t.importo, percentuale),
-    }));
+    }))
+    // Una quota di 0 euro non c'è da spostare: non finisce in lista né nel totale.
+    .filter((q) => q.quota > 0);
 }
 
 export function totaleInSospeso(q: QuotaInSospeso[]): number {

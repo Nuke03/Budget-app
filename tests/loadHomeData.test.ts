@@ -142,6 +142,28 @@ describe('loadHomeData: P.IVA', () => {
     expect(d.disponibileLibero).toBe(1000 - 82);
   });
 
+  it('il conto tasse non conta mai nel disponibile, nemmeno se flaggato: la Home e il dettaglio lo escludono', async () => {
+    const conti = contiPiva.map((c) => (c.id === 'tasse' ? { ...c, saldo_attuale: 500, conta_in_disponibile: true } : c));
+    const db = createFakeDb(
+      { accounts: conti, budget_goals: [], categories: [], transactions: [], piva_settings: [IMPOSTAZIONI_PIVA], piva_accantonamenti: [] },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.disponibileLibero).toBe(1000);
+    expect(d.accounts.find((a) => a.id === 'tasse')?.contaInDisponibile).toBe(false);
+    expect(d.accounts.find((a) => a.id === 'a1')?.contaInDisponibile).toBe(true);
+  });
+
+  it('senza P.IVA guidata un conto flaggato resta nel disponibile', async () => {
+    const conti = contiPiva.map((c) => (c.id === 'tasse' ? { ...c, saldo_attuale: 500, conta_in_disponibile: true } : c));
+    const db = createFakeDb(
+      { accounts: conti, budget_goals: [], categories: [], transactions: [] },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.disponibileLibero).toBe(1500);
+  });
+
   it('le fatture ferme da più di 60 giorni entrano nel Da fare', async () => {
     const db = createFakeDb(
       {

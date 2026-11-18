@@ -4,18 +4,23 @@ import { useEffect, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount } from '@/lib/data/accounts';
+import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { ContiVista } from './ContiVista';
 import type { Account } from '@/lib/types';
 
 export default function AccountsPage() {
   const fail = useThrowToBoundary();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [contoTasseId, setContoTasseId] = useState<string | null>(null);
   const [nome, setNome] = useState('');
   const [contaInDisponibile, setContaInDisponibile] = useState(true);
 
   async function refresh() {
     const supabase = createClient();
     setAccounts(await getAccounts(supabase));
+    // Se le impostazioni P.IVA non si leggono, i conti si vedono lo stesso: solo senza la riga del conto tasse.
+    const piva = await getPivaSettings(supabase).catch(() => null);
+    setContoTasseId(piva?.attivo ? piva.contoTasseId : null);
   }
 
   useEffect(() => {
@@ -54,6 +59,7 @@ export default function AccountsPage() {
     <>
       <ContiVista
         accounts={accounts}
+        contoTasseId={contoTasseId}
         nome={nome}
         onNome={setNome}
         contaInDisponibile={contaInDisponibile}

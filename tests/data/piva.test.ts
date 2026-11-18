@@ -7,6 +7,7 @@ import {
   assicuraScadenze,
   getFatture,
   deleteFattura,
+  collegaIncasso,
 } from '@/lib/data/piva';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -149,5 +150,32 @@ describe('deleteFattura', () => {
     expect(chiamate).toContainEqual(['eq', 'id', 'f1']);
     expect(chiamate).toContainEqual(['is', 'data_incasso', null]);
     expect(n).toBe(0);
+  });
+});
+
+describe('collegaIncasso', () => {
+  it('collega solo una fattura non incassata, con la data e l entrata, senza altri movimenti', async () => {
+    const chiamate: unknown[][] = [];
+    const builder: any = {
+      update: (...a: unknown[]) => { chiamate.push(['update', ...a]); return builder; },
+      eq: (...a: unknown[]) => { chiamate.push(['eq', ...a]); return builder; },
+      is: (...a: unknown[]) => { chiamate.push(['is', ...a]); return builder; },
+      then: (r: any) => r({ error: null, count: 1 }),
+    };
+    const rpc = vi.fn();
+    const n = await collegaIncasso({ from: () => builder, rpc } as any, 'f1', 'tx-9', '2026-11-10');
+    expect(chiamate).toContainEqual(['update', { data_incasso: '2026-11-10', transaction_id: 'tx-9' }, { count: 'exact' }]);
+    expect(chiamate).toContainEqual(['eq', 'id', 'f1']);
+    expect(chiamate).toContainEqual(['is', 'data_incasso', null]);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(n).toBe(1);
+  });
+
+  it('lancia se il database risponde con un errore', async () => {
+    const builder: any = {
+      update: () => builder, eq: () => builder, is: () => builder,
+      then: (r: any) => r({ error: { message: 'no' }, count: null }),
+    };
+    await expect(collegaIncasso({ from: () => builder } as any, 'f1', 'tx-9', '2026-11-10')).rejects.toMatchObject({ message: 'no' });
   });
 });

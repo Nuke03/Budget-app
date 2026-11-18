@@ -2,15 +2,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
-const dati = vi.hoisted(() => ({ casaFalla: false }));
+const dati = vi.hoisted(() => ({
+  casaFalla: false,
+  // Come l'hook vero, restituisce sempre la stessa funzione: se cambiasse a ogni render, l'effetto di lettura
+  // ripartirebbe a ogni render e una lettura fallita finirebbe in un catch che rilancia, senza nessuno che la gestisca.
+  fail: (e: unknown) => {
+    throw e;
+  },
+}));
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } }),
 }));
 vi.mock('@/lib/useThrowToBoundary', () => ({
-  useThrowToBoundary: () => (e: unknown) => {
-    throw e;
-  },
+  useThrowToBoundary: () => dati.fail,
 }));
 vi.mock('@/lib/calculations/filterTransactionsByPeriodo', async (orig) => {
   const m = await orig<typeof import('@/lib/calculations/filterTransactionsByPeriodo')>();
@@ -92,6 +97,8 @@ describe('Storico: saldi personali per differenza', () => {
     async function passa(ms: number) {
       await vi.advanceTimersByTimeAsync(ms);
       for (let i = 0; i < 20; i++) await Promise.resolve();
+      // setImmediate non è finto: React aggiorna lo schermo fuori da act con un suo task.
+      await new Promise<void>((r) => setImmediate(r));
     }
     afterEach(() => vi.useRealTimers());
 

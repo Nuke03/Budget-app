@@ -13,8 +13,11 @@ export function AccountRow({
   account,
   onUpdateBalance,
   onUpdateDetails,
+  contoTasse = false,
 }: {
   account: Account;
+  // Il conto delle tasse della P.IVA: non conta mai nel disponibile, quindi niente interruttore.
+  contoTasse?: boolean;
   onUpdateBalance: (id: string, saldo: number) => void;
   onUpdateDetails?: (
     id: string,
@@ -50,7 +53,7 @@ export function AccountRow({
     if (!onUpdateDetails || !editNome.trim()) return;
     onUpdateDetails(account.id, {
       nome: editNome,
-      contaInDisponibile: editContaInDisponibile,
+      contaInDisponibile: contoTasse ? false : editContaInDisponibile,
       targetSaldo: editTargetSaldo.trim() === '' ? null : Number(editTargetSaldo),
     });
     setIsEditing(false);
@@ -69,16 +72,20 @@ export function AccountRow({
           />
         </label>
 
-        <label className="flex min-h-11 items-center gap-2.5 text-[15px] font-medium">
-          <input
-            aria-label="Conta nel disponibile libero"
-            type="checkbox"
-            checked={editContaInDisponibile}
-            onChange={(e) => setEditContaInDisponibile(e.target.checked)}
-            className="h-5 w-5 accent-brand"
-          />
-          Conta nel disponibile libero
-        </label>
+        {contoTasse ? (
+          <p className="text-[13px] text-ink-2">È il conto tasse: resta fuori dal disponibile.</p>
+        ) : (
+          <label className="flex min-h-11 items-center gap-2.5 text-[15px] font-medium">
+            <input
+              aria-label="Conta nel disponibile libero"
+              type="checkbox"
+              checked={editContaInDisponibile}
+              onChange={(e) => setEditContaInDisponibile(e.target.checked)}
+              className="h-5 w-5 accent-brand"
+            />
+            Conta nel disponibile libero
+          </label>
+        )}
 
         <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
           Obiettivo di saldo (opzionale)

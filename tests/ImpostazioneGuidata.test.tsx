@@ -210,6 +210,31 @@ describe('ImpostazioneGuidata', () => {
     expect(onFatto2.mock.calls[0][0].guidataDal).toBe('2026-03-01');
   });
 
+  it('riattivare la P.IVA riparte da oggi: niente quote per gli incassi di prima', async () => {
+    const onFatto = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ImpostazioneGuidata
+        iniziale={base({ attivo: false, guidataDal: '2025-03-01', preset: 'enpap', contoTasseId: 'a2' })}
+        conti={conti}
+        categorie={categorie}
+        onFatto={onFatto}
+      />
+    );
+    avanti();
+    avanti();
+    avanti();
+    fireEvent.click(screen.getByRole('button', { name: 'Confermo' }));
+    await waitFor(() => expect(onFatto).toHaveBeenCalled());
+    expect(onFatto.mock.calls[0][0].guidataDal).toBe(oggiRomaISO());
+  });
+
+  it('sotto la scelta del conto dice che lo toglie dal disponibile', () => {
+    render(
+      <ImpostazioneGuidata iniziale={base({ preset: 'enpap' })} conti={conti} categorie={categorie} passoIniziale={3} onFatto={vi.fn()} />
+    );
+    expect(screen.getByText('Lo tolgo dal disponibile: sono soldi delle tasse.')).toBeInTheDocument();
+  });
+
   it('il passo iniziale 3 apre la scelta del conto', () => {
     render(
       <ImpostazioneGuidata

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contoPerIncasso, fattureInAttesa, riassuntoInAttesa } from '@/lib/calculations/pivaFatture';
+import { contoPerIncasso, entrataGemella, fattureInAttesa, riassuntoInAttesa } from '@/lib/calculations/pivaFatture';
 import type { Account, PivaFattura, Transaction } from '@/lib/types';
 
 const fattura = (id: string, dataEmissione: string, importo: number, dataIncasso: string | null = null): PivaFattura => ({
@@ -69,5 +69,30 @@ describe('contoPerIncasso', () => {
   });
   it('nessun conto adatto: null', () => {
     expect(contoPerIncasso([], [conti[0]], 'cat', 'tasse')).toBeNull();
+  });
+});
+
+describe('entrataGemella', () => {
+  const ent = (id: string, importo: number, data: string, categoriaId: string | null = 'cat', tipo: 'income' | 'expense' = 'income'): Transaction =>
+    ({ id, tipo, importo, data, categoriaId, accountId: 'a1', createdAt: `${data}T10:00:00Z` }) as Transaction;
+  const f = fattura('f1', '2026-11-01', 300);
+
+  it('trova un entrata del fatturato con lo stesso importo, dal giorno di emissione in poi', () => {
+    expect(entrataGemella(f, [ent('t1', 300, '2026-11-10')], [f], 'cat')?.id).toBe('t1');
+    expect(entrataGemella(f, [ent('t1', 300, '2026-11-01')], [f], 'cat')?.id).toBe('t1');
+  });
+  it('ignora importo diverso, data prima dell emissione, altra categoria, spese', () => {
+    const altre = [ent('a', 301, '2026-11-10'), ent('b', 300, '2026-10-31'), ent('c', 300, '2026-11-10', 'x'), ent('d', 300, '2026-11-10', 'cat', 'expense')];
+    expect(entrataGemella(f, altre, [f], 'cat')).toBeNull();
+  });
+  it('ignora un entrata già collegata a un altra fattura', () => {
+    const altra = { ...fattura('f2', '2026-10-01', 300, '2026-11-10'), transactionId: 't1' };
+    expect(entrataGemella(f, [ent('t1', 300, '2026-11-10')], [f, altra], 'cat')).toBeNull();
+  });
+  it('con più gemelle prende la più vicina all emissione', () => {
+    expect(entrataGemella(f, [ent('tardi', 300, '2026-11-20'), ent('presto', 300, '2026-11-05')], [f], 'cat')?.id).toBe('presto');
+  });
+  it('senza categoria del fatturato non propone nulla', () => {
+    expect(entrataGemella(f, [ent('t1', 300, '2026-11-10')], [f], null)).toBeNull();
   });
 });

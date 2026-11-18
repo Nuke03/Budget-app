@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { deleteFattura, incassaFattura, updateFattura } from '@/lib/data/piva';
-import { fattureInAttesa, riassuntoInAttesa } from '@/lib/calculations/pivaFatture';
+import { collegaIncasso, deleteFattura, incassaFattura, updateFattura } from '@/lib/data/piva';
+import { entrataGemella, fattureInAttesa, riassuntoInAttesa } from '@/lib/calculations/pivaFatture';
 import { formatDataLunga } from '@/lib/format';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
@@ -21,7 +21,7 @@ import {
 import { NuovaFattura } from './NuovaFattura';
 import { PercheFatture } from './PerchePiva';
 import { euroInFrase } from './PromptQuota';
-import type { PivaFattura } from '@/lib/types';
+import type { PivaFattura, Transaction } from '@/lib/types';
 
 type Foglio = { id: string; modo: 'pagata' | 'modifica' | 'azioni' };
 
@@ -34,6 +34,7 @@ export function FattureInAttesa({
   conti,
   contoIniziale,
   categoriaId,
+  incassi = [],
   onIncassata,
   onCambiato,
   onTolta,
@@ -44,6 +45,8 @@ export function FattureInAttesa({
   conti: { id: string; nome: string }[];
   contoIniziale: string | null;
   categoriaId: string | null;
+  // Le entrate lette dalla pagina: servono a riconoscere un incasso già registrato a mano.
+  incassi?: Transaction[];
   // Fattura incassata: arriva l'id dell'entrata creata (per proporre la quota tasse).
   onIncassata: (transactionId: string) => Promise<void>;
   onCambiato: () => Promise<void>;
@@ -57,6 +60,8 @@ export function FattureInAttesa({
   const [conto, setConto] = useState(contoIniziale ?? conti[0]?.id ?? '');
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+  // C'è un'entrata uguale già registrata: prima di incassare si chiede se è la stessa.
+  const [chiedeGemella, setChiedeGemella] = useState(false);
 
   const attesa = fattureInAttesa(
     fatture.filter((f) => !nascoste.has(f.id)),
@@ -67,12 +72,45 @@ export function FattureInAttesa({
     .sort((a, b) => ((a.dataIncasso ?? '') < (b.dataIncasso ?? '') ? 1 : -1))
     .slice(0, INCASSATE_VISIBILI);
   const aperta = foglio ? (fatture.find((f) => f.id === foglio.id) ?? null) : null;
+  const gemella = aperta && chiedeGemella ? entrataGemella(aperta, incassi, fatture, categoriaId) : null;
 
   function apriPagata(f: PivaFattura) {
     setErrore(null);
+    setChiedeGemella(false);
     setData(oggi);
     setConto(contoIniziale ?? conti[0]?.id ?? '');
     setFoglio({ id: f.id, modo: 'pagata' });
+  }
+
+  // "Segna incassata": se un'entrata uguale c'è già, prima si chiede; altrimenti si incassa.
+  function conferma(f: PivaFattura) {
+    if (inCorso || !data || !conto) return;
+    if (entrataGemella(f, incassi, fatture, categoriaId)) {
+      setChiedeGemella(true);
+      return;
+    }
+    void incassa(f);
+  }
+
+  // "Sì, è questo": l'incasso c'è già, si collega senza creare nulla.
+  async function collega(f: PivaFattura, gemella: Transaction) {
+    if (inCorso) return;
+    setInCorso(true);
+    setErrore(null);
+    try {
+      await collegaIncasso(createClient(), f.id, gemella.id, gemella.data);
+    } catch {
+      setErrore('Non è riuscito. Riprova.');
+      setInCorso(false);
+      return;
+    }
+    setFoglio(null);
+    setInCorso(false);
+    try {
+      await onCambiato();
+    } catch {
+      // Il collegamento c'è: se la pagina non si aggiorna lo dice chi ricarica.
+    }
   }
 
   async function incassa(f: PivaFattura) {
@@ -235,14 +273,28 @@ export function FattureInAttesa({
             </Campo>
             <SelezioneConto etichetta="Conto" conti={conti} valore={conto} onChange={setConto} />
             <ErroreMovimento testo={errore} />
-            <button
-              type="button"
-              onClick={() => void incassa(aperta)}
-              disabled={inCorso || !data || !conto}
-              className={CLASSE_PRIMARIO}
-            >
-              Segna incassata
-            </button>
+            {gemella ? (
+              <>
+                <p className="num text-[15px]">
+                  Hai già registrato {euroInFrase(gemella.importo)} il {formatDataLunga(gemella.data)}: è questo?
+                </p>
+                <button type="button" onClick={() => void collega(aperta, gemella)} disabled={inCorso} className={CLASSE_PRIMARIO}>
+                  Sì, è questo
+                </button>
+                <button type="button" onClick={() => void incassa(aperta)} disabled={inCorso} className={CLASSE_SECONDARIO}>
+                  No, è un altro incasso
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => conferma(aperta)}
+                disabled={inCorso || !data || !conto}
+                className={CLASSE_PRIMARIO}
+              >
+                Segna incassata
+              </button>
+            )}
             <button type="button" onClick={() => setFoglio(null)} disabled={inCorso} className={CLASSE_LINK}>
               Annulla
             </button>

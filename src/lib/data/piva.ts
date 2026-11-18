@@ -133,6 +133,23 @@ export async function incassaFattura(
   return data as string;
 }
 
+// Collega una fattura a un'entrata che c'era già (stesso incasso registrato a mano): nessun nuovo movimento,
+// nessun saldo toccato. Solo se la fattura non è già incassata. Torna quante righe ha collegato.
+export async function collegaIncasso(
+  supabase: SupabaseClient,
+  fatturaId: string,
+  transactionId: string,
+  data: string
+): Promise<number> {
+  const { error, count } = await supabase
+    .from('piva_fatture')
+    .update({ data_incasso: data, transaction_id: transactionId }, { count: 'exact' })
+    .eq('id', fatturaId)
+    .is('data_incasso', null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 // Solo una fattura non incassata si modifica: le altre hanno già un movimento e un saldo.
 export async function updateFattura(
   supabase: SupabaseClient,

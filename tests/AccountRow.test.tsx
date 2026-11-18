@@ -73,6 +73,23 @@ describe('AccountRow', () => {
     });
   });
 
+  it('il conto tasse non ha l interruttore: dice che resta fuori dal disponibile e salva sempre "fuori"', () => {
+    const onUpdateDetails = vi.fn();
+    render(
+      <AccountRow
+        account={{ ...account, contaInDisponibile: true }}
+        contoTasse
+        onUpdateBalance={vi.fn()}
+        onUpdateDetails={onUpdateDetails}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Modifica conto'));
+    expect(screen.queryByLabelText('Conta nel disponibile libero')).not.toBeInTheDocument();
+    expect(screen.getByText('È il conto tasse: resta fuori dal disponibile.')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    expect(onUpdateDetails).toHaveBeenCalledWith('1', { nome: 'Fondo emergenza', contaInDisponibile: false, targetSaldo: 3000 });
+  });
+
   it('annulla la modifica senza chiamare onUpdateDetails', () => {
     const onUpdateDetails = vi.fn();
     render(

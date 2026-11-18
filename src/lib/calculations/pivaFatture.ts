@@ -48,3 +48,28 @@ export function contoPerIncasso(
   if (ultimo?.accountId) return ultimo.accountId;
   return conti.find((c) => c.contaInDisponibile && c.id !== contoTasseId)?.id ?? null;
 }
+
+// L'entrata che sembra già l'incasso di questa fattura: del fatturato, stesso importo, dal giorno
+// dell'emissione in poi, e non collegata a nessun'altra fattura. Serve a non registrare due volte lo stesso incasso.
+export function entrataGemella(
+  fattura: Pick<PivaFattura, 'importo' | 'dataEmissione'>,
+  incassi: Transaction[],
+  fatture: Pick<PivaFattura, 'transactionId'>[],
+  categoriaFatturatoId: string | null
+): Transaction | null {
+  if (!categoriaFatturatoId) return null;
+  const collegate = new Set(fatture.map((f) => f.transactionId).filter((id): id is string => !!id));
+  const centesimi = Math.round(fattura.importo * 100);
+  return (
+    incassi
+      .filter(
+        (t) =>
+          t.tipo === 'income' &&
+          t.categoriaId === categoriaFatturatoId &&
+          !collegate.has(t.id) &&
+          Math.round(t.importo * 100) === centesimi &&
+          t.data >= fattura.dataEmissione
+      )
+      .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0))[0] ?? null
+  );
+}
