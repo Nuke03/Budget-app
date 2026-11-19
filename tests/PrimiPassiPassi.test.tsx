@@ -130,6 +130,15 @@ describe('passo spese certe già create', () => {
 });
 
 describe('passo imprevisti', () => {
+  it('mostra il test delle tre domande come testo, senza caselle', () => {
+    render(<PassoImprevisti giaCreato={false} />);
+    expect(screen.getByText('Quando usarlo: tre domande')).toBeInTheDocument();
+    expect(screen.getByText('È imprevedibile?')).toBeInTheDocument();
+    expect(screen.getByText('È necessaria, cioè non si può rimandare?')).toBeInTheDocument();
+    expect(screen.getByText('Non c’è un altro modo di pagarla?')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+
   it('dice che il cuscinetto cresce un poco ogni mese', () => {
     render(<PassoImprevisti giaCreato={false} />);
     expect(screen.getByText(/cresce un poco ogni mese/)).toBeTruthy();

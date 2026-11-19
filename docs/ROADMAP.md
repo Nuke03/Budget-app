@@ -277,7 +277,7 @@ Debito chiuso: l'aggiunta di un movimento è atomica. La funzione `crea_moviment
 - "Perché?" nel check-in della casa, verso la lezione sulla coppia;
 - viste di prova: `/anteprima?vista=impara`, `lezione`, `primi-passi`, `passo-imprevisti`, `avviso-fondi`, `attesa`, `ricomincia`.
 
-**Prossimi passi:** lanciare la migrazione 0011, poi la prova dal vivo (vedi "Da controllare per Fabio").
+**Prossimi passi:** la prova dal vivo (vedi "Da controllare per Fabio").
 
 Resti segnati nel piano B3:
 - logo del login e un suggerimento sotto i campi con l'ombra;
@@ -343,7 +343,7 @@ Da fare nel piano B:
 ### Da controllare per Fabio
 
 - Link delle 15 lezioni del percorso (`src/lib/percorso/lezioni.ts`): aprirli a mano prima della pubblicazione, perché i siti cambiano indirizzi. Elenco: https://economiapertutti.bancaditalia.it/ ; https://www.bancaditalia.it/pubblicazioni/guide-bi/index.html ; https://www.bancaditalia.it/focus/cybersicurezza/truffe-cyber ; https://www.arbitrobancariofinanziario.it ; https://www.consob.it/web/investor-education/ ; https://www.ivass.it/consumatori/index.html ; https://www.inps.it (home, non la pagina del servizio pensione, che la ricerca ha letto solo in parte).
-- Migrazione 0011 (percorso): il test SQL (`supabase/tests`) è stato eseguito con successo. La migrazione va ancora lanciata su Supabase; fino ad allora i commit del percorso restano in locale. Prova dal vivo: "Ricomincia da zero" sul tuo account e poi i Primi passi; una spesa che porta il disponibile sotto zero; una spesa da 160 € (lezione sul fondo imprevisti). Prima del reset guarda nella Casa crediti e saldo del conto comune, e ricontrollali dopo.
+- Migrazione 0011 (percorso): applicata su Supabase il 19 novembre 2026, e il test SQL (`supabase/tests/ricomincia_da_zero.sql`) è passato. Prova dal vivo ancora da fare: "Ricomincia da zero" sul tuo account e poi i Primi passi; una spesa che porta il disponibile sotto zero; una spesa da 160 € (lezione sul fondo imprevisti). Prima del reset guarda nella Casa crediti e saldo del conto comune, e ricontrollali dopo.
 - Le soglie del percorso (`src/lib/calculations/percorso/soglie.ts`) sono stime: da ritoccare dopo un po' di uso vero.
 - Rimandato: "Lo voglio ancora" nella lista d'attesa apre gli obiettivi senza la cifra già scritta.
 - Rimandato: il titolo dell'avviso sui fondi nomina solo il primo tipo di soldi toccato, anche se ne tocca più di uno.
@@ -361,7 +361,7 @@ Da fare nel piano B:
   - se la lettura dei dati P.IVA fallisce, la Home mostra il disponibile senza la riserva per le tasse;
   - un incasso diretto nello Storico si chiama "Fattura Incasso in studio";
   - quando lo stipendio supera quello che hai, il hub mostra 0 € rimasti e la Home una cifra negativa.
-- Per una futura migrazione 0011: indice unico su `piva_fatture.transaction_id` (oggi due schede aperte potrebbero collegare lo stesso incasso a due fatture); controllo che la data d'incasso non sia prima dell'emissione; descrizione dell'incasso diretto senza "Fattura"; tabelle P.IVA in sola lettura dal client, scritture solo dalle funzioni.
+- Per una futura migrazione 0012: indice unico su `piva_fatture.transaction_id` (oggi due schede aperte potrebbero collegare lo stesso incasso a due fatture); controllo che la data d'incasso non sia prima dell'emissione; descrizione dell'incasso diretto senza "Fattura"; tabelle P.IVA in sola lettura dal client, scritture solo dalle funzioni.
 
 ## Come lavorare per risparmiare token
 

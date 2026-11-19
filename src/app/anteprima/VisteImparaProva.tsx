@@ -1,3 +1,6 @@
+'use client';
+
+// Client: le viste con funzioni (come onChiudi) non possono passarle da un Server Component.
 import type { AvvisoFondi } from '@/lib/calculations/percorso/avviso';
 import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
 import { lezione } from '@/lib/percorso/lezioni';
