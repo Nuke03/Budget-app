@@ -22,11 +22,14 @@ export function valutaAvvisoFondi(input: {
 }): AvvisoFondi | null {
   const { importo, contaInDisponibile, disponibileDopo, riservati, fondoImprevisti } = input;
   if (!contaInDisponibile) return null;
-  if (disponibileDopo >= 0) return null;
+  // Si confronta in centesimi, mai sul float grezzo.
+  const dopo = arrotonda2(disponibileDopo);
+  if (dopo >= 0) return null;
   // Era già sotto zero prima della spesa: l'avviso è già stato dato.
-  if (disponibileDopo + importo < 0) return null;
+  if (arrotonda2(dopo + importo) < 0) return null;
 
-  const buco = arrotonda2(-disponibileDopo);
+  const buco = arrotonda2(-dopo);
+  if (buco <= 0) return null;
   // Il buco si consuma nell'ordine, fermandosi a ciascun riservato.
   let resto = buco;
   const toccati: SoldiToccati[] = [];

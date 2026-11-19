@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as transactions from '@/lib/data/transactions';
+import * as households from '@/lib/data/households';
+import * as casaStato from '@/lib/loadCasaStato';
 import { loadHomeData } from '@/lib/loadHomeData';
 import { createFakeDb } from './helpers/fakeDb';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
@@ -163,6 +165,22 @@ describe('loadHomeData: P.IVA', () => {
     expect(d.disponibileReale).toBe(1000 - 130 - 82);
     expect(d.disponibileReale + obiettivi + casa + debiti + tasse).toBe(1000);
     expect(d.disponibileLibero).toBe(d.disponibileReale);
+  });
+
+  it('riservati: versamento alla casa e debiti entrano in casa e debiti', async () => {
+    vi.spyOn(households, 'getMyHousehold').mockResolvedValue({ household: { id: 'H1' }, members: [], invite: null, me: { userId: 'A' } } as never);
+    vi.spyOn(casaStato, 'loadCasaStato').mockResolvedValue({
+      riservaVersamento: 200, debitoDaRestituire: 75, piano: null, righe: [], righeCasa: [], membri: [],
+      crediti: [], debiti: [], me: { userId: 'A', joinedAt: '2026-01-01T00:00:00Z' },
+      controlli: { ultimoControllo: null, ultimoCheckinMese: null },
+    } as never);
+    const db = createFakeDb(
+      { accounts: contiPiva, budget_goals: [], categories: [], transactions: [] },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.riservati).toEqual({ obiettivi: 0, casa: 200, debiti: 75, tasse: 0 });
+    expect(d.disponibileReale).toBe(1000 - 200 - 75);
   });
 
   it('il conto tasse non conta mai nel disponibile, nemmeno se flaggato: la Home e il dettaglio lo escludono', async () => {

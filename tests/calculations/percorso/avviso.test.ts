@@ -54,6 +54,20 @@ describe('valutaAvvisoFondi', () => {
     expect(r?.fondoImprevisti).toEqual(fondo);
   });
 
+  it('confine: prima esattamente a 0 (dopo = -importo) avvisa con buco pieno', () => {
+    const r = valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -50 });
+    expect(r?.buco).toBe(50);
+  });
+
+  it('float: prima circa 0 per rumore (0.1 + 0.2 - 0.6, importo 0.3) avvisa con buco 0.3', () => {
+    const r = valutaAvvisoFondi({ ...base, importo: 0.3, disponibileDopo: 0.1 + 0.2 - 0.6 });
+    expect(r?.buco).toBe(0.3);
+  });
+
+  it('rumore: disponibileDopo = -1e-15 non avvisa', () => {
+    expect(valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -1e-15 })).toBeNull();
+  });
+
   it('arrotonda a centesimi', () => {
     const r = valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -20.004999 });
     expect(r?.buco).toBe(20);
