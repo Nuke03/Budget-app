@@ -3,7 +3,7 @@ import * as webpush from 'web-push';
 import { isAuthorizedCron } from '@/lib/data/keepAlive';
 import { leggiStatiPersone, type PersonaDaAvvisare } from '@/lib/data/statoNotifiche';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
-import { decidiNotifica, type Notifica } from '@/lib/calculations/supporto/notifiche';
+import { decidiNotifica, marcatoreScadenze, type Notifica } from '@/lib/calculations/supporto/notifiche';
 import { endpointAmmesso } from '@/lib/pushEndpoint';
 import { chiaviVapid } from '@/lib/chiaviVapid';
 
@@ -23,7 +23,7 @@ const statoHttp = (e: unknown): number | null =>
 function aggiornamentoDopoInvio(p: PersonaDaAvvisare, n: Notifica, oggi: string): Record<string, string> {
   const base = { ultima_notifica_il: oggi };
   if (n.tipo === 'spese') return { ...base, ultima_spese_il: oggi };
-  if (n.tipo === 'scadenza') return { ...base, ultima_scadenza_avvisata: p.stato.scadenza!.id };
+  if (n.tipo === 'scadenza') return { ...base, ultima_scadenza_avvisata: marcatoreScadenze(p.stato.scadenze)! };
   if (n.tipo === 'checkin') return { ...base, ultima_checkin_il: oggi };
   return { ...base, ultimo_versamento_mese: p.stato.versamento!.mese };
 }

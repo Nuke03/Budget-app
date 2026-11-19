@@ -386,7 +386,7 @@ describe('loadHomeData: stipendio', () => {
     const d = await loadHomeData(db.client, TODAY, 'A');
     // rimasto = 800 - 300 = 500; sul conto ci sono 1000
     expect(d.disponibileLibero).toBe(500);
-    expect(d.piva?.stipendio).toEqual({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 });
+    expect(d.piva?.stipendio).toEqual({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6, frase: null });
     expect(d.dataTarget).toEqual(fineMese('2026-11-15'));
     expect(d.margineGiornaliero).toBe(computeMargineGiornaliero(500, fineMese('2026-11-15'), TODAY));
     // le entrate si leggono una volta sola, anche con la finestra più lunga
@@ -404,7 +404,23 @@ describe('loadHomeData: stipendio', () => {
     );
     const d = await loadHomeData(db.client, TODAY, 'A');
     expect(d.disponibileLibero).toBe(1000);
-    expect(d.piva?.stipendio).toEqual({ stipendio: 5000, rimasto: 5000, cuscinetto: 0, mesiCoperti: 0 });
+    expect(d.piva?.stipendio).toEqual({ stipendio: 5000, rimasto: 5000, cuscinetto: 0, mesiCoperti: 0, frase: null });
+  });
+
+  it('P9: spese oltre lo stipendio, la Home mostra 0 e la frase con l eccedenza, mai un numero negativo', async () => {
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [], categories: [],
+        transactions: [spesa('s1', '2026-11-05', 900)],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, stipendio_mensile: 800, stipendio_rivisto_il: '2026-11-01' }],
+        piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.disponibileLibero).toBe(0);
+    expect(d.piva?.stipendio?.frase).toBe('Hai già speso 100 € più dello stipendio di questo mese.');
+    expect(d.piva?.stipendio?.cuscinetto).toBe(1000);
   });
 
   it('il conto tasse non conta fra le spese dello stipendio, anche se contaInDisponibile', async () => {
@@ -442,6 +458,100 @@ describe('loadHomeData: stipendio', () => {
     // A = 1000 al netto del 13,7% = 860; B = 300: proposta 300, 40% sotto lo stipendio
     expect(d.prossimo?.tipo).toBe('piva');
     expect(d.prossimo?.testo).toContain('conviene abbassare lo stipendio a 300 €');
+  });
+});
+
+describe('loadHomeData: P.IVA, difetti piccoli', () => {
+  const seed = (extra: Record<string, Record<string, unknown>[]> = {}, impostazioni: Record<string, unknown> = {}) =>
+    createFakeDb(
+      {
+        accounts: [...contiPiva, { id: 'risp', user_id: 'A', household_id: null, nome: 'Risparmi', saldo_attuale: 500, conta_in_disponibile: false, target_saldo: null }],
+        budget_goals: [], categories: [], transactions: [],
+        piva_settings: [{ ...IMPOSTAZIONI_PIVA, ...impostazioni }],
+        piva_accantonamenti: [],
+        ...extra,
+      },
+      { userId: 'A', membri: {} }
+    );
+
+  it('P4a: un incasso su un conto fuori dal disponibile non chiede la quota', async () => {
+    const db = seed({ transactions: [entrata('conta', '2026-11-10', 600), { ...entrata('fuori', '2026-11-11', 600), account_id: 'risp' }] });
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.inSospeso.map((q) => q.transactionId)).toEqual(['conta']);
+    expect(d.riservati.tasse).toBe(82);
+  });
+
+  it('P4b: una quota scartata non è in sospeso e non pesa sul disponibile', async () => {
+    const db = seed({
+      transactions: [entrata('scartata', '2026-11-10', 600), entrata('resta', '2026-11-11', 600)],
+      piva_quote_scartate: [{ transaction_id: 'scartata', user_id: 'A', scartata_il: '2026-11-12' }],
+    });
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.inSospeso.map((q) => q.transactionId)).toEqual(['resta']);
+    expect(d.disponibileLibero).toBe(1000 - 82);
+  });
+
+  it('P5: dopo un cambio di categoria solo gli incassi da categoria_dal in poi chiedono la quota', async () => {
+    const db = seed(
+      { transactions: [entrata('prima', '2026-11-10', 600), entrata('dopo', '2026-11-14', 600)] },
+      { categoria_dal: '2026-11-12' }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.inSospeso.map((q) => q.transactionId)).toEqual(['dopo']);
+  });
+
+  it('P7: se la P.IVA non si legge la Home lo dice; se è spenta o assente no', async () => {
+    const guasta = seed();
+    const from = guasta.client.from.bind(guasta.client);
+    vi.spyOn(guasta.client, 'from').mockImplementation(((t: string) => {
+      if (t === 'piva_accantonamenti') throw new Error('rete');
+      return from(t);
+    }) as typeof guasta.client.from);
+    const rotta = await loadHomeData(guasta.client, TODAY, 'A');
+    expect(rotta.piva).toBeNull();
+    expect(rotta.pivaNonLetta).toBe(true);
+
+    const impostazioniRotte = seed();
+    const from2 = impostazioniRotte.client.from.bind(impostazioniRotte.client);
+    vi.spyOn(impostazioniRotte.client, 'from').mockImplementation(((t: string) => {
+      if (t === 'piva_settings') throw new Error('rete');
+      return from2(t);
+    }) as typeof impostazioniRotte.client.from);
+    expect((await loadHomeData(impostazioniRotte.client, TODAY, 'A')).pivaNonLetta).toBe(true);
+
+    expect((await loadHomeData(seed({}, { attivo: false }).client, TODAY, 'A')).pivaNonLetta).toBe(false);
+    expect((await loadHomeData(seed().client, TODAY, 'A')).pivaNonLetta).toBe(false);
+  });
+
+  it('P7: una quota scartata che non si legge non nasconde la P.IVA ne la riserva: la Home si apre lo stesso', async () => {
+    const db = seed({ transactions: [entrata('e1', '2026-11-10', 600)] });
+    const from = db.client.from.bind(db.client);
+    vi.spyOn(db.client, 'from').mockImplementation(((t: string) => {
+      if (t === 'piva_quote_scartate') throw new Error('rete');
+      return from(t);
+    }) as typeof db.client.from);
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.contoTasseId).toBe('tasse');
+    expect(d.pivaNonLetta).toBe(false);
+  });
+
+  it('P2: dopo il 15 dicembre la Home legge anche le scadenze di gennaio', async () => {
+    const db = seed(
+      {
+        piva_scadenze: [
+          { id: 's1', user_id: 'A', anno: 2027, chiave: 'cassa_acconto', tipo: 'cassa', descrizione: 'ENPAP: acconto', data: '2027-01-02', importo: null, pagata_il: null, transaction_id: null, nascosta: false },
+        ],
+      },
+      { guidata_dal: '2026-11-01' }
+    );
+    const dicembre = new Date('2026-12-20T12:00:00Z');
+    const d = await loadHomeData(db.client, dicembre, 'A');
+    expect(d.prossimo?.testo).toContain('ENPAP: acconto entro il 2 gennaio');
+    // a novembre la riga del 2027 non si legge
+    const novembre = await loadHomeData(seed({ piva_scadenze: [
+      { id: 's1', user_id: 'A', anno: 2027, chiave: 'cassa_acconto', tipo: 'cassa', descrizione: 'ENPAP: acconto', data: '2026-11-25', importo: null, pagata_il: null, transaction_id: null, nascosta: false },
+    ] }).client, TODAY, 'A');
+    expect(novembre.piva?.scadenze).toEqual([]);
   });
 });
 

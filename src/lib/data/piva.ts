@@ -223,6 +223,21 @@ export async function accantonaTasse(
   return data as string;
 }
 
+// Gli incassi per cui si è scelto di non mettere niente da parte (P4).
+export async function getQuoteScartate(supabase: SupabaseClient): Promise<Set<string>> {
+  const { data, error } = await supabase.from('piva_quote_scartate').select('transaction_id');
+  if (error) throw error;
+  return new Set(((data ?? []) as { transaction_id: string }[]).map((r) => r.transaction_id));
+}
+
+// "Scarta" su una quota da spostare. Due tocchi insieme non sono un errore: la riga c'è già.
+export async function scartaQuota(supabase: SupabaseClient, transactionId: string, oggi: string): Promise<void> {
+  const { error } = await supabase
+    .from('piva_quote_scartate')
+    .insert({ transaction_id: transactionId, scartata_il: oggi });
+  if (error && (error as { code?: unknown }).code !== '23505') throw error;
+}
+
 export async function annullaAccantonamento(supabase: SupabaseClient, id: string): Promise<number> {
   const { data, error } = await supabase.rpc('annulla_accantonamento', { p_id: id });
   if (error) throw error;

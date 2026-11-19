@@ -19,6 +19,7 @@ const row = {
   stipendio_mensile: null,
   stipendio_rivisto_il: null,
   incasso_mese_magro: null,
+  categoria_dal: null,
 };
 
 const input = {
@@ -37,6 +38,7 @@ const input = {
   stipendioMensile: null,
   stipendioRivistoIl: null,
   incassoMeseMagro: null,
+  categoriaDal: null,
 };
 
 const mapped = {
@@ -56,6 +58,7 @@ const mapped = {
   stipendioMensile: null,
   stipendioRivistoIl: null,
   incassoMeseMagro: null,
+  categoriaDal: null,
 };
 
 describe('getPivaSettings', () => {
@@ -80,6 +83,11 @@ describe('getPivaSettings', () => {
       stipendioRivistoIl: '2026-11-01',
       incassoMeseMagro: 300,
     });
+  });
+
+  it('P5: legge categoria_dal', async () => {
+    const supabase = fakeSelectClient([{ ...row, categoria_dal: '2026-11-19' }]);
+    expect((await getPivaSettings(supabase))?.categoriaDal).toBe('2026-11-19');
   });
 
   it('mappa la riga esistente', async () => {

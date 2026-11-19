@@ -21,6 +21,7 @@ export default async function HomePage() {
       goals={data.goals}
       casa={data.casa}
       piva={data.piva}
+      pivaNonLetta={data.pivaNonLetta}
       righe={data.righe}
       storico={data.storico}
       andamento={data.andamento}

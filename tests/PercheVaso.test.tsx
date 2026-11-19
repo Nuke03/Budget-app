@@ -7,7 +7,7 @@ const settings = (over: Partial<PivaSettings> = {}): PivaSettings => ({
   id: 's', attivo: true, dataApertura: '2024-01-01', categoriaFatturatoId: 'c', coefficienteRedditivita: 78,
   aliquotaSostitutivaOverride: 5, aliquotaContributoSoggettivo: 10, aliquotaContributoIntegrativo: 2,
   minimaleContributivoAnnuo: 856, contributiVersatiAnnoPrecedente: 0, contoTasseId: 't', preset: 'enpap',
-  guidataDal: '2026-01-01', stipendioMensile: null, stipendioRivistoIl: null, incassoMeseMagro: null, ...over,
+  guidataDal: '2026-01-01', stipendioMensile: null, stipendioRivistoIl: null, incassoMeseMagro: null, categoriaDal: null, ...over,
 });
 const stima = { imposta: 390, soggettivo: 856, integrativo: 200, totale: 1446 };
 

@@ -50,6 +50,7 @@ export function HomeDashboard({
   goals,
   casa = null,
   piva = null,
+  pivaNonLetta = false,
   meUserId,
   oggi = oggiRomaISO(),
   righe,
@@ -70,6 +71,8 @@ export function HomeDashboard({
   goals: GoalWithAccantonato[];
   casa?: CasaPerHome | null;
   piva?: PivaHome | null;
+  // La P.IVA non si è riusciuta a leggere: il disponibile non conta le tasse, e lo si dice.
+  pivaNonLetta?: boolean;
   meUserId?: string;
   oggi?: string;
   righe: RigaLibretto[];
@@ -162,6 +165,10 @@ export function HomeDashboard({
               : ''}
             {cuscinetto > 0 ? `, ${euroInFrase(cuscinetto)} di cuscinetto` : ''}
           </p>
+          {piva?.stipendio?.frase ? <p className="mt-1 text-[15px] text-ink-2">{piva.stipendio.frase}</p> : null}
+          {pivaNonLetta ? (
+            <p className="mt-1 text-[15px] text-ink-2">Il disponibile non conta le tasse: non riesco a leggere la P.IVA.</p>
+          ) : null}
           {cuscinettoVuoto ? (
             <Link href="/piva" className="mt-1 block min-h-11 py-2 text-[15px] font-semibold text-brand-dark">
               Il cuscinetto per ora è finito: questo mese lo stipendio è più di quello che hai. Lo rivediamo insieme?

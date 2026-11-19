@@ -133,6 +133,7 @@ describe('quota per incasso e stima dell anno', () => {
     stipendioMensile: null,
     stipendioRivistoIl: null,
     incassoMeseMagro: null,
+    categoriaDal: null,
   };
   const acc = (transactionId: string | null): PivaAccantonamento => ({
     id: 'a',
@@ -185,7 +186,7 @@ describe('quote nulle e minimale', () => {
     id: 's', attivo: true, dataApertura: '2024-01-01', categoriaFatturatoId: 'cat-fatt', coefficienteRedditivita: 78,
     aliquotaSostitutivaOverride: 5, aliquotaContributoSoggettivo: 10, aliquotaContributoIntegrativo: 2,
     minimaleContributivoAnnuo: 856, contributiVersatiAnnoPrecedente: 0, contoTasseId: null, preset: 'enpap',
-    guidataDal: '2026-03-01', stipendioMensile: null, stipendioRivistoIl: null, incassoMeseMagro: null,
+    guidataDal: '2026-03-01', stipendioMensile: null, stipendioRivistoIl: null, incassoMeseMagro: null, categoriaDal: null,
   };
 
   it('quoteInSospeso non propone quote di 0 euro (incasso piccolo, quota arrotondata a zero)', () => {
@@ -206,5 +207,43 @@ describe('quote nulle e minimale', () => {
   });
   it('differenzaMinimale: arrotondata all euro', () => {
     expect(differenzaMinimale(s, 10100)).toBe(Math.round(856 - 7878 * 0.1));
+  });
+});
+
+describe('quoteInSospeso: P5 (si riparte da oggi), P4 (conti e Scarta)', () => {
+  const inc = (id: string, data: string, over: Partial<Transaction> = {}) =>
+    tx({ id, categoriaId: 'cat-fatt', data, importo: 600, accountId: 'a1', ...over });
+
+  it('P5: usa la più recente fra guidataDal e categoriaDal', () => {
+    const incassi = [inc('prima', '2026-05-10'), inc('dopo', '2026-06-10')];
+    const q = quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01', { categoriaDal: '2026-06-01' });
+    expect(q.map((x) => x.transactionId)).toEqual(['dopo']);
+  });
+  it('P5: categoriaDal più vecchia di guidataDal non cambia nulla; null neppure', () => {
+    const incassi = [inc('a', '2026-03-05'), inc('b', '2026-02-20')];
+    expect(
+      quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01', { categoriaDal: '2026-01-01' }).map((x) => x.transactionId),
+    ).toEqual(['a']);
+    expect(
+      quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01', { categoriaDal: null }).map((x) => x.transactionId),
+    ).toEqual(['a']);
+  });
+  it('P4a: un incasso su un conto che non conta nel disponibile non chiede la quota', () => {
+    const incassi = [inc('conta', '2026-03-10', { accountId: 'a1' }), inc('fuori', '2026-03-10', { accountId: 'risp' })];
+    const q = quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01', { contiChePesano: new Set(['a1']) });
+    expect(q.map((x) => x.transactionId)).toEqual(['conta']);
+  });
+  it('P4a: un incasso senza conto (contanti) resta; senza elenco dei conti nessun filtro', () => {
+    const incassi = [inc('contanti', '2026-03-10', { accountId: null }), inc('x', '2026-03-10', { accountId: 'risp' })];
+    expect(
+      quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01', { contiChePesano: new Set(['a1']) }).map((q) => q.transactionId),
+    ).toEqual(['contanti']);
+    expect(quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01').length).toBe(2);
+  });
+  it('P4b: una quota scartata non è più in sospeso e non entra nel totale', () => {
+    const incassi = [inc('scartato', '2026-03-10'), inc('resta', '2026-03-11')];
+    const q = quoteInSospeso(incassi, [], 13.7, 'cat-fatt', '2026-03-01', { scartate: new Set(['scartato']) });
+    expect(q.map((x) => x.transactionId)).toEqual(['resta']);
+    expect(totaleInSospeso(q)).toBe(82);
   });
 });

@@ -17,6 +17,13 @@ export function inizioMesiFa(oggi: string, mesi: number): string {
   return `${Math.floor(totale / 12)}-${String((totale % 12) + 1).padStart(2, '0')}-01`;
 }
 
+// Gli anni di scadenze che la Home legge: dopo il 15 dicembre anche l'anno dopo, perché le scadenze
+// di gennaio-marzo entrano nel "Da fare" a 15 giorni.
+export function anniScadenzeHome(oggi: string): number[] {
+  const anno = Number(oggi.slice(0, 4));
+  return oggi > `${anno}-12-15` ? [anno, anno + 1] : [anno];
+}
+
 // Da dove leggere gli incassi: dal giorno della guida o, se prima, dall'inizio della finestra di 6 mesi.
 export function inizioLetturaIncassi(guidataDal: string, oggi: string): string {
   const finestra = inizioMesiFa(oggi, MESI_INCASSI);

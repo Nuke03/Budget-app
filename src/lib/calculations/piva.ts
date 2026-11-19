@@ -151,9 +151,18 @@ export function quoteInSospeso(
   accantonamenti: PivaAccantonamento[],
   percentuale: number,
   categoriaFatturatoId: string,
-  guidataDal: string | null
+  guidataDal: string | null,
+  opzioni: {
+    // Da quando la categoria è quella del fatturato: conta la più recente fra questa e guidataDal.
+    categoriaDal?: string | null;
+    // I conti che contano nel disponibile: un incasso su un altro conto non chiede la quota. Senza conto (contanti) resta.
+    contiChePesano?: Set<string>;
+    // Gli incassi per cui si è scelto di non mettere niente da parte.
+    scartate?: Set<string>;
+  } = {}
 ): QuotaInSospeso[] {
   if (guidataDal === null) return [];
+  const dal = opzioni.categoriaDal && opzioni.categoriaDal > guidataDal ? opzioni.categoriaDal : guidataDal;
   const gestiti = new Set(
     accantonamenti.map((a) => a.transactionId).filter((id): id is string => id !== null)
   );
@@ -162,8 +171,10 @@ export function quoteInSospeso(
       (t) =>
         t.tipo === 'income' &&
         t.categoriaId === categoriaFatturatoId &&
-        t.data >= guidataDal &&
-        !gestiti.has(t.id)
+        t.data >= dal &&
+        !gestiti.has(t.id) &&
+        !opzioni.scartate?.has(t.id) &&
+        (!opzioni.contiChePesano || t.accountId === null || opzioni.contiChePesano.has(t.accountId))
     )
     .map((t) => ({
       transactionId: t.id,

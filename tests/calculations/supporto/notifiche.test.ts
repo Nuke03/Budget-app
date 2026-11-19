@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decidiNotifica, periodoDaRecuperare, type StatoPersona } from '@/lib/calculations/supporto/notifiche';
+import { decidiNotifica, marcatoreScadenze, periodoDaRecuperare, type StatoPersona } from '@/lib/calculations/supporto/notifiche';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 
 const OGGI = '2026-11-11';
@@ -17,7 +17,7 @@ const base: StatoPersona = {
   gestisce: false,
   checkinDaFare: null,
   versamento: null,
-  scadenza: null,
+  scadenze: [],
   ultimaScadenzaAvvisata: null,
 };
 const st = (o: Partial<StatoPersona>): StatoPersona => ({ ...base, ...o });
@@ -163,7 +163,7 @@ describe('testi', () => {
 describe('decidiNotifica: scadenza P.IVA', () => {
   const scad = (data: string, id = 'sc1') => ({ id, descrizione: 'F24 di novembre', data });
   it('notifica scadenza a 7 giorni', () => {
-    const n = decidiNotifica(st({ scadenza: scad('2026-11-18') }), OGGI);
+    const n = decidiNotifica(st({ scadenze: [scad('2026-11-18')] }), OGGI);
     expect(n).toEqual({
       tipo: 'scadenza',
       titolo: 'Budget',
@@ -172,18 +172,35 @@ describe('decidiNotifica: scadenza P.IVA', () => {
     });
   });
   it('oltre 7 giorni o già passata: niente', () => {
-    expect(decidiNotifica(st({ scadenza: scad('2026-11-19') }), OGGI)).toBeNull();
-    expect(decidiNotifica(st({ scadenza: scad('2026-11-10') }), OGGI)).toBeNull();
+    expect(decidiNotifica(st({ scadenze: [scad('2026-11-19')] }), OGGI)).toBeNull();
+    expect(decidiNotifica(st({ scadenze: [scad('2026-11-10')] }), OGGI)).toBeNull();
   });
   it('notifica scadenza non ripetuta per la stessa scadenza', () => {
-    expect(decidiNotifica(st({ scadenza: scad('2026-11-15'), ultimaScadenzaAvvisata: 'sc1' }), OGGI)).toBeNull();
-    expect(decidiNotifica(st({ scadenza: scad('2026-11-15'), ultimaScadenzaAvvisata: 'altra' }), OGGI)?.tipo).toBe('scadenza');
+    expect(decidiNotifica(st({ scadenze: [scad('2026-11-15')], ultimaScadenzaAvvisata: 'sc1' }), OGGI)).toBeNull();
+    expect(decidiNotifica(st({ scadenze: [scad('2026-11-15')], ultimaScadenzaAvvisata: 'altra' }), OGGI)?.tipo).toBe('scadenza');
   });
   it('scadenza batte versamento lo stesso giorno', () => {
-    const n = decidiNotifica(st({ scadenza: scad('2026-11-15'), versamento: vers(12) }), OGGI);
+    const n = decidiNotifica(st({ scadenze: [scad('2026-11-15')], versamento: vers(12) }), OGGI);
     expect(n?.tipo).toBe('scadenza');
   });
   it('una notifica al giorno: già mandata oggi, niente scadenza', () => {
-    expect(decidiNotifica(st({ scadenza: scad('2026-11-15'), ultimaNotificaIl: OGGI }), OGGI)).toBeNull();
+    expect(decidiNotifica(st({ scadenze: [scad('2026-11-15')], ultimaNotificaIl: OGGI }), OGGI)).toBeNull();
+  });
+  it('P6: due scadenze nella settimana, una notifica sola che le conta entrambe', () => {
+    const due = [scad('2026-11-13', 'sc1'), scad('2026-11-16', 'sc2')];
+    const n = decidiNotifica(st({ scadenze: due }), OGGI);
+    expect(n?.tipo).toBe('scadenza');
+    expect(n?.testo).toContain('2 scadenze questa settimana');
+    expect(n?.testo).toContain('13 novembre');
+  });
+  it('P6: il segno di già avvisato è quello dell ultima del gruppo: coprono tutte', () => {
+    const due = [scad('2026-11-13', 'sc1'), scad('2026-11-16', 'sc2')];
+    expect(marcatoreScadenze(due)).toBe('sc2');
+    expect(marcatoreScadenze([])).toBeNull();
+    expect(decidiNotifica(st({ scadenze: due, ultimaScadenzaAvvisata: 'sc2' }), OGGI)).toBeNull();
+  });
+  it('P6: una scadenza avvisata da sola e una nuova entrata nella settimana: si riavvisa il gruppo', () => {
+    const due = [scad('2026-11-13', 'sc1'), scad('2026-11-16', 'sc2')];
+    expect(decidiNotifica(st({ scadenze: due, ultimaScadenzaAvvisata: 'sc1' }), OGGI)?.testo).toContain('2 scadenze');
   });
 });

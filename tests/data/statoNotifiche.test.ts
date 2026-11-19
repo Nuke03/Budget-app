@@ -103,9 +103,13 @@ describe('leggiStatiPersone: scadenze P.IVA', () => {
     const out = await leggiStatiPersone(db.client, OGGI);
     const u1 = out.find((p) => p.stato.userId === 'U1')!;
     const u2 = out.find((p) => p.stato.userId === 'U2')!;
-    expect(u1.stato.scadenza).toEqual({ id: 'a', descrizione: 'D-a', data: '2026-11-14' });
+    // tutte quelle della settimana, dalla prima: la notifica le conta insieme
+    expect(u1.stato.scadenze).toEqual([
+      { id: 'a', descrizione: 'D-a', data: '2026-11-14' },
+      { id: 'b', descrizione: 'D-b', data: '2026-11-16' },
+    ]);
     expect(u1.stato.ultimaScadenzaAvvisata).toBe('a');
-    expect(u2.stato.scadenza).toBeNull();
+    expect(u2.stato.scadenze).toEqual([]);
     expect(u2.stato.ultimaScadenzaAvvisata).toBeNull();
   });
 });

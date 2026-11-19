@@ -91,19 +91,40 @@ export function propostaStipendio(i: {
   return { a, b, proposta, serveMeseMagro };
 }
 
+// Se le spese hanno superato lo stipendio: la frase calma con l'eccedenza, altrimenti null.
+// È la sola regola: l'hub e la Home la usano entrambi, così dicono lo stesso numero e la stessa frase.
+export function fraseEccedenza(rimasto: number): string | null {
+  const eccedenza = Math.round(-rimasto * 100) / 100;
+  return eccedenza > 0 ? `Hai già speso ${euroInFrase(eccedenza)} più dello stipendio di questo mese.` : null;
+}
+
 export function homeConStipendio(i: {
   disponibileLibero: number;
   stipendio: number;
   speseMese: number;
   versatoCasaMese: number;
   riservaVersamento: number;
-}): { mostrato: number; rimasto: number; cuscinetto: number; mesiCoperti: number } {
+}): {
+  mostrato: number;
+  rimasto: number;
+  // Quanto resta dello stipendio, mai sotto zero: è il numero che si mostra.
+  rimastoMostrato: number;
+  // Quanto si è speso oltre lo stipendio (0 se non è successo) e la frase che lo dice.
+  eccedenza: number;
+  frase: string | null;
+  cuscinetto: number;
+  mesiCoperti: number;
+} {
   const rimasto = i.stipendio - i.speseMese - i.versatoCasaMese - i.riservaVersamento;
-  const mostrato = Math.min(i.disponibileLibero, rimasto);
-  const cuscinetto = Math.max(0, i.disponibileLibero - rimasto);
+  // Mai un numero negativo: sopra lo stipendio si mostra 0 e la frase dice di quanto.
+  const mostrato = Math.max(0, Math.min(i.disponibileLibero, rimasto));
+  const rimastoMostrato = Math.max(0, rimasto);
+  const eccedenza = Math.max(0, Math.round(-rimasto * 100) / 100);
+  // Con le spese oltre lo stipendio non c'è niente da togliere: il cuscinetto non supera mai quello che c'è.
+  const cuscinetto = Math.max(0, i.disponibileLibero - rimastoMostrato);
   const mesiCoperti =
     i.stipendio > 0 ? Math.round((cuscinetto / i.stipendio) * 10) / 10 : 0;
-  return { mostrato, rimasto, cuscinetto, mesiCoperti };
+  return { mostrato, rimasto, rimastoMostrato, eccedenza, frase: fraseEccedenza(rimasto), cuscinetto, mesiCoperti };
 }
 
 export function revisioneStipendio(

@@ -41,6 +41,7 @@ export function impostazioniPivaProva(oggi: string): PivaSettings {
     stipendioMensile: 1300,
     stipendioRivistoIl: giorniFa(oggi, 20),
     incassoMeseMagro: null,
+    categoriaDal: null,
   };
 }
 

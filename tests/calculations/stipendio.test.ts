@@ -5,6 +5,7 @@ import {
   propostaStipendio,
   homeConStipendio,
   revisioneStipendio,
+  fraseEccedenza,
   fineMese,
 } from '@/lib/calculations/stipendio';
 import type { Transaction } from '@/lib/types';
@@ -84,7 +85,9 @@ describe('homeConStipendio', () => {
     const r = homeConStipendio({
       disponibileLibero: 2900, stipendio: 1300, speseMese: 660, versatoCasaMese: 0, riservaVersamento: 0,
     });
-    expect(r).toEqual({ mostrato: 640, rimasto: 640, cuscinetto: 2260, mesiCoperti: 1.7 });
+    expect(r).toEqual({
+      mostrato: 640, rimasto: 640, rimastoMostrato: 640, eccedenza: 0, frase: null, cuscinetto: 2260, mesiCoperti: 1.7,
+    });
   });
   it('disponibile sotto lo stipendio rimasto → cuscinetto 0', () => {
     const r = homeConStipendio({
@@ -148,5 +151,33 @@ describe('fineMese', () => {
     expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2028, 1, 29]);
     const e = fineMese('2026-11-18');
     expect([e.getMonth(), e.getDate()]).toEqual([10, 30]);
+  });
+});
+
+describe('P9: stipendio superato, una sola regola', () => {
+  const sopra = { disponibileLibero: 900, stipendio: 1000, speseMese: 1120, versatoCasaMese: 0, riservaVersamento: 0 };
+
+  it('spese oltre lo stipendio: mostrato 0, eccedenza 120, frase calma', () => {
+    const r = homeConStipendio(sopra);
+    expect(r.mostrato).toBe(0);
+    expect(r.eccedenza).toBe(120);
+    expect(r.frase).toBe('Hai già speso 120 € più dello stipendio di questo mese.');
+    expect(r.rimastoMostrato).toBe(0);
+  });
+  it('mai un numero negativo, nemmeno se il disponibile è sotto zero', () => {
+    const r = homeConStipendio({ ...sopra, disponibileLibero: -50, speseMese: 100 });
+    expect(r.mostrato).toBe(0);
+    expect(r.rimastoMostrato).toBeGreaterThanOrEqual(0);
+  });
+  it('stipendio non superato: nessuna frase, nessuna eccedenza', () => {
+    const r = homeConStipendio({ ...sopra, speseMese: 400 });
+    expect(r.eccedenza).toBe(0);
+    expect(r.frase).toBeNull();
+    expect(r.mostrato).toBe(600);
+  });
+  it('la regola è una funzione sola, con centesimi: stessa frase ovunque', () => {
+    expect(fraseEccedenza(-120.5)).toBe('Hai già speso 120,50 € più dello stipendio di questo mese.');
+    expect(fraseEccedenza(0)).toBeNull();
+    expect(fraseEccedenza(30)).toBeNull();
   });
 });

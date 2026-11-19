@@ -164,7 +164,7 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
   const ultime = await Promise.all(utenti.map((id) => ultimaCreazioneDi(admin, id)));
   const ultimaCreazione = new Map(utenti.map((id, i) => [id, ultime[i]] as const));
 
-  // La prossima scadenza P.IVA (entro 7 giorni, non pagata né nascosta) di chi ha la P.IVA attiva.
+  // Le scadenze P.IVA (entro 7 giorni, non pagate né nascoste) di chi ha la P.IVA attiva.
   const conPiva = await aBlocchi(utenti, async (blocco) => {
     const { data, error } = await admin.from('piva_settings').select('user_id, attivo').in('user_id', blocco);
     if (error) throw error;
@@ -185,8 +185,9 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
     if (error) throw error;
     return (data ?? []) as RigaScadenza[];
   });
-  const scadenzaPerUtente = new Map<string, RigaScadenza>();
-  for (const r of righeScadenze) if (!scadenzaPerUtente.has(r.user_id)) scadenzaPerUtente.set(r.user_id, r);
+  // Tutte le scadenze della settimana, in ordine di data: una notifica sola le conta insieme.
+  const scadenzePerUtente = new Map<string, RigaScadenza[]>();
+  for (const r of righeScadenze) scadenzePerUtente.set(r.user_id, [...(scadenzePerUtente.get(r.user_id) ?? []), r]);
 
   // Le case attive degli iscritti, con tutti i loro membri attivi (serve a sapere chi gestisce).
   const datiPerUtente = new Map<string, DatiCasa>();
@@ -265,7 +266,7 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
         ultimoVersamentoMese: p?.ultimo_versamento_mese ?? null,
         ultimaNotificaIl: p?.ultima_notifica_il ?? null,
         nessunaSpesaFinoAl: p?.nessuna_spesa_fino_al ?? null,
-        scadenza: ((r) => (r ? { id: r.id, descrizione: r.descrizione, data: r.data } : null))(scadenzaPerUtente.get(userId)),
+        scadenze: (scadenzePerUtente.get(userId) ?? []).map((r) => ({ id: r.id, descrizione: r.descrizione, data: r.data })),
         ultimaScadenzaAvvisata: p?.ultima_scadenza_avvisata ?? null,
         ...(datiPerUtente.get(userId) ?? SENZA_CASA),
       },

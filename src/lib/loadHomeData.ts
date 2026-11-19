@@ -15,7 +15,7 @@ import {
   revisioneStipendio,
   speseDelMese,
 } from '@/lib/calculations/stipendio';
-import { casaDelMese, finestraIncassi, inizioLetturaIncassi, inizioMesiFa, speseUltimiMesi } from '@/lib/pivaHome';
+import { anniScadenzeHome, casaDelMese, finestraIncassi, inizioLetturaIncassi, inizioMesiFa, speseUltimiMesi } from '@/lib/pivaHome';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { leggiPromemoriaUtente, leggiRimandati } from '@/lib/data/notifiche';
@@ -38,7 +38,7 @@ import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
 import type { ArgomentoId, PercorsoUtente, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
-import { getAccantonamenti, getFatture, getScadenze } from '@/lib/data/piva';
+import { getAccantonamenti, getFatture, getQuoteScartate, getScadenze } from '@/lib/data/piva';
 import {
   computeAliquotaSostitutiva,
   computePercentualeIncasso,
@@ -48,7 +48,7 @@ import {
 } from '@/lib/calculations/piva';
 import { loadCasaAggiunta, type CasaAggiunta } from '@/lib/loadCasaData';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
-import type { Account, BudgetGoal, Category, PivaFattura, PivaScadenza, PivaSettings, Transaction } from '@/lib/types';
+import type { Account, BudgetGoal, Category, PivaAccantonamento, PivaFattura, PivaScadenza, PivaSettings, Transaction } from '@/lib/types';
 
 // Le due parti si leggono a parte: se manca lo stato, la casa esiste ma il disponibile
 // personale non tiene conto della quota (la home lo dice).
@@ -63,6 +63,8 @@ export interface StipendioHome {
   rimasto: number;
   cuscinetto: number;
   mesiCoperti: number;
+  // Se le spese hanno superato lo stipendio: la frase con l'eccedenza (la stessa dell'hub P.IVA).
+  frase: string | null;
 }
 
 // La P.IVA guidata vista dalla home: dove vanno le tasse, quanto mettere da parte, quali quote
@@ -73,7 +75,7 @@ export interface PivaHome {
   percentuale: number;
   inSospeso: QuotaInSospeso[];
   stipendio: StipendioHome | null;
-  // Le scadenze dell'anno corrente; vuote se non si leggono (la home si apre lo stesso).
+  // Le scadenze dell'anno corrente (e dell'anno dopo, da metà dicembre); vuote se non si leggono (la home si apre lo stesso).
   scadenze: PivaScadenza[];
   // Le fatture dell'utente; vuote se non si leggono (la home si apre lo stesso).
   fatture: PivaFattura[];
@@ -100,6 +102,8 @@ export interface HomeData {
   casa: CasaPerHome | null;
   // null: P.IVA non attiva o guida non completata.
   piva: PivaHome | null;
+  // La P.IVA è attiva (o potrebbe esserlo) ma non si legge: il disponibile non conta le tasse, e la Home lo dice.
+  pivaNonLetta: boolean;
   righe: RigaLibretto[];
   // Le transazioni dei 3 mesi già lette per la Home: da qui si indovina la categoria di una nuova spesa.
   storico: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
@@ -159,7 +163,7 @@ async function casaOpzionale(
   return { aggiunta, stato };
 }
 
-// La P.IVA non deve mai rompere la home: se non si legge, la home si apre come senza P.IVA.
+// La P.IVA non deve mai rompere la home: se non si legge, la home si apre come senza P.IVA, e lo dice.
 // Le entrate e gli accantonamenti si leggono dal giorno della guida, anche oltre la finestra dei 3 mesi,
 // e solo se la guida è completata: per gli altri nessuna lettura in più.
 // Con lo stipendio fisso gli incassi si leggono anche per gli ultimi 6 mesi (stessa lettura, solo più indietro).
@@ -167,26 +171,35 @@ interface PivaLetta {
   piva: PivaHome;
   settings: PivaSettings;
   incassi: Transaction[];
+  accantonamenti: PivaAccantonamento[];
+  // Gli incassi per cui si è scelto di non mettere niente da parte (vuoto se non si leggono).
+  scartate: Set<string>;
   percentuale: number;
 }
 
 async function pivaOpzionale(
   supabase: SupabaseClient,
   settings: Promise<PivaSettings | null>,
-  today: Date
+  today: Date,
+  nonLetta: () => void
 ): Promise<PivaLetta | null> {
   try {
     const s = await settings;
     if (!s || !s.attivo || !s.guidataDal || !s.contoTasseId || !s.categoriaFatturatoId) return null;
     const daIncassi =
       s.stipendioMensile !== null ? inizioLetturaIncassi(s.guidataDal, oggiRomaISO(today)) : s.guidataDal;
-    const [incassi, accantonamenti, scadenze, fatture] = await Promise.all([
+    const [incassi, accantonamenti, scadenze, fatture, scartate] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da: s.guidataDal }),
       // Una scadenza che non si legge non toglie la P.IVA dalla home: niente promemoria di scadenza.
-      getScadenze(supabase, oggiRomaData(today).getFullYear()).catch(() => [] as PivaScadenza[]),
+      // Dopo il 15 dicembre anche quelle dell'anno dopo.
+      Promise.all(anniScadenzeHome(oggiRomaISO(today)).map((anno) => getScadenze(supabase, anno)))
+        .then((perAnno) => perAnno.flat())
+        .catch(() => [] as PivaScadenza[]),
       // Come le scadenze: una fattura che non si legge non toglie la P.IVA dalla home.
       getFatture(supabase).catch(() => [] as PivaFattura[]),
+      // Una scelta "Scarta" che non si legge non toglie la P.IVA dalla home: la quota resta da spostare.
+      getQuoteScartate(supabase).catch(() => new Set<string>()),
     ]);
     const percentuale = computePercentualeIncasso(
       s.coefficienteRedditivita,
@@ -199,16 +212,23 @@ async function pivaOpzionale(
         contoTasseId: s.contoTasseId,
         categoriaFatturatoId: s.categoriaFatturatoId,
         percentuale,
-        inSospeso: quoteInSospeso(incassi, accantonamenti, percentuale, s.categoriaFatturatoId, s.guidataDal),
+        inSospeso: quoteInSospeso(incassi, accantonamenti, percentuale, s.categoriaFatturatoId, s.guidataDal, {
+          categoriaDal: s.categoriaDal,
+          scartate,
+        }),
         stipendio: null,
         scadenze,
         fatture,
       },
       settings: s,
       incassi,
+      accantonamenti,
+      scartate,
       percentuale,
     };
   } catch {
+    // Non è "P.IVA spenta": non si riesce a leggere, e il disponibile non conta le tasse.
+    nonLetta();
     return null;
   }
 }
@@ -259,7 +279,11 @@ export async function loadHomeBase(
   const obiettivi = getOpenGoals(supabase);
   const oggi = oggiRomaISO(today);
   // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
-  const pivaSettings = getPivaSettings(supabase).catch(() => null);
+  let pivaNonLetta = false;
+  const pivaSettings = getPivaSettings(supabase).catch(() => {
+    pivaNonLetta = true;
+    return null;
+  });
   const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, rimandati, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
@@ -276,7 +300,9 @@ export async function loadHomeBase(
     leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null })),
     // L'ultima riga scritta da te in qualunque spazio (anche Casa): conta per "in pari".
     ultimaCreazioneUtente(supabase, userId),
-    pivaOpzionale(supabase, pivaSettings, today),
+    pivaOpzionale(supabase, pivaSettings, today, () => {
+      pivaNonLetta = true;
+    }),
     // I "Più tardi" della Casa valgono anche qui; se non si leggono, niente è rimandato.
     leggiRimandati(supabase).catch(() => ({} as Record<string, string>)),
     // Il percorso non deve rompere la home: se non si legge, i primi passi partono da zero.
@@ -291,6 +317,18 @@ export async function loadHomeBase(
   const accounts = piva
     ? contiLetti.map((a) => (a.id === piva.contoTasseId ? { ...a, contaInDisponibile: false } : a))
     : contiLetti;
+  if (pivaLetta && piva) {
+    // Un incasso su un conto che non conta nel disponibile non chiede la quota: ora che i conti sono noti si rifà il conto.
+    const contiChePesano = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
+    piva.inSospeso = quoteInSospeso(
+      pivaLetta.incassi,
+      pivaLetta.accantonamenti,
+      pivaLetta.percentuale,
+      piva.categoriaFatturatoId,
+      pivaLetta.settings.guidataDal,
+      { categoriaDal: pivaLetta.settings.categoriaDal, contiChePesano, scartate: pivaLetta.scartate }
+    );
+  }
   const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
   const riservati = {
@@ -330,7 +368,13 @@ export async function loadHomeBase(
     });
     disponibileLibero = home.mostrato;
     dataTarget = fineMese(oggi);
-    piva.stipendio = { stipendio, rimasto: home.rimasto, cuscinetto: home.cuscinetto, mesiCoperti: home.mesiCoperti };
+    piva.stipendio = {
+      stipendio,
+      rimasto: home.rimasto,
+      cuscinetto: home.cuscinetto,
+      mesiCoperti: home.mesiCoperti,
+      frase: home.frase,
+    };
     const { incassiMensili, mesiConIncassi } = finestraIncassi(pivaLetta.incassi, piva.categoriaFatturatoId, oggi);
     const { proposta } = propostaStipendio({
       incassiMensili,
@@ -417,6 +461,7 @@ export async function loadHomeBase(
     goals: goalsWithAccantonato,
     casa,
     piva,
+    pivaNonLetta,
     righe: righeLibretto(transazioni, oggi, 4, categories),
     storico: transazioni.map((t) => ({
       descrizione: t.descrizione,

@@ -247,7 +247,7 @@ describe('GET /api/promemoria', () => {
     seed({ promemoria_utente: [{ user_id: 'U1', notifiche_attive: null }] });
     const r = await chiama();
     expect(await r.json()).toEqual({ inviate: 0, rimosse: 0 });
-    expect(sendNotification).not.toHaveBeenCalled();
+    expect(sendNotification.mock.calls.some((c) => JSON.parse(c[1]).testo.includes('scadenz'))).toBe(false);
   });
 });
 
@@ -267,5 +267,25 @@ describe('GET /api/promemoria: scadenze P.IVA', () => {
       ultima_notifica_il: OGGI,
     });
     expect(db.tables.promemoria_utente[0].ultima_spese_il).toBeUndefined();
+  });
+
+  it('P6: due scadenze nella settimana, una notifica sola e tutte segnate come avvisate', async () => {
+    seed({
+      piva_settings: [{ id: 'p1', user_id: 'U1', attivo: true }],
+      piva_scadenze: [
+        { id: 'sc1', user_id: 'U1', descrizione: 'ENPAP: saldo', data: '2026-11-13', pagata_il: null, nascosta: false },
+        { id: 'sc2', user_id: 'U1', descrizione: 'F24 di novembre', data: '2026-11-15', pagata_il: null, nascosta: false },
+      ],
+    });
+    await chiama();
+    const testi = sendNotification.mock.calls.map((c) => JSON.parse(c[1]).testo);
+    expect(new Set(testi).size).toBe(1);
+    expect(testi[0]).toContain('2 scadenze questa settimana');
+    expect(db.tables.promemoria_utente[0]).toMatchObject({ ultima_scadenza_avvisata: 'sc2' });
+    // il giorno dopo il gruppo non si ripete
+    db.tables.promemoria_utente[0].ultima_notifica_il = '2026-11-10';
+    sendNotification.mockClear();
+    await chiama();
+    expect(sendNotification.mock.calls.some((c) => JSON.parse(c[1]).testo.includes('scadenz'))).toBe(false);
   });
 });

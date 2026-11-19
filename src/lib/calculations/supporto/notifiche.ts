@@ -8,6 +8,18 @@ export interface Notifica {
   url: string;
 }
 
+export interface ScadenzaVicina {
+  id: string;
+  descrizione: string;
+  data: string;
+}
+
+// Una colonna sola ricorda quale scadenza è stata avvisata: si scrive l'ultima del gruppo, e un gruppo
+// avvisato una volta non si ripete. Così una notifica copre tutte le scadenze della settimana.
+export function marcatoreScadenze(scadenze: ScadenzaVicina[]): string | null {
+  return scadenze.length === 0 ? null : scadenze[scadenze.length - 1].id;
+}
+
 // Tutte le date sono giorni di calendario Europe/Rome 'YYYY-MM-DD'; i mesi 'YYYY-MM-01'.
 export interface StatoPersona {
   userId: string;
@@ -22,8 +34,8 @@ export interface StatoPersona {
   gestisce: boolean;
   checkinDaFare: string | null;
   versamento: { giorno: number; importo: number; versato: number; mese: string } | null;
-  // La prima scadenza P.IVA non pagata né nascosta nei prossimi 7 giorni (null se la P.IVA è spenta).
-  scadenza: { id: string; descrizione: string; data: string } | null;
+  // Le scadenze P.IVA non pagate né nascoste nei prossimi 7 giorni, dalla prima all'ultima (vuoto se la P.IVA è spenta).
+  scadenze: ScadenzaVicina[];
   ultimaScadenzaAvvisata: string | null;
 }
 
@@ -69,17 +81,22 @@ export function decidiNotifica(p: StatoPersona, oggi: string): Notifica | null {
     return null;
   }
 
-  const sc = p.scadenza;
-  if (sc && p.ultimaScadenzaAvvisata !== sc.id) {
-    const giorni = giorniTra(oggi, sc.data);
-    if (giorni >= 0 && giorni <= GIORNI_SCADENZA_PREAVVISO) {
-      return {
-        tipo: 'scadenza',
-        titolo: TITOLO,
-        testo: `${sc.descrizione}: scade il ${Number(sc.data.slice(8, 10))} ${nomeMese(sc.data)}. Controlla il vaso tasse.`,
-        url: '/piva',
-      };
-    }
+  const vicine = p.scadenze.filter((s) => {
+    const giorni = giorniTra(oggi, s.data);
+    return giorni >= 0 && giorni <= GIORNI_SCADENZA_PREAVVISO;
+  });
+  const sc = vicine[0];
+  if (sc && p.ultimaScadenzaAvvisata !== marcatoreScadenze(vicine)) {
+    const giorno = `${Number(sc.data.slice(8, 10))} ${nomeMese(sc.data)}`;
+    return {
+      tipo: 'scadenza',
+      titolo: TITOLO,
+      testo:
+        vicine.length === 1
+          ? `${sc.descrizione}: scade il ${giorno}. Controlla il vaso tasse.`
+          : `${vicine.length} scadenze questa settimana, la prima il ${giorno}. Controlla il vaso tasse.`,
+      url: '/piva',
+    };
   }
 
   const v = p.versamento;

@@ -71,6 +71,8 @@ export interface PivaSettings {
   stipendioMensile: number | null;
   stipendioRivistoIl: string | null;
   incassoMeseMagro: number | null;
+  // Da quando le entrate della categoria del fatturato chiedono la quota (si sposta se la categoria cambia).
+  categoriaDal: string | null;
 }
 
 export interface PivaFattura {

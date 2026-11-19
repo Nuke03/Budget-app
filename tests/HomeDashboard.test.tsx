@@ -625,7 +625,7 @@ describe('il libretto', () => {
           categories={[]}
           goals={[]}
           piva={{ contoTasseId: 't', categoriaFatturatoId: 'c', percentuale: 13.7, inSospeso: [], scadenze: [], fatture: [],
-            stipendio: { stipendio: 800, rimasto: 500, cuscinetto: 370, mesiCoperti: 0.5 } }}
+            stipendio: { stipendio: 800, rimasto: 500, cuscinetto: 370, mesiCoperti: 0.5, frase: null } }}
         />
       );
       expect(screen.getByText(/Hai 870 € sui conti, 370 € di cuscinetto/)).toBeInTheDocument();
@@ -639,7 +639,7 @@ describe('il libretto', () => {
   });
 
   describe('cuscinetto vuoto', () => {
-    const pivaCon = (stipendio: { stipendio: number; rimasto: number; cuscinetto: number; mesiCoperti: number } | null) => ({
+    const pivaCon = (stipendio: { stipendio: number; rimasto: number; cuscinetto: number; mesiCoperti: number; frase: string | null } | null) => ({
       contoTasseId: 't', categoriaFatturatoId: 'c', percentuale: 13.7, inSospeso: [], scadenze: [], fatture: [], stipendio,
     });
     const home = (piva: ReturnType<typeof pivaCon>, disponibile: number) =>
@@ -656,7 +656,7 @@ describe('il libretto', () => {
       );
 
     it('cuscinetto vuoto mostra l avviso con link a /piva', () => {
-      home(pivaCon({ stipendio: 1500, rimasto: 900, cuscinetto: 0, mesiCoperti: 0 }), 700);
+      home(pivaCon({ stipendio: 1500, rimasto: 900, cuscinetto: 0, mesiCoperti: 0, frase: null }), 700);
       const link = screen.getByRole('link', {
         name: 'Il cuscinetto per ora è finito: questo mese lo stipendio è più di quello che hai. Lo rivediamo insieme?',
       });
@@ -664,7 +664,7 @@ describe('il libretto', () => {
     });
 
     it('con lo stipendio la cifra grande si chiama "Ti restano per questo mese", senza resta "Disponibile libero"', () => {
-      home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 }), 500);
+      home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6, frase: null }), 500);
       expect(screen.getByText('Ti restano per questo mese')).toBeInTheDocument();
       expect(screen.queryByText('Disponibile libero')).not.toBeInTheDocument();
       cleanup();
@@ -675,15 +675,60 @@ describe('il libretto', () => {
 
     it('non compare se il cuscinetto c è, se lo stipendio non c è, o se lo stipendio non supera quello che hai', () => {
       const avviso = /Il cuscinetto per ora è finito/;
-      home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6 }), 500);
+      home(pivaCon({ stipendio: 800, rimasto: 500, cuscinetto: 500, mesiCoperti: 0.6, frase: null }), 500);
       expect(screen.queryByText(avviso)).not.toBeInTheDocument();
       cleanup();
       home(pivaCon(null), 700);
       expect(screen.queryByText(avviso)).not.toBeInTheDocument();
       cleanup();
-      home(pivaCon({ stipendio: 800, rimasto: 700, cuscinetto: 0, mesiCoperti: 0 }), 700);
+      home(pivaCon({ stipendio: 800, rimasto: 700, cuscinetto: 0, mesiCoperti: 0, frase: null }), 700);
       expect(screen.queryByText(avviso)).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('HomeDashboard: P9 stipendio superato e P7 P.IVA non letta', () => {
+  const dati = {
+    margineGiornaliero: 0,
+    dataTarget: '2026-11-30T00:00:00Z',
+    accounts,
+    categories: [],
+    goals: [],
+  };
+  const conStipendio = (frase: string | null) => ({
+    contoTasseId: 't', categoriaFatturatoId: 'c', percentuale: 13.7, inSospeso: [], scadenze: [], fatture: [],
+    stipendio: { stipendio: 800, rimasto: -120, cuscinetto: 0, mesiCoperti: 0, frase },
+  });
+
+  it('P9: sopra lo stipendio la cifra è 0 e sotto c è la frase calma con l eccedenza', () => {
+    render(
+      <HomeDashboard
+        {...dati}
+        disponibileLibero={0}
+        piva={conStipendio('Hai già speso 120 € più dello stipendio di questo mese.')}
+      />
+    );
+    expect(screen.getByTestId('disponibile')).toHaveTextContent(/^0/);
+    expect(screen.getByText('Hai già speso 120 € più dello stipendio di questo mese.')).toBeInTheDocument();
+    expect(screen.queryByText(/-\d/)).not.toBeInTheDocument();
+  });
+
+  it('P9: senza eccedenza nessuna frase', () => {
+    render(<HomeDashboard {...dati} disponibileLibero={300} piva={conStipendio(null)} />);
+    expect(screen.queryByText(/Hai già speso/)).not.toBeInTheDocument();
+  });
+
+  it('P7: P.IVA non letta, una riga calma dice che il disponibile non conta le tasse', () => {
+    const { container } = render(<HomeDashboard {...dati} disponibileLibero={300} pivaNonLetta />);
+    expect(
+      screen.getByText('Il disponibile non conta le tasse: non riesco a leggere la P.IVA.')
+    ).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
+  it('P7: letta o spenta, la riga non c è', () => {
+    render(<HomeDashboard {...dati} disponibileLibero={300} pivaNonLetta={false} />);
+    expect(screen.queryByText(/non riesco a leggere la P.IVA/)).not.toBeInTheDocument();
   });
 });
 

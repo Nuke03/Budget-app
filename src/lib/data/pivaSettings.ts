@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PivaSettings } from '../types';
 
 const COLONNE =
-  'id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente, conto_tasse_id, preset, guidata_dal, stipendio_mensile, stipendio_rivisto_il, incasso_mese_magro';
+  'id, attivo, data_apertura, categoria_fatturato_id, coefficiente_redditivita, aliquota_sostitutiva_override, aliquota_contributo_soggettivo, aliquota_contributo_integrativo, minimale_contributivo_annuo, contributi_versati_anno_precedente, conto_tasse_id, preset, guidata_dal, stipendio_mensile, stipendio_rivisto_il, incasso_mese_magro, categoria_dal';
 
 interface PivaSettingsRow {
   id: string;
@@ -21,6 +21,7 @@ interface PivaSettingsRow {
   stipendio_mensile: number | null;
   stipendio_rivisto_il: string | null;
   incasso_mese_magro: number | null;
+  categoria_dal: string | null;
 }
 
 function mapRow(row: PivaSettingsRow): PivaSettings {
@@ -41,6 +42,7 @@ function mapRow(row: PivaSettingsRow): PivaSettings {
     stipendioMensile: row.stipendio_mensile,
     stipendioRivistoIl: row.stipendio_rivisto_il,
     incassoMeseMagro: row.incasso_mese_magro,
+    categoriaDal: row.categoria_dal,
   };
 }
 
@@ -60,6 +62,7 @@ export interface PivaSettingsInput {
   stipendioMensile: number | null;
   stipendioRivistoIl: string | null;
   incassoMeseMagro: number | null;
+  categoriaDal: string | null;
 }
 
 function toRow(input: PivaSettingsInput) {
@@ -79,6 +82,7 @@ function toRow(input: PivaSettingsInput) {
     stipendio_mensile: input.stipendioMensile,
     stipendio_rivisto_il: input.stipendioRivistoIl,
     incasso_mese_magro: input.incassoMeseMagro,
+    categoria_dal: input.categoriaDal,
   };
 }
 
