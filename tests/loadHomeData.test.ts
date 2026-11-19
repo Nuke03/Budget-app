@@ -248,6 +248,43 @@ describe('loadHomeData: P.IVA', () => {
     expect(d.disponibileReale).toBe(1000 - 200 - 75);
   });
 
+  describe('promemoria della casa rimandati (Più tardi salvati nel database)', () => {
+    const monta = (rimandati: Record<string, string>) => {
+      vi.spyOn(households, 'getMyHousehold').mockResolvedValue({ household: { id: 'H1' }, members: [], invite: null, me: { userId: 'A' } } as never);
+      vi.spyOn(casaStato, 'loadCasaStato').mockResolvedValue({
+        riservaVersamento: 0, debitoDaRestituire: 0, piano: null, righe: [], righeCasa: [],
+        membri: [{ userId: 'A', displayName: 'Fabio' }], crediti: { A: 45 }, debiti: [],
+        me: { userId: 'A', joinedAt: '2026-01-01T00:00:00Z' },
+        controlli: { ultimoControllo: null, ultimoCheckinMese: '2026-11-01' },
+      } as never);
+      return createFakeDb(
+        {
+          accounts: contiPiva, budget_goals: [], categories: [],
+          transactions: [{
+            id: 't1', user_id: 'A', household_id: null, tipo: 'expense', importo: 12, data: '2026-11-15',
+            categoria_id: null, account_id: null, goal_id: null, descrizione: 'Pizza', nota: null,
+            created_at: '2026-11-15T10:00:00Z', stima: false,
+          }],
+          promemoria_utente: [{ user_id: 'A', rimandati }],
+        },
+        { userId: 'A', membri: {} }
+      );
+    };
+
+    it('senza rimandati il promemoria della casa è il prossimo passo', async () => {
+      const d = await loadHomeData(monta({}).client, TODAY, 'A');
+      expect(d.prossimo).toMatchObject({ tipo: 'casa' });
+      expect(d.prossimo?.testo).toContain('rimborso');
+    });
+
+    it('rimandato fino a domani: il prossimo passo non è più quello, e torna il giorno dopo', async () => {
+      const d = await loadHomeData(monta({ 'credito:A': '2026-11-16' }).client, TODAY, 'A');
+      expect(d.prossimo?.testo ?? '').not.toContain('rimborso');
+      const dopo = await loadHomeData(monta({ 'credito:A': '2026-11-16' }).client, new Date('2026-11-16T12:00:00Z'), 'A');
+      expect(dopo.prossimo?.testo).toContain('rimborso');
+    });
+  });
+
   it('il conto tasse non conta mai nel disponibile, nemmeno se flaggato: la Home e il dettaglio lo escludono', async () => {
     const conti = contiPiva.map((c) => (c.id === 'tasse' ? { ...c, saldo_attuale: 500, conta_in_disponibile: true } : c));
     const db = createFakeDb(

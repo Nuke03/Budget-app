@@ -18,7 +18,7 @@ import {
 import { casaDelMese, finestraIncassi, inizioLetturaIncassi, inizioMesiFa, speseUltimiMesi } from '@/lib/pivaHome';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
-import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
+import { leggiPromemoriaUtente, leggiRimandati } from '@/lib/data/notifiche';
 import { formatEuro } from '@/lib/format';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { calcolaAndamento, type Andamento } from '@/lib/calculations/supporto/andamento';
@@ -260,7 +260,7 @@ export async function loadHomeBase(
   const oggi = oggiRomaISO(today);
   // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
   const pivaSettings = getPivaSettings(supabase).catch(() => null);
-  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
+  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, rimandati, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -277,6 +277,8 @@ export async function loadHomeBase(
     // L'ultima riga scritta da te in qualunque spazio (anche Casa): conta per "in pari".
     ultimaCreazioneUtente(supabase, userId),
     pivaOpzionale(supabase, pivaSettings, today),
+    // I "Più tardi" della Casa valgono anche qui; se non si leggono, niente è rimandato.
+    leggiRimandati(supabase).catch(() => ({} as Record<string, string>)),
     // Il percorso non deve rompere la home: se non si legge, i primi passi partono da zero.
     leggiPercorso(supabase).catch(() => ({ utente: null, lezioni: {} as StatiLezioni })),
     // Anche la lista d'attesa non deve rompere la home.
@@ -372,7 +374,9 @@ export async function loadHomeBase(
   );
   const prossimo = prossimaCosa({
     inPari,
-    promemoriaCasa: promemoriaDaCasa(casa, oggi).map((p) => ({ testo: p.testo, href: p.azione?.href })),
+    promemoriaCasa: promemoriaDaCasa(casa, oggi)
+      .filter((p) => !((rimandati[p.id] ?? '') > oggi))
+      .map((p) => ({ testo: p.testo, href: p.azione?.href })),
     promemoriaPiva: piva
       ? promemoriaPiva(
           { scadenze: piva.scadenze, fatture: piva.fatture, inSospeso: totaleInSospeso(piva.inSospeso), revisioneStipendio: revisione },

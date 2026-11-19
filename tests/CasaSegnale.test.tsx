@@ -3,6 +3,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { NavBar } from '@/app/NavBar';
 import { CasaSegnaleProvider, useCasaDaFare, useSegnalaCasa } from '@/app/CasaSegnale';
 import { CasaHome } from '@/app/casa/CasaHome';
+import { CasaSenzaCasa } from '@/app/casa/CasaSenzaCasa';
 import type { CasaHomeDati } from '@/lib/calculations/supporto/casaHome';
 import type { CasaCorrente } from '@/lib/data/households';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
@@ -109,6 +110,26 @@ describe('la Casa pubblica i suoi promemoria visibili', () => {
         <NavBar />
       </CasaSegnaleProvider>
     );
+
+  it('senza libretto (dati non letti) e senza casa il puntino si spegne', () => {
+    const { unmount } = render(
+      <CasaSegnaleProvider>
+        <Pubblica attivo />
+        <CasaHome casa={casa} libretto={undefined} oggi="2026-11-12" />
+        <NavBar />
+      </CasaSegnaleProvider>
+    );
+    expect(screen.queryByTestId('puntino-casa')).not.toBeInTheDocument();
+    unmount();
+    render(
+      <CasaSegnaleProvider>
+        <Pubblica attivo />
+        <CasaSenzaCasa />
+        <NavBar />
+      </CasaSegnaleProvider>
+    );
+    expect(screen.queryByTestId('puntino-casa')).not.toBeInTheDocument();
+  });
 
   it('con una cosa da fare compare il puntino; con "Più tardi" sparisce', () => {
     monta([{ tipo: 'promemoria', id: 'credito:u1', testo: 'In attesa del rimborso: 45 €.', href: '/casa' }]);

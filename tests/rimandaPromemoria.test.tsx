@@ -80,6 +80,18 @@ describe('rimandati nel database', () => {
     await waitFor(() => expect(window.localStorage.getItem('promemoria-fino:a')).toBe('2026-11-04'));
   });
 
+  it('quando il server manda una mappa nuova, la mappa si riallinea', () => {
+    const strisciaConMappa = (m: Record<string, string>) => (
+      <RimandatiProvider iniziale={m}>
+        <StrisciaPromemoria promemoria={promemoria} oggi="2026-11-03" />
+      </RimandatiProvider>
+    );
+    const { rerender } = render(strisciaConMappa({ a: '2026-11-04' }));
+    expect(screen.queryByText('Primo promemoria.')).not.toBeInTheDocument();
+    rerender(strisciaConMappa({}));
+    expect(screen.getByText('Primo promemoria.')).toBeInTheDocument();
+  });
+
   it('se la lettura è fallita (iniziale null) tutto passa da localStorage, senza chiamare il database', () => {
     mostra(null);
     fireEvent.click(screen.getAllByRole('button', { name: 'Più tardi' })[0]);

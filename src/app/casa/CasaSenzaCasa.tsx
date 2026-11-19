@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { CoverHeader } from '../CoverHeader';
+import { SegnalaCasa } from '../CasaSegnale';
 import { CLASSE_NEUTRO, CLASSE_PRIMARIO } from './CampiMovimento';
 
 export function CasaSenzaCasa() {
   return (
     <>
+      <SegnalaCasa attivo={false} />
       <CoverHeader titolo="Casa" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
         <p className="text-[15px] text-ink-2">Qui mettete insieme le spese di casa. Il resto resta solo vostro.</p>

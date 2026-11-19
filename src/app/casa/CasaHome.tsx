@@ -56,6 +56,7 @@ export function CasaHome({
   if (!libretto) {
     return (
       <>
+        <SegnalaCasa attivo={false} />
         <CoverHeader titolo="La casa" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
         <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6 pt-3.5">
           <section className="rounded-[var(--radius-md)] border border-rule bg-surface p-4">

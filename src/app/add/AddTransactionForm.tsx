@@ -492,7 +492,7 @@ export function AddTransactionForm({
               />
             </label>
 
-            {tipo === 'expense' && goalsDisponibili.length > 0 && (
+            {tipo === 'expense' && (goalsDisponibili.length > 0 || onCreateGoal) && (
               <div className="flex flex-col gap-1.5 text-sm font-medium text-ink-2">
                 {obiettivoEtichetta}
                 <div className="flex flex-wrap gap-2">
@@ -514,7 +514,46 @@ export function AddTransactionForm({
                       </button>
                     );
                   })}
+                  {onCreateGoal && (
+                    <button
+                      type="button"
+                      disabled={bloccato}
+                      aria-expanded={isCreatingGoal}
+                      onClick={() => setIsCreatingGoal((v) => !v)}
+                      className={`${CHIP_BASE} border-dashed ${CHIP_SPENTO}`}
+                    >
+                      + Nuova cosa da mettere da parte
+                    </button>
+                  )}
                 </div>
+                {onCreateGoal && isCreatingGoal && (
+                  <div className="flex flex-col gap-2 rounded-[var(--radius-md)] bg-surface-muted p-3">
+                    <input
+                      aria-label="Nome nuova cosa da mettere da parte"
+                      value={nuovoGoalNome}
+                      onChange={(e) => setNuovoGoalNome(e.target.value)}
+                      placeholder="Es. Assicurazione auto"
+                      className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-surface px-3 py-2 text-base text-foreground outline-none focus-visible:border-brand"
+                    />
+                    <input
+                      aria-label="Importo nuova cosa da mettere da parte"
+                      type="number"
+                      inputMode="decimal"
+                      value={nuovoGoalImporto}
+                      onChange={(e) => setNuovoGoalImporto(e.target.value)}
+                      placeholder="0"
+                      className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-surface px-3 py-2 text-base text-foreground outline-none focus-visible:border-brand"
+                    />
+                    <button
+                      type="button"
+                      disabled={!isNuovoGoalValido}
+                      onClick={() => void handleCreateGoal().catch(() => setStatus('error'))}
+                      className="min-h-11 rounded-[var(--radius-sm)] bg-brand px-4 text-sm font-semibold text-brand-foreground disabled:opacity-40"
+                    >
+                      Crea e collega
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

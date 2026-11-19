@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, createElement, useCallback, useContext, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, createElement, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { salvaRimandato, unisciRimandati, type Rimandati } from '@/lib/data/notifiche';
 
@@ -63,6 +63,12 @@ let codaSalvataggi: Promise<unknown> = Promise.resolve();
 
 export function RimandatiProvider({ iniziale, children }: { iniziale: Rimandati | null; children: ReactNode }) {
   const [mappa, setMappa] = useState<Rimandati>(iniziale ?? {});
+  // Quando il server manda dati nuovi (dopo un refresh) la mappa si riallinea.
+  const [visto, setVisto] = useState(iniziale);
+  if (iniziale !== visto) {
+    setVisto(iniziale);
+    setMappa(iniziale ?? {});
+  }
   const imposta = useCallback((id: string, finoAl: string, oggi: string) => {
     setMappa((m) => unisciRimandati(m, id, finoAl, oggi));
     codaSalvataggi = codaSalvataggi.then(async () => {
@@ -73,8 +79,9 @@ export function RimandatiProvider({ iniziale, children }: { iniziale: Rimandati 
       }
     });
   }, []);
-  if (iniziale === null) return children as React.JSX.Element;
-  return createElement(RimandatiContesto.Provider, { value: { mappa, imposta } }, children);
+  // Senza lettura (iniziale null) il contesto è vuoto e vale solo localStorage; la radice resta sempre la stessa.
+  const valore = useMemo(() => (iniziale === null ? null : { mappa, imposta }), [iniziale, mappa, imposta]);
+  return createElement(RimandatiContesto.Provider, { value: valore }, children);
 }
 
 // Gli id rimandati fra quelli dati. La memoria si legge solo nel browser: sul server (e nel primo

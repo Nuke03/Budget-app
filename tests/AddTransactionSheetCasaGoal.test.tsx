@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 import { AddTransactionSheet } from '@/app/add/AddTransactionSheet';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 
@@ -54,35 +55,27 @@ beforeEach(() => {
   createGoal.mockResolvedValue(nuovo);
 });
 
-// Il foglio usa il modulo veloce, che oggi non disegna il pulsante dell'obiettivo: si prova il collegamento
-// (la prop passata al modulo), non il pulsante.
-type PropsForm = { key?: string; onCreateGoal?: (p: { nome: string; importoTarget: number; categoriaId: string | null }) => Promise<unknown> };
-const form = vi.hoisted(() => ({ ultime: [] as { contesto: string; props: unknown }[] }));
-vi.mock('@/app/add/AddTransactionForm', () => ({
-  AddTransactionForm: (props: PropsForm & { goals?: unknown[]; contoEtichetta?: string }) => {
-    form.ultime.push({ contesto: props.contoEtichetta === 'Chi ha pagato' ? 'casa' : 'personale', props });
-    return null;
-  },
-}));
-
 function apri(modoIniziale: 'casa' | 'personale') {
-  form.ultime = [];
   return render(
     <AddTransactionSheet aperto onClose={vi.fn()} personale={personale} casa={casa} modoIniziale={modoIniziale} meUserId="u1" onSaved={vi.fn()} />
   );
 }
 
-const propsDi = (contesto: 'casa' | 'personale') =>
-  form.ultime.filter((u) => u.contesto === contesto).at(-1)!.props as PropsForm;
+function creaDalForm(nome: string, importo: string) {
+  fireEvent.click(screen.getByRole('button', { name: 'Aggiungi una nota' }));
+  const apriForm = screen.getByRole('button', { name: '+ Nuova cosa da mettere da parte' });
+  expect(apriForm.className).toContain('min-h-11');
+  fireEvent.click(apriForm);
+  fireEvent.change(screen.getByLabelText('Nome nuova cosa da mettere da parte'), { target: { value: nome } });
+  fireEvent.change(screen.getByLabelText('Importo nuova cosa da mettere da parte'), { target: { value: importo } });
+  fireEvent.click(screen.getByRole('button', { name: 'Crea e collega' }));
+}
 
-describe('foglio di aggiunta: nuova cosa da mettere da parte in Casa', () => {
-  it('in Casa il modulo riceve onCreateGoal, che crea un obiettivo della casa', async () => {
-    apri('casa');
-    const onCreateGoal = propsDi('casa').onCreateGoal;
-    expect(onCreateGoal).toBeTypeOf('function');
-    const creato = await onCreateGoal!({ nome: 'Assicurazione casa', importoTarget: 250, categoriaId: 'cc' });
-    expect(creato).toBe(nuovo);
-    expect(createGoal).toHaveBeenCalledTimes(1);
+describe('foglio di aggiunta: nuova cosa da mettere da parte', () => {
+  it('in Casa il pulsante è visibile, crea un obiettivo della casa e lo sceglie', async () => {
+    const { container } = apri('casa');
+    creaDalForm('Assicurazione casa', '250');
+    await waitFor(() => expect(createGoal).toHaveBeenCalledTimes(1));
     const [client, input, scope] = createGoal.mock.calls[0];
     expect(client).toMatchObject({ marca: 'client' });
     expect(input).toEqual({
@@ -90,17 +83,29 @@ describe('foglio di aggiunta: nuova cosa da mettere da parte in Casa', () => {
       importoTarget: 250,
       modalita: 'bloccato',
       scadenza: null,
-      categoriaId: 'cc',
+      categoriaId: null,
       ricorrente: false,
       frequenzaMesi: null,
     });
     expect(scope).toEqual({ kind: 'casa', householdId: 'h1' });
+    expect(await screen.findByRole('button', { name: 'Assicurazione casa', pressed: true })).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
   });
 
-  it('in Personale continua a creare un obiettivo personale (senza scope di casa)', async () => {
+  it('in Personale crea un obiettivo personale (senza scope di casa) e lo sceglie', async () => {
+    createGoal.mockResolvedValue({ ...nuovo, id: 'g-pers', nome: 'Vacanza' });
     apri('personale');
-    await propsDi('personale').onCreateGoal!({ nome: 'Vacanza', importoTarget: 500, categoriaId: null });
-    expect(createGoal).toHaveBeenCalledTimes(1);
+    creaDalForm('Vacanza', '500');
+    await waitFor(() => expect(createGoal).toHaveBeenCalledTimes(1));
     expect(createGoal.mock.calls[0][2]).toBeUndefined();
+    expect(await screen.findByRole('button', { name: 'Vacanza', pressed: true })).toBeInTheDocument();
+  });
+
+  it('per un’entrata non c’è', () => {
+    apri('casa');
+    fireEvent.click(screen.getByRole('button', { name: 'Spesa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Entrata' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi una nota' }));
+    expect(screen.queryByRole('button', { name: '+ Nuova cosa da mettere da parte' })).not.toBeInTheDocument();
   });
 });
