@@ -21,9 +21,14 @@ describe('leggiPrecompilato', () => {
   });
 
   it('importi non validi si scartano: 0, negativo, enorme, testo, infinito', () => {
-    for (const importo of ['0', '-3', '1e9', '2e9', 'abc', 'Infinity', '']) {
+    for (const importo of ['0', '-3', '1e9', '2e9', 'abc', 'Infinity', '', '0x10', '1e3', '5.123', '1 000', '.5']) {
       expect(leggiPrecompilato(`?nuovo=1&nome=Cuffie&importo=${importo}`)).toMatchObject({ nome: 'Cuffie', importoTarget: 0 });
     }
+  });
+
+  it('accetta la virgola e al massimo due decimali', () => {
+    expect(leggiPrecompilato('?nuovo=1&nome=A&importo=12,5')?.importoTarget).toBe(12.5);
+    expect(leggiPrecompilato('?nuovo=1&nome=A&importo=7')?.importoTarget).toBe(7);
   });
 
   it('niente di valido: nessun precompilato', () => {

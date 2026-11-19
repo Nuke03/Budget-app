@@ -49,7 +49,12 @@ export async function valutaDopoSalvataggio(transactionId: string): Promise<Dopo
         await rispostaAvviso(supabase, transactionId, 'visto');
         const lezioneAvviso: ArgomentoId = goalFondo ? 'prima-da-parte' : 'imprevisti';
         // La lezione dell'avviso conta come lezione del giorno: non se ne propone un'altra sopra.
-        await segnaProposta(supabase, lezioneAvviso, d.oggi);
+        // Se non si riesce a segnarla, l'avviso resta: è la cosa che conta.
+        try {
+          await segnaProposta(supabase, lezioneAvviso, d.oggi);
+        } catch {
+          // la lezione potrà ripresentarsi: meglio che perdere l'avviso
+        }
         return { tipo: 'avviso', avviso, transactionId, lezione: lezioneAvviso };
       }
     }

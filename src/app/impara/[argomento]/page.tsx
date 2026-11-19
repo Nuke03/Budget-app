@@ -13,11 +13,14 @@ export default async function LezionePage({ params }: { params: Promise<{ argome
   if (!LEZIONI.some((l) => l.id === argomento)) notFound();
   const l = lezione(argomento as ArgomentoId);
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, (id) => loadPercorsoData(supabase, new Date(), id));
+  // Se i dati non si leggono la lezione si apre lo stesso, senza "Con i tuoi numeri".
+  const { dati } = await conUtente(supabase, (id) =>
+    loadPercorsoData(supabase, new Date(), id).catch(() => null)
+  );
   return (
     <>
       <CoverHeader titolo="Impara" />
-      <SchedaLezione lezione={l} numeri={numeriLezione(l.id, dati)} />
+      <SchedaLezione lezione={l} numeri={dati ? numeriLezione(l.id, dati) : null} />
     </>
   );
 }

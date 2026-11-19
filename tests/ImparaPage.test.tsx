@@ -99,6 +99,12 @@ describe('pagina lezione', () => {
     expect(screen.getByText(/scheda:Un piano per ogni euro\|Adesso il tuo libero/)).toBeInTheDocument();
   });
 
+  it('lettura dei dati fallita: la lezione si apre lo stesso, senza numeri', async () => {
+    loadPercorsoData.mockRejectedValue(new Error('rete'));
+    render(await LezionePage({ params: Promise.resolve({ argomento: 'piano' }) }));
+    expect(screen.getByText('scheda:Un piano per ogni euro|null')).toBeInTheDocument();
+  });
+
   it('argomento sconosciuto: notFound', async () => {
     await expect(LezionePage({ params: Promise.resolve({ argomento: 'boh' }) })).rejects.toThrow('NOT_FOUND');
     expect(notFound).toHaveBeenCalled();

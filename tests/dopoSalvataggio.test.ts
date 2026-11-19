@@ -102,9 +102,9 @@ describe('valutaDopoSalvataggio', () => {
     expect(segnaProposta).toHaveBeenCalledWith(expect.anything(), 'imprevisti', '2026-11-19');
   });
 
-  it('segnaProposta fallisce nel ramo avviso: null, come per ogni errore', async () => {
+  it('segnaProposta fallisce nel ramo avviso: l avviso si restituisce lo stesso', async () => {
     segnaProposta.mockRejectedValueOnce(new Error('rete'));
-    expect(await valutaDopoSalvataggio(ID)).toBeNull();
+    expect(await valutaDopoSalvataggio(ID)).toMatchObject({ tipo: 'avviso', transactionId: ID });
   });
 
   it('senza fondo imprevisti la lezione è imprevisti', async () => {
