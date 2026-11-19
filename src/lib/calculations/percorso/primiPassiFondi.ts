@@ -1,5 +1,6 @@
 // Calcoli dei primi passi: scadenze dei fondi e riepilogo della settimana di prova.
 import { addMonths, endOfMonth, format } from 'date-fns';
+import { computeAccantonatoFinora } from '../accantonato';
 import type { Category, Transaction } from '@/lib/types';
 import { GIORNI_SETTIMANA } from './soglie';
 import { piccoleSpese } from './numeri';
@@ -21,6 +22,31 @@ export function scadenzaImprevisti(oggi: string, traguardo: number, quota: numbe
 // 'YYYY-MM' -> ultimo giorno di quel mese ('YYYY-MM-DD').
 export function fineDelMese(mese: string): string {
   return format(endOfMonth(new Date(`${mese}-01T12:00:00`)), 'yyyy-MM-dd');
+}
+
+// Quanto ci sarà nel fondo alla prima scadenza, per un fondo di una spesa certa creato oggi: matura
+// "da adesso", quindi se il ciclo è già iniziato i mesi passati non contano. Stesse funzioni del fondo vero.
+export function accantonatoAllaPrimaScadenza(input: {
+  importo: number;
+  frequenzaMesi: number;
+  // 'YYYY-MM-DD'
+  scadenza: string;
+  oggi: string;
+}): number {
+  const accantonato = computeAccantonatoFinora(
+    {
+      importoTarget: input.importo,
+      modalita: 'dilazionato',
+      stato: 'aperto',
+      scadenza: input.scadenza,
+      createdAt: `${input.oggi}T12:00:00.000Z`,
+      ricorrente: true,
+      frequenzaMesi: input.frequenzaMesi,
+      accantonaDa: input.oggi,
+    },
+    new Date(`${input.scadenza}T00:00:00`)
+  );
+  return Math.round(accantonato * 100) / 100;
 }
 
 export function meseValido(mese: string): boolean {

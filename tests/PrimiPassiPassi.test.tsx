@@ -105,6 +105,21 @@ describe('passo spese certe', () => {
     assertNessunaParolaVietata(container);
   });
 
+  it('per ogni voce spuntata dice quanto ci sarà alla prima scadenza', () => {
+    const { container } = render(<PassoSpeseCerte oggi="2026-11-19" />);
+    expect(screen.queryByText(/Alla prima scadenza/)).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Assicurazione auto/ }));
+    // Scadenza di default fra un anno intero: il fondo ci arriva pieno.
+    expect(screen.getByText('Alla prima scadenza ci saranno circa 480 €; da lì in poi la quota basta.')).toBeTruthy();
+    // Con la scadenza fra 4 mesi (marzo 2027) ne maturano 4 su 12.
+    const mese = container.querySelector('input[type="month"]') as HTMLInputElement;
+    fireEvent.change(mese, { target: { value: '2027-03' } });
+    expect(screen.getByText('Alla prima scadenza ci saranno circa 160 €; da lì in poi la quota basta.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Gomme/ }));
+    expect(screen.getAllByText(/Alla prima scadenza ci saranno circa/)).toHaveLength(2);
+    assertNessunaParolaVietata(container);
+  });
+
   it('senza assicurazione auto non c è il link alla lezione', async () => {
     render(<PassoSpeseCerte oggi="2026-11-19" />);
     fireEvent.click(screen.getByRole('checkbox', { name: /Bollo/ }));

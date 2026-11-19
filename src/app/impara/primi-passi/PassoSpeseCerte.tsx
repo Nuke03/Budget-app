@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addMonths, format } from 'date-fns';
 import { SPESE_CERTE_PERSONALI } from '@/lib/percorso/speseCerte';
+import { euroInFrase } from '@/lib/format';
+import { accantonatoAllaPrimaScadenza, fineDelMese, meseValido } from '@/lib/calculations/percorso/primiPassiFondi';
 import { creaFondiSpeseCerte, nessunaSpesaCerta, proponiLezione } from './actions';
 import { CAMPO, ERRORE_TESTO, ETICHETTA, PRIMARIO, SECONDARIO } from './stili';
 
@@ -32,6 +34,13 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
     )
   );
   const [create, setCreate] = useState<string[] | null>(null);
+
+  // Un fondo creato a metà ciclo parte da adesso: alla prima scadenza manca la parte dei mesi già passati.
+  function primaScadenza(frequenzaMesi: number, r: Riga): number | null {
+    const importo = Number(r.importo.replace(',', '.'));
+    if (!(importo > 0) || !meseValido(r.mese) || r.mese < oggi.slice(0, 7)) return null;
+    return accantonatoAllaPrimaScadenza({ importo, frequenzaMesi, scadenza: fineDelMese(r.mese), oggi });
+  }
 
   const spuntate = SPESE_CERTE_PERSONALI.filter((s) => righe[s.chiave].scelta && !giaCreate.includes(s.chiave));
   const validi = spuntate.every((s) => Number(righe[s.chiave].importo.replace(',', '.')) > 0 && righe[s.chiave].mese >= oggi.slice(0, 7));
@@ -114,6 +123,7 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
               </label>
               <p className="text-sm text-ink-2">{s.riga}</p>
               {r.scelta ? (
+                <>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <label className="flex flex-col gap-1">
                     <span className={ETICHETTA}>{`Importo (€, ogni ${s.frequenzaMesi === 12 ? 'anno' : `${s.frequenzaMesi} mesi`})`}</span>
@@ -135,6 +145,12 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
                     />
                   </label>
                 </div>
+                {primaScadenza(s.frequenzaMesi, r) !== null ? (
+                  <p className="mt-2 text-sm text-ink-2">
+                    {`Alla prima scadenza ci saranno circa ${euroInFrase(primaScadenza(s.frequenzaMesi, r) as number)}; da lì in poi la quota basta.`}
+                  </p>
+                ) : null}
+                </>
               ) : null}
             </li>
           );
