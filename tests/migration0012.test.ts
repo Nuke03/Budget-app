@@ -99,7 +99,7 @@ describe('migrazione 0012 (statica)', () => {
     expect(c).toContain("'Incasso in studio'");
     expect(c).toContain('security invoker');
     expect(codice).toMatch(
-      /update public\.transactions\s+set descrizione = 'Incasso in studio'\s+where descrizione = 'Fattura Incasso in studio'/,
+      /update public\.transactions\s+set descrizione = 'Incasso in studio'\s+where descrizione = 'Fattura Incasso in studio' and household_id is null/,
     );
   });
 
@@ -115,6 +115,8 @@ describe('migrazione 0012 (statica)', () => {
   it('P11: vincolo not valid poi validate', () => {
     expect(codice).toMatch(/add constraint piva_fatture_date_check\s+check \(data_incasso is null or data_incasso >= data_emissione\) not valid/);
     expect(codice).toContain('validate constraint piva_fatture_date_check');
+    expect(codice).toContain("raise notice 'P11:");
+    expect(codice).toMatch(/if v_ids is null then\s+alter table public\.piva_fatture validate/);
   });
 
   it('P4, K1: le due tabelle nuove hanno RLS sulle proprie righe', () => {
@@ -127,8 +129,12 @@ describe('migrazione 0012 (statica)', () => {
     expect(codice).toMatch(/create index if not exists goal_versamenti_goal_idx on public\.goal_versamenti \(goal_id\)/);
     for (const t of ['piva_quote_scartate', 'goal_versamenti']) {
       expect(codice).toContain(`alter table public.${t} enable row level security`);
-      expect(codice).toMatch(new RegExp(String.raw`on public\.${t}[\s\S]*?auth\.uid\(\) = user_id`));
+      expect(codice).toMatch(new RegExp(String.raw`on public\.${t}[\s\S]*?auth\.uid\(\)\) = user_id`));
     }
+  });
+
+  it('K1: goal_versamenti accetta solo obiettivi personali di chi scrive', () => {
+    expect(codice).toMatch(/exists \(\s*select 1 from public\.budget_goals g\s+where g\.id = goal_id and g\.user_id = \(select auth\.uid\(\)\) and g\.household_id is null/);
   });
 
   it('B2-2 e P5: colonne nuove', () => {

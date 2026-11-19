@@ -59,11 +59,19 @@ alter table public.goal_versamenti enable row level security;
 
 drop policy if exists piva_quote_scartate_proprie on public.piva_quote_scartate;
 create policy piva_quote_scartate_proprie on public.piva_quote_scartate for all to authenticated
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
+-- un versamento si scrive solo su un obiettivo personale di chi lo scrive
 drop policy if exists goal_versamenti_proprie on public.goal_versamenti;
 create policy goal_versamenti_proprie on public.goal_versamenti for all to authenticated
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.budget_goals g
+      where g.id = goal_id and g.user_id = (select auth.uid()) and g.household_id is null
+    )
+  );
 
 -- =====================================================================
 -- 4. P10 e P11: un incasso collega una sola fattura; l'incasso non precede l'emissione
@@ -71,21 +79,33 @@ create policy goal_versamenti_proprie on public.goal_versamenti for all to authe
 
 -- P10: se due fatture puntano allo stesso incasso resta il collegamento della più vecchia;
 -- le altre tornano aperte (come fa il trigger piva_su_elimina_movimento).
-with d as (
-  select id, row_number() over (partition by transaction_id order by created_at, id) as rn
-  from public.piva_fatture
-  where transaction_id is not null
-)
-update public.piva_fatture f
-set transaction_id = null, data_incasso = null
-from d
-where f.id = d.id and d.rn > 1;
+do $$
+declare
+  n int;
+begin
+  with d as (
+    select id, row_number() over (partition by transaction_id order by created_at, id) as rn
+    from public.piva_fatture
+    where transaction_id is not null
+  ), u as (
+    update public.piva_fatture f
+    set transaction_id = null, data_incasso = null
+    from d
+    where f.id = d.id and d.rn > 1
+    returning f.id
+  )
+  select count(*) into n from u;
+  raise notice 'P10: fatture riaperte perché puntavano a un incasso già collegato: %', n;
+end $$;
 
 create unique index if not exists piva_fatture_un_incasso
   on public.piva_fatture (transaction_id) where transaction_id is not null;
 
--- P11: prima senza controllare le righe vecchie, poi validato (se una riga vecchia non va, qui si ferma tutto)
+-- P11: il vincolo nasce not valid (protegge già le scritture nuove). Si valida solo se nessuna riga vecchia lo viola;
+-- altrimenti resta not valid e le fatture da correggere compaiono in un NOTICE.
 do $$
+declare
+  v_ids text;
 begin
   if not exists (
     select 1 from pg_constraint
@@ -94,8 +114,14 @@ begin
     alter table public.piva_fatture add constraint piva_fatture_date_check
       check (data_incasso is null or data_incasso >= data_emissione) not valid;
   end if;
+  select string_agg(id::text, ', ') into v_ids
+  from public.piva_fatture where data_incasso is not null and data_incasso < data_emissione;
+  if v_ids is null then
+    alter table public.piva_fatture validate constraint piva_fatture_date_check;
+  else
+    raise notice 'P11: vincolo lasciato not valid, fatture con incasso prima dell''emissione: %', v_ids;
+  end if;
 end $$;
-alter table public.piva_fatture validate constraint piva_fatture_date_check;
 
 -- =====================================================================
 -- 5. P8: incassa_fattura. Un incasso diretto ("Incasso in studio") non ha il prefisso "Fattura"
@@ -130,7 +156,7 @@ end $$;
 -- le righe già scritte "Fattura Incasso in studio"
 update public.transactions
 set descrizione = 'Incasso in studio'
-where descrizione = 'Fattura Incasso in studio';
+where descrizione = 'Fattura Incasso in studio' and household_id is null;
 
 -- =====================================================================
 -- 6. elimina_movimento: riga e saldo insieme
@@ -171,6 +197,7 @@ end $$;
 -- Si toglie l'effetto della riga vecchia dal suo conto e si applica quello della nuova al suo conto;
 -- se il conto è lo stesso si applica solo la differenza. I conti si bloccano in ordine di id.
 -- I trigger check_household_refs e forbid_household_change giudicano la riga, e la RLS chi può toccarla.
+-- Il client deve mandare tutti i campi: categoria, obiettivo, nota e descrizione si sovrascrivono con quanto passato.
 -- p_stima nullo lascia la colonna com'è. Casa, data di creazione e chi ha pagato non cambiano mai.
 -- =====================================================================
 
@@ -443,6 +470,7 @@ grant execute on function public.ricomincia_da_zero() to authenticated;
 commit;
 
 -- ROLLBACK (solo se serve; perde i versamenti degli obiettivi, le quote scartate e i "Più tardi"):
+-- Il rollback NON annulla la riscrittura delle descrizioni (P8) né la riapertura delle fatture doppione (P10).
 -- Le quattro funzioni sostituite (incassa_fattura, crea_categorie_iniziali, get_calendar_feed, ricomincia_da_zero)
 -- si riportano alla versione precedente rieseguendo la loro definizione dalla 0010, 0011 e 0004.
 -- drop function if exists public.crea_fondo_bolletta(uuid, uuid, date, date);
