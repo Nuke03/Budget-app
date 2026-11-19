@@ -1,0 +1,63 @@
+import { describe, it, expect } from 'vitest';
+import { valutaAvvisoFondi } from '@/lib/calculations/percorso/avviso';
+
+const RISERVATI = { obiettivi: 100, casa: 50, debiti: 0, tasse: 30 };
+const base = { contaInDisponibile: true, riservati: RISERVATI, fondoImprevisti: null };
+
+describe('valutaAvvisoFondi', () => {
+  it('da 30 € a -20 €: buco 20, tocca obiettivi', () => {
+    const r = valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -20 });
+    expect(r).toEqual({ buco: 20, toccati: ['obiettivi'], fondoImprevisti: null });
+  });
+
+  it('già sotto zero prima: nessun avviso', () => {
+    expect(valutaAvvisoFondi({ ...base, importo: 10, disponibileDopo: -40 })).toBeNull();
+  });
+
+  it('conto fuori dal disponibile: nessun avviso', () => {
+    expect(valutaAvvisoFondi({ ...base, contaInDisponibile: false, importo: 50, disponibileDopo: -20 })).toBeNull();
+  });
+
+  it('disponibile ancora a zero o più: nessun avviso', () => {
+    expect(valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: 0 })).toBeNull();
+  });
+
+  it('buco più grande degli obiettivi: tocca obiettivi poi casa', () => {
+    const r = valutaAvvisoFondi({ ...base, importo: 200, disponibileDopo: -120 });
+    expect(r?.buco).toBe(120);
+    expect(r?.toccati).toEqual(['obiettivi', 'casa']);
+  });
+
+  it('nessun obiettivo riservato: toccati solo tasse, fondoImprevisti null', () => {
+    const r = valutaAvvisoFondi({
+      ...base,
+      riservati: { obiettivi: 0, casa: 0, debiti: 0, tasse: 40 },
+      importo: 50,
+      disponibileDopo: -20,
+    });
+    expect(r).toEqual({ buco: 20, toccati: ['tasse'], fondoImprevisti: null });
+  });
+
+  it('fondo imprevisti con accantonato 0: fondoImprevisti null', () => {
+    const r = valutaAvvisoFondi({
+      ...base,
+      importo: 50,
+      disponibileDopo: -20,
+      fondoImprevisti: { goalId: 'g1', accantonato: 0 },
+    });
+    expect(r?.fondoImprevisti).toBeNull();
+  });
+
+  it('fondo imprevisti con accantonato > 0 e obiettivi toccati: lo restituisce', () => {
+    const fondo = { goalId: 'g1', accantonato: 80 };
+    const r = valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -20, fondoImprevisti: fondo });
+    expect(r?.fondoImprevisti).toEqual(fondo);
+  });
+
+  it('arrotonda a centesimi', () => {
+    const r = valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -20.004999 });
+    expect(r?.buco).toBe(20);
+    const r2 = valutaAvvisoFondi({ ...base, importo: 50, disponibileDopo: -20.126 });
+    expect(r2?.buco).toBe(20.13);
+  });
+});

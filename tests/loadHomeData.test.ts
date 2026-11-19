@@ -142,6 +142,29 @@ describe('loadHomeData: P.IVA', () => {
     expect(d.disponibileLibero).toBe(1000 - 82);
   });
 
+  it('riservati sommati più disponibileReale ricostruiscono il saldo dei conti nel disponibile', async () => {
+    const obiettivo = {
+      id: 'g1', user_id: 'A', household_id: null, nome: 'Vacanza', importo_target: 130, modalita: 'bloccato',
+      scadenza: null, categoria_id: null, ricorrente: false, frequenza_mesi: null, stato: 'aperto',
+      created_at: '2026-01-01T00:00:00Z', accantona_da: null,
+    };
+    const db = createFakeDb(
+      {
+        accounts: contiPiva, budget_goals: [obiettivo], categories: [],
+        transactions: [entrata('e1', '2026-11-10', 600)],
+        piva_settings: [IMPOSTAZIONI_PIVA], piva_accantonamenti: [],
+      },
+      { userId: 'A', membri: {} }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    const { obiettivi, casa, debiti, tasse } = d.riservati;
+    expect(obiettivi).toBe(130);
+    expect(tasse).toBe(82);
+    expect(d.disponibileReale).toBe(1000 - 130 - 82);
+    expect(d.disponibileReale + obiettivi + casa + debiti + tasse).toBe(1000);
+    expect(d.disponibileLibero).toBe(d.disponibileReale);
+  });
+
   it('il conto tasse non conta mai nel disponibile, nemmeno se flaggato: la Home e il dettaglio lo escludono', async () => {
     const conti = contiPiva.map((c) => (c.id === 'tasse' ? { ...c, saldo_attuale: 500, conta_in_disponibile: true } : c));
     const db = createFakeDb(

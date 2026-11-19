@@ -5,7 +5,7 @@ import { getOpenGoals } from '@/lib/data/goals';
 import { getLastIncomeDate, getTransactions } from '@/lib/data/transactions';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { PERSONALE } from '@/lib/data/scope';
-import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
+import { computeDisponibileLibero, riservatoObiettivi } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import {
   fineMese,
@@ -75,6 +75,9 @@ export interface PivaHome {
 
 export interface HomeData {
   disponibileLibero: number;
+  // Il disponibile prima dell'adattamento allo stipendio, e i quattro riservati che lo compongono.
+  disponibileReale: number;
+  riservati: { obiettivi: number; casa: number; debiti: number; tasse: number };
   margineGiornaliero: number;
   dataTarget: Date;
   accounts: Account[];
@@ -232,13 +235,19 @@ export async function loadHomeData(
     : contiLetti;
   const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
 
+  const riservati = {
+    obiettivi: riservatoObiettivi(goalsConSpeso, today),
+    casa: casa?.stato?.riservaVersamento ?? 0,
+    debiti: casa?.stato?.debitoDaRestituire ?? 0,
+    tasse: piva ? totaleInSospeso(piva.inSospeso) : 0,
+  };
   const disponibileReale = computeDisponibileLibero(
     accounts,
     goalsConSpeso,
     today,
-    casa?.stato?.riservaVersamento ?? 0,
-    casa?.stato?.debitoDaRestituire ?? 0,
-    piva ? totaleInSospeso(piva.inSospeso) : 0
+    riservati.casa,
+    riservati.debiti,
+    riservati.tasse
   );
 
   // Con lo stipendio fisso la home mostra il minore fra quello che c'è e quello che resta dello stipendio,
@@ -318,6 +327,8 @@ export async function loadHomeData(
 
   return {
     disponibileLibero,
+    disponibileReale,
+    riservati,
     margineGiornaliero,
     dataTarget,
     accounts,
