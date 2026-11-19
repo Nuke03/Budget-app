@@ -1,6 +1,6 @@
 -- supabase/tests/ricomincia_da_zero.sql
 -- Prova di ricomincia_da_zero() e crea_categorie_iniziali(). Si esegue a mano nel SQL editor di Supabase
--- DOPO le migrazioni 0004-0011. Non lascia nulla nel database: crea utenti finti e dati di prova,
+-- DOPO le migrazioni 0004-0012. Non lascia nulla nel database: crea utenti finti e dati di prova,
 -- e termina con rollback. Se un controllo fallisce, l'errore dice quale.
 -- Esito atteso: "NOTICE: ricomincia_da_zero: tutti i controlli OK" e nessun errore.
 begin;
@@ -15,7 +15,7 @@ declare
   b constant uuid := 'bbbbbbbb-0000-0000-0000-0000000000b1';
   h uuid;
   conto_a uuid; conto_a_vuoto uuid; conto_casa uuid; conto_b uuid;
-  cat_a uuid; cat_b uuid; cat_casa uuid; goal_a uuid; tx_b uuid; tx_b_casa uuid;
+  cat_a uuid; cat_b uuid; cat_casa uuid; goal_a uuid; tx_a uuid; tx_b uuid; tx_b_casa uuid;
   oggi date := (now() at time zone 'Europe/Rome')::date;
   mese date := date_trunc('month', now() at time zone 'Europe/Rome')::date;
   cred_a0 numeric; deb_a0 numeric; arr_a0 numeric; cred_b0 numeric; deb_b0 numeric; arr_b0 numeric;
@@ -36,11 +36,16 @@ begin
 
   -- movimenti personali di A e di B
   insert into public.transactions (user_id, tipo, importo, data, categoria_id, account_id, goal_id, descrizione)
-    values (a, 'expense', 10, oggi, cat_a, conto_a_vuoto, goal_a, 'Personale A');
+    values (a, 'expense', 10, oggi, cat_a, conto_a_vuoto, goal_a, 'Personale A') returning id into tx_a;
   insert into public.transfers (user_id, da_account_id, a_account_id, importo, data, causale)
     values (a, conto_a, conto_a_vuoto, 15, oggi, 'altro');
   insert into public.transactions (user_id, tipo, importo, data, categoria_id, account_id, descrizione)
     values (b, 'expense', 10, oggi, cat_b, conto_b, 'Personale B') returning id into tx_b;
+
+  -- 0012: un versamento verso l obiettivo e una quota scartata, di A e di B
+  insert into public.goal_versamenti (goal_id, user_id, data, importo) values (goal_a, a, oggi, 25);
+  insert into public.piva_quote_scartate (transaction_id, user_id, scartata_il) values (tx_a, a, oggi);
+  insert into public.piva_quote_scartate (transaction_id, user_id, scartata_il) values (tx_b, b, oggi);
 
   -- Casa: versamento dal conto personale di A, spesa anticipata da A con il suo conto, spesa sul conto comune
   insert into public.transfers (household_id, user_id, da_account_id, a_account_id, importo, data, causale, mese_competenza)
@@ -110,6 +115,11 @@ begin
     'restano obiettivi personali aperti di A';
   assert not exists (select 1 from public.categories where id = cat_a), 'la vecchia categoria di A è rimasta';
 
+  -- le due tabelle della 0012: vuote per A, intatte per B
+  assert not exists (select 1 from public.goal_versamenti where user_id = a), 'restano versamenti degli obiettivi di A';
+  assert not exists (select 1 from public.piva_quote_scartate where user_id = a), 'restano quote scartate di A';
+  assert exists (select 1 from public.piva_quote_scartate where user_id = b and transaction_id = tx_b), 'la quota scartata di B è sparita';
+
   -- nessuna riga di B toccata
   assert (select zz_b_prima.n from zz_b_prima where k = 'conto') = (select count(*) from public.accounts where user_id = b), 'conti di B cambiati';
   assert (select s from zz_b_prima where k = 'conto') = (select coalesce(sum(saldo_attuale), 0) from public.accounts where user_id = b), 'saldo di B cambiato';
@@ -136,6 +146,33 @@ begin
   perform set_config('request.jwt.claims', '', true);
   perform set_config('request.jwt.claim.sub', '', true);
   assert n = 0, 'crea_categorie_iniziali ha duplicato le categorie';
+
+  -- p1: chi ha un movimento personale non riceve le categorie iniziali, chi non ne ha le riceve una volta sola
+  -- B ha già una categoria personale: la cancello (come proprietario) per provare solo la regola dei movimenti
+  delete from public.transactions where user_id = b and household_id is null;
+  delete from public.piva_quote_scartate where user_id = b;
+  delete from public.categories where user_id = b and household_id is null
+    and not exists (select 1 from public.transactions t where t.categoria_id = categories.id);
+  update public.categories set archiviata = true where user_id = b and household_id is null;
+  insert into public.transactions (user_id, tipo, importo, data, descrizione) values (b, 'expense', 5, oggi, 'Movimento di B');
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claim.sub', b::text, true);
+  set local role authenticated;
+  n := public.crea_categorie_iniziali();
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  assert n = 0, 'crea_categorie_iniziali ha creato categorie a chi ha movimenti personali';
+  delete from public.transactions where user_id = b and household_id is null;
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claim.sub', b::text, true);
+  set local role authenticated;
+  n := public.crea_categorie_iniziali();
+  assert public.crea_categorie_iniziali() = 0, 'la seconda chiamata ha duplicato le categorie';
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  assert n = 11, format('categorie iniziali di B: %s, attese 11', n);
 
   raise notice 'ricomincia_da_zero: tutti i controlli OK';
 end $test$;

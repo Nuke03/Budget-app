@@ -1,6 +1,6 @@
 -- supabase/tests/rls_casa.sql
 -- Prova delle policy RLS e delle funzioni della casa comune. Si esegue a mano nel SQL editor
--- di Supabase DOPO le migrazioni 0004, 0005, 0006, 0007 e 0008. Non lascia nulla nel database: crea utenti finti e
+-- di Supabase DOPO le migrazioni 0004, 0005, 0006, 0007, 0008 e 0009. Non lascia nulla nel database: crea utenti finti e
 -- dati di prova, poi termina con un errore voluto che annulla tutto e mostra il referto.
 -- Esito atteso: "RISULTATO: ... 0 FAIL" e solo righe OK.
 begin;
@@ -26,7 +26,9 @@ insert into auth.users (id, email) values
   ('43434343-0000-0000-0000-000000000043', 'rls-x3@test.invalid'),
   ('44444444-0000-0000-0000-000000000044', 'rls-x4@test.invalid'),
   ('51515151-0000-0000-0000-000000000051', 'rls-t1@test.invalid'),
-  ('52525252-0000-0000-0000-000000000052', 'rls-t2@test.invalid');
+  ('52525252-0000-0000-0000-000000000052', 'rls-t2@test.invalid'),
+  ('61616161-0000-0000-0000-000000000061', 'rls-s1@test.invalid'),
+  ('62626262-0000-0000-0000-000000000062', 'rls-s2@test.invalid');
 
 create table public.zz_esiti (n serial, nome text, ok boolean, dettaglio text);
 grant all on public.zz_esiti to public;
@@ -946,6 +948,37 @@ begin
       format('select public.record_balance_check(%L, 100, %L)', conto_casa, oggi + 1), 'data non valida');
     perform public.zz_err_msg('il controllo del saldo senza saldo dichiarato fallisce', b,
       format('select public.record_balance_check(%L, null, %L)', conto_casa, oggi), 'saldo mancante');
+  end;
+
+  -- 26. B-2 (0009): un debito da Tricount (saldo iniziale) blocca l uscita e la chiusura della casa.
+  -- s1 anticipa piu del dovuto, s2 gli deve 50. Nessun versamento o restituzione: il debito resta aperto.
+  declare
+    s1 constant uuid := '61616161-0000-0000-0000-000000000061';
+    s2 constant uuid := '62626262-0000-0000-0000-000000000062';
+    h6 uuid; c6 text;
+  begin
+    perform public.zz_as(s1);
+    select public.create_household('Casa Tricount', 'S1') into h6;
+    select public.create_invite(h6) into c6;
+    perform public.zz_reset();
+    perform public.zz_ok('s2 entra nella casa del saldo iniziale', s2,
+      format('select public.join_household(%L, ''S2'')', c6));
+    perform public.zz_ok('s1 registra il debito da Tricount di s2', s1,
+      format('select public.record_saldo_iniziale(%L, %L, %L, 50)', h6, s1, s2));
+    perform public.zz_err_msg('il debitore con un debito da Tricount non esce', s2,
+      'select public.leave_household()', 'DEBITO_APERTO');
+    perform public.zz_err_msg('il creditore con un debito da Tricount non esce', s1,
+      'select public.leave_household()', 'DEBITO_APERTO');
+    perform public.zz_verifica('i due membri sono ancora dentro',
+      (select count(*) from public.household_members where household_id = h6 and attivo) = 2,
+      'un membro e uscito');
+    -- se resta solo s1 (s2 fuori per altra via), il debito blocca anche la chiusura
+    update public.household_members set attivo = false where household_id = h6 and user_id = s2;
+    perform public.zz_err_msg('un debito da Tricount blocca la chiusura', s1,
+      'select public.close_household()', 'DEBITO_APERTO');
+    perform public.zz_verifica('la casa non e stata archiviata',
+      exists (select 1 from public.households where id = h6 and archiviata_il is null),
+      'la casa risulta archiviata');
   end;
 
   -- Referto
