@@ -274,7 +274,7 @@ describe('MovimentiCasa', () => {
       expect(screen.queryByText('Modifica')).not.toBeInTheDocument();
     });
 
-    it('chi ha pagato vede Modifica, il conto è "Io, con <conto>" e non si cambia', async () => {
+    it('chi ha pagato vede Modifica, il conto è "Io, con <conto>" e non si cambia, il tipo resta spesa', async () => {
       apri([], [carta], { contiPersonali: [cartaFabio] });
       fireEvent.click(screen.getByText('Modifica'));
       const conti = screen.getByText('Chi ha pagato') as HTMLElement;

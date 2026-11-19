@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { creaCodaRimandata } from '@/lib/eliminazioneRimandata';
 import { riprendiEliminazioniInSospeso, salvaInSospeso, togliInSospeso } from '@/lib/eliminazioniInSospeso';
 import { createClient } from '@/lib/supabase/client';
+import { leggiSessione } from '@/lib/utenteOLogin';
 import { AvvisoAnnulla } from './AvvisoAnnulla';
 
 const ATTESA_MS = 5000;
@@ -31,6 +32,9 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const coda = useRef<ReturnType<typeof creaCodaRimandata> | null>(null);
   const ripristini = useRef(new Map<string, () => void>());
+  const utenteId = useRef<string | null>(null);
+  // Per ogni eliminazione in attesa, l'utente con cui si è scritta la chiave (serve a toglierla).
+  const chiavi = useRef(new Map<string, string>());
   const timerErrore = useRef<ReturnType<typeof setTimeout> | null>(null);
   if (coda.current === null) coda.current = creaCodaRimandata({ attesaMs: ATTESA_MS });
 
@@ -39,6 +43,12 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     setErrore(testo);
     setNascosto(false);
     timerErrore.current = setTimeout(() => setErrore(null), ERRORE_MS);
+  }, []);
+
+  const togliChiave = useCallback((id: string) => {
+    const u = chiavi.current.get(id);
+    if (u) togliInSospeso(id, u);
+    chiavi.current.delete(id);
   }, []);
 
   const elimina = useCallback(
@@ -50,14 +60,25 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
       setNascosto(false);
       setPendente({ id: r.id, testo: r.testo });
       // Prima del timer: se l'app muore ora, l'eliminazione non si perde.
-      if (r.riprendibile) salvaInSospeso(r.id);
+      if (r.riprendibile) {
+        const salva = (u: string) => {
+          chiavi.current.set(r.id, u);
+          salvaInSospeso(r.id, u);
+        };
+        if (utenteId.current) salva(utenteId.current);
+        else
+          // Utente non ancora noto (sessione in lettura): la chiave si scrive appena arriva, se serve ancora.
+          void leggiSessione(createClient()).then(({ userId }) => {
+            if (userId && coda.current!.inAttesa()?.id === r.id) salva(userId);
+          });
+      }
       coda.current!.aggiungi({
         id: r.id,
         testo: r.testo,
         esegui: async () => {
           try {
             await r.esegui();
-            if (r.riprendibile) togliInSospeso(r.id);
+            togliChiave(r.id);
             // Le pagine del server (Home) mostrano i dati nuovi; un errore qui non rimette in gioco la scrittura.
             try {
               router.refresh();
@@ -65,7 +86,7 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
             setPendente((p) => (p && p.id === r.id ? null : p));
           } catch {
             // La riga torna com'era (la scrittura è atomica): niente da ripetere alla riapertura.
-            if (r.riprendibile) togliInSospeso(r.id);
+            togliChiave(r.id);
             r.ripristina();
             setPendente((p) => (p && p.id === r.id ? null : p));
             // Se c'è un'altra eliminazione in attesa, il suo Annulla resta: l'errore si aggiunge allo stesso avviso.
@@ -77,20 +98,38 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
         },
       });
     },
-    [mostraErrore, router],
+    [mostraErrore, router, togliChiave],
   );
 
-  // All'avvio dell'app: le eliminazioni rimaste a metà (app chiusa prima della scrittura) si ripetono.
+  // All'avvio, e ogni volta che l'utente della sessione diventa noto (anche dopo un accesso): le sue eliminazioni
+  // rimaste a metà (app chiusa prima della scrittura) si ripetono. Le chiavi degli altri utenti non si toccano.
   useEffect(() => {
     let vivo = true;
-    void riprendiEliminazioniInSospeso(createClient, [coda.current!.inAttesa()?.id ?? '']).then((fatte) => {
-      if (!vivo || fatte === 0) return;
-      try {
-        router.refresh();
-      } catch {}
-    });
+    const riprendi = (u: string) =>
+      void riprendiEliminazioniInSospeso(createClient, u).then((fatte) => {
+        if (!vivo || fatte === 0) return;
+        try {
+          router.refresh();
+        } catch {}
+      });
+    const nuovoUtente = (u: string | null) => {
+      if (u === utenteId.current) return;
+      utenteId.current = u;
+      if (u) riprendi(u);
+    };
+    let sub: { unsubscribe: () => void } | null = null;
+    try {
+      const supabase = createClient();
+      void leggiSessione(supabase).then(({ userId }) => {
+        if (vivo) nuovoUtente(userId);
+      });
+      sub = supabase.auth.onAuthStateChange?.((_evento, sessione) => {
+        if (vivo) nuovoUtente(sessione?.user?.id ?? null);
+      })?.data.subscription ?? null;
+    } catch {}
     return () => {
       vivo = false;
+      sub?.unsubscribe();
     };
     // una volta sola, all'avvio
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,11 +171,11 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     const ripristina = ripristini.current.get(pendente.id);
     if (coda.current!.annulla(pendente.id)) {
       ripristini.current.delete(pendente.id);
-      togliInSospeso(pendente.id);
+      togliChiave(pendente.id);
       ripristina?.();
       setPendente(null);
     }
-  }, [pendente]);
+  }, [pendente, togliChiave]);
 
   const testo = nascosto ? null : errore ? (pendente ? `${errore} ${pendente.testo}` : errore) : (pendente?.testo ?? null);
 

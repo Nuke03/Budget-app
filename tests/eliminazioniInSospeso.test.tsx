@@ -7,14 +7,35 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/a',
 }));
 const rpc = vi.hoisted(() => vi.fn());
-vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ rpc }) }));
+// Sessione controllabile: il token ha come sub l'utente corrente; onAuthStateChange permette di simulare un accesso.
+const sessione = vi.hoisted(() => ({
+  utente: 'u1' as string | null,
+  callback: null as null | ((e: string, s: { user: { id: string } } | null) => void),
+}));
+const client = vi.hoisted(() => ({
+  rpc: (...a: unknown[]) => (rpc as (...x: unknown[]) => unknown)(...a),
+  auth: {
+    getSession: async () => ({
+      data: {
+        session: sessione.utente ? { access_token: `x.${btoa(JSON.stringify({ sub: sessione.utente }))}.y` } : null,
+      },
+    }),
+    onAuthStateChange: (cb: (e: string, s: { user: { id: string } } | null) => void) => {
+      sessione.callback = cb;
+      return { data: { subscription: { unsubscribe: () => {} } } };
+    },
+  },
+}));
+vi.mock('@/lib/supabase/client', () => ({ createClient: () => client }));
 
 import { AnnullaProvider, useEliminaConAnnulla } from '@/app/AnnullaProvider';
 import { riprendiEliminazioniInSospeso, salvaInSospeso } from '@/lib/eliminazioniInSospeso';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 const ID2 = '22222222-2222-4222-8222-222222222222';
-const CHIAVE = (id: string) => `eliminazione-in-sospeso:${id}`;
+const CHIAVE = (id: string, u = 'u1') => `eliminazione-in-sospeso:${u}:${id}`;
+const vecchia = () => Date.now() - 10_000; // oltre la finestra di Annulla di un'altra scheda
+const client2 = () => ({ rpc }) as never;
 
 function Prova({ esegui, riprendibile = true }: { esegui: () => Promise<void>; riprendibile?: boolean }) {
   const elimina = useEliminaConAnnulla();
@@ -29,25 +50,35 @@ function Prova({ esegui, riprendibile = true }: { esegui: () => Promise<void>; r
   );
 }
 
+async function monta(el: React.ReactElement) {
+  const r = render(el);
+  await act(async () => {}); // la sessione si legge
+  return r;
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   window.localStorage.clear();
   rpc.mockReset();
   rpc.mockResolvedValue({ data: null, error: null });
+  sessione.utente = 'u1';
+  sessione.callback = null;
   nav.refresh.mockClear();
 });
 afterEach(() => vi.useRealTimers());
 
 describe('eliminazione in sospeso: scrittura e pulizia della chiave', () => {
-  it('la chiave si scrive prima del timer e si toglie a scrittura riuscita', async () => {
+  it('la chiave (con l utente) si scrive prima del timer e si toglie a scrittura riuscita', async () => {
     const esegui = vi.fn(async () => {});
-    render(
+    await monta(
       <AnnullaProvider>
         <Prova esegui={esegui} />
       </AnnullaProvider>
     );
     fireEvent.click(screen.getByText('elimina'));
-    expect(window.localStorage.getItem(CHIAVE(ID))).not.toBeNull();
+    const voce = JSON.parse(window.localStorage.getItem(CHIAVE(ID)) as string);
+    expect(voce).toMatchObject({ id: ID, utenteId: 'u1' });
+    expect(typeof voce.salvataIl).toBe('number');
     expect(esegui).not.toHaveBeenCalled();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
@@ -58,7 +89,7 @@ describe('eliminazione in sospeso: scrittura e pulizia della chiave', () => {
 
   it('Annulla toglie la chiave e non scrive mai', async () => {
     const esegui = vi.fn(async () => {});
-    render(
+    await monta(
       <AnnullaProvider>
         <Prova esegui={esegui} />
       </AnnullaProvider>
@@ -74,7 +105,7 @@ describe('eliminazione in sospeso: scrittura e pulizia della chiave', () => {
   });
 
   it('se la scrittura fallisce la riga torna e la chiave si toglie (niente eliminazione a sorpresa dopo)', async () => {
-    render(
+    await monta(
       <AnnullaProvider>
         <Prova
           esegui={async () => {
@@ -84,14 +115,15 @@ describe('eliminazione in sospeso: scrittura e pulizia della chiave', () => {
       </AnnullaProvider>
     );
     fireEvent.click(screen.getByText('elimina'));
+    expect(window.localStorage.getItem(CHIAVE(ID))).not.toBeNull();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
     expect(window.localStorage.getItem(CHIAVE(ID))).toBeNull();
   });
 
-  it('una eliminazione non riprendibile (es. un obiettivo) non scrive nessuna chiave', () => {
-    render(
+  it('una eliminazione non riprendibile (es. un obiettivo) non scrive nessuna chiave', async () => {
+    await monta(
       <AnnullaProvider>
         <Prova esegui={async () => {}} riprendibile={false} />
       </AnnullaProvider>
@@ -105,7 +137,7 @@ describe('eliminazione in sospeso: scrittura e pulizia della chiave', () => {
       throw new Error('quota');
     });
     const esegui = vi.fn(async () => {});
-    render(
+    await monta(
       <AnnullaProvider>
         <Prova esegui={esegui} />
       </AnnullaProvider>
@@ -120,16 +152,14 @@ describe('eliminazione in sospeso: scrittura e pulizia della chiave', () => {
 });
 
 describe('eliminazione in sospeso: ripresa all avvio', () => {
-  it('all avvio le chiavi rimaste si ripetono con elimina_movimento e si tolgono', async () => {
-    salvaInSospeso(ID);
-    salvaInSospeso(ID2);
-    await act(async () => {
-      render(
-        <AnnullaProvider>
-          <div />
-        </AnnullaProvider>
-      );
-    });
+  it('all avvio le chiavi dell utente rimaste si ripetono con elimina_movimento e si tolgono', async () => {
+    salvaInSospeso(ID, 'u1', vecchia());
+    salvaInSospeso(ID2, 'u1', vecchia());
+    await monta(
+      <AnnullaProvider>
+        <div />
+      </AnnullaProvider>
+    );
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenCalledWith('elimina_movimento', { p_id: ID });
     expect(rpc).toHaveBeenCalledWith('elimina_movimento', { p_id: ID2 });
@@ -139,43 +169,85 @@ describe('eliminazione in sospeso: ripresa all avvio', () => {
   });
 
   it('senza chiavi non chiama niente', async () => {
-    await act(async () => {
-      render(
-        <AnnullaProvider>
-          <div />
-        </AnnullaProvider>
-      );
-    });
+    await monta(
+      <AnnullaProvider>
+        <div />
+      </AnnullaProvider>
+    );
     expect(rpc).not.toHaveBeenCalled();
     expect(nav.refresh).not.toHaveBeenCalled();
   });
 
+  it('un altro utente sullo stesso telefono: le chiavi di u1 restano intatte e non si chiama niente', async () => {
+    salvaInSospeso(ID, 'u1', vecchia());
+    sessione.utente = 'u2';
+    await monta(
+      <AnnullaProvider>
+        <div />
+      </AnnullaProvider>
+    );
+    expect(rpc).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(CHIAVE(ID, 'u1'))).not.toBeNull();
+  });
+
+  it('senza sessione la chiave resta; dopo l accesso la ripresa parte', async () => {
+    salvaInSospeso(ID, 'u1', vecchia());
+    sessione.utente = null;
+    await monta(
+      <AnnullaProvider>
+        <div />
+      </AnnullaProvider>
+    );
+    expect(rpc).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(CHIAVE(ID))).not.toBeNull();
+    await act(async () => {
+      sessione.callback?.('SIGNED_IN', { user: { id: 'u1' } });
+    });
+    expect(rpc).toHaveBeenCalledWith('elimina_movimento', { p_id: ID });
+    expect(window.localStorage.getItem(CHIAVE(ID))).toBeNull();
+  });
+
+  it('una chiave giovane (finestra di Annulla di un altra scheda) si salta', async () => {
+    salvaInSospeso(ID, 'u1', Date.now() - 2000);
+    const fatte = await riprendiEliminazioniInSospeso(client2, 'u1');
+    expect(fatte).toBe(0);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(CHIAVE(ID))).not.toBeNull();
+  });
+
+  it('una chiave più vecchia di 7 giorni scade: si toglie senza chiamare la rpc', async () => {
+    salvaInSospeso(ID, 'u1', Date.now() - 8 * 24 * 3600 * 1000);
+    await riprendiEliminazioniInSospeso(client2, 'u1');
+    expect(rpc).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(CHIAVE(ID))).toBeNull();
+  });
+
   it('errore di rete: la chiave resta per la volta dopo', async () => {
-    salvaInSospeso(ID);
+    salvaInSospeso(ID, 'u1', vecchia());
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'Failed to fetch' } });
-    const fatte = await riprendiEliminazioniInSospeso(() => ({ rpc }) as never);
+    const fatte = await riprendiEliminazioniInSospeso(client2, 'u1');
     expect(fatte).toBe(0);
     expect(window.localStorage.getItem(CHIAVE(ID))).not.toBeNull();
   });
 
   it('movimento non modificabile da chi è qui: la chiave si toglie, non si riprova mai', async () => {
-    salvaInSospeso(ID);
+    salvaInSospeso(ID, 'u1', vecchia());
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'movimento non modificabile' } });
-    await riprendiEliminazioniInSospeso(() => ({ rpc }) as never);
+    await riprendiEliminazioniInSospeso(client2, 'u1');
     expect(window.localStorage.getItem(CHIAVE(ID))).toBeNull();
   });
 
   it('una chiave che non è un id valido si toglie senza chiamare la rpc', async () => {
-    salvaInSospeso('non-un-uuid');
-    await riprendiEliminazioniInSospeso(() => ({ rpc }) as never);
+    salvaInSospeso('non-un-uuid', 'u1', vecchia());
+    await riprendiEliminazioniInSospeso(client2, 'u1');
     expect(rpc).not.toHaveBeenCalled();
     expect(window.localStorage.getItem(CHIAVE('non-un-uuid'))).toBeNull();
   });
 
-  it('una ripetizione dopo una già riuscita non fa danni (idempotente: la rpc su una riga assente è un no-op)', async () => {
-    salvaInSospeso(ID);
-    await riprendiEliminazioniInSospeso(() => ({ rpc }) as never);
-    await riprendiEliminazioniInSospeso(() => ({ rpc }) as never);
+  it('a scrittura riuscita la chiave sparisce: una seconda ripresa non richiama la rpc', async () => {
+    salvaInSospeso(ID, 'u1', vecchia());
+    await riprendiEliminazioniInSospeso(client2, 'u1');
+    await riprendiEliminazioniInSospeso(client2, 'u1');
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
@@ -183,7 +255,7 @@ describe('eliminazione in sospeso: ripresa all avvio', () => {
     const spia = vi.spyOn(Storage.prototype, 'key').mockImplementation(() => {
       throw new Error('negato');
     });
-    await expect(riprendiEliminazioniInSospeso(() => ({ rpc }) as never)).resolves.toBe(0);
+    await expect(riprendiEliminazioniInSospeso(client2, 'u1')).resolves.toBe(0);
     spia.mockRestore();
   });
 });
