@@ -1,6 +1,7 @@
 import { differenceInCalendarMonths } from 'date-fns';
 import { formatEuro } from '@/lib/format';
 import type { BudgetGoal } from '@/lib/types';
+import type { ArgomentoId } from '@/lib/percorso/tipi';
 import type { Andamento } from './andamento';
 import { computeAccantonatoFinora, computeFinestraGoal, computeQuotaMensile } from '../accantonato';
 
@@ -10,6 +11,7 @@ export interface Consiglio {
   tipo: TipoConsiglio;
   testo: string;
   perche: string;
+  lezione: ArgomentoId;
   categoriaId?: string;
   goalId?: string;
 }
@@ -26,22 +28,26 @@ const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 
 // Quattro frasi brevi dalla ricerca sull'economia domestica; una per mese
 // (mese % 4), così cambiano senza caso.
-const FRASI_IN_LINEA: { testo: string; perche: string }[] = [
+const FRASI_IN_LINEA: { testo: string; perche: string; lezione: ArgomentoId }[] = [
   {
     testo: 'Per esempio, una spesa annuale si spezza in quote mensili: 300 € di TARI fanno 25 € al mese.',
     perche: 'Mettere da parte poco ogni mese pesa meno che trovare tutto insieme quando arriva la rata.',
+    lezione: 'spese-certe',
   },
   {
     testo: 'Regole come 50/30/20 (metà per le cose necessarie, 30% per i desideri, 20% da parte) sono un punto di partenza, non un verdetto.',
     perche: 'Servono a farsi un’idea, poi conta la tua situazione.',
+    lezione: 'bisogni-desideri',
   },
   {
     testo: 'Se per due mesi di fila i soldi messi da parte non bastano, la quota è troppo bassa. Si alza dal piano della quota.',
     perche: 'Un numero che non torna dice che il piano va aggiustato, non che qualcuno ha sbagliato.',
+    lezione: 'coppia',
   },
   {
     testo: 'Mettere in comune quello che serve davvero, come la casa, e farlo in modo trasparente conta più della formula.',
     perche: 'Avere i numeri davanti, uguali per tutti quelli coinvolti, evita di rifare i conti a mente.',
+    lezione: 'coppia',
   },
 ];
 
@@ -81,6 +87,7 @@ export function scegliConsiglio(input: {
     return {
       tipo: 'senza_dettaglio',
       testo: `Di quello che hai speso, ${euroInFrase(spesoStime)} sono stime. Con le cifre vere il quadro del mese sarà più preciso.`,
+      lezione: 'dove-vanno',
       perche: `Le stime sono più di un quinto delle spese del mese (${euroInFrase(andamento.spesoFinora)} finora). Finché restano stime, il confronto con il solito può spostarsi.`,
     };
   }
@@ -91,6 +98,7 @@ export function scegliConsiglio(input: {
     return {
       tipo: 'categoria_sopra',
       testo: `${nome} questo mese è a ${euroInFrase(sopra.mese)}, di solito a questo punto sei a ${euroInFrase(sopra.solito)}. Vale uno sguardo.`,
+      lezione: 'dove-vanno',
       perche: `Il solito è la media dei mesi scorsi allo stesso giorno. Qui il mese è sopra di ${euroInFrase(sopra.mese - sopra.solito)}.`,
       ...(sopra.categoriaId !== null ? { categoriaId: sopra.categoriaId } : {}),
     };
@@ -101,6 +109,7 @@ export function scegliConsiglio(input: {
     return {
       tipo: 'obiettivo_corto',
       testo: `Per ${g.nome} mancano ${euroInFrase(g.mancano)}. Mettendone da parte un po' ogni mese ci arrivi senza fretta.`,
+      lezione: 'spese-certe',
       perche: `Con la quota mensile prevista, entro la scadenza non si arriva alla cifra: mancano ${euroInFrase(g.mancano)} rispetto a quanto messo da parte finora.`,
       goalId: g.goalId,
     };
@@ -113,6 +122,7 @@ export function scegliConsiglio(input: {
     return {
       tipo: 'in_linea',
       testo: `Per ora non c'è un mese di prima con cui confrontare. ${frase.testo}`,
+      lezione: frase.lezione,
       perche: `Il solito si calcola sui mesi scorsi allo stesso giorno, e ancora non ce ne sono. ${frase.perche}`,
     };
   }
@@ -120,12 +130,14 @@ export function scegliConsiglio(input: {
     return {
       tipo: 'in_linea',
       testo: `Finora hai speso ${euroInFrase(spesoFinora)}, un po' sopra il solito di ${euroInFrase(solito)}, ma nessuna voce spicca da sola. ${frase.testo}`,
+      lezione: frase.lezione,
       perche: `Il solito è la media dei mesi scorsi allo stesso giorno. Il totale è sopra, ma nessuna categoria lo è molto da sola. ${frase.perche}`,
     };
   }
   return {
     tipo: 'in_linea',
     testo: `Il mese va come al solito. ${frase.testo}`,
+    lezione: frase.lezione,
     perche: `Nessuna voce è molto sopra il solito e le stime pesano poco. ${frase.perche}`,
   };
 }

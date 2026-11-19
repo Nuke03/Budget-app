@@ -14,7 +14,7 @@ import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 
 const andamento: Andamento = { spesoFinora: 100, solito: 120, mesiConfronto: 3, curva: [], perCategoria: [] };
-const consiglio: Consiglio = { tipo: 'in_linea', testo: 'Un consiglio di prova', perche: 'Perché sì' };
+const consiglio: Consiglio = { tipo: 'in_linea', testo: 'Un consiglio di prova', perche: 'Perché sì', lezione: 'dove-vanno' };
 const conti = [
   { id: 'k', nome: 'Contanti' },
   { id: 'c', nome: 'Carta' },

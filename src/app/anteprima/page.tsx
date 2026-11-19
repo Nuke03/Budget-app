@@ -75,6 +75,7 @@ const consiglio: Consiglio = {
   tipo: 'categoria_sopra',
   testo: 'Questo mese la spesa è un po’ sopra il solito.',
   perche: 'Finora hai speso 210 € in spesa, di solito a questo punto sei a 160 €.',
+  lezione: 'dove-vanno',
   categoriaId: 'k1',
 };
 
@@ -82,6 +83,7 @@ const consiglioVuoto: Consiglio = {
   tipo: 'senza_dettaglio',
   testo: 'Segna qualche spesa: dopo qualche giorno ti dico come va.',
   perche: 'Non ci sono ancora abbastanza spese per un confronto.',
+  lezione: 'dove-vanno',
 };
 
 function movimenti(oggi: string): Transaction[] {

@@ -105,6 +105,21 @@ describe('scegliConsiglio', () => {
     expect(testi.size).toBe(4);
   });
 
+  it('ogni consiglio ha una lezione', () => {
+    expect(scegliConsiglio({ ...base, andamento: andamento({ spesoFinora: 400 }), spesoStime: 100 }).lezione).toBe('dove-vanno');
+    const corti = [{ goalId: 'g1', nome: 'Vacanza', mancano: 300 }];
+    expect(scegliConsiglio({ ...base, andamento: andamento(), obiettiviCorti: corti }).lezione).toBe('spese-certe');
+    const sopra = andamento({ perCategoria: [{ categoriaId: 'cibo', mese: 200, solito: 100 }] });
+    expect(scegliConsiglio({ ...base, andamento: sopra }).lezione).toBe('dove-vanno');
+  });
+
+  it('le frasi in linea portano alla lezione del loro tema', () => {
+    const lezioni = ['2026-04-10', '2026-01-10', '2026-02-10', '2026-03-10'].map(
+      (oggi) => scegliConsiglio({ ...base, andamento: andamento(), oggi }).lezione
+    );
+    expect(lezioni).toEqual(['spese-certe', 'bisogni-desideri', 'coppia', 'coppia']);
+  });
+
   it('in_linea senza solito: dice che manca il confronto', () => {
     const c = scegliConsiglio({ ...base, andamento: andamento({ solito: null, mesiConfronto: 0 }) });
     expect(c.testo).toContain("Per ora non c'è un mese di prima con cui confrontare.");

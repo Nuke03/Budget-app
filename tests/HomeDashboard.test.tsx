@@ -74,7 +74,7 @@ const goals = [
 ];
 
 const ANDAMENTO_VUOTO = { spesoFinora: 0, solito: null, mesiConfronto: 0, curva: [], perCategoria: [] };
-const CONSIGLIO = { tipo: 'in_linea', testo: 'Segna la prima spesa.', perche: 'Il libretto parte dal primo movimento.' } as const;
+const CONSIGLIO = { tipo: 'in_linea', testo: 'Segna la prima spesa.', perche: 'Il libretto parte dal primo movimento.', lezione: 'dove-vanno' } as const;
 const NUOVI = { righe: [], andamento: ANDAMENTO_VUOTO, consiglio: CONSIGLIO, prossimo: null };
 
 // Le parti del libretto hanno un valore di base: ogni test cambia solo ciò che gli serve.
