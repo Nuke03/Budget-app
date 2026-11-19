@@ -10,72 +10,58 @@ const item: PlanItem = {
 const input = { householdId: 'H1', item, scadenza: '2027-03-31', oggi: '2026-11-09' };
 const nuovoDb = () => createFakeDb({ budget_goals: [] }, { userId: 'U1', membri: { H1: ['U1'] } });
 
+// Il fondo si cerca-o-crea e si collega in una sola funzione del database (crea_fondo_bolletta), con un
+// blocco: due soci che toccano "Metti da parte" insieme ottengono lo stesso fondo.
+const fondoRiga = {
+  id: 'g1', household_id: 'H1', user_id: 'U1', nome: 'TARI', importo_target: 300, modalita: 'dilazionato',
+  scadenza: '2027-03-31', categoria_id: 'c1', ricorrente: true, frequenza_mesi: 12, stato: 'aperto',
+  created_at: '2026-11-09T00:00:00Z', accantona_da: '2026-11-09', ruolo: null,
+};
+
 describe('creaFondoBolletta', () => {
-  it('crea il fondo con i valori giusti', async () => {
-    const db = nuovoDb();
-    db.registerRpc('link_plan_item_goal', () => ({ data: 1 }));
+  it('fa una sola chiamata rpc con i parametri giusti e non scrive altro dal client', async () => {
+    const db = createFakeDb({ budget_goals: [fondoRiga] }, { userId: 'U1', membri: { H1: ['U1'] } });
+    db.registerRpc('crea_fondo_bolletta', () => ({ data: 'g1' }));
     await creaFondoBolletta(db.client, input);
+    expect(db.rpcCalls).toEqual([
+      {
+        name: 'crea_fondo_bolletta',
+        args: { p_household: 'H1', p_item: 'i1', p_scadenza: '2027-03-31', p_oggi: '2026-11-09' },
+      },
+    ]);
     expect(db.tables.budget_goals).toHaveLength(1);
-    expect(db.tables.budget_goals[0]).toMatchObject({
-      household_id: 'H1', nome: 'TARI', modalita: 'dilazionato', ricorrente: true, frequenza_mesi: 12,
-      importo_target: 300, scadenza: '2027-03-31', categoria_id: 'c1', accantona_da: '2026-11-09',
+  });
+
+  it('torna il fondo, letto per id', async () => {
+    const db = createFakeDb({ budget_goals: [fondoRiga] }, { userId: 'U1', membri: { H1: ['U1'] } });
+    db.registerRpc('crea_fondo_bolletta', () => ({ data: 'g1' }));
+    const fondo = await creaFondoBolletta(db.client, input);
+    expect(fondo).toMatchObject({
+      id: 'g1', nome: 'TARI', importoTarget: 300, ricorrente: true, frequenzaMesi: 12, categoriaId: 'c1',
+      scadenza: '2027-03-31', accantonaDa: '2026-11-09',
     });
   });
 
-  it('collega la voce', async () => {
+  it("se l'rpc fallisce l'errore sale e non si legge niente", async () => {
     const db = nuovoDb();
-    db.registerRpc('link_plan_item_goal', () => ({ data: 1 }));
-    const fondo = await creaFondoBolletta(db.client, input);
-    expect(db.rpcCalls).toEqual([
-      { name: 'link_plan_item_goal', args: { p_household: 'H1', p_item: 'i1', p_goal: fondo.id } },
-    ]);
+    db.registerRpc('crea_fondo_bolletta', () => ({ error: { message: 'casa non valida' } }));
+    await expect(creaFondoBolletta(db.client, input)).rejects.toMatchObject({ message: 'casa non valida' });
+    expect(db.tables.budget_goals).toHaveLength(0);
   });
 
-  it('se il collegamento fallisce l\'errore sale e il fondo resta', async () => {
+  it('voce senza categoria non chiama il database', async () => {
     const db = nuovoDb();
-    db.registerRpc('link_plan_item_goal', () => ({ error: { message: 'casa non scrivibile' } }));
-    await expect(creaFondoBolletta(db.client, input)).rejects.toMatchObject({ message: 'casa non scrivibile' });
-    expect(db.tables.budget_goals).toHaveLength(1);
-  });
-
-  it('voce senza categoria non scrive niente', async () => {
-    const db = nuovoDb();
-    db.registerRpc('link_plan_item_goal', () => ({ data: 1 }));
+    db.registerRpc('crea_fondo_bolletta', () => ({ data: 'g1' }));
     await expect(creaFondoBolletta(db.client, { ...input, item: { ...item, categoriaId: null } })).rejects.toThrow(
       'voce senza categoria'
     );
-    expect(db.tables.budget_goals).toHaveLength(0);
     expect(db.rpcCalls).toHaveLength(0);
   });
 
-  it('riprovo dopo un collegamento fallito: resta un solo fondo e il collegamento si rifà', async () => {
+  it('se il fondo non si legge dopo la creazione, errore (la voce è già collegata)', async () => {
     const db = nuovoDb();
-    let n = 0;
-    db.registerRpc('link_plan_item_goal', () => (n++ === 0 ? { error: { message: 'no' } } : { data: 1 }));
-    await expect(creaFondoBolletta(db.client, { ...input, item: { ...item, goalId: 'chiuso' } })).rejects.toMatchObject({ message: 'no' });
-    const fondo = await creaFondoBolletta(db.client, { ...input, item: { ...item, nome: 'tari', goalId: 'chiuso' } });
-    expect(db.tables.budget_goals).toHaveLength(1);
-    expect(db.rpcCalls).toHaveLength(2);
-    expect(db.rpcCalls[1].args).toMatchObject({ p_goal: fondo.id });
-  });
-
-  it('fondo chiuso non viene riusato: ne nasce uno nuovo aperto', async () => {
-    const db = createFakeDb(
-      {
-        budget_goals: [
-          { id: 'g-chiuso', household_id: 'H1', user_id: 'U1', nome: 'TARI', categoria_id: 'c1', ricorrente: true, stato: 'chiuso' },
-        ],
-      },
-      { userId: 'U1', membri: { H1: ['U1'] } }
-    );
-    db.registerRpc('link_plan_item_goal', () => ({ data: 1 }));
-    const fondo = await creaFondoBolletta(db.client, { ...input, item: { ...item, goalId: 'g-chiuso' } });
-    expect(db.tables.budget_goals).toHaveLength(2);
-    expect(db.tables.budget_goals[1]).toMatchObject({ stato: 'aperto', nome: 'TARI', categoria_id: 'c1' });
-    expect(fondo.id).not.toBe('g-chiuso');
-    expect(db.rpcCalls).toEqual([
-      { name: 'link_plan_item_goal', args: { p_household: 'H1', p_item: 'i1', p_goal: fondo.id } },
-    ]);
+    db.registerRpc('crea_fondo_bolletta', () => ({ data: 'g-introvabile' }));
+    await expect(creaFondoBolletta(db.client, input)).rejects.toThrow();
   });
 });
 

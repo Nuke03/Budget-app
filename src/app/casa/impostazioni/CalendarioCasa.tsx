@@ -99,7 +99,7 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
   }
 
   return (
-    <section className={CLASSE_SCHEDA}>
+    <section id="calendario" className={`${CLASSE_SCHEDA} scroll-mt-4`}>
       <h2 className="font-serif text-lg font-semibold">Calendario</h2>
       <p className="text-[15px] text-ink-2">
         Un link privato per vedere nel tuo calendario il versamento, i controlli e le scadenze della casa.
@@ -173,6 +173,10 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
         <p>
           <span className="font-semibold">iPhone.</span> Impostazioni, Calendario, Account, Aggiungi account, Altro,
           Aggiungi calendario con abbonamento, e incolla il link.
+        </p>
+        <p>
+          Se non trovi queste voci (iOS 18): Impostazioni, App, Calendario, Account calendario, Aggiungi account, Altro,
+          Aggiungi calendario in abbonamento.
         </p>
       </div>
 

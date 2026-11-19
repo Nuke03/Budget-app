@@ -49,3 +49,44 @@ export async function leggiPromemoriaUtente(
     nessunaSpesaFinoAl: data?.nessuna_spesa_fino_al ?? null,
   };
 }
+
+// "Più tardi" e "Va bene così" dei promemoria della casa: { id: primo giorno in cui ricompaiono }.
+// Stanno nel database, così valgono su ogni telefono.
+export type Rimandati = Record<string, string>;
+
+function pulisciRimandati(grezzi: unknown): Rimandati {
+  const out: Rimandati = {};
+  if (typeof grezzi !== 'object' || grezzi === null || Array.isArray(grezzi)) return out;
+  for (const [id, fino] of Object.entries(grezzi)) {
+    if (typeof fino === 'string' && GIORNO.test(fino)) out[id] = fino;
+  }
+  return out;
+}
+
+// Aggiunge una chiave e toglie quelle già scadute (la data è il primo giorno in cui il promemoria ricompare).
+export function unisciRimandati(attuali: Rimandati, id: string, finoAl: string, oggi: string): Rimandati {
+  const out: Rimandati = {};
+  for (const [k, v] of Object.entries(pulisciRimandati(attuali))) if (oggi < v && k !== id) out[k] = v;
+  if (oggi < finoAl) out[id] = finoAl;
+  return out;
+}
+
+export async function leggiRimandati(supabase: SupabaseClient): Promise<Rimandati> {
+  const { data, error } = await supabase.from('promemoria_utente').select('rimandati').maybeSingle();
+  if (error) throw error;
+  return pulisciRimandati((data as { rimandati?: unknown } | null)?.rimandati);
+}
+
+// Rimanda un solo promemoria: rilegge la riga, unisce la chiave (le altre restano) e scrive.
+export async function salvaRimandato(
+  supabase: SupabaseClient,
+  id: string,
+  finoAl: string,
+  oggi: string
+): Promise<Rimandati> {
+  if (!GIORNO.test(finoAl)) throw new Error('data non valida');
+  const rimandati = unisciRimandati(await leggiRimandati(supabase), id, finoAl, oggi);
+  const { error } = await supabase.from('promemoria_utente').upsert({ rimandati }, { onConflict: 'user_id' });
+  if (error) throw error;
+  return rimandati;
+}

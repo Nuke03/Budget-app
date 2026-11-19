@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { createContext, createElement, useCallback, useContext, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { salvaRimandato, unisciRimandati, type Rimandati } from '@/lib/data/notifiche';
 
 // "Più tardi": un promemoria rimandato resta nascosto per la giornata, nello stesso posto per ogni
 // vista che lo mostra (la striscia dei promemoria e la card Da fare).
@@ -14,6 +16,13 @@ const chiaveFino = (id: string): string => `promemoria-fino:${id}`;
 export function dataFraMesi(oggi: string, n: number): string {
   const d = new Date(`${oggi}T12:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+// Il giorno dopo `oggi` (YYYY-MM-DD): "Più tardi" nasconde fino a lì, escluso.
+export function giornoDopo(oggi: string): string {
+  const d = new Date(`${oggi}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
 }
 
@@ -43,10 +52,36 @@ export function rimandaPromemoria(id: string, oggi: string): void {
   }
 }
 
+// I rimandati nel database ({ id: primo giorno in cui ricompaiono }), uguali su ogni telefono. Il server li legge
+// con la Casa e li passa qui; se la lettura è fallita (iniziale null) non c'è contesto e vale solo localStorage.
+// Il nascondimento è subito (ottimistico); se il salvataggio fallisce si ripiega su localStorage.
+type Contesto = { mappa: Rimandati; imposta: (id: string, finoAl: string, oggi: string) => void };
+const RimandatiContesto = createContext<Contesto | null>(null);
+
+// Un salvataggio alla volta: ognuno rilegge la riga e unisce la sua chiave, senza pestare quello prima.
+let codaSalvataggi: Promise<unknown> = Promise.resolve();
+
+export function RimandatiProvider({ iniziale, children }: { iniziale: Rimandati | null; children: ReactNode }) {
+  const [mappa, setMappa] = useState<Rimandati>(iniziale ?? {});
+  const imposta = useCallback((id: string, finoAl: string, oggi: string) => {
+    setMappa((m) => unisciRimandati(m, id, finoAl, oggi));
+    codaSalvataggi = codaSalvataggi.then(async () => {
+      try {
+        await salvaRimandato(createClient(), id, finoAl, oggi);
+      } catch {
+        rimandaFinoAl(id, finoAl);
+      }
+    });
+  }, []);
+  if (iniziale === null) return children as React.JSX.Element;
+  return createElement(RimandatiContesto.Provider, { value: { mappa, imposta } }, children);
+}
+
 // Gli id rimandati fra quelli dati. La memoria si legge solo nel browser: sul server (e nel primo
 // render) non c'è, così l'HTML coincide.
 export function usePromemoriaRimandati(ids: string[], oggi: string): { rimandati: Set<string>; rimanda: (id: string) => void; rimandaFino: (ids: string[], finoAl: string) => void } {
   const [daOra, setDaOra] = useState<Set<string>>(new Set());
+  const db = useContext(RimandatiContesto);
   const memoria = useSyncExternalStore(
     () => () => {},
     () => ids.filter((id) => promemoriaRimandato(id, oggi)).join('|'),
@@ -54,14 +89,22 @@ export function usePromemoriaRimandati(ids: string[], oggi: string): { rimandati
   );
   const rimanda = useCallback(
     (id: string) => {
-      rimandaPromemoria(id, oggi);
+      if (db) db.imposta(id, giornoDopo(oggi), oggi);
+      else rimandaPromemoria(id, oggi);
       setDaOra((prima) => new Set(prima).add(id));
     },
-    [oggi]
+    [oggi, db]
   );
-  const rimandaFino = useCallback((idsDaNascondere: string[], finoAl: string) => {
-    for (const id of idsDaNascondere) rimandaFinoAl(id, finoAl);
-    setDaOra((prima) => new Set([...prima, ...idsDaNascondere]));
-  }, []);
-  return { rimandati: new Set([...daOra, ...(memoria ? memoria.split('|') : [])]), rimanda, rimandaFino };
+  const rimandaFino = useCallback(
+    (idsDaNascondere: string[], finoAl: string) => {
+      for (const id of idsDaNascondere) {
+        if (db) db.imposta(id, finoAl, oggi);
+        else rimandaFinoAl(id, finoAl);
+      }
+      setDaOra((prima) => new Set([...prima, ...idsDaNascondere]));
+    },
+    [oggi, db]
+  );
+  const nelDatabase = ids.filter((id) => db && (db.mappa[id] ?? '') > oggi);
+  return { rimandati: new Set([...daOra, ...nelDatabase, ...(memoria ? memoria.split('|') : [])]), rimanda, rimandaFino };
 }

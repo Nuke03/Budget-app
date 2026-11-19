@@ -83,6 +83,18 @@ describe('eventiCalendario', () => {
     expect(dati).toEqual(['2026-11-30', '2027-02-28', '2027-05-31', '2027-08-31']);
   });
 
+  it('l UID dell obiettivo usa l id: rinominare non cambia l UID, senza id vale lo slug di prima', () => {
+    const conId = (nome: string) => ({
+      ...feed,
+      obiettivi: [{ id: 'g-1', nome, scadenza: '2027-03-31', importo: 300, ricorrente: false, frequenzaMesi: null }],
+    });
+    const uid = (f: FeedData) => eventiCalendario(f, oggi).find((e) => e.titolo.includes('300'))?.uid;
+    expect(uid(conId('TARI'))).toBe('obiettivo-g-1-2027-03-31@budget-app');
+    expect(uid(conId('Rifiuti'))).toBe('obiettivo-g-1-2027-03-31@budget-app');
+    const senzaId = { ...feed, obiettivi: [{ ...conId('TARI').obiettivi[0], id: undefined }] };
+    expect(uid(senzaId)).toBe('obiettivo-tari-2027-03-31@budget-app');
+  });
+
   it('il testo non usa parole tecniche vietate', () => {
     const testo = eventiCalendario({ ...feed, creditoAltri: 10 }, oggi)
       .map((e) => e.titolo)
@@ -145,6 +157,13 @@ describe('parseFeed', () => {
 
   it('legge la forma del database', () => {
     expect(parseFeed(raw)).toEqual(feed);
+  });
+
+  it('legge l id dell obiettivo se esiste, e lo ignora se non è una stringa', () => {
+    const con = { ...raw, obiettivi: [{ ...raw.obiettivi[0], id: 'g-1' }] };
+    expect(parseFeed(con)?.obiettivi[0].id).toBe('g-1');
+    const strano = { ...raw, obiettivi: [{ ...raw.obiettivi[0], id: 42 }] };
+    expect(parseFeed(strano)?.obiettivi[0].id).toBeUndefined();
   });
 
   it('parseFeed scarta una chiave personale extra: nessun campo estraneo finisce nell ICS', () => {

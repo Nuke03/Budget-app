@@ -62,6 +62,14 @@ function piano(legato: boolean): PlanBundle {
 }
 
 describe('CasaDettagli', () => {
+  it('ha un link diretto Aggiungi al calendario che porta alla sezione Calendario delle impostazioni', () => {
+    const { container } = render(<CasaDettagli casa={casa} />);
+    const link = screen.getByRole('link', { name: 'Aggiungi al calendario' });
+    expect(link).toHaveAttribute('href', '/casa/impostazioni#calendario');
+    expect(link.className).toContain('min-h-12');
+    assertNessunaParolaVietata(container);
+  });
+
   it('mostra il link Tricount quando serve', () => {
     render(<CasaDettagli casa={casa} mostraTricount />);
     expect(screen.getByRole('link', { name: /Venite da Tricount\? Inserisci il saldo di oggi/ })).toHaveAttribute(

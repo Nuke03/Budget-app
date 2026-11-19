@@ -1,45 +1,26 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createGoal, getOpenGoals } from './goals';
+import { createGoal, getGoalCasa } from './goals';
 import { casa } from './scope';
 import type { BudgetGoal, PlanItem } from '../types';
 
-// Mette da parte una bolletta: crea il fondo della casa e lo collega alla voce del piano.
-// Se il collegamento fallisce l'errore sale ma il fondo resta: la pagina lo riconosce da sola
-// (stessa categoria e stesso nome) e basta riprovare.
+// Mette da parte una bolletta: il fondo ricorrente della voce si cerca o si crea e si collega alla voce
+// in un colpo solo, dentro il database (crea_fondo_bolletta, con un blocco): due soci che toccano
+// "Metti da parte" insieme ottengono lo stesso fondo. Ripetere dopo un errore non duplica niente.
 export async function creaFondoBolletta(
   supabase: SupabaseClient,
   input: { householdId: string; item: PlanItem; scadenza: string; oggi: string }
 ): Promise<BudgetGoal> {
   const { householdId, item, scadenza, oggi } = input;
   if (!item.categoriaId) throw new Error('voce senza categoria');
-  // Un fondo aperto uguale c'è già (tentativo precedente o un altro membro): si collega quello.
-  const aperti = await getOpenGoals(supabase, casa(householdId));
-  const esistente = aperti.find(
-    (g) =>
-      g.ricorrente && g.categoriaId === item.categoriaId && g.nome.toLowerCase() === item.nome.toLowerCase()
-  );
-  const fondo =
-    esistente ??
-    (await createGoal(
-      supabase,
-      {
-        nome: item.nome,
-        importoTarget: item.importoRicorrenza,
-        modalita: 'dilazionato',
-        scadenza,
-        categoriaId: item.categoriaId,
-        ricorrente: true,
-        frequenzaMesi: item.frequenzaMesi,
-        accantonaDa: oggi,
-      },
-      casa(householdId)
-    ));
-  const { error } = await supabase.rpc('link_plan_item_goal', {
+  const { data, error } = await supabase.rpc('crea_fondo_bolletta', {
     p_household: householdId,
     p_item: item.id,
-    p_goal: fondo.id,
+    p_scadenza: scadenza,
+    p_oggi: oggi,
   });
   if (error) throw error;
+  const fondo = await getGoalCasa(supabase, data as string, householdId);
+  if (!fondo) throw new Error('fondo non trovato');
   return fondo;
 }
 

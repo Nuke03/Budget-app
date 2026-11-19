@@ -201,6 +201,14 @@ export function CasaDettagli({
           </Link>
         ) : null}
 
+        <Link
+          href="/casa/impostazioni#calendario"
+          className="flex min-h-12 items-center justify-between rounded-[var(--radius-md)] border border-rule bg-surface px-4 text-[15px] font-semibold text-brand-dark"
+        >
+          Aggiungi al calendario
+          <ChevronRight size={18} aria-hidden="true" className="shrink-0" />
+        </Link>
+
         <Link href="/casa/impostazioni" className={LINK}>
           Impostazioni
         </Link>

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Fragment } from 'react';
 import { Home, BarChart3, Building2, MoreHorizontal, Plus } from 'lucide-react';
 import { EVENTO_AGGIUNGI, type DettaglioAggiungi } from '@/lib/eventoAggiungi';
+import { useCasaDaFare } from './CasaSegnale';
 
 // "Altro" resta attiva anche sulle pagine raggiungibili dalla sua lista.
 const PERCORSI_ALTRO = ['/altro', '/goals', '/accounts', '/categories', '/piva'];
@@ -24,6 +25,7 @@ const schede = [
 export function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const casaDaFare = useCasaDaFare();
 
   // Se la pagina ha un foglio di aggiunta lo apre, altrimenti porta alla Home che lo apre.
   function aggiungi() {
@@ -45,6 +47,7 @@ export function NavBar() {
         {schede.map((s, i) => {
           const isActive = s.attiva(pathname);
           const Icon = s.icon;
+          const puntino = s.href === '/casa' && casaDaFare;
           return (
             <Fragment key={s.href}>
               {i === 2 ? (
@@ -62,11 +65,21 @@ export function NavBar() {
             <Link
               href={s.href}
               aria-current={isActive ? 'page' : undefined}
+              aria-label={puntino ? `${s.label}, c'è una cosa da fare` : undefined}
               className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs transition-colors duration-150 ${
                 isActive ? 'font-bold text-brand' : 'font-medium text-ink-2'
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.4 : 2} />
+              <span className="relative">
+                <Icon size={20} strokeWidth={isActive ? 2.4 : 2} />
+                {puntino ? (
+                  <span
+                    data-testid="puntino-casa"
+                    aria-hidden="true"
+                    className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-brand"
+                  />
+                ) : null}
+              </span>
               {s.label}
             </Link>
             </Fragment>

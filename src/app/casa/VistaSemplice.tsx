@@ -14,6 +14,9 @@ import { dividiCifra } from '../home/formati';
 import { CasaAzioni, useCasaAzioni } from './CasaAzioni';
 import { CasaFab } from './CasaFab';
 import { DaFareCard } from './DaFareCard';
+import { RimandatiProvider } from './rimandaPromemoria';
+import type { Rimandati } from '@/lib/data/notifiche';
+import { SegnalaCasa } from '../CasaSegnale';
 
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 const RIGA = 'flex min-h-11 items-center border-b border-rule py-3 text-[15px]';
@@ -72,6 +75,7 @@ export function VistaSemplice({
   debiti = [],
   mesiArretrati = [],
   oggi,
+  rimandati = null,
 }: {
   casa: CasaCorrente;
   vista: CasaHomeDati['vistaSemplice'];
@@ -80,6 +84,7 @@ export function VistaSemplice({
   debiti?: DebitoMembro[];
   mesiArretrati?: string[];
   oggi: string;
+  rimandati?: Rimandati | null;
 }) {
   const mese = nomeMese(oggi);
   const membri = casa.members.map((m) => ({ userId: m.userId, nome: m.displayName }));
@@ -93,6 +98,7 @@ export function VistaSemplice({
   const cifra = dovuto !== null ? dividiCifra(formatEuro(dovuto)) : null;
 
   return (
+    <RimandatiProvider iniziale={rimandati}>
     <CasaAzioni
       householdId={casa.household.id}
       meUserId={casa.me.userId}
@@ -146,7 +152,9 @@ export function VistaSemplice({
             debiti={debiti}
             nomi={nomi}
           />
-        ) : null}
+        ) : (
+          <SegnalaCasa attivo={false} />
+        )}
 
         <section className="border-t border-rule">
           <Stato casa={casa} stato={stato} debiti={debiti} />
@@ -165,5 +173,6 @@ export function VistaSemplice({
       </main>
       {aggiunta ? <CasaFab aggiunta={aggiunta} contiPersonali={contiPersonali} /> : null}
     </CasaAzioni>
+    </RimandatiProvider>
   );
 }

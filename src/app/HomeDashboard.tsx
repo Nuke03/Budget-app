@@ -16,6 +16,7 @@ import { SchedaNotifiche } from './home/SchedaNotifiche';
 import { dividiCifra, giornoEMese } from './home/formati';
 import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { useSegnalaCasa } from './CasaSegnale';
 import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
 import type { ArgomentoId } from '@/lib/percorso/tipi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
@@ -82,6 +83,8 @@ export function HomeDashboard({
   lezioneDelGiorno?: ArgomentoId | null;
 }) {
   const router = useRouter();
+  // La barra segna la Casa quando il prossimo passo della Home è un promemoria della casa.
+  useSegnalaCasa(prossimo?.tipo === 'casa');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [registratoId, setRegistratoId] = useState<string | null>(null);

@@ -16,6 +16,9 @@ import { ComeSiCalcola } from './ComeSiCalcola';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import { CasaAzioni } from './CasaAzioni';
 import { DaFareCard } from './DaFareCard';
+import { RimandatiProvider } from './rimandaPromemoria';
+import type { Rimandati } from '@/lib/data/notifiche';
+import { SegnalaCasa } from '../CasaSegnale';
 
 const COLONNE = 'grid grid-cols-[2.75rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-x-2 px-4';
 const LINK_RIGA =
@@ -34,6 +37,7 @@ export function CasaHome({
   debiti = [],
   mesiArretrati = [],
   oggi = oggiRomaISO(),
+  rimandati = null,
 }: {
   casa: CasaCorrente;
   libretto?: CasaHomeDati;
@@ -46,6 +50,8 @@ export function CasaHome({
   debiti?: DebitoMembro[];
   mesiArretrati?: string[];
   oggi?: string;
+  // I "Più tardi" salvati nel database; null se non si sono letti (vale la memoria del telefono).
+  rimandati?: Rimandati | null;
 }) {
   if (!libretto) {
     return (
@@ -71,6 +77,7 @@ export function CasaHome({
   const nomi = Object.fromEntries(membri.map((m) => [m.userId, m.nome]));
 
   return (
+    <RimandatiProvider iniziale={rimandati}>
     <CasaAzioni
       householdId={casa.household.id}
       meUserId={casa.me.userId}
@@ -106,7 +113,9 @@ export function CasaHome({
             debiti={debiti}
             nomi={nomi}
           />
-        ) : null}
+        ) : (
+          <SegnalaCasa attivo={false} />
+        )}
 
         <section className="overflow-hidden rounded-[var(--radius-md)] border border-rule bg-surface">
           <h2 className="sr-only">Ultime spese di casa</h2>
@@ -159,5 +168,6 @@ export function CasaHome({
 
       {aggiunta ? <CasaFab aggiunta={aggiunta} contiPersonali={contiPersonali} /> : null}
     </CasaAzioni>
+    </RimandatiProvider>
   );
 }

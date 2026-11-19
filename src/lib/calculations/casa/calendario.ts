@@ -2,6 +2,8 @@
 // Tutte le date sono stringhe YYYY-MM-DD (giorno di calendario di Roma, passato da chi chiama).
 
 export type ObiettivoFeed = {
+  // Facoltativo per compatibilità con un feed vecchio: senza id l'UID si ricava dal nome.
+  id?: string;
   nome: string;
   scadenza: string;
   importo: number;
@@ -56,6 +58,7 @@ export function parseFeed(raw: unknown): FeedData | null {
     if (typeof o.ricorrente !== 'boolean') return null;
     if (!(o.frequenza_mesi === null || isNum(o.frequenza_mesi))) return null;
     obiettivi.push({
+      ...(typeof o.id === 'string' && o.id !== '' ? { id: o.id } : {}),
       nome: o.nome,
       scadenza: o.scadenza,
       importo: o.importo,
@@ -163,7 +166,8 @@ export function eventiCalendario(feed: FeedData, oggi: string): EventoCalendario
     const base = slug(o.nome);
     const n = (usati.get(base) ?? 0) + 1;
     usati.set(base, n);
-    const chiave = n === 1 ? base : `${base}-${n}`;
+    // Con l'id l'UID resta lo stesso anche se l'obiettivo cambia nome.
+    const chiave = o.id ? o.id : n === 1 ? base : `${base}-${n}`;
     const date: string[] = [];
     if (o.ricorrente && o.frequenzaMesi !== null && o.frequenzaMesi > 0) {
       const giorno = parti(o.scadenza).d;

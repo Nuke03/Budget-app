@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { createGoal } from '@/lib/data/goals';
+import { casa as scopeCasa } from '@/lib/data/scope';
 import { nomiAltri } from '@/lib/calculations/casa/etichette';
 import { registraMovimento, type SpazioSpesa, type SpesaPayload } from '@/lib/registraSpesa';
 import { accantonaTasse } from '@/lib/data/piva';
@@ -230,22 +231,25 @@ export function AddTransactionSheet({
     onClose();
   }
 
-  async function handleCreateGoal(payload: {
-    nome: string;
-    importoTarget: number;
-    categoriaId: string | null;
-  }) {
+  // Una nuova cosa da mettere da parte: personale, o della casa se si è nel modo Casa.
+  async function creaObiettivo(
+    payload: { nome: string; importoTarget: number; categoriaId: string | null },
+    householdId?: string
+  ) {
     const supabase = createClient();
-    return createGoal(supabase, {
+    const input = {
       nome: payload.nome,
       importoTarget: payload.importoTarget,
-      modalita: 'bloccato',
+      modalita: 'bloccato' as const,
       scadenza: null,
       categoriaId: payload.categoriaId,
       ricorrente: false,
       frequenzaMesi: null,
-    });
+    };
+    return householdId ? createGoal(supabase, input, scopeCasa(householdId)) : createGoal(supabase, input);
   }
+  const handleCreateGoal = (payload: { nome: string; importoTarget: number; categoriaId: string | null }) =>
+    creaObiettivo(payload);
 
   const spazio = {
     etichetta: modo === 'casa' ? 'Casa' : 'Personale',
@@ -279,6 +283,7 @@ export function AddTransactionSheet({
           accounts={contiCasaEPersonali}
           idContiSoloSpesa={contiPersonali.map((a) => a.id)}
           goals={casa.obiettivi}
+          onCreateGoal={(payload) => creaObiettivo(payload, casa.householdId)}
           contoEtichetta="Chi ha pagato"
           obiettivoEtichetta="Da parte (opzionale)"
           nascondiGestisciCategorie

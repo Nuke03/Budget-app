@@ -9,6 +9,7 @@ import { casaHomeDati } from '@/lib/calculations/supporto/casaHome';
 import { CasaHome } from './CasaHome';
 import { VistaSemplice } from './VistaSemplice';
 import { CasaSenzaCasa } from './CasaSenzaCasa';
+import { leggiRimandati } from '@/lib/data/notifiche';
 
 export default async function CasaPage({
   searchParams,
@@ -24,7 +25,12 @@ export default async function CasaPage({
   if (!casa) return <CasaSenzaCasa />;
 
   const meseCorrente = meseRomaISO();
-  const [dati, contiPersonali] = await Promise.all([loadCasaData(supabase, casa).catch(() => null), contiInCorso]);
+  // "Più tardi" salvati nel database; se non si leggono, vale la memoria del telefono (iniziale null).
+  const [dati, contiPersonali, rimandati] = await Promise.all([
+    loadCasaData(supabase, casa).catch(() => null),
+    contiInCorso,
+    leggiRimandati(supabase).catch(() => null),
+  ]);
   // Se i conti e le spese non si leggono, la quota e le impostazioni restano raggiungibili.
   const pianoOra = dati ? pianoInVigore(dati.piani, meseCorrente) : null;
   const oggi = oggiRomaISO();
@@ -40,6 +46,7 @@ export default async function CasaPage({
         debiti={dati?.debiti}
         mesiArretrati={mesiArretrati}
         oggi={oggi}
+        rimandati={rimandati}
       />
     );
   }
@@ -58,6 +65,7 @@ export default async function CasaPage({
       debiti={dati?.debiti}
       mesiArretrati={mesiArretrati}
       oggi={oggi}
+      rimandati={rimandati}
     />
   );
 }

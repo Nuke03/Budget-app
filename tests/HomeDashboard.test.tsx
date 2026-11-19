@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render as renderRTL, screen, fireEvent, waitFor, within, cleanup, act } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { HomeDashboard as HomeBase } from '@/app/HomeDashboard';
+import { CasaSegnaleProvider, useCasaDaFare } from '@/app/CasaSegnale';
 
 const replace = vi.hoisted(() => vi.fn());
 vi.mock('@/app/impara/primi-passi/actions', () => ({
@@ -683,5 +684,41 @@ describe('il libretto', () => {
       home(pivaCon({ stipendio: 800, rimasto: 700, cuscinetto: 0, mesiCoperti: 0 }), 700);
       expect(screen.queryByText(avviso)).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('HomeDashboard e il puntino della Casa', () => {
+  const base = {
+    disponibileLibero: 1240.5,
+    margineGiornaliero: 62,
+    dataTarget: '2026-11-27T00:00:00Z',
+    accounts,
+    categories: [],
+    goals,
+    oggi: '2026-11-11',
+  };
+  const sonda = () => <p data-testid="sonda">{String(useCasaDaFare())}</p>;
+  const prossimoCasa = { testo: 'Quota casa 650 € entro il 5 dicembre', href: '/casa', tipo: 'casa' as const };
+
+  it('pubblica "c\u2019è una cosa da fare" quando il prossimo passo è della casa', () => {
+    const Sonda = sonda;
+    render(
+      <CasaSegnaleProvider>
+        <HomeDashboard {...base} prossimo={prossimoCasa} />
+        <Sonda />
+      </CasaSegnaleProvider>
+    );
+    expect(screen.getByTestId('sonda')).toHaveTextContent('true');
+  });
+
+  it('non lo pubblica se il prossimo passo è altro o non c\u2019è', () => {
+    const Sonda = sonda;
+    render(
+      <CasaSegnaleProvider>
+        <HomeDashboard {...base} prossimo={{ testo: 'Scadenza P.IVA', href: '/piva', tipo: 'piva' }} />
+        <Sonda />
+      </CasaSegnaleProvider>
+    );
+    expect(screen.getByTestId('sonda')).toHaveTextContent('false');
   });
 });

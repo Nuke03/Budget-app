@@ -30,6 +30,17 @@ beforeEach(() => {
 });
 
 describe('CalendarioCasa', () => {
+  it('ha l ancora #calendario e la riga per chi ha iOS 18', () => {
+    const { container } = render(<CalendarioCasa feedIniziale={feed} origin={ORIGIN} />);
+    expect(container.querySelector('section#calendario')).not.toBeNull();
+    expect(
+      screen.getByText(
+        'Se non trovi queste voci (iOS 18): Impostazioni, App, Calendario, Account calendario, Aggiungi account, Altro, Aggiungi calendario in abbonamento.',
+      ),
+    ).toBeInTheDocument();
+    assertNessunaParolaVietata(container);
+  });
+
   it('senza feed mostra Crea il link', async () => {
     rotateCalendarFeed.mockResolvedValue('nuovotoken');
     render(<CalendarioCasa feedIniziale={null} origin={ORIGIN} />);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CasaPage from '@/app/casa/page';
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }));
@@ -14,11 +14,17 @@ vi.mock('@/lib/calculations/supporto/casaHome', () => ({ casaHomeDati: vi.fn() }
 vi.mock('@/app/casa/CasaHome', () => ({ CasaHome: function CasaHome() { return null; } }));
 vi.mock('@/app/casa/VistaSemplice', () => ({ VistaSemplice: function VistaSemplice() { return null; } }));
 vi.mock('@/app/casa/CasaSenzaCasa', () => ({ CasaSenzaCasa: () => null }));
+vi.mock('@/lib/data/notifiche', () => ({ leggiRimandati: vi.fn() }));
+import { leggiRimandati } from '@/lib/data/notifiche';
 import { getAccounts } from '@/lib/data/accounts';
 import { loadCasaData } from '@/lib/loadCasaData';
 import { casaHomeDati } from '@/lib/calculations/supporto/casaHome';
 
 describe('pagina Casa', () => {
+  beforeEach(() => {
+    vi.mocked(leggiRimandati).mockResolvedValue({});
+  });
+
   it('legge i conti personali mentre i dati della casa sono ancora in lettura', async () => {
     let finisci: () => void = () => {};
     vi.mocked(loadCasaData).mockReturnValue(new Promise<never>((_r, rej) => { finisci = () => rej(new Error('x')); }));
@@ -54,6 +60,17 @@ describe('pagina Casa', () => {
     expect(el.props.libretto).toEqual({ gestisce: true, disponibile: 10 });
     expect(el.props.spiegazione).toEqual({ valore: 10, formula: 'f', ingredienti: [] });
     expect(el.props.vociDaParte).toEqual([]);
+  });
+
+  it('passa alla Casa i "Più tardi" salvati nel database; se non si leggono, null (vale il telefono)', async () => {
+    vi.mocked(loadCasaData).mockRejectedValue(new Error('x'));
+    vi.mocked(getAccounts).mockResolvedValue([]);
+    vi.mocked(leggiRimandati).mockResolvedValueOnce({ a: '2026-11-20' });
+    const el = (await CasaPage()) as { props: { rimandati?: unknown } };
+    expect(el.props.rimandati).toEqual({ a: '2026-11-20' });
+    vi.mocked(leggiRimandati).mockRejectedValueOnce(new Error('no'));
+    const senza = (await CasaPage()) as { props: { rimandati?: unknown } };
+    expect(senza.props.rimandati).toBeNull();
   });
 
   describe('vista semplice', () => {

@@ -10,6 +10,7 @@ import { azioneDaPromemoria, useCasaAzioni } from './CasaAzioni';
 import { dataFraMesi, usePromemoriaRimandati } from './rimandaPromemoria';
 import { MESI_DALLA_QUOTA } from '@/lib/calculations/casa/promemoria';
 import { useMettiDaParte } from './useMettiDaParte';
+import { useSegnalaCasa } from '../CasaSegnale';
 
 const CARD = 'rounded-[var(--radius-md)] border border-rule bg-surface-muted p-4';
 
@@ -39,6 +40,8 @@ export function DaFareCard({
     oggi
   );
   const daFare = candidati.find((d) => d.tipo !== 'promemoria' || !rimandati.has(d.id));
+  // La barra segna la Casa finché c'è una cosa da fare non rimandata.
+  useSegnalaCasa(Boolean(daFare));
   if (!daFare) return null;
   const piuTardi =
     daFare.tipo === 'promemoria' ? (

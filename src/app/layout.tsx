@@ -3,6 +3,7 @@ import { Source_Serif_4, Work_Sans } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "./NavBar";
 import { AnnullaProvider } from "./AnnullaProvider";
+import { CasaSegnaleProvider } from "./CasaSegnale";
 
 const serif = Source_Serif_4({
   subsets: ["latin"],
@@ -36,8 +37,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="it" className={`${serif.variable} ${sans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <AnnullaProvider>
-          <div className="flex-1 pb-28">{children}</div>
-          <NavBar />
+          <CasaSegnaleProvider>
+            <div className="flex-1 pb-28">{children}</div>
+            <NavBar />
+          </CasaSegnaleProvider>
         </AnnullaProvider>
       </body>
     </html>

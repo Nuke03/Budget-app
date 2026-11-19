@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BudgetGoal, GoalModalita } from '../types';
-import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
+import { applyScope, casa as casaScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
 
 const GOAL_COLUMNS =
   'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at, accantona_da, ruolo';
@@ -55,6 +55,15 @@ export async function getGoalPersonale(
   const { data, error } = await applyScope(supabase.from('budget_goals').select(GOAL_COLUMNS), PERSONALE)
     .eq('id', id)
     .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapRow(data as GoalRow) : null;
+}
+
+// Un obiettivo della casa per id (RLS: solo se sei membro). null se non c'è.
+export async function getGoalCasa(supabase: SupabaseClient, id: string, householdId: string): Promise<BudgetGoal | null> {
+  const { data, error } = await applyScope(supabase.from('budget_goals').select(GOAL_COLUMNS), casaScope(householdId))
+    .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   return data ? mapRow(data as GoalRow) : null;
