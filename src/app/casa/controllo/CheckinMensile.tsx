@@ -251,6 +251,12 @@ function Passo({ dati, mese, nomeDelMese }: { dati: CheckinCaricato; mese: strin
             {conAvanzo ? `${fraseEsito(calcolo)} Cosa ne facciamo?` : fraseEsito(calcolo)}
           </p>
           <ComeSiCalcola spiegazione={calcolo.spiegazioneAvanzo} />
+          <Link
+            href="/impara/coppia"
+            className="-mx-2 inline-flex min-h-11 items-center self-start px-2 text-sm font-semibold text-brand-dark underline"
+          >
+            Perché?
+          </Link>
           {conAvanzo ? (
             <div className="flex flex-col gap-2">
               <SceltePill legenda="Cosa ne facciamo?" opzioni={opzioni} valore={chiaveScelta} onChange={scegli} />

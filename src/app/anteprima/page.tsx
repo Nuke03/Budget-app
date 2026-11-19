@@ -19,6 +19,7 @@ import { finanzeCasa } from '../casa/finanzeCasa';
 import { CheckinMensile } from '../casa/controllo/CheckinMensile';
 import { AvvisoProva, ContiProva, GuidaPivaProva, ObiettiviProva, PivaHubProva, ScadenzePivaProva, StoricoProva } from './VisteProva';
 import { categoriePivaProva, contiPivaProva, datiPivaProva, impostazioniPivaProva, scadenzePivaProva } from './pivaProva';
+import { AttesaProva, AvvisoFondiProva, ImparaProva, LezioneProva, PassoImprevistiProva, PrimiPassiProva, RicominciaProva } from './VisteImparaProva';
 import { checkinProva, datiCasaProva } from './casaProva';
 
 // Solo in sviluppo: Home e /in-pari con dati di prova, senza login né Supabase,
@@ -208,6 +209,24 @@ export default async function AnteprimaPage({
           mesiArretrati={mesiArretrati}
           oggi={oggi}
         />
+      </>
+    );
+  }
+
+  const vistePercorso: Record<string, React.ReactNode> = {
+    impara: <ImparaProva oggi={oggi} />,
+    lezione: <LezioneProva />,
+    'primi-passi': <PrimiPassiProva />,
+    'passo-imprevisti': <PassoImprevistiProva />,
+    'avviso-fondi': <AvvisoFondiProva />,
+    attesa: <AttesaProva oggi={oggi} />,
+    ricomincia: <RicominciaProva />,
+  };
+  if (Object.hasOwn(vistePercorso, scelta)) {
+    return (
+      <>
+        <Banner />
+        {vistePercorso[scelta]}
       </>
     );
   }

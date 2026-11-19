@@ -58,7 +58,7 @@ The original Google Sheet ("Weekly Expense + Income Tracker") exists as a refere
 4. Free-tier-first — no feature should require a paid service or integration.
 5. Feels like an app, not a form — the current implementation reads as plain web forms; the product goal is a native-feeling mobile experience (the reason this design pass exists).
 6. Support, not work — the app tells you what to do next, one thing at a time; anything that adds work without helping is wrong even when the numbers add up. Rare reminders beat frequent ones.
-7. Teach while deciding — plain Italian, no jargon, no guilt, no gamification; every key number has a "Come si calcola?" or "Perché?" one tap away. Room is reserved for the guided P.IVA section (irregular income, F24 deadlines) and a personal learning path, entered from the tip's "Perché?".
+7. Teach while deciding — plain Italian, no jargon, no guilt, no gamification; every key number has a "Come si calcola?" or "Perché?" one tap away. Both now exist: the guided P.IVA section (irregular income, F24 deadlines) and the personal learning path (Impara, with its Primi passi), entered from the tip's "Perché?".
 
 ## Accessibility & Inclusion
 

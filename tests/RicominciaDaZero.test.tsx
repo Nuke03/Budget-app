@@ -45,6 +45,7 @@ describe('RicominciaDaZero', () => {
       screen.getByText('Il piano gratuito non ha copie di sicurezza: dopo la conferma questi dati non si recuperano.')
     ).toBeInTheDocument();
     expect(screen.getByText(/Cancella:/)).toBeInTheDocument();
+    expect(screen.getByText(/obiettivi e le categorie che la casa usa restano, chiusi o archiviati/i)).toBeInTheDocument();
     expect(screen.getByText(/Resta:/)).toBeInTheDocument();
   });
 

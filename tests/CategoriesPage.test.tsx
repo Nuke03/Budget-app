@@ -116,6 +116,7 @@ describe('CategoriesPage', () => {
       expect(updateCategory).toHaveBeenCalledWith(expect.anything(), '1', {
         nome: 'Spesa alimentare modificata',
         colore: '#3B9AE1',
+        ruolo: null,
       });
     });
   });
@@ -133,5 +134,35 @@ describe('CategoriesPage', () => {
 
     fireEvent.click(screen.getByText('Annulla'));
     expect(screen.getByText('Nuova categoria')).toBeInTheDocument();
+  });
+
+  it('una categoria di spesa ha la scelta Tipo e salva ruolo', async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    vi.mocked(updateCategory).mockClear();
+    vi.mocked(updateCategory).mockResolvedValue({ ...categories[0], ruolo: 'svago' });
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
+    expect(screen.getByText('Normale')).toBeInTheDocument();
+    expect(screen.getByText('Spesa certa')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Svago e acquisti'));
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    await waitFor(() => {
+      expect(updateCategory).toHaveBeenCalledWith(expect.anything(), '1', expect.objectContaining({ ruolo: 'svago' }));
+    });
+  });
+
+  it('una categoria di entrata non ha la scelta Tipo', async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    vi.mocked(updateCategory).mockClear();
+    vi.mocked(updateCategory).mockResolvedValue(categories[1]);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    fireEvent.click(screen.getAllByText('Entrata')[0]);
+    fireEvent.click(screen.getByLabelText('Modifica Stipendio'));
+    expect(screen.queryByText('Spesa certa')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    await waitFor(() => expect(updateCategory).toHaveBeenCalled());
+    expect(vi.mocked(updateCategory).mock.calls[0][2]).not.toHaveProperty('ruolo');
   });
 });

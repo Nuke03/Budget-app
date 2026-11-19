@@ -265,7 +265,19 @@ Revisioni fatte: impeccable (verdetto: da pubblicare) e opus, con le correzioni 
 
 Debito chiuso: l'aggiunta di un movimento è atomica. La funzione `crea_movimento` scrive riga e saldo in un'operazione.
 
-**Prossimi passi:** il percorso di apprendimento personale ("pezzo 3"), che parte dal "Perché?" del consiglio.
+**Percorso di apprendimento personale (pezzo 3), fatto (19 novembre 2026).** Piano: `docs/superpowers/plans/2026-11-19-percorso-apprendimento.md`. Spec: `docs/superpowers/specs/2026-11-19-percorso-apprendimento-design.md`. Commit da `aa4b573` a quello di "ruolo delle categorie, anteprime e documenti" su master. Cosa contiene:
+- migrazione 0011: stato del percorso, lista d'attesa, ruolo delle categorie e la funzione che azzera i dati personali;
+- 15 lezioni in "Impara", con i numeri dell'utente e il "Perché?" del consiglio;
+- "Primi passi": conti, entrate, P.IVA, una settimana di spese, spese certe, fondo imprevisti, un obiettivo;
+- avviso quando una spesa porta il disponibile sotto zero, con la domanda sul fondo imprevisti;
+- una lezione proposta dopo il salvataggio giusto;
+- lista d'attesa di 30 giorni per gli acquisti non urgenti;
+- "Ricomincia da zero" in Altro, con conferma scritta;
+- scelta "Tipo" (Normale, Spesa certa, Svago e acquisti) nella modifica di una categoria di spesa;
+- "Perché?" nel check-in della casa, verso la lezione sulla coppia;
+- viste di prova: `/anteprima?vista=impara`, `lezione`, `primi-passi`, `passo-imprevisti`, `avviso-fondi`, `attesa`, `ricomincia`.
+
+**Prossimi passi:** lanciare la migrazione 0011, poi la prova dal vivo (vedi "Da controllare per Fabio").
 
 Resti segnati nel piano B3:
 - logo del login e un suggerimento sotto i campi con l'ombra;
@@ -331,6 +343,10 @@ Da fare nel piano B:
 ### Da controllare per Fabio
 
 - Link delle 15 lezioni del percorso (`src/lib/percorso/lezioni.ts`): aprirli a mano prima della pubblicazione, perché i siti cambiano indirizzi. Elenco: https://economiapertutti.bancaditalia.it/ ; https://www.bancaditalia.it/pubblicazioni/guide-bi/index.html ; https://www.bancaditalia.it/focus/cybersicurezza/truffe-cyber ; https://www.arbitrobancariofinanziario.it ; https://www.consob.it/web/investor-education/ ; https://www.ivass.it/consumatori/index.html ; https://www.inps.it (home, non la pagina del servizio pensione, che la ricerca ha letto solo in parte).
+- Migrazione 0011 (percorso): il test SQL (`supabase/tests`) è stato eseguito con successo. La migrazione va ancora lanciata su Supabase; fino ad allora i commit del percorso restano in locale. Prova dal vivo: "Ricomincia da zero" sul tuo account e poi i Primi passi; una spesa che porta il disponibile sotto zero; una spesa da 160 € (lezione sul fondo imprevisti). Prima del reset guarda nella Casa crediti e saldo del conto comune, e ricontrollali dopo.
+- Le soglie del percorso (`src/lib/calculations/percorso/soglie.ts`) sono stime: da ritoccare dopo un po' di uso vero.
+- Rimandato: "Lo voglio ancora" nella lista d'attesa apre gli obiettivi senza la cifra già scritta.
+- Rimandato: il titolo dell'avviso sui fondi nomina solo il primo tipo di soldi toccato, anche se ne tocca più di uno.
 - La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
 - I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.

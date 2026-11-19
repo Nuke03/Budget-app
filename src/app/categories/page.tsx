@@ -17,6 +17,14 @@ const TIPI: { chiave: CategoriaTipo; etichetta: string }[] = [
   { chiave: 'income', etichetta: 'Entrata' },
 ];
 
+type Ruolo = 'normale' | 'certa' | 'svago';
+
+const RUOLI: { chiave: Ruolo; etichetta: string }[] = [
+  { chiave: 'normale', etichetta: 'Normale' },
+  { chiave: 'certa', etichetta: 'Spesa certa' },
+  { chiave: 'svago', etichetta: 'Svago e acquisti' },
+];
+
 export default function CategoriesPage() {
   const fail = useThrowToBoundary();
   const eliminaConAnnulla = useEliminaConAnnulla();
@@ -27,6 +35,7 @@ export default function CategoriesPage() {
   const [tipo, setTipo] = useState<CategoriaTipo>('expense');
   const [colore, setColore] = useState<string>(CATEGORY_COLORS[0].value);
   const [filtroTipo, setFiltroTipo] = useState<CategoriaTipo>('expense');
+  const [ruolo, setRuolo] = useState<Ruolo>('normale');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   async function refresh() {
@@ -42,10 +51,12 @@ export default function CategoriesPage() {
     setEditingCategory(c);
     setNome(c.nome);
     setColore(c.colore ?? CATEGORY_COLORS[0].value);
+    setRuolo(c.ruolo ?? 'normale');
   }
 
   function cancelEdit() {
     setEditingCategory(null);
+    setRuolo('normale');
     setNome('');
     setColore(CATEGORY_COLORS[0].value);
   }
@@ -61,7 +72,12 @@ export default function CategoriesPage() {
   async function handleUpdate() {
     if (!editingCategory || !nome.trim()) return;
     const supabase = createClient();
-    await updateCategory(supabase, editingCategory.id, { nome, colore });
+    const conRuolo = editingCategory.tipo === 'expense';
+    await updateCategory(supabase, editingCategory.id, {
+      nome,
+      colore,
+      ...(conRuolo ? { ruolo: ruolo === 'normale' ? null : ruolo } : {}),
+    });
     cancelEdit();
     await refresh();
   }
@@ -153,6 +169,10 @@ export default function CategoriesPage() {
             aria-label="Nome categoria"
             className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
           />
+
+          {editingCategory && editingCategory.tipo === 'expense' ? (
+            <SceltePill legenda="Tipo" opzioni={RUOLI} valore={ruolo} onChange={(chiave) => setRuolo(chiave as Ruolo)} />
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <span className="text-[13px] font-medium text-ink-2">Colore</span>

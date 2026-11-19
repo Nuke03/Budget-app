@@ -258,6 +258,12 @@ describe('CheckinMensile', () => {
     assertNessunaParolaVietata(container);
   });
 
+  it('il link Perché? porta alla lezione sulla coppia', () => {
+    const { calcolo, versamenti } = scenario({ speso: 1208, nonRegistrate: 80 });
+    render(<CheckinMensile dati={dati({ calcolo, versamenti })} />);
+    expect(screen.getByRole('link', { name: 'Perché?' })).toHaveAttribute('href', '/impara/coppia');
+  });
+
   it('in pari', () => {
     const { calcolo, versamenti } = scenario({ speso: 1208, nonRegistrate: 80 });
     expect(calcolo.esito).toBe('in_pari');

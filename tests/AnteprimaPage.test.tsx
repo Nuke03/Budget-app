@@ -47,6 +47,23 @@ describe('/anteprima', () => {
     await expect(AnteprimaPage({ searchParams: Promise.resolve({ vista }) })).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
+  it.each([
+    ['impara', "Lista d'attesa"],
+    ['lezione', 'Con i tuoi numeri'],
+    ['primi-passi', '2 di 6'],
+    ['passo-imprevisti', 'Crea il cuscinetto'],
+    ['avviso-fondi', 'È un imprevisto vero?'],
+    ['attesa', 'Lo voglio ancora'],
+    ['ricomincia', 'Ricomincia da zero'],
+  ])('anteprima: ogni vista nuova si apre senza errori (%s)', async (vista, testo) => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const el = await AnteprimaPage({ searchParams: Promise.resolve({ vista }) });
+    render(<AnnullaProvider>{el}</AnnullaProvider>);
+    expect(notFound).not.toHaveBeenCalled();
+    expect(screen.getByText('Dati di prova')).toBeTruthy();
+    expect(screen.getAllByText(testo).length).toBeGreaterThan(0);
+  });
+
   describe('viste P.IVA', () => {
     async function mostra(vista: string) {
       vi.stubEnv('NODE_ENV', 'development');

@@ -61,7 +61,7 @@ export function RicominciaDaZero({ casa }: { casa: { credito: number; debito: nu
             ) : null}
             <p className="text-[15px]">
               Cancella: movimenti, conti, obiettivi, categorie personali, dati P.IVA, progressi del percorso e lista
-              d&apos;attesa.
+              d&apos;attesa. Gli obiettivi e le categorie che la casa usa restano, chiusi o archiviati.
             </p>
             <p className="text-[15px]">
               Resta: il login, le notifiche e i promemoria, l&apos;iscrizione alla casa e tutti i dati della casa. I conti

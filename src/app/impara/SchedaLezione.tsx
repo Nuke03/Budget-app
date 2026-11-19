@@ -6,14 +6,23 @@ import { useRouter } from 'next/navigation';
 import type { Lezione } from '@/lib/percorso/lezioni';
 import { apriLezione, lezioneFatta, rimandaLezione } from './actions';
 
-export function SchedaLezione({ lezione, numeri }: { lezione: Lezione; numeri: string | null }) {
+// `anteprima`: nella pagina di prova non si scrive niente, nemmeno il visto.
+export function SchedaLezione({
+  lezione,
+  numeri,
+  anteprima = false,
+}: {
+  lezione: Lezione;
+  numeri: string | null;
+  anteprima?: boolean;
+}) {
   const router = useRouter();
   const [inCorso, avvia] = useTransition();
 
   // La lezione si segna come vista all'apertura.
   useEffect(() => {
-    void apriLezione(lezione.id);
-  }, [lezione.id]);
+    if (!anteprima) void apriLezione(lezione.id);
+  }, [lezione.id, anteprima]);
 
   function provaOra() {
     if (!lezione.prova) return;
