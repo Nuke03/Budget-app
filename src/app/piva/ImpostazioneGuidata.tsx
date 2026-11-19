@@ -170,6 +170,11 @@ export function ImpostazioneGuidata({
         preset,
         // Riattivando dopo una disattivazione si riparte da oggi: gli incassi di prima non generano quote.
         guidataDal: iniziale && iniziale.attivo && iniziale.guidataDal ? iniziale.guidataDal : oggiRomaISO(),
+        // Una categoria diversa da quella di prima: si riparte da oggi.
+        categoriaDal:
+          iniziale?.categoriaFatturatoId && iniziale.categoriaFatturatoId !== categoriaFatturatoId
+            ? oggiRomaISO()
+            : (iniziale?.categoriaDal ?? null),
         stipendioMensile: iniziale?.stipendioMensile ?? null,
         stipendioRivistoIl: iniziale?.stipendioRivistoIl ?? null,
         incassoMeseMagro: iniziale?.incassoMeseMagro ?? null,

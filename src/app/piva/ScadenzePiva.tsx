@@ -54,7 +54,8 @@ export function ScadenzePiva({
     setErrore(null);
     setModulo({ id: s.id, modo });
     setImporto(s.importo != null ? String(s.importo) : '');
-    setData(modo === 'paga' ? oggi : s.data);
+    // "Pagata" propone il giorno della scadenza se è già passata, altrimenti oggi.
+    setData(modo === 'paga' ? (s.data < oggi ? s.data : oggi) : s.data);
   }
 
   async function esegui(id: string, lavoro: () => Promise<void>) {

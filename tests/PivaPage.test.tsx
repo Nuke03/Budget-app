@@ -18,6 +18,7 @@ vi.mock('@/lib/data/transactions', () => ({ getTransactions: vi.fn() }));
 
 vi.mock('@/lib/data/piva', () => ({
   getAccantonamenti: vi.fn(),
+  getQuoteScartate: vi.fn().mockResolvedValue(new Set()),
   accantonaTasse: vi.fn(),
   assicuraScadenze: vi.fn().mockResolvedValue(undefined),
   getScadenze: vi.fn().mockResolvedValue([]),
@@ -39,9 +40,11 @@ import { getCategories } from '@/lib/data/categories';
 import { getAccounts } from '@/lib/data/accounts';
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccantonamenti } from '@/lib/data/piva';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 
 const categories = [
   { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
+  { id: 'cat-alt', nome: 'Altri compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
 ];
 
 const conti = [
@@ -66,6 +69,7 @@ const guidata = {
   stipendioMensile: null,
   stipendioRivistoIl: null,
   incassoMeseMagro: null,
+  categoriaDal: '2026-09-01',
 };
 
 beforeEach(() => {
@@ -134,6 +138,42 @@ describe('PivaPage', () => {
         expect.objectContaining({ minimaleContributivoAnnuo: 900, contoTasseId: 'tasse', guidataDal: '2026-11-01' })
       );
     });
+  });
+
+  it('P5: cambiando la categoria del fatturato salva categoriaDal = oggi; senza cambio la lascia', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue(guidata);
+    vi.mocked(updatePivaSettings).mockResolvedValue(guidata);
+    render(<PivaPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Impostazioni' }));
+    fireEvent.click(screen.getByText('Modifica i parametri'));
+    await waitFor(() => expect(screen.getByText('Salva modifiche')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    await waitFor(() =>
+      expect(updatePivaSettings).toHaveBeenLastCalledWith(expect.anything(), '1', expect.objectContaining({ categoriaDal: '2026-09-01' }))
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Impostazioni' }));
+    fireEvent.click(screen.getByText('Modifica i parametri'));
+    await waitFor(() => expect(screen.getByText('Salva modifiche')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Categoria fatturato'), { target: { value: 'cat-alt' } });
+    fireEvent.click(screen.getByText('Salva modifiche'));
+    await waitFor(() =>
+      expect(updatePivaSettings).toHaveBeenLastCalledWith(
+        expect.anything(),
+        '1',
+        expect.objectContaining({ categoriaFatturatoId: 'cat-alt', categoriaDal: oggiRomaISO() })
+      )
+    );
+  });
+
+  it('disattivare la P.IVA non perde categoriaDal', async () => {
+    vi.mocked(getPivaSettings).mockResolvedValue(guidata);
+    vi.mocked(updatePivaSettings).mockResolvedValue({ ...guidata, attivo: false });
+    render(<PivaPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Impostazioni' }));
+    fireEvent.click(screen.getByText('Disattiva gestione P.IVA'));
+    await waitFor(() =>
+      expect(updatePivaSettings).toHaveBeenCalledWith(expect.anything(), '1', expect.objectContaining({ attivo: false, categoriaDal: '2026-09-01' }))
+    );
   });
 
   it('disattiva la gestione P.IVA al click', async () => {

@@ -11,11 +11,14 @@ import {
   creaFattura,
   getAccantonamenti,
   getFatture,
+  getQuoteScartate,
   getScadenze,
+  scartaQuota,
 } from '@/lib/data/piva';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { homeConStipendio, propostaStipendio, speseDelMese } from '@/lib/calculations/stipendio';
 import {
+  anniScadenzeHome,
   casaDelMese,
   finestraIncassi,
   inizioMesiFa,
@@ -47,7 +50,7 @@ import { FattureInAttesa } from './FattureInAttesa';
 import { NuovaFattura, type ValoriFattura } from './NuovaFattura';
 import { contoDaCuiSpostare, euroInFrase, PromptQuota } from './PromptQuota';
 import { ScadenzePiva } from './ScadenzePiva';
-import { StipendioPiva } from './StipendioPiva';
+import { StipendioPiva, type RigaStipendio } from './StipendioPiva';
 import type {
   Account,
   BudgetGoal,
@@ -85,6 +88,8 @@ export interface DatiPivaHub {
   scad: PivaScadenza[] | null;
   fatt: PivaFattura[] | null;
   stip: DatiStipendio | null;
+  // Gli incassi per cui si è scelto di non mettere niente da parte (assente: nessuno).
+  scart?: Set<string>;
 }
 
 // La pagina P.IVA a guida finita: quanto mettere da parte, il conto tasse, le quote ancora da spostare.
@@ -111,6 +116,9 @@ export function PivaHub({
   const [fatture, setFatture] = useState<PivaFattura[]>([]);
   const [fattureNonCaricate, setFattureNonCaricate] = useState(false);
   const [datiStipendio, setDatiStipendio] = useState<DatiStipendio | null>(null);
+  const [scartate, setScartate] = useState<Set<string>>(new Set());
+  // La quota per cui si sta chiedendo conferma di "Scarta".
+  const [scartaAperta, setScartaAperta] = useState<string | null>(null);
   const [caricato, setCaricato] = useState(false);
   // La quota per cui è aperto il foglio "Fatto" (importo modificabile).
   const [quotaAperta, setQuotaAperta] = useState<string | null>(null);
@@ -140,9 +148,25 @@ export function PivaHub({
     const leggiScadenze = async (): Promise<PivaScadenza[] | null> => {
       try {
         if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(anno, settings.guidataDal));
+        // Dopo il 15 dicembre la Home legge anche l'anno dopo: le righe devono esistere. Se non si creano, l'anno corrente resta.
+        for (const prossimo of anniScadenzeHome(oggiISO).filter((a) => a > anno)) {
+          try {
+            if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(prossimo, settings.guidataDal));
+          } catch {
+            // niente: le scadenze di quest'anno si vedono lo stesso
+          }
+        }
         return await getScadenze(supabase, anno);
       } catch {
         return null;
+      }
+    };
+    // Una scelta "Scarta" che non si legge lascia la quota da spostare: meglio una quota in più che una persa.
+    const leggiScartate = async (): Promise<Set<string>> => {
+      try {
+        return await getQuoteScartate(supabase);
+      } catch {
+        return new Set<string>();
       }
     };
     // Come le scadenze: se le fatture non si leggono, il resto della pagina funziona.
@@ -167,15 +191,16 @@ export function PivaHub({
       }
     };
     // getAccounts senza scope: i conti personali.
-    const [acc, tx, accant, scad, fatt, stip] = await Promise.all([
+    const [acc, tx, accant, scad, fatt, stip, scart] = await Promise.all([
       getAccounts(supabase),
       getTransactions(supabase, undefined, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da }),
       leggiScadenze(),
       leggiFatture(),
       leggiStipendio(),
+      leggiScartate(),
     ]);
-    return { acc, tx, accant, scad, fatt, stip };
+    return { acc, tx, accant, scad, fatt, stip, scart };
   }
 
   function applica(d: Awaited<ReturnType<typeof leggi>>) {
@@ -187,6 +212,7 @@ export function PivaHub({
     setFatture(d.fatt ?? []);
     setFattureNonCaricate(d.fatt === null);
     setDatiStipendio(d.stip);
+    setScartate(d.scart ?? new Set());
     setCaricato(true);
   }
 
@@ -226,7 +252,12 @@ export function PivaHub({
   const saldoTondo = Math.round(contoTasse.saldoAttuale * 100) % 100 === 0;
   const saldoVaso = saldoTondo ? { intero: euroInFrase(contoTasse.saldoAttuale), resto: '' } : dividiCifra(formatEuro(contoTasse.saldoAttuale));
   const inSospeso = categoriaId
-    ? quoteInSospeso(incassi, accantonamenti, percentuale, categoriaId, settings.guidataDal)
+    ? quoteInSospeso(incassi, accantonamenti, percentuale, categoriaId, settings.guidataDal, {
+        categoriaDal: settings.categoriaDal,
+        // Un incasso su un conto che non conta nel disponibile non chiede la quota (come nella Home).
+        contiChePesano: new Set(conti.filter((c) => c.contaInDisponibile && c.id !== contoTasseId).map((c) => c.id)),
+        scartate,
+      })
     : [];
   const quotaDaSpostare = inSospeso.find((x) => x.transactionId === quotaAperta) ?? null;
   // Sul conto tasse non entrano incassi: gli altri conti sono personali (getAccounts senza scope).
@@ -237,7 +268,7 @@ export function PivaHub({
   const oggiISO = oggiRomaISO();
   const contiDisponibile = new Set(conti.filter((c) => c.contaInDisponibile && c.id !== contoTasseId).map((c) => c.id));
   let calcoloStipendio: ReturnType<typeof propostaStipendio> | null = null;
-  let rigaStipendio: { rimasto: number; cuscinetto: number; mesiCoperti: number } | null = null;
+  let rigaStipendio: RigaStipendio | null = null;
   if (datiStipendio && categoriaId) {
     const { incassiMensili, mesiConIncassi } = finestraIncassi(incassi, categoriaId, oggiISO);
     const { quotaCasaMensile, versatoCasaMese } = casaDelMese(datiStipendio.casa?.righe ?? null, oggiISO);
@@ -260,14 +291,14 @@ export function PivaHub({
         datiStipendio.casa?.debitoDaRestituire ?? 0,
         totaleInSospeso(inSospeso)
       );
-      const { rimasto, cuscinetto, mesiCoperti } = homeConStipendio({
+      const { rimastoMostrato, cuscinetto, mesiCoperti, frase: fraseStipendio } = homeConStipendio({
         disponibileLibero: disponibile,
         stipendio: settings.stipendioMensile,
         speseMese: speseDelMese(datiStipendio.spese, contiDisponibile, oggiISO.slice(0, 7)),
         versatoCasaMese,
         riservaVersamento,
       });
-      rigaStipendio = { rimasto, cuscinetto, mesiCoperti };
+      rigaStipendio = { rimasto: rimastoMostrato, cuscinetto, mesiCoperti, frase: fraseStipendio };
     }
   }
 
@@ -281,6 +312,27 @@ export function PivaHub({
       setErrore('Fatto, ma non riesco ad aggiornare la pagina. Riaprila tra poco.');
       return false;
     }
+  }
+
+  // "Scarta": non si mette da parte niente per questo incasso. La riga resta nel database, e la quota sparisce.
+  async function scarta(transactionId: string) {
+    if (inCorso.has(transactionId)) return;
+    setErrore(null);
+    setInCorso((prima) => new Set(prima).add(transactionId));
+    try {
+      await scartaQuota(createClient(), transactionId, oggiRomaISO());
+    } catch {
+      setErrore('Non è riuscito. Riprova.');
+      return;
+    } finally {
+      setInCorso((prima) => {
+        const dopo = new Set(prima);
+        dopo.delete(transactionId);
+        return dopo;
+      });
+    }
+    setScartaAperta(null);
+    await ricarica();
   }
 
   // true se i soldi sono stati registrati come spostati.
@@ -393,14 +445,51 @@ export function PivaHub({
                           {incasso ? ` del ${formatDataLunga(incasso.data)}` : ''}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setQuotaAperta(q.transactionId)}
-                        disabled={inCorso.has(q.transactionId)}
-                        className={`${CLASSE_SECONDARIO} shrink-0`}
-                      >
-                        Fatto
-                      </button>
+                      {scartaAperta === q.transactionId ? (
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <p className="text-[15px]">Non metti da parte niente per questo incasso.</p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void scarta(q.transactionId)}
+                              disabled={inCorso.has(q.transactionId)}
+                              className={CLASSE_PRIMARIO}
+                            >
+                              Sì, scarta
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setScartaAperta(null)}
+                              disabled={inCorso.has(q.transactionId)}
+                              className={CLASSE_NEUTRO}
+                            >
+                              Tieni
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErrore(null);
+                              setScartaAperta(q.transactionId);
+                            }}
+                            disabled={inCorso.has(q.transactionId)}
+                            className={CLASSE_NEUTRO}
+                          >
+                            Scarta
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuotaAperta(q.transactionId)}
+                            disabled={inCorso.has(q.transactionId)}
+                            className={CLASSE_SECONDARIO}
+                          >
+                            Fatto
+                          </button>
+                        </div>
+                      )}
                     </li>
                   );
                 })}

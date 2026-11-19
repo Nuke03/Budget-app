@@ -20,7 +20,9 @@ import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { StoricoVista } from './StoricoVista';
 import { AddTransactionForm } from '../add/AddTransactionForm';
-import type { Transaction, Category, Account, BudgetGoal, TransactionTipo } from '@/lib/types';
+import { euroInFrase } from '@/lib/format';
+import { CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
+import type { Transaction, Category, Account, BudgetGoal, TransactionTipo, PivaAccantonamento } from '@/lib/types';
 
 export default function HistoryPage() {
   const fail = useThrowToBoundary();
@@ -33,6 +35,12 @@ export default function HistoryPage() {
   const [goals, setGoals] = useState<BudgetGoal[]>([]);
   const [righeNeutre, setRigheNeutre] = useState<RigaNeutra[]>([]);
   const [righeTasse, setRigheTasse] = useState<RigaNeutra[]>([]);
+  // Gli spostamenti sul conto tasse letti con lo storico: servono a sapere, prima di eliminare un incasso, se la sua quota è già nel conto.
+  const accantonamenti = useRef<PivaAccantonamento[]>([]);
+  // Dopo aver eliminato un incasso la cui quota era già nel conto tasse: la domanda con un tocco.
+  const [quotaDaRiportare, setQuotaDaRiportare] = useState<{ id: string; importo: number } | null>(null);
+  const [riportoInCorso, setRiportoInCorso] = useState(false);
+  const [riportoFallito, setRiportoFallito] = useState(false);
   const [periodo, setPeriodo] = useState<Periodo>('mese');
   const [rangePersonalizzato, setRangePersonalizzato] = useState({ da: '', a: '' });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -76,7 +84,9 @@ export default function HistoryPage() {
   async function caricaRigheTasse(supabase: ReturnType<typeof createClient>, da: string): Promise<RigaNeutra[]> {
     const settings = await getPivaSettings(supabase);
     if (!settings?.attivo) return [];
-    return righeNeutreAccantonamenti(await getAccantonamenti(supabase, { da: da || '0001-01-01' }));
+    const letti = await getAccantonamenti(supabase, { da: da || '0001-01-01' });
+    accantonamenti.current = letti;
+    return righeNeutreAccantonamenti(letti);
   }
 
   async function caricaRigheCasa(supabase: ReturnType<typeof createClient>, da: string): Promise<RigaNeutra[]> {
@@ -133,6 +143,9 @@ export default function HistoryPage() {
   }, [fail]);
 
   function handleDelete(t: Transaction) {
+    // Si guarda ora, prima che l'eliminazione diventi effettiva: dopo, il database stacca l'incasso dal suo spostamento.
+    const spostamento =
+      t.tipo === 'income' ? accantonamenti.current.find((a) => a.transactionId === t.id) : undefined;
     const cambia = (nascondi: boolean) =>
       setNascoste((prima) => {
         const dopo = new Set(prima);
@@ -149,9 +162,31 @@ export default function HistoryPage() {
       esegui: async () => {
         // Una sola rpc: riga e saldo insieme. Se fallisce non è cambiato niente e la riga torna (lo fa AnnullaProvider).
         await eliminaMovimento(createClient(), t.id);
+        // L'incasso è andato (anche dopo l'attesa dell'Annulla): ora si chiede della quota rimasta nel conto tasse.
+        if (spostamento) {
+          setRiportoFallito(false);
+          setQuotaDaRiportare({ id: spostamento.id, importo: spostamento.importo });
+        }
         await refresh(letteDalRef.current).catch(() => {});
       },
     });
+  }
+
+  // Sì: l'rpc annulla_accantonamento rimette i soldi sul conto di partenza.
+  async function riportaIndietro() {
+    if (!quotaDaRiportare || riportoInCorso) return;
+    setRiportoInCorso(true);
+    setRiportoFallito(false);
+    try {
+      await annullaAccantonamento(createClient(), quotaDaRiportare.id);
+    } catch {
+      setRiportoFallito(true);
+      setRiportoInCorso(false);
+      return;
+    }
+    setQuotaDaRiportare(null);
+    setRiportoInCorso(false);
+    await refresh(letteDalRef.current).catch(() => {});
   }
 
   // Annullare uno spostamento rimette i soldi sul conto di partenza (lo fa l'rpc).
@@ -229,6 +264,27 @@ export default function HistoryPage() {
         onEdit={setEditingTransaction}
         onDelete={handleDelete}
       />
+
+      {quotaDaRiportare ? (
+        <FoglioInferiore titolo="Conto tasse" onClose={() => !riportoInCorso && setQuotaDaRiportare(null)}>
+          <div className="flex flex-col gap-3 px-5 pb-5">
+            <p className="num text-[15px]">
+              La quota di {euroInFrase(quotaDaRiportare.importo)} è nel conto tasse. La riporto indietro?
+            </p>
+            {riportoFallito ? (
+              <p role="alert" className="text-[15px] font-medium text-danger">
+                Non è riuscito. Riprova.
+              </p>
+            ) : null}
+            <button type="button" onClick={() => void riportaIndietro()} disabled={riportoInCorso} className={CLASSE_PRIMARIO}>
+              Sì
+            </button>
+            <button type="button" onClick={() => setQuotaDaRiportare(null)} disabled={riportoInCorso} className={CLASSE_NEUTRO}>
+              No
+            </button>
+          </div>
+        </FoglioInferiore>
+      ) : null}
 
       {editingTransaction && (
         <FoglioInferiore titolo="Modifica transazione" onClose={() => setEditingTransaction(null)}>

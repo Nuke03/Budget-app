@@ -64,7 +64,7 @@ export default function PivaPage() {
   async function handleSave(values: PivaSettingsFormValues) {
     const supabase = createClient();
     // I campi della P.IVA guidata non sono in questo modulo: restano come sono.
-    const input = { ...values, attivo: true, ...campiGuidata(settings) };
+    const input = { ...values, categoriaDal: values.categoriaDal ?? null, attivo: true, ...campiGuidata(settings) };
     if (settings) {
       await updatePivaSettings(supabase, settings.id, input);
     } else {
@@ -97,6 +97,7 @@ export default function PivaPage() {
       aliquotaContributoIntegrativo: settings.aliquotaContributoIntegrativo,
       minimaleContributivoAnnuo: settings.minimaleContributivoAnnuo,
       contributiVersatiAnnoPrecedente: settings.contributiVersatiAnnoPrecedente,
+      categoriaDal: settings.categoriaDal,
       ...campiGuidata(settings),
       ...campi,
     });
@@ -116,6 +117,7 @@ export default function PivaPage() {
       aliquotaContributoIntegrativo: settings.aliquotaContributoIntegrativo,
       minimaleContributivoAnnuo: settings.minimaleContributivoAnnuo,
       contributiVersatiAnnoPrecedente: settings.contributiVersatiAnnoPrecedente,
+      categoriaDal: settings.categoriaDal,
       ...campiGuidata(settings),
     });
     await refresh();

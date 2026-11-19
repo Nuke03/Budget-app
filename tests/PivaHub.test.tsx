@@ -10,6 +10,8 @@ vi.mock('@/lib/data/transactions', () => ({ getTransactions: vi.fn() }));
 vi.mock('@/lib/data/accounts', () => ({ getAccounts: vi.fn() }));
 vi.mock('@/lib/data/piva', () => ({
   getAccantonamenti: vi.fn(),
+  getQuoteScartate: vi.fn(),
+  scartaQuota: vi.fn(),
   accantonaTasse: vi.fn(),
   assicuraScadenze: vi.fn(),
   getScadenze: vi.fn(),
@@ -34,6 +36,7 @@ import { getAccounts } from '@/lib/data/accounts';
 import { leggiCasaPerStipendio, leggiGoalsConSpeso } from '@/lib/pivaHome';
 import {
   getAccantonamenti, accantonaTasse, assicuraScadenze, getScadenze, getFatture, creaFattura, incassaFattura,
+  getQuoteScartate, scartaQuota,
 } from '@/lib/data/piva';
 
 const settings: PivaSettings = {
@@ -53,6 +56,7 @@ const settings: PivaSettings = {
   stipendioMensile: null,
   stipendioRivistoIl: null,
   incassoMeseMagro: null,
+  categoriaDal: null,
 };
 
 const conti = [
@@ -113,6 +117,8 @@ beforeEach(() => {
   vi.mocked(incassaFattura).mockReset().mockResolvedValue('i-nuovo');
   vi.mocked(accantonaTasse).mockReset();
   vi.mocked(accantonaTasse).mockResolvedValue('pa-nuovo');
+  vi.mocked(getQuoteScartate).mockReset().mockResolvedValue(new Set());
+  vi.mocked(scartaQuota).mockReset().mockResolvedValue(undefined);
   vi.mocked(leggiCasaPerStipendio).mockReset().mockResolvedValue(null);
   vi.mocked(leggiGoalsConSpeso).mockReset().mockResolvedValue([]);
 });
@@ -474,6 +480,112 @@ describe('PivaHub', () => {
       expect(await screen.findByText('Lo stipendio non si calcola ora. Riprova tra poco.')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Va bene' })).not.toBeInTheDocument();
       expect(screen.getByText(/Di ogni incasso metti da parte il 13,7%/)).toBeInTheDocument();
+    });
+  });
+
+  describe('P9: stipendio superato', () => {
+    it('oltre lo stipendio: 0 € rimasti e la frase calma, la stessa della Home', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 920)]);
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      const stip = await screen.findByRole('region', { name: 'Stipendio' });
+      expect(await within(stip).findByText('Te ne restano 0 €')).toBeInTheDocument();
+      expect(within(stip).getByText('Hai già speso 120 € più dello stipendio di questo mese.')).toBeInTheDocument();
+      expect(stip.textContent).not.toMatch(/-\d/);
+      assertNessunaParolaVietata(stip);
+    });
+    it('senza eccedenza nessuna frase', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      await screen.findByText('Te ne restano 600 €');
+      expect(screen.queryByText(/Hai già speso/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('P4: conti che non contano e Scarta', () => {
+    it('un incasso su un conto fuori dal disponibile non chiede la quota', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([{ ...incasso('i2', '2026-11-10', 600), accountId: 'risp' }]);
+      vi.mocked(getAccounts).mockResolvedValue([
+        ...conti,
+        { id: 'risp', nome: 'Risparmi', saldoAttuale: 100, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+      ]);
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      expect(within(lista).getByText('Niente da spostare: sei in pari con gli incassi.')).toBeInTheDocument();
+    });
+
+    it('una quota già scartata non compare', async () => {
+      vi.mocked(getQuoteScartate).mockResolvedValue(new Set(['i2']));
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      expect(within(lista).getByText('Niente da spostare: sei in pari con gli incassi.')).toBeInTheDocument();
+    });
+
+    it('se le quote scartate non si leggono la quota resta da spostare', async () => {
+      vi.mocked(getQuoteScartate).mockRejectedValue(new Error('rete'));
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      expect(within(lista).getByText('Metti da parte 82 €')).toBeInTheDocument();
+    });
+
+    it('Scarta chiede conferma con una frase calma, poi scrive e rilegge', async () => {
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Scarta' }));
+      expect(within(lista).getByText('Non metti da parte niente per questo incasso.')).toBeInTheDocument();
+      expect(scartaQuota).not.toHaveBeenCalled();
+      assertNessunaParolaVietata(lista);
+      fireEvent.click(within(lista).getByRole('button', { name: 'Sì, scarta' }));
+      await waitFor(() => expect(scartaQuota).toHaveBeenCalledWith(expect.anything(), 'i2', '2026-11-17'));
+      await waitFor(() => expect(getQuoteScartate).toHaveBeenCalledTimes(2));
+    });
+
+    it('"Tieni" chiude la conferma senza scrivere', async () => {
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Scarta' }));
+      fireEvent.click(within(lista).getByRole('button', { name: 'Tieni' }));
+      expect(scartaQuota).not.toHaveBeenCalled();
+      expect(within(lista).getByText('Metti da parte 82 €')).toBeInTheDocument();
+      expect(within(lista).queryByText('Non metti da parte niente per questo incasso.')).not.toBeInTheDocument();
+    });
+
+    it('se Scarta non riesce lo dice e la quota resta', async () => {
+      vi.mocked(scartaQuota).mockRejectedValue(new Error('rete'));
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Scarta' }));
+      fireEvent.click(within(lista).getByRole('button', { name: 'Sì, scarta' }));
+      expect(await within(lista).findByText('Non è riuscito. Riprova.')).toBeInTheDocument();
+      expect(within(lista).getByText('Metti da parte 82 €')).toBeInTheDocument();
+    });
+  });
+
+  it('P5: dopo il cambio di categoria (categoriaDal) gli incassi precedenti non chiedono la quota', async () => {
+    apri({}, { categoriaDal: '2026-11-12' });
+    const lista = await screen.findByRole('region', { name: 'Da spostare' });
+    expect(within(lista).getByText('Niente da spostare: sei in pari con gli incassi.')).toBeInTheDocument();
+  });
+
+  describe('P2: scadenze dell anno dopo', () => {
+    const anniCreati = () => vi.mocked(assicuraScadenze).mock.calls.flatMap((c) => c[1].map((r) => r.anno));
+    it('dopo il 15 dicembre si creano anche le scadenze dell anno dopo', async () => {
+      vi.setSystemTime(new Date('2026-12-20T12:00:00Z'));
+      apri();
+      await screen.findByRole('region', { name: 'Conto tasse' });
+      expect(new Set(anniCreati())).toEqual(new Set([2026, 2027]));
+    });
+    it('a novembre solo quelle dell anno', async () => {
+      apri();
+      await screen.findByRole('region', { name: 'Conto tasse' });
+      expect(new Set(anniCreati())).toEqual(new Set([2026]));
+    });
+    it('se le righe dell anno dopo non si creano la pagina resta usabile', async () => {
+      vi.setSystemTime(new Date('2026-12-20T12:00:00Z'));
+      vi.mocked(assicuraScadenze).mockImplementation(async (_s, righe) => {
+        if (righe.some((r) => r.anno === 2027)) throw new Error('rete');
+      });
+      apri();
+      expect(await screen.findByRole('region', { name: 'Conto tasse' })).toBeInTheDocument();
     });
   });
 

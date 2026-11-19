@@ -148,6 +148,18 @@ describe('ScadenzePiva', () => {
     await waitFor(() => expect(onCambiato).toHaveBeenCalled());
   });
 
+  it('P1: Pagata propone la data della scadenza se è già passata, oggi se è ancora davanti', () => {
+    apri([nov({ importo: 3400, data: '2026-11-10' })]);
+    fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
+    expect(screen.getByLabelText('Data')).toHaveValue('2026-11-10');
+  });
+
+  it('P1: scadenza di oggi o futura: la proposta è oggi', () => {
+    apri([nov({ importo: 3400, data: '2026-11-17' })]);
+    fireEvent.click(screen.getByRole('button', { name: 'Pagata' }));
+    expect(screen.getByLabelText('Data')).toHaveValue('2026-11-17');
+  });
+
   it('Conferma il pagamento due volte non registra due uscite e resta disabilitato in corso', () => {
     let finisci: (v: string) => void = () => {};
     vi.mocked(pagaScadenza).mockReturnValue(new Promise<string>((r) => (finisci = r)));

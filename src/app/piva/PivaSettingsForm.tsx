@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Category } from '@/lib/types';
 import { FieldHint } from '@/app/FieldHint';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 
 export interface PivaSettingsFormValues {
   dataApertura: string | null;
@@ -13,6 +14,8 @@ export interface PivaSettingsFormValues {
   aliquotaContributoIntegrativo: number;
   minimaleContributivoAnnuo: number;
   contributiVersatiAnnoPrecedente: number;
+  // Da quando la categoria è quella del fatturato: il form lo porta a oggi quando la categoria cambia.
+  categoriaDal?: string | null;
 }
 
 const DEFAULTS: PivaSettingsFormValues = {
@@ -93,7 +96,11 @@ export function PivaSettingsForm({
     e.preventDefault();
     if (!isValid) return;
 
+    // Cambiando la categoria si riparte da oggi: solo gli incassi da oggi in poi chiedono la quota.
+    // Nella prima attivazione (nessuna categoria prima) resta il giorno della guida.
+    const categoriaCambiata = initial !== null && categoriaFatturatoId !== initial.categoriaFatturatoId;
     onSubmit({
+      categoriaDal: categoriaCambiata ? oggiRomaISO() : (initial?.categoriaDal ?? null),
       dataApertura: dataApertura.trim() === '' ? null : dataApertura,
       categoriaFatturatoId,
       coefficienteRedditivita: Number(coefficienteRedditivita),

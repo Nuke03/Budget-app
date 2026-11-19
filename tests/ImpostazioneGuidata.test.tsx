@@ -47,6 +47,7 @@ function base(over: Partial<PivaSettings> = {}): PivaSettings {
     stipendioMensile: null,
     stipendioRivistoIl: null,
     incassoMeseMagro: null,
+    categoriaDal: null,
     ...over,
   };
 }

@@ -94,7 +94,7 @@ describe('StipendioPiva', () => {
   });
 
   it('con lo stipendio mostra la cifra grande, quanto resta e il cuscinetto', () => {
-    apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 1200, mesiCoperti: 1.5 } });
+    apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 1200, mesiCoperti: 1.5, frase: null } });
     expect(screen.getByRole('heading', { name: 'Stipendio di novembre' })).toBeInTheDocument();
     expect(screen.getByText('800 €')).toHaveClass('num', 'font-serif');
     expect(screen.getByText('Te ne restano 450 €')).toBeInTheDocument();
@@ -104,15 +104,22 @@ describe('StipendioPiva', () => {
     expect(screen.queryByRole('button', { name: 'Va bene' })).not.toBeInTheDocument();
   });
 
+  it('P9: sopra lo stipendio mostra 0 € e la frase, mai un numero negativo', () => {
+    apri({ stipendio: 800, riga: { rimasto: 0, cuscinetto: 300, mesiCoperti: 0.4, frase: 'Hai già speso 120 € più dello stipendio di questo mese.' } });
+    expect(screen.getByText('Te ne restano 0 €')).toBeInTheDocument();
+    expect(screen.getByText('Hai già speso 120 € più dello stipendio di questo mese.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/-\d/);
+  });
+
   it('il Perché dello stipendio spiega stipendio e cuscinetto', () => {
-    apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 1200, mesiCoperti: 1.5 } });
+    apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 1200, mesiCoperti: 1.5, frase: null } });
     fireEvent.click(screen.getByRole('button', { name: 'Perché? lo stipendio' }));
     expect(screen.getByText(/Lo stipendio è la cifra fissa che puoi spendere ogni mese, anche quando gli incassi arrivano a strappi/)).toBeInTheDocument();
     expect(screen.getByText(/«Copre 1,5 mesi» vuol dire che potresti pagare 1,5 stipendi anche senza incassare niente/)).toBeInTheDocument();
   });
 
   it('con lo stipendio si può cambiare', async () => {
-    const p = apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 0, mesiCoperti: 0 } });
+    const p = apri({ stipendio: 800, riga: { rimasto: 450, cuscinetto: 0, mesiCoperti: 0, frase: null } });
     fireEvent.click(screen.getByRole('button', { name: 'Cambia lo stipendio' }));
     fireEvent.change(screen.getByLabelText('Stipendio al mese (€)'), { target: { value: '700' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salva' }));

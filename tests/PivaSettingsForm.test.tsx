@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { PivaSettingsForm } from '@/app/piva/PivaSettingsForm';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 
 const categories = [
   { id: 'cat-fatt', nome: 'Compensi liberi professionali', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
@@ -48,6 +49,7 @@ describe('PivaSettingsForm', () => {
       aliquotaContributoIntegrativo: 4,
       minimaleContributivoAnnuo: 0,
       contributiVersatiAnnoPrecedente: 0,
+      categoriaDal: null,
     });
   });
 
@@ -127,5 +129,36 @@ describe('PivaSettingsForm', () => {
     fireEvent.click(screen.getByText('Annulla'));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  describe('P5: cambio di categoria, si riparte da oggi', () => {
+    const iniziale = (categoriaDal: string | null) => ({
+      dataApertura: null,
+      categoriaFatturatoId: 'cat-fatt',
+      coefficienteRedditivita: 78,
+      aliquotaSostitutivaOverride: null,
+      aliquotaContributoSoggettivo: 10,
+      aliquotaContributoIntegrativo: 4,
+      minimaleContributivoAnnuo: 0,
+      contributiVersatiAnnoPrecedente: 0,
+      categoriaDal,
+    });
+    const salva = (categoriaDal: string | null, cambia: boolean) => {
+      cleanup();
+      const onSubmit = vi.fn();
+      render(<PivaSettingsForm categories={categories} initial={iniziale(categoriaDal)} submitLabel="Salva" onSubmit={onSubmit} />);
+      if (cambia) fireEvent.change(screen.getByLabelText('Categoria fatturato'), { target: { value: 'cat-regalo' } });
+      fireEvent.click(screen.getByText('Salva'));
+      return onSubmit.mock.calls[0][0];
+    };
+
+    it('categoria cambiata: categoriaDal è oggi', () => {
+      expect(salva(null, true).categoriaDal).toBe(oggiRomaISO());
+      expect(salva('2026-03-01', true).categoriaDal).toBe(oggiRomaISO());
+    });
+    it('categoria invariata: categoriaDal resta com era', () => {
+      expect(salva('2026-03-01', false).categoriaDal).toBe('2026-03-01');
+      expect(salva(null, false).categoriaDal).toBeNull();
+    });
   });
 });

@@ -116,6 +116,63 @@ describe('FattureInAttesa', () => {
     await waitFor(() => expect(props.onIncassata).toHaveBeenCalledWith('tx-nuova'));
   });
 
+  describe('P11: data d incasso non prima dell emissione', () => {
+    const apriPagataB = () => {
+      const r = apri();
+      apriElenco();
+      // b è emessa il 20 ottobre
+      fireEvent.click(within(screen.getAllByRole('listitem')[1]).getByRole('button', { name: 'Pagata' }));
+      return r;
+    };
+
+    it('una data prima dell emissione si rifiuta con un messaggio chiaro, senza scrivere', () => {
+      apriPagataB();
+      fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-10-19' } });
+      expect(screen.getByText(/La data dell'incasso non può essere prima di quella della fattura \(20 ottobre 2026\)\./)).toBeInTheDocument();
+      const conferma = screen.getByRole('button', { name: 'Segna incassata' });
+      expect(conferma).toBeDisabled();
+      fireEvent.click(conferma);
+      expect(incassaFattura).not.toHaveBeenCalled();
+    });
+
+    it('lo stesso giorno dell emissione va bene', async () => {
+      apriPagataB();
+      fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-10-20' } });
+      expect(screen.queryByText(/non può essere prima/)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
+      await waitFor(() => expect(incassaFattura).toHaveBeenCalled());
+    });
+
+    it('se il database rifiuta la data (vincolo) il messaggio è lo stesso', async () => {
+      vi.mocked(incassaFattura).mockRejectedValue({
+        message: 'new row for relation "piva_fatture" violates check constraint "piva_fatture_date_check"',
+      });
+      apriPagataB();
+      fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(/La data dell'incasso non può essere prima di quella della fattura/);
+    });
+
+    it('anche collegare un entrata: se il vincolo del database rifiuta, il messaggio è lo stesso', async () => {
+      const gemella = { id: 'tx-g', tipo: 'income', importo: 300, data: '2026-11-05', categoriaId: 'cat', accountId: 'a1' } as Transaction;
+      vi.mocked(collegaIncasso).mockRejectedValue({ message: 'violates check constraint "piva_fatture_date_check"' });
+      apri(tre, { incassi: [gemella] });
+      apriElenco();
+      fireEvent.click(within(screen.getAllByRole('listitem')[1]).getByRole('button', { name: 'Pagata' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Segna incassata' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Sì, è questo' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(/La data dell'incasso non può essere prima di quella della fattura/);
+    });
+
+    it('il cliente di ripiego resta Incasso in studio (la descrizione la fa la funzione del database)', async () => {
+      const { NuovaFattura } = await import('@/app/piva/NuovaFattura');
+      const onSalva = vi.fn().mockResolvedValue(undefined);
+      render(<NuovaFattura onSalva={onSalva} pagataAdessoIniziale conti={conti} contoIniziale="a1" oggi="2026-11-17" />);
+      fireEvent.change(screen.getByLabelText('Importo (€)'), { target: { value: '90' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
+      await waitFor(() => expect(onSalva).toHaveBeenCalledWith(expect.objectContaining({ cliente: 'Incasso in studio' })));
+    });
+  });
+
   it('Pagata non si ripete mentre è in corso', () => {
     let finisci: (v: string) => void = () => {};
     vi.mocked(incassaFattura).mockReturnValue(new Promise<string>((r) => (finisci = r)));

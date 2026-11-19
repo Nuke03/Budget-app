@@ -17,6 +17,8 @@ export interface RigaStipendio {
   rimasto: number;
   cuscinetto: number;
   mesiCoperti: number;
+  // Se le spese hanno superato lo stipendio: la frase con l'eccedenza (la stessa della Home).
+  frase: string | null;
 }
 
 export interface SalvaStipendio {
@@ -147,6 +149,7 @@ export function StipendioPiva({
           {riga ? (
             <p className="num mt-1 text-[15px] text-ink-2">Te ne restano {euroInFrase(Math.max(0, riga.rimasto))}</p>
           ) : null}
+          {riga?.frase ? <p className="mt-1 text-[15px] text-ink-2">{riga.frase}</p> : null}
         </div>
         {riga ? (
           <div className="flex flex-col border-t border-rule pt-3">

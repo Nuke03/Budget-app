@@ -25,6 +25,14 @@ import type { PivaFattura, Transaction } from '@/lib/types';
 
 type Foglio = { id: string; modo: 'pagata' | 'modifica' | 'azioni' };
 
+const MESSAGGIO_DATA = (emissione: string) =>
+  `La data dell'incasso non può essere prima di quella della fattura (${formatDataLunga(emissione)}).`;
+
+// Il vincolo del database (piva_fatture_date_check) dice la stessa cosa del controllo nel foglio.
+function eErroreData(e: unknown): boolean {
+  return String((e as { message?: unknown } | null)?.message ?? '').includes('piva_fatture_date_check');
+}
+
 const INCASSATE_VISIBILI = 3;
 
 // Chi ti deve soldi: le fatture non ancora pagate, dalla più vecchia. "Pagata" le trasforma in incasso.
@@ -77,14 +85,15 @@ export function FattureInAttesa({
   function apriPagata(f: PivaFattura) {
     setErrore(null);
     setChiedeGemella(false);
-    setData(oggi);
+    // Una fattura con la data di emissione ancora davanti non si incassa prima.
+    setData(oggi < f.dataEmissione ? f.dataEmissione : oggi);
     setConto(contoIniziale ?? conti[0]?.id ?? '');
     setFoglio({ id: f.id, modo: 'pagata' });
   }
 
   // "Segna incassata": se un'entrata uguale c'è già, prima si chiede; altrimenti si incassa.
   function conferma(f: PivaFattura) {
-    if (inCorso || !data || !conto) return;
+    if (inCorso || !data || !conto || data < f.dataEmissione) return;
     if (entrataGemella(f, incassi, fatture, categoriaId)) {
       setChiedeGemella(true);
       return;
@@ -99,8 +108,8 @@ export function FattureInAttesa({
     setErrore(null);
     try {
       await collegaIncasso(createClient(), f.id, gemella.id, gemella.data);
-    } catch {
-      setErrore('Non è riuscito. Riprova.');
+    } catch (e) {
+      setErrore(eErroreData(e) ? MESSAGGIO_DATA(f.dataEmissione) : 'Non è riuscito. Riprova.');
       setInCorso(false);
       return;
     }
@@ -114,14 +123,14 @@ export function FattureInAttesa({
   }
 
   async function incassa(f: PivaFattura) {
-    if (inCorso || !data || !conto) return;
+    if (inCorso || !data || !conto || data < f.dataEmissione) return;
     setInCorso(true);
     setErrore(null);
     let transazione: string;
     try {
       transazione = await incassaFattura(createClient(), f.id, { data, accountId: conto, categoriaId });
-    } catch {
-      setErrore('Non è riuscito. Riprova.');
+    } catch (e) {
+      setErrore(eErroreData(e) ? MESSAGGIO_DATA(f.dataEmissione) : 'Non è riuscito. Riprova.');
       setInCorso(false);
       return;
     }
@@ -272,7 +281,7 @@ export function FattureInAttesa({
               <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={CLASSE_CAMPO} />
             </Campo>
             <SelezioneConto etichetta="Conto" conti={conti} valore={conto} onChange={setConto} />
-            <ErroreMovimento testo={errore} />
+            <ErroreMovimento testo={data && data < aperta.dataEmissione ? MESSAGGIO_DATA(aperta.dataEmissione) : errore} />
             {gemella ? (
               <>
                 <p className="num text-[15px]">
@@ -289,7 +298,7 @@ export function FattureInAttesa({
               <button
                 type="button"
                 onClick={() => conferma(aperta)}
-                disabled={inCorso || !data || !conto}
+                disabled={inCorso || !data || !conto || data < aperta.dataEmissione}
                 className={CLASSE_PRIMARIO}
               >
                 Segna incassata
