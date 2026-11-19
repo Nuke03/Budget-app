@@ -186,6 +186,15 @@ describe('casaHomeDati', () => {
     expect(r.quotaDal).toBe('2026-12-01');
   });
 
+  it('vista semplice: ingresso alle 23:30 di Roma l ultimo del mese vale per il mese di Roma', () => {
+    // 30 novembre 23:30 a Roma = 22:30 UTC: stesso mese; 31 ottobre 23:30 Roma = 22:30 UTC, mese di ottobre
+    const tardi = membro('tardi', 'Tardi', '2026-11-30T22:30:00Z');
+    expect(casaHomeDati(dati({ righe: {} }, [tardi, fabio]), 'tardi', '2026-11-30').vistaSemplice.quotaDal).toBe('2026-12-01');
+    // 30 nov 23:30 UTC = 1 dic 00:30 Roma: entra a dicembre, quota da gennaio
+    const oltre = membro('oltre', 'Oltre', '2026-11-30T23:30:00Z');
+    expect(casaHomeDati(dati({ righe: {} }, [oltre, fabio]), 'oltre', '2026-12-01').vistaSemplice.quotaDal).toBe('2027-01-01');
+  });
+
   it('vista semplice: la prima quota del membro vince sul primo piano futuro', () => {
     const dic = piano([voce({})]);
     dic.plan.validoDal = '2026-12-01';

@@ -4,6 +4,7 @@ import { riferimentoControllo } from '../casa/controlloSaldo';
 import { speseMensiliDelMese } from '../casa/checkin';
 import { anteprimaDaParte, statoVociDaParte, ultimaScadenza } from '../casa/fondi';
 import { computeReminders, statoPromemoria, type AzionePromemoria } from '../casa/promemoria';
+import { meseRomaISO } from '../casa/oggi';
 import { pianoDelMese, pianoInVigore } from '../casa/versamenti';
 import { chiGestisce } from './gestore';
 
@@ -73,9 +74,11 @@ function quotaDalDiMembro(dati: CasaData, meUserId: string, mese: string): strin
   const piano = conMiaQuota ?? futuri[0];
   if (piano) return `${piano.plan.validoDal.slice(0, 7)}-01`;
   const joinedAt = dati.casa.members.find((m) => m.userId === meUserId)?.joinedAt;
-  if (joinedAt && `${joinedAt.slice(0, 7)}-01` >= mese) {
-    const anno = Number(joinedAt.slice(0, 4));
-    const m = Number(joinedAt.slice(5, 7));
+  // Il mese d'ingresso si legge all'ora di Roma, non in UTC.
+  const meseIngresso = joinedAt ? meseRomaISO(new Date(joinedAt)) : null;
+  if (meseIngresso && meseIngresso >= mese) {
+    const anno = Number(meseIngresso.slice(0, 4));
+    const m = Number(meseIngresso.slice(5, 7));
     return m === 12 ? `${anno + 1}-01-01` : `${anno}-${String(m + 1).padStart(2, '0')}-01`;
   }
   return null;

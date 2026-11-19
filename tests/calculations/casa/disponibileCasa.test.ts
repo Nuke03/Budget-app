@@ -169,6 +169,18 @@ describe('C8: una sola regola per le spese collegate a un fondo', () => {
     expect(computeDaPagareMese({ voci: [voce], spese: [spesaG('altro')], mese, obiettiviApertiIds: [] })).toBe(750);
   });
 
+  it('spesa collegata a un obiettivo aperto non riduce quanto resta da pagare nella categoria', () => {
+    const voci = [
+      { categoriaId: 'ut', importoMensile: 100, frequenzaMesi: 1 },
+      { categoriaId: 'ut', importoMensile: 50, frequenzaMesi: 1, goalId: 'G' },
+    ];
+    const spese = [{ tipo: 'expense' as const, importo: 80, data: '2026-11-03', categoriaId: 'ut', goalId: 'G' }];
+    const senza = computeDaPagareMese({ voci, spese: [], mese, obiettiviApertiIds: ['G'] });
+    const con = computeDaPagareMese({ voci, spese, mese, obiettiviApertiIds: ['G'] });
+    expect(senza).toBe(100);
+    expect(con).toBe(100);
+  });
+
   it('il disponibile e il check-in contano la stessa spesa allo stesso modo', () => {
     const piano = { items: [{ ...voce, id: 'v1' }] } as never;
     const t = { ...spesaG('g1'), id: 't1', origine: null } as never;

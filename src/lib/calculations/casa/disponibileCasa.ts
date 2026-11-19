@@ -32,7 +32,11 @@ export function computeDaPagareMese(input: {
   // Le voci legate a un obiettivo aperto sono già contate tra i soldi messi da parte;
   // quelle legate a un obiettivo chiuso o scaduto restano da pagare.
   const aperti = new Set(input.obiettiviApertiIds);
+  // Stessa regola del check-in, con una differenza voluta: qui le voci legate a un obiettivo aperto
+  // non sono nel previsto (sono già in B), quindi nemmeno le spese collegate a quell'obiettivo
+  // si tolgono dal previsto delle altre voci della categoria. Nel check-in il previsto le include tutte.
   const obiettiviMensili = obiettiviDelleVociMensili(input.voci);
+  for (const id of aperti) obiettiviMensili.delete(id);
   // Più voci nella stessa categoria condividono la stessa spesa: si sottrae una volta sola.
   const previstoPerCategoria = new Map<string, number>();
   for (const v of input.voci) {
