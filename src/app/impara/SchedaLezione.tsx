@@ -19,7 +19,11 @@ export function SchedaLezione({ lezione, numeri }: { lezione: Lezione; numeri: s
     if (!lezione.prova) return;
     const href = lezione.prova.href;
     avvia(async () => {
-      await lezioneFatta(lezione.id);
+      try {
+        await lezioneFatta(lezione.id);
+      } catch {
+        // segnare il fatto è una comodità: si va avanti lo stesso
+      }
       router.push(href);
     });
   }

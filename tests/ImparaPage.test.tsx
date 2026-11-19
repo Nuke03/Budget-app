@@ -76,7 +76,7 @@ describe('pagina Impara', () => {
     loadPercorsoData.mockResolvedValue(dati());
     const { unmount } = render(await ImparaPage());
     expect(screen.queryByRole('link', { name: /Primi passi/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Lista d.attesa/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Lista d.attesa/ })).toHaveAttribute('href', '/impara/attesa');
     unmount();
     loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: true } }));
     render(await ImparaPage());

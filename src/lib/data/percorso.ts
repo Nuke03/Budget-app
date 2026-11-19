@@ -164,7 +164,7 @@ export async function leggiListaAttesa(supabase: SupabaseClient): Promise<VoceAt
 }
 
 // Giorni di calendario in UTC: nessun salto per l'ora legale.
-function piuGiorni(giorno: string, n: number): string {
+export function piuGiorni(giorno: string, n: number): string {
   const d = new Date(`${giorno}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);

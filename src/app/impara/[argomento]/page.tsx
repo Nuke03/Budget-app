@@ -13,7 +13,7 @@ export default async function LezionePage({ params }: { params: Promise<{ argome
   if (!LEZIONI.some((l) => l.id === argomento)) notFound();
   const l = lezione(argomento as ArgomentoId);
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, () => loadPercorsoData(supabase));
+  const { dati } = await conUtente(supabase, (id) => loadPercorsoData(supabase, new Date(), id));
   return (
     <>
       <CoverHeader titolo="Impara" />

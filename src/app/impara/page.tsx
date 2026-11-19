@@ -10,7 +10,7 @@ const linkClasse = 'flex min-h-[44px] items-center gap-3 px-4 py-3 text-base tex
 
 export default async function ImparaPage() {
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, () => loadPercorsoData(supabase));
+  const { dati } = await conUtente(supabase, (id) => loadPercorsoData(supabase, new Date(), id));
   return (
     <>
       <CoverHeader titolo="Impara" />
@@ -25,7 +25,7 @@ export default async function ImparaPage() {
             </li>
           ) : null}
           <li>
-            <Link href="/impara/lista-attesa" className={linkClasse}>
+            <Link href="/impara/attesa" className={linkClasse}>
               <span className="flex-1 font-semibold">Lista d&apos;attesa</span>
               <ChevronRight size={18} className="shrink-0 text-ink-2" />
             </Link>
