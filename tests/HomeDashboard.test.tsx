@@ -4,6 +4,10 @@ import type { ReactElement } from 'react';
 import { HomeDashboard as HomeBase } from '@/app/HomeDashboard';
 
 const replace = vi.hoisted(() => vi.fn());
+vi.mock('@/app/impara/primi-passi/actions', () => ({
+  nascondiPrimiPassi: vi.fn(async () => {}),
+  proponiLezione: vi.fn(async () => {}),
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace }),
 }));
@@ -13,6 +17,7 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ rpc }),
 }));
 
+import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { CasaStato } from '@/lib/loadCasaStato';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
@@ -456,6 +461,31 @@ describe('il libretto', () => {
     expect(screen.queryByRole('link', { name: 'Leggi la lezione' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Perché?' }));
     expect(screen.getByRole('link', { name: 'Leggi la lezione' })).toHaveAttribute('href', '/impara/dove-vanno');
+  });
+
+  it('con primi passi visibili non c è il consiglio', () => {
+    const primiPassi: PrimiPassi = {
+      passi: [
+        { id: 'conti', fatto: true },
+        { id: 'entrate', fatto: false },
+      ],
+      fatti: 1,
+      totale: 2,
+      prossimo: 'entrate',
+      visibile: true,
+    };
+    render(<HomeDashboard {...base} primiPassi={primiPassi} lezioneDelGiorno="imprevisti" />);
+    expect(screen.getByText('1 di 2')).toBeInTheDocument();
+    expect(screen.queryByText('Segna la prima spesa.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Da sapere/)).not.toBeInTheDocument();
+  });
+
+  it('senza primi passi e con lezione del giorno c è Da sapere', () => {
+    const primiPassi = { passi: [], fatti: 0, totale: 0, prossimo: null, visibile: false };
+    render(<HomeDashboard {...base} primiPassi={primiPassi} lezioneDelGiorno="imprevisti" />);
+    expect(screen.getByText('Segna la prima spesa.')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Da sapere/ });
+    expect(link).toHaveAttribute('href', '/impara/imprevisti');
   });
 
   it('il registro vuoto dice che è vuoto, senza prossimo non c è la card', () => {

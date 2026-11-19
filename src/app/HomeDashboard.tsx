@@ -8,12 +8,16 @@ import { CoverHeader } from './CoverHeader';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { AndamentoCard } from './home/AndamentoCard';
 import { ConsiglioCard } from './home/ConsiglioCard';
+import { DaSapere } from './home/DaSapere';
+import { PrimiPassiCard } from './home/PrimiPassiCard';
 import { DettaglioDisponibile } from './home/DettaglioDisponibile';
 import { Registro } from './home/Registro';
 import { SchedaNotifiche } from './home/SchedaNotifiche';
 import { dividiCifra, giornoEMese } from './home/formati';
 import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
+import type { ArgomentoId } from '@/lib/percorso/tipi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
@@ -54,6 +58,8 @@ export function HomeDashboard({
   prossimo,
   notificheAttive = null,
   chiavePubblica = null,
+  primiPassi = null,
+  lezioneDelGiorno = null,
 }: {
   disponibileLibero: number;
   margineGiornaliero: number;
@@ -72,6 +78,8 @@ export function HomeDashboard({
   prossimo: Prossimo | null;
   notificheAttive?: boolean | null;
   chiavePubblica?: string | null;
+  primiPassi?: PrimiPassi | null;
+  lezioneDelGiorno?: ArgomentoId | null;
 }) {
   const router = useRouter();
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -190,7 +198,14 @@ export function HomeDashboard({
           </Link>
         ) : null}
 
-        <ConsiglioCard consiglio={consiglio} />
+        {primiPassi?.visibile ? (
+          <PrimiPassiCard primiPassi={primiPassi} />
+        ) : (
+          <>
+            <ConsiglioCard consiglio={consiglio} />
+            {lezioneDelGiorno ? <DaSapere id={lezioneDelGiorno} /> : null}
+          </>
+        )}
 
         <SchedaNotifiche chiavePubblica={chiavePubblica} notificheAttive={notificheAttive} />
       </main>

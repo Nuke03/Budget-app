@@ -41,6 +41,11 @@ export default function GoalsPage() {
     refresh().catch(fail);
   }, [fail]);
 
+  // /goals?nuovo=1 (dai primi passi) apre subito il modulo del nuovo obiettivo.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('nuovo')) setCreando(true);
+  }, []);
+
   async function handleCreate(payload: GoalPayload) {
     const supabase = createClient();
     await createGoal(supabase, payload);

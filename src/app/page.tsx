@@ -27,6 +27,8 @@ export default async function HomePage() {
       consiglio={data.consiglio}
       prossimo={data.prossimo}
       notificheAttive={data.notificheAttive}
+      primiPassi={data.primiPassi}
+      lezioneDelGiorno={data.lezioneDelGiorno}
       chiavePubblica={chiaviVapid()?.pubblica ?? null}
       meUserId={user.id}
       oggi={oggiRomaISO()}

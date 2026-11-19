@@ -90,6 +90,36 @@ const contiPiva = [
   { id: 'tasse', user_id: 'A', household_id: null, nome: 'Tasse', saldo_attuale: 0, conta_in_disponibile: false, target_saldo: null },
 ];
 
+describe('loadHomeData: percorso', () => {
+  it('senza categorie chiama crea_categorie_iniziali una volta', async () => {
+    const db = createFakeDb({ accounts: [], budget_goals: [], transactions: [], categories: [] }, { userId: 'A', membri: {} });
+    db.registerRpc('crea_categorie_iniziali', () => ({ data: 0 }));
+    await loadHomeData(db.client, TODAY, 'A');
+    expect(db.rpcCalls.filter((c) => c.name === 'crea_categorie_iniziali')).toHaveLength(1);
+  });
+
+  it('con categorie non chiama crea_categorie_iniziali', async () => {
+    const db = createFakeDb(
+      {
+        accounts: [], budget_goals: [], transactions: [],
+        categories: [{ id: 'c1', user_id: 'A', household_id: null, nome: 'Spesa', icona: null, ruolo: null }],
+      },
+      { userId: 'A', membri: {} }
+    );
+    db.registerRpc('crea_categorie_iniziali', () => ({ data: 0 }));
+    await loadHomeData(db.client, TODAY, 'A');
+    expect(db.rpcCalls).toHaveLength(0);
+  });
+
+  it('senza conti i primi passi sono visibili e non c è lezione del giorno', async () => {
+    const db = createFakeDb({ accounts: [], budget_goals: [], transactions: [], categories: [] }, { userId: 'A', membri: {} });
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.primiPassi.visibile).toBe(true);
+    expect(d.primiPassi.fatti).toBe(0);
+    expect(d.lezioneDelGiorno).toBeNull();
+  });
+});
+
 describe('loadHomeData: P.IVA', () => {
   it('con P.IVA spenta: piva null e nessuna lettura di piva_accantonamenti', async () => {
     const db = createFakeDb(

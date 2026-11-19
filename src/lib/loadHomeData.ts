@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { format } from 'date-fns';
 import { getAccounts } from '@/lib/data/accounts';
 import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals } from '@/lib/data/goals';
@@ -30,6 +31,10 @@ import {
   type RigaLibretto,
   type Prossimo,
 } from '@/lib/calculations/supporto/home';
+import { creaCategorieIniziali, leggiPercorso } from '@/lib/data/percorso';
+import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/passi';
+import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
+import type { ArgomentoId, StatiLezioni } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { getAccantonamenti, getFatture, getScadenze } from '@/lib/data/piva';
@@ -96,6 +101,22 @@ export interface HomeData {
   inPari: { dal: string; al: string } | null;
   // null: non ha ancora risposto (o non si legge).
   notificheAttive: boolean | null;
+  primiPassi: PrimiPassi;
+  // La lezione da proporre oggi sotto il consiglio; null quando i primi passi sono visibili o non c'è nulla.
+  lezioneDelGiorno: ArgomentoId | null;
+}
+
+// Senza categorie (primo accesso) si creano quelle di partenza, una sola volta, poi si rilegge.
+// Se la creazione non riesce la home si apre lo stesso, senza categorie.
+async function categorieConPartenza(supabase: SupabaseClient): Promise<Category[]> {
+  const categorie = await getCategories(supabase);
+  if (categorie.length > 0) return categorie;
+  try {
+    await creaCategorieIniziali(supabase);
+    return await getCategories(supabase);
+  } catch {
+    return categorie;
+  }
 }
 
 // Primo giorno del mese di 3 mesi fa (YYYY-MM-DD), da un giorno YYYY-MM-DD.
@@ -209,9 +230,9 @@ export async function loadHomeData(
   const oggi = oggiRomaISO(today);
   // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
   const pivaSettings = getPivaSettings(supabase).catch(() => null);
-  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta] = await Promise.all([
+  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, percorso, pivaImpostazioni] = await Promise.all([
     getAccounts(supabase),
-    getCategories(supabase),
+    categorieConPartenza(supabase),
     obiettivi,
     // Quanto di ogni obiettivo è già stato speso (transazioni esplicitamente
     // collegate): va sottratto da quanto resta riservato, altrimenti quei soldi
@@ -226,6 +247,9 @@ export async function loadHomeData(
     // L'ultima riga scritta da te in qualunque spazio (anche Casa): conta per "in pari".
     ultimaCreazioneUtente(supabase, userId),
     pivaOpzionale(supabase, pivaSettings, today),
+    // Il percorso non deve rompere la home: se non si legge, i primi passi partono da zero.
+    leggiPercorso(supabase).catch(() => ({ utente: null, lezioni: {} as StatiLezioni })),
+    pivaSettings,
   ]);
   const piva = pivaLetta?.piva ?? null;
   // Con la P.IVA guidata il conto tasse non conta mai nel disponibile, qualunque sia il suo interruttore:
@@ -325,6 +349,25 @@ export async function loadHomeData(
       : [],
   });
 
+  const primiPassi = statoPrimiPassi({
+    conti: accounts,
+    goals: goalsWithAccantonato,
+    percorso: percorso.utente,
+    pivaGuidata: !!pivaImpostazioni?.guidataDal,
+    oggi,
+  });
+  const lezioneOggi = lezioneDelGiorno({
+    oggi,
+    transazioni,
+    categorie: categories,
+    goals: goalsWithAccantonato,
+    lezioni: percorso.lezioni,
+    percorso: percorso.utente,
+    disponibileReale,
+    ultimaEntrataIl: ultimaEntrata ? format(ultimaEntrata, 'yyyy-MM-dd') : null,
+    primiPassiVisibili: primiPassi.visibile,
+  });
+
   return {
     disponibileLibero,
     disponibileReale,
@@ -348,5 +391,7 @@ export async function loadHomeData(
     prossimo,
     inPari,
     notificheAttive: scelte.notificheAttive,
+    primiPassi,
+    lezioneDelGiorno: lezioneOggi,
   };
 }
