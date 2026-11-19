@@ -3,9 +3,11 @@
 -- Nuove colonne: accounts.archiviato, categories.ruolo ('certa', 'svago'), budget_goals.ruolo ('imprevisti').
 -- Un solo obiettivo 'imprevisti' aperto e personale per utente (indice unico parziale).
 -- Nuove tabelle: percorso_utente, percorso_lezioni, percorso_avvisi, lista_attesa (RLS: solo le proprie righe).
--- Due funzioni, entrambe security invoker (la RLS resta il giudice, tocca solo le righe di chi la lancia):
---   crea_categorie_iniziali (le 11 categorie di partenza, solo se non ne hai già) e
---   ricomincia_da_zero (cancella i dati personali; la Casa non si tocca mai).
+-- Due funzioni:
+--   crea_categorie_iniziali (security invoker: le 11 categorie di partenza, solo se non ne hai già) e
+--   ricomincia_da_zero (security definer, come record_transfer: authenticated non può cancellare da transfers
+--   e deve vedere TUTTE le righe della Casa per sapere cosa è referenziato. Ogni istruzione è filtrata
+--   da user_id = auth.uid(); cancella solo dati personali, la Casa non si tocca mai).
 -- Idempotente: if not exists, create or replace, drop policy if exists, revoke/grant.
 -- Rollback: in fondo al file.
 begin;
@@ -132,11 +134,11 @@ end $$;
 -- =====================================================================
 
 create or replace function public.ricomincia_da_zero()
-returns void language plpgsql security invoker set search_path = public as $$
+returns void language plpgsql security definer set search_path = public as $$
 declare
   v_me uuid := auth.uid();
 begin
-  if v_me is null then raise exception 'utente non valido'; end if;
+  if v_me is null then raise exception 'non autenticato'; end if;
 
   -- 1. il percorso
   delete from public.percorso_avvisi where user_id = v_me;
@@ -196,7 +198,7 @@ end $$;
 
 revoke execute on function public.crea_categorie_iniziali() from public, anon, authenticated;
 grant execute on function public.crea_categorie_iniziali() to authenticated;
-revoke execute on function public.ricomincia_da_zero() from public, anon, authenticated;
+revoke all on function public.ricomincia_da_zero() from public, anon;
 grant execute on function public.ricomincia_da_zero() to authenticated;
 
 commit;

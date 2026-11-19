@@ -15,7 +15,7 @@ declare
   b constant uuid := 'bbbbbbbb-0000-0000-0000-0000000000b1';
   h uuid;
   conto_a uuid; conto_a_vuoto uuid; conto_casa uuid; conto_b uuid;
-  cat_a uuid; cat_b uuid; goal_a uuid; tx_b uuid;
+  cat_a uuid; cat_b uuid; cat_casa uuid; goal_a uuid; tx_b uuid; tx_b_casa uuid;
   oggi date := (now() at time zone 'Europe/Rome')::date;
   mese date := date_trunc('month', now() at time zone 'Europe/Rome')::date;
   cred_a0 numeric; deb_a0 numeric; arr_a0 numeric; cred_b0 numeric; deb_b0 numeric; arr_b0 numeric;
@@ -49,6 +49,12 @@ begin
     values (a, 'expense', 20, oggi, conto_a, 'Carta A', h, a);
   insert into public.transactions (user_id, tipo, importo, data, account_id, descrizione, household_id)
     values (a, 'expense', 30, oggi, conto_casa, 'Spesa comune', h);
+  -- B (ancora membro) ha una spesa della casa su una categoria della casa
+  insert into public.categories (user_id, nome, tipo, household_id) values (b, 'Bollette casa', 'expense', h) returning id into cat_casa;
+  insert into public.transactions (user_id, tipo, importo, data, categoria_id, account_id, descrizione, household_id)
+    values (b, 'expense', 25, oggi, cat_casa, conto_casa, 'Bolletta B', h) returning id into tx_b_casa;
+  -- A ha uno spostamento personale fra due conti personali (percorso del delete su transfers)
+  assert (select count(*) from public.transfers where user_id = a and household_id is null) = 1, 'preparazione: spostamento personale mancante';
 
   -- Prima: numeri della casa e saldi dei conti della casa
   cred_a0 := public._casa_credito_aperto(h, a); deb_a0 := public._casa_debiti_aperti(h, a); arr_a0 := public._casa_arretrati(h, a);
@@ -110,6 +116,9 @@ begin
   assert (select n from zz_b_prima where k = 'cat') = (select count(*) from public.categories where user_id = b), 'categorie di B cambiate';
   assert (select n from zz_b_prima where k = 'tx') = (select count(*) from public.transactions where user_id = b and household_id is null), 'movimenti di B cambiati';
   assert exists (select 1 from public.transactions where id = tx_b), 'il movimento di B è sparito';
+  assert exists (select 1 from public.transactions where id = tx_b_casa and categoria_id = cat_casa and account_id = conto_casa and household_id = h),
+    'la spesa di casa di B è stata toccata';
+  assert exists (select 1 from public.categories where id = cat_casa and household_id = h and not archiviata), 'la categoria della casa è stata toccata';
 
   -- le categorie iniziali: 11 per A
   select count(*) into n from public.categories where user_id = a and household_id is null and not archiviata;

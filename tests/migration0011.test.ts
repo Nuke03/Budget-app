@@ -47,10 +47,22 @@ describe('migrazione 0011 (statica)', () => {
     }
   });
 
-  it('ricomincia_da_zero è security invoker', () => {
+  it('ricomincia_da_zero è security definer, con guardia su auth.uid() e grant', () => {
     const c = corpo(codice, 'ricomincia_da_zero');
-    expect(c).toContain('security invoker');
+    expect(c).toContain('security definer');
     expect(c).toContain('set search_path = public');
+    expect(c).toContain('v_me uuid := auth.uid()');
+    expect(c).toMatch(/if v_me is null then raise exception 'non autenticato'/);
+    expect(codice).toMatch(/revoke all on function public\.ricomincia_da_zero\(\) from public, anon;/);
+    expect(codice).toMatch(/grant execute on function public\.ricomincia_da_zero\(\) to authenticated;/);
+  });
+
+  it('ogni delete e update di ricomincia_da_zero è filtrato da v_me', () => {
+    const c = corpo(codice, 'ricomincia_da_zero');
+    const dele = c.match(/delete from public\.[^;]*;/g) ?? [];
+    expect(dele.length).toBeGreaterThanOrEqual(9);
+    for (const d of dele) expect(d).toContain('v_me');
+    for (const u of c.match(/update public\.[^;]*;/g) ?? []) expect(u).toContain('v_me');
   });
 
   it('ricomincia_da_zero non cancella mai righe con household_id', () => {
