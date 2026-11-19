@@ -271,7 +271,7 @@ Debito chiuso: l'aggiunta di un movimento è atomica. La funzione `crea_moviment
 - "Primi passi": conti, entrate, P.IVA, una settimana di spese, spese certe, fondo imprevisti, un obiettivo;
 - avviso quando una spesa porta il disponibile sotto zero, con la domanda sul fondo imprevisti;
 - una lezione proposta dopo il salvataggio giusto;
-- lista d'attesa di 30 giorni per gli acquisti non urgenti;
+- lista d'attesa di 7 giorni per gli acquisti non urgenti;
 - "Ricomincia da zero" in Altro, con conferma scritta;
 - scelta "Tipo" (Normale, Spesa certa, Svago e acquisti) nella modifica di una categoria di spesa;
 - "Perché?" nel check-in della casa, verso la lezione sulla coppia;
