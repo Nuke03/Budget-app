@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { utenteOLogin } from '@/lib/utenteOLogin';
 import { loadPercorsoData } from '@/lib/loadPercorsoData';
-import { closeGoal, createGoal, getOpenGoals, reopenGoal, updateGoalPiano } from '@/lib/data/goals';
+import { closeGoal, createGoal, getGoalPersonale, getOpenGoals, reopenGoal, updateGoalPiano } from '@/lib/data/goals';
 import { avvisoGiaDato, collegaAObiettivo, rispostaAvviso, segnaProposta } from '@/lib/data/percorso';
 import { valutaAvvisoFondi, type AvvisoFondi } from '@/lib/calculations/percorso/avviso';
 import { lezioneDopoSalvataggio } from '@/lib/calculations/percorso/regole';
@@ -47,12 +47,10 @@ export async function valutaDopoSalvataggio(transactionId: string): Promise<Dopo
       if (avviso) {
         // Prima si ricorda che l'avviso è scattato: non si ripete per la stessa spesa.
         await rispostaAvviso(supabase, transactionId, 'visto');
-        return {
-          tipo: 'avviso',
-          avviso,
-          transactionId,
-          lezione: goalFondo ? 'prima-da-parte' : 'imprevisti',
-        };
+        const lezioneAvviso: ArgomentoId = goalFondo ? 'prima-da-parte' : 'imprevisti';
+        // La lezione dell'avviso conta come lezione del giorno: non se ne propone un'altra sopra.
+        await segnaProposta(supabase, lezioneAvviso, d.oggi);
+        return { tipo: 'avviso', avviso, transactionId, lezione: lezioneAvviso };
       }
     }
 
@@ -108,12 +106,23 @@ export async function rispondiAvviso(
     // Una spesa già collegata a un altro obiettivo non si sposta.
     if (riga.goal_id !== null && riga.goal_id !== goalId) throw new Error('Spesa già collegata');
     const fondo = (await getOpenGoals(supabase)).find((g) => g.id === goalId);
-    if (!fondo || fondo.ruolo !== 'imprevisti') throw new Error('Obiettivo non valido');
-    // Già collegata a questo fondo: il fondo è già stato sistemato, non si rifà.
-    if (riga.goal_id === null) {
-      const spesa = Number(riga.importo);
-      if (!Number.isFinite(spesa) || spesa <= 0) throw new Error('Spesa non valida');
-      esito = await usaFondoImprevisti(supabase, user.id, transactionId, fondo, spesa);
+    if (fondo) {
+      if (fondo.ruolo !== 'imprevisti') throw new Error('Obiettivo non valido');
+      // Già collegata a questo fondo: il fondo è già stato sistemato, non si rifà.
+      if (riga.goal_id === null) {
+        const spesa = Number(riga.importo);
+        if (!Number.isFinite(spesa) || spesa <= 0) throw new Error('Spesa non valida');
+        esito = await usaFondoImprevisti(supabase, user.id, transactionId, fondo, spesa);
+      }
+    } else {
+      // Un "ricomincia" andato a metà: la spesa è già collegata al vecchio fondo, che è già chiuso.
+      // Il nuovo tentativo non rifà niente e scrive solo la risposta. Il fondo deve essere
+      // un cuscinetto imprevisti chiuso di chi risponde.
+      if (riga.goal_id !== goalId) throw new Error('Obiettivo non valido');
+      const chiuso = await getGoalPersonale(supabase, goalId as string, user.id);
+      if (!chiuso || chiuso.ruolo !== 'imprevisti' || chiuso.stato !== 'chiuso') {
+        throw new Error('Obiettivo non valido');
+      }
     }
   }
   await rispostaAvviso(supabase, transactionId, risposta);

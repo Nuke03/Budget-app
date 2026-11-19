@@ -41,7 +41,7 @@ describe('lista d attesa', () => {
     expect(screen.getByRole('button', { name: 'Non più' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Lo voglio ancora' }));
     await waitFor(() => expect(azioni.decidiVoce).toHaveBeenCalledWith('a1', 'voluto'));
-    expect(push).toHaveBeenCalledWith('/goals');
+    expect(push).toHaveBeenCalledWith('/goals?nuovo=1&nome=Cuffie&importo=89.9');
     fireEvent.click(screen.getByRole('button', { name: 'Non più' }));
     await waitFor(() => expect(azioni.decidiVoce).toHaveBeenCalledWith('a1', 'non_piu'));
     assertNessunaParolaVietata(container);

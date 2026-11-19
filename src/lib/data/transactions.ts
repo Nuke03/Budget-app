@@ -178,6 +178,13 @@ export async function deleteTransaction(supabase: SupabaseClient, id: string): P
   return (data as { id: string }[] | null)?.length ?? 0;
 }
 
+// Una riga sola: c'è almeno un movimento personale (di qualunque data)?
+export async function haMovimentiPersonali(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await applyScope(supabase.from('transactions').select('id'), PERSONALE).limit(1);
+  if (error) throw error;
+  return (data as unknown[]).length > 0;
+}
+
 export async function getLastIncomeDate(
   supabase: SupabaseClient,
   scope: Scope = PERSONALE

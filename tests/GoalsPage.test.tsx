@@ -86,4 +86,29 @@ describe('Obiettivi: nuovo obiettivo', () => {
     const foglio = screen.getByRole('dialog', { name: 'Nuovo obiettivo' });
     expect(foglio).toContainElement(screen.getByLabelText('Nome'));
   });
+
+  it('con ?nuovo=1&nome=&importo= il modulo si apre già compilato', async () => {
+    window.history.pushState({}, '', '/goals?nuovo=1&nome=Cuffie&importo=89.9');
+    try {
+      render(<Pagina />);
+      const foglio = await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+      expect(foglio).toContainElement(screen.getByLabelText('Nome'));
+      expect(screen.getByLabelText('Nome')).toHaveValue('Cuffie');
+      expect(screen.getByLabelText(/Importo/)).toHaveValue(89.9);
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
+
+  it('con valori non validi il modulo si apre vuoto', async () => {
+    window.history.pushState({}, '', '/goals?nuovo=1&nome=&importo=-5');
+    try {
+      render(<Pagina />);
+      await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+      expect(screen.getByLabelText('Nome')).toHaveValue('');
+      expect(screen.getByLabelText(/Importo/)).toHaveValue(null);
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
 });

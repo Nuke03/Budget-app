@@ -46,6 +46,20 @@ export async function getOpenGoals(supabase: SupabaseClient, scope: Scope = PERS
   return (data as GoalRow[]).map(mapRow);
 }
 
+// Un obiettivo personale di questo utente per id, aperto o chiuso. null se non c'è o non è suo.
+export async function getGoalPersonale(
+  supabase: SupabaseClient,
+  id: string,
+  userId: string
+): Promise<BudgetGoal | null> {
+  const { data, error } = await applyScope(supabase.from('budget_goals').select(GOAL_COLUMNS), PERSONALE)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapRow(data as GoalRow) : null;
+}
+
 export async function createGoal(
   supabase: SupabaseClient,
   input: {

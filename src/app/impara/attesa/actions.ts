@@ -19,9 +19,12 @@ export async function aggiungiVoce(nome: string, importo: number): Promise<void>
   if (typeof importo !== 'number' || !Number.isFinite(importo) || importo <= 0 || importo >= 1e9) {
     throw new Error('Importo non valido');
   }
+  // Ai centesimi: un importo che fa 0 dopo l'arrotondamento non vale.
+  const centesimi = Math.round(importo * 100) / 100;
+  if (centesimi <= 0) throw new Error('Importo non valido');
   const supabase = await createClient();
   await utenteOLogin(supabase);
-  await aggiungiAttesa(supabase, pulito, importo, oggiRomaISO());
+  await aggiungiAttesa(supabase, pulito, centesimi, oggiRomaISO());
   aggiorna();
 }
 
@@ -30,6 +33,6 @@ export async function decidiVoce(id: string, stato: 'voluto' | 'non_piu'): Promi
   if (stato !== 'voluto' && stato !== 'non_piu') throw new Error('Scelta non valida');
   const supabase = await createClient();
   await utenteOLogin(supabase);
-  await decidiAttesa(supabase, id, stato);
+  await decidiAttesa(supabase, id, stato, oggiRomaISO());
   aggiorna();
 }

@@ -81,6 +81,26 @@ describe('AvvisoFondiFoglio', () => {
     ).toBeInTheDocument();
   });
 
+  it('più tipi toccati: il titolo li nomina tutti', () => {
+    const a = apri({ buco: 40, toccati: ['casa', 'tasse'], fondoImprevisti: null });
+    expect(screen.getByText('Questa spesa usa 40 € che servono per la quota della casa e le tasse.')).toBeInTheDocument();
+    assertNessunaParolaVietata(a.container);
+    a.unmount();
+    const b = apri({ buco: 40, toccati: ['casa', 'debiti', 'tasse'], fondoImprevisti: null });
+    expect(
+      screen.getByText(
+        'Questa spesa usa 40 € che servono per la quota della casa, restituire quello che devi in casa e le tasse.'
+      )
+    ).toBeInTheDocument();
+    assertNessunaParolaVietata(b.container);
+    b.unmount();
+    const c = apri({ buco: 40, toccati: ['obiettivi', 'tasse'], fondoImprevisti: null });
+    expect(
+      screen.getByText('Questa spesa usa 40 € che avevi messo da parte e che servono per le tasse.')
+    ).toBeInTheDocument();
+    assertNessunaParolaVietata(c.container);
+  });
+
   it('senza fondo: informazione e prossima entrata, nessuna domanda', () => {
     apri({ buco: 50, toccati: ['obiettivi'], fondoImprevisti: null }, 'imprevisti');
     expect(screen.queryByText('È un imprevisto vero?')).not.toBeInTheDocument();

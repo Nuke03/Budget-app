@@ -3,6 +3,7 @@ import {
   leggiPercorso,
   salvaPercorso,
   aggiungiAttesa,
+  decidiAttesa,
   collegaAObiettivo,
 } from '@/lib/data/percorso';
 import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
@@ -36,6 +37,22 @@ describe('aggiungiAttesa', () => {
     const [ins] = callsOf(calls[0], 'insert');
     expect((ins[0] as { rivedi_il: string }).rivedi_il).toBe('2026-11-26');
     expect(v.rivediIl).toBe('2026-11-26');
+  });
+});
+
+describe('decidiAttesa', () => {
+  it('aggiorna solo una voce ancora in attesa e già da rivedere', async () => {
+    const { client, calls } = createRecordingClient([{ id: 'a1' }]);
+    await decidiAttesa(client, 'a1', 'voluto', '2026-11-19');
+    expect(callsOf(calls[0], 'update')[0][0]).toEqual({ stato: 'voluto' });
+    expect(callsOf(calls[0], 'eq')).toEqual([['id', 'a1'], ['stato', 'in_attesa']]);
+    expect(callsOf(calls[0], 'lte')[0]).toEqual(['rivedi_il', '2026-11-19']);
+    expect(callsOf(calls[0], 'select')[0]).toEqual(['id']);
+  });
+
+  it('nessuna riga aggiornata: errore', async () => {
+    const { client } = createRecordingClient([]);
+    await expect(decidiAttesa(client, 'a1', 'non_piu', '2026-11-19')).rejects.toThrow('Voce non valida');
   });
 });
 

@@ -45,8 +45,8 @@ describe('divisioneMese', () => {
       tr({ id: 'f', importo: 500, tipo: 'income' }),
       tr({ id: 'g', importo: 40, goalId: 'g1', categoriaId: 'cibo' }),
     ];
-    const r = divisioneMese(t, categorie, [goal({ accantonato: 25 }), goal({ id: 'g2', accantonato: 15 })], '2026-11');
-    expect(r).toEqual({ certe: 150, altre: 90, daParte: 40 });
+    const r = divisioneMese(t, categorie, '2026-11');
+    expect(r).toEqual({ certe: 150, altre: 90 });
   });
 });
 

@@ -16,11 +16,19 @@ const PER_COSA: Record<Exclude<SoldiToccati, 'obiettivi'>, string> = {
   tasse: 'le tasse',
 };
 
+// "a, b e c": l'ultimo con la "e".
+function elenco(voci: string[]): string {
+  if (voci.length <= 1) return voci.join('');
+  return `${voci.slice(0, -1).join(', ')} e ${voci[voci.length - 1]}`;
+}
+
 function titolo(avviso: AvvisoFondi): string {
   const cifra = euroInFrase(avviso.buco);
-  const primo = avviso.toccati[0];
-  if (!primo || primo === 'obiettivi') return `Questa spesa usa ${cifra} che avevi messo da parte.`;
-  return `Questa spesa usa ${cifra} che servono per ${PER_COSA[primo]}.`;
+  const altri = avviso.toccati.filter((v): v is Exclude<SoldiToccati, 'obiettivi'> => v !== 'obiettivi');
+  const daParte = avviso.toccati.includes('obiettivi');
+  if (altri.length === 0) return `Questa spesa usa ${cifra} che avevi messo da parte.`;
+  const servono = `che servono per ${elenco(altri.map((v) => PER_COSA[v]))}`;
+  return `Questa spesa usa ${cifra} ${daParte ? `che avevi messo da parte e ${servono}` : servono}.`;
 }
 
 type Fase = 'domanda' | 'fondo' | 'normale';

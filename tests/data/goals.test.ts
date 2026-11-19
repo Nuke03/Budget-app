@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
+import { getGoalPersonale, getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
 import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
 
@@ -120,5 +120,20 @@ describe('ruolo obiettivo', () => {
     expect((callsOf(calls[0], 'insert')[0][0] as { ruolo: string }).ruolo).toBe('imprevisti');
     expect((callsOf(calls[0], 'select')[0][0] as string)).toContain('ruolo');
     expect(g.ruolo).toBe('imprevisti');
+  });
+});
+
+describe('getGoalPersonale', () => {
+  it('cerca per id, solo fra gli obiettivi personali dell utente, aperti o chiusi', async () => {
+    const { client, calls } = createRecordingClient([{ ...row, stato: 'chiuso', ruolo: 'imprevisti' }]);
+    const g = await getGoalPersonale(client, 'g1', 'u1');
+    expect(g).toMatchObject({ id: '1', stato: 'chiuso', ruolo: 'imprevisti' });
+    expect(callsOf(calls[0], 'is')[0]).toEqual(['household_id', null]);
+    expect(callsOf(calls[0], 'eq')).toEqual([['id', 'g1'], ['user_id', 'u1']]);
+  });
+
+  it('non trovato: null', async () => {
+    const { client } = createRecordingClient([]);
+    expect(await getGoalPersonale(client, 'g1', 'u1')).toBeNull();
   });
 });

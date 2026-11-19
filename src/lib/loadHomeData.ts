@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { getAccounts } from '@/lib/data/accounts';
 import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals } from '@/lib/data/goals';
-import { getLastIncomeDate, getTransactions } from '@/lib/data/transactions';
+import { getLastIncomeDate, getTransactions, haMovimentiPersonali } from '@/lib/data/transactions';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { PERSONALE } from '@/lib/data/scope';
 import { computeDisponibileLibero, riservatoObiettivi } from '@/lib/calculations/disponibile';
@@ -35,7 +35,7 @@ import {
 import { creaCategorieIniziali, leggiListaAttesa, leggiPercorso } from '@/lib/data/percorso';
 import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/passi';
 import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
-import type { ArgomentoId, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
+import type { ArgomentoId, PercorsoUtente, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { getAccantonamenti, getFatture, getScadenze } from '@/lib/data/piva';
@@ -116,11 +116,14 @@ export interface HomeData {
 }
 
 // Senza categorie (primo accesso) si creano quelle di partenza, una sola volta, poi si rilegge.
+// Chi ha già movimenti personali non è nuovo: le categorie le ha tolte lui, non si ricreano
+// (la funzione SQL applica la stessa regola, con un blocco contro le aperture doppie).
 // Se la creazione non riesce la home si apre lo stesso, senza categorie.
 async function categorieConPartenza(supabase: SupabaseClient): Promise<Category[]> {
   const categorie = await getCategories(supabase);
   if (categorie.length > 0) return categorie;
   try {
+    if (await haMovimentiPersonali(supabase)) return categorie;
     await creaCategorieIniziali(supabase);
     return await getCategories(supabase);
   } catch {
@@ -227,12 +230,30 @@ async function ultimaCreazioneUtente(supabase: SupabaseClient, userId: string | 
   }
 }
 
+// Le letture grezze della Home, per chi deve decidere sopra gli stessi dati (il percorso) senza
+// rileggerli. Restano sul server: non fanno parte di HomeData, che va al client.
+export interface GrezziHome {
+  percorso: { utente: PercorsoUtente | null; lezioni: StatiLezioni };
+  // Personali, ultimi 3 mesi.
+  transazioni: Transaction[];
+  ultimaEntrata: Date | null;
+  pivaSettings: PivaSettings | null;
+}
+
 // Tutto ciò che la home mostra: solo dati personali (scope di default).
 export async function loadHomeData(
   supabase: SupabaseClient,
   today: Date = new Date(),
   userId: string | null = null
 ): Promise<HomeData> {
+  return (await loadHomeBase(supabase, today, userId)).home;
+}
+
+export async function loadHomeBase(
+  supabase: SupabaseClient,
+  today: Date = new Date(),
+  userId: string | null = null
+): Promise<{ home: HomeData; grezzi: GrezziHome }> {
   // Tutto parte insieme; lo speso collegato agli obiettivi segue subito la lettura degli obiettivi
   // (una sola query per tutti), senza aspettare la parte di casa.
   const obiettivi = getOpenGoals(supabase);
@@ -381,7 +402,7 @@ export async function loadHomeData(
     primiPassiVisibili: primiPassi.visibile,
   });
 
-  return {
+  const home: HomeData = {
     disponibileLibero,
     disponibileReale,
     riservati,
@@ -406,5 +427,9 @@ export async function loadHomeData(
     notificheAttive: scelte.notificheAttive,
     primiPassi,
     lezioneDelGiorno: lezioneOggi,
+  };
+  return {
+    home,
+    grezzi: { percorso, transazioni, ultimaEntrata, pivaSettings: pivaImpostazioni },
   };
 }

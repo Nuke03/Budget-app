@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ruoloCategoria, eRata, meseStretto, puoProporre, lezioneDopoSalvataggio, lezioneDelGiorno,
+  meseStretto, puoProporre, lezioneDopoSalvataggio, lezioneDelGiorno,
   type DatiRegole,
 } from '@/lib/calculations/percorso/regole';
 import type { BudgetGoal, Category, Transaction } from '@/lib/types';
@@ -34,30 +34,6 @@ const dati = (over: Partial<DatiRegole> = {}): DatiRegole => ({
 });
 
 const giorniFa = (n: number): string => new Date(Date.parse(`${OGGI}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
-
-describe('ruoloCategoria', () => {
-  it('Auto e Assicurazione sono certe, Bar e ristoranti no, il ruolo salvato vince sul nome', () => {
-    expect(ruoloCategoria(cat('a', 'Auto'))).toBe('certa');
-    expect(ruoloCategoria(cat('b', 'Assicurazione'))).toBe('certa');
-    expect(ruoloCategoria(cat('c', 'Bar e ristoranti'))).toBeNull();
-    expect(ruoloCategoria(cat('d', 'Shopping'))).toBe('svago');
-    expect(ruoloCategoria(cat('e', 'Auto', 'svago'))).toBe('svago');
-    expect(ruoloCategoria(cat('f', 'Abbonamenti'))).toBe('certa');
-    expect(ruoloCategoria(cat('g', 'Rèvisione'))).toBe('certa');
-  });
-});
-
-describe('eRata', () => {
-  it('Klarna e "rata telefono" sono rate, "pirata" no', () => {
-    expect(eRata(tr({ descrizione: 'Klarna' }), [])).toBe(true);
-    expect(eRata(tr({ descrizione: 'Rata telefono' }), [])).toBe(true);
-    expect(eRata(tr({ descrizione: 'Cena pirata' }), [])).toBe(false);
-    expect(eRata(tr({ descrizione: 'Spesa' }), [])).toBe(false);
-  });
-  it('anche dal nome della categoria', () => {
-    expect(eRata(tr({ categoriaId: 'x' }), [cat('x', 'Finanziamento auto')])).toBe(true);
-  });
-});
 
 describe('meseStretto', () => {
   it('disponibile -1 è stretto; ultima entrata 31 giorni fa è stretto; 29 no', () => {

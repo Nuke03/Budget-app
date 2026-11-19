@@ -1,50 +1,31 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { format } from 'date-fns';
-import { loadHomeData, type HomeData } from '@/lib/loadHomeData';
-import { leggiPercorso } from '@/lib/data/percorso';
-import { getPivaSettings } from '@/lib/data/pivaSettings';
-import { getLastIncomeDate, getTransactions } from '@/lib/data/transactions';
-import { PERSONALE } from '@/lib/data/scope';
-import { inizioMesiFa } from '@/lib/pivaHome';
+import { loadHomeBase, type HomeData } from '@/lib/loadHomeData';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
-import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/passi';
-import type { StatiLezioni } from '@/lib/percorso/tipi';
-import type { Account, Transaction } from '@/lib/types';
+import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
+import type { Account } from '@/lib/types';
 import type { DatiRegole } from '@/lib/calculations/percorso/regole';
 
 // Tutto ciò che serve a decidere e a scrivere le lezioni: i dati della home più lo stato del percorso.
+// Le letture sono quelle della Home, una volta sola: nessuna lettura in più.
 export async function loadPercorsoData(
   supabase: SupabaseClient,
   today: Date = new Date(),
   userId: string | null = null
 ): Promise<DatiRegole & { primiPassi: PrimiPassi; conti: Account[]; riservati: HomeData['riservati'] }> {
-  const oggi = oggiRomaISO(today);
-  const [home, percorso, piva, transazioni, ultimaEntrata] = await Promise.all([
-    loadHomeData(supabase, today, userId),
-    leggiPercorso(supabase).catch(() => ({ utente: null, lezioni: {} as StatiLezioni })),
-    getPivaSettings(supabase).catch(() => null),
-    getTransactions(supabase, PERSONALE, { da: inizioMesiFa(oggi, 3) }).catch(() => [] as Transaction[]),
-    getLastIncomeDate(supabase).catch(() => null),
-  ]);
-  const primiPassi = statoPrimiPassi({
-    conti: home.accounts,
-    goals: home.goals,
-    percorso: percorso.utente,
-    pivaGuidata: !!piva?.guidataDal,
-    oggi,
-  });
+  const { home, grezzi } = await loadHomeBase(supabase, today, userId);
   return {
-    oggi,
-    transazioni,
+    oggi: oggiRomaISO(today),
+    transazioni: grezzi.transazioni,
     categorie: home.categories,
     goals: home.goals,
-    lezioni: percorso.lezioni,
-    percorso: percorso.utente,
+    lezioni: grezzi.percorso.lezioni,
+    percorso: grezzi.percorso.utente,
     disponibileReale: home.disponibileReale,
     disponibileLibero: home.disponibileLibero,
-    ultimaEntrataIl: ultimaEntrata ? format(ultimaEntrata, 'yyyy-MM-dd') : null,
-    primiPassiVisibili: primiPassi.visibile,
-    primiPassi,
+    ultimaEntrataIl: grezzi.ultimaEntrata ? format(grezzi.ultimaEntrata, 'yyyy-MM-dd') : null,
+    primiPassiVisibili: home.primiPassi.visibile,
+    primiPassi: home.primiPassi,
     // Per l'avviso sui fondi: i conti (con il conto tasse già fuori) e i soldi già promessi.
     conti: home.accounts,
     riservati: home.riservati,

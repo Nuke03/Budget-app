@@ -16,3 +16,5 @@ export const GIORNI_SETTIMANA = 7;
 export const MESI_MASSIMI_IMPREVISTI = 600;
 export const TRAGUARDO_IMPREVISTI = 200;
 export const QUOTA_IMPREVISTI = 20;
+// Due mesi di entrate che differiscono di almeno il 30%: il reddito è irregolare.
+export const SOGLIA_REDDITO_IRREGOLARE = 0.3;

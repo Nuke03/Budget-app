@@ -188,10 +188,19 @@ export async function aggiungiAttesa(
 export async function decidiAttesa(
   supabase: SupabaseClient,
   id: string,
-  stato: 'voluto' | 'non_piu'
+  stato: 'voluto' | 'non_piu',
+  oggi: string
 ): Promise<void> {
-  const { error } = await supabase.from('lista_attesa').update({ stato }).eq('id', id);
+  // Solo una voce ancora in attesa e già da rivedere: nessuna riga aggiornata vuol dire che non si può.
+  const { data, error } = await supabase
+    .from('lista_attesa')
+    .update({ stato })
+    .eq('id', id)
+    .eq('stato', 'in_attesa')
+    .lte('rivedi_il', oggi)
+    .select('id');
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Voce non valida');
 }
 
 // Solo goal_id: il resto del movimento non cambia. null scollega.

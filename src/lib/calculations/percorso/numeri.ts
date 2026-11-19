@@ -1,10 +1,11 @@
 // "Con i tuoi numeri": frasi pronte dai dati dell'utente.
 import type { ArgomentoId } from '@/lib/percorso/tipi';
-import type { BudgetGoal, Category, Transaction } from '@/lib/types';
+import type { Category, Transaction } from '@/lib/types';
 import { euroInFrase } from '@/lib/format';
 import { computeQuotaMensile } from '../accantonato';
 import { PICCOLA_SPESA } from './soglie';
-import { ruoloCategoria, type DatiRegole } from './regole';
+import type { DatiRegole } from './regole';
+import { ruoloCategoria } from './ruoli';
 
 export function piccoleSpese(t: Transaction[], mese: string): { numero: number; totale: number } {
   let numero = 0;
@@ -20,9 +21,8 @@ export function piccoleSpese(t: Transaction[], mese: string): { numero: number; 
 export function divisioneMese(
   t: Transaction[],
   categorie: Category[],
-  goals: (BudgetGoal & { accantonato: number })[],
   mese: string
-): { certe: number; altre: number; daParte: number } {
+): { certe: number; altre: number } {
   let certe = 0;
   let altre = 0;
   for (const x of t) {
@@ -31,8 +31,7 @@ export function divisioneMese(
     if (c && ruoloCategoria(c) === 'certa') certe += x.importo;
     else altre += x.importo;
   }
-  const daParte = goals.reduce((s, g) => s + g.accantonato, 0);
-  return { certe, altre, daParte };
+  return { certe, altre };
 }
 
 export function numeriLezione(id: ArgomentoId, d: DatiRegole): string | null {
@@ -44,7 +43,7 @@ export function numeriLezione(id: ArgomentoId, d: DatiRegole): string | null {
       return `Questo mese hai ${p.numero} spese sotto i ${PICCOLA_SPESA} €, in tutto ${euroInFrase(p.totale)}.`;
     }
     case 'bisogni-desideri': {
-      const v = divisioneMese(d.transazioni, d.categorie, d.goals, mese);
+      const v = divisioneMese(d.transazioni, d.categorie, mese);
       if (v.certe + v.altre === 0) return null;
       return `Questo mese ${euroInFrase(v.certe)} sono andati in spese certe e ${euroInFrase(v.altre)} in tutto il resto.`;
     }

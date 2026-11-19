@@ -6,6 +6,7 @@ const rispostaAvviso = vi.fn(async () => {});
 const segnaProposta = vi.fn(async () => {});
 const collegaAObiettivo = vi.fn(async () => {});
 const getOpenGoals = vi.fn();
+const getGoalPersonale = vi.fn();
 const closeGoal = vi.fn(async () => {});
 const createGoal = vi.fn(async () => ({}));
 const reopenGoal = vi.fn(async () => {});
@@ -27,6 +28,7 @@ vi.mock('@/lib/utenteOLogin', () => ({ utenteOLogin: () => utenteOLogin() }));
 vi.mock('@/lib/loadPercorsoData', () => ({ loadPercorsoData: (...a: unknown[]) => loadPercorsoData(...a) }));
 vi.mock('@/lib/data/goals', () => ({
   getOpenGoals: (...a: unknown[]) => getOpenGoals(...a),
+  getGoalPersonale: (...a: unknown[]) => getGoalPersonale(...a),
   closeGoal: (...a: unknown[]) => closeGoal(...(a as [])),
   createGoal: (...a: unknown[]) => createGoal(...(a as [])),
   reopenGoal: (...a: unknown[]) => reopenGoal(...(a as [])),
@@ -86,6 +88,23 @@ describe('valutaDopoSalvataggio', () => {
       lezione: 'prima-da-parte',
     });
     expect(rispostaAvviso).toHaveBeenCalledWith(expect.anything(), ID, 'visto');
+  });
+
+  it('l avviso conta come lezione del giorno: segnaProposta con la lezione dell avviso', async () => {
+    await valutaDopoSalvataggio(ID);
+    expect(segnaProposta).toHaveBeenCalledWith(expect.anything(), 'prima-da-parte', '2026-11-19');
+    expect(rispostaAvviso.mock.invocationCallOrder[0]).toBeLessThan(segnaProposta.mock.invocationCallOrder[0]);
+  });
+
+  it('senza fondo l avviso segna la lezione imprevisti', async () => {
+    loadPercorsoData.mockResolvedValue(dati({ goals: [] }));
+    await valutaDopoSalvataggio(ID);
+    expect(segnaProposta).toHaveBeenCalledWith(expect.anything(), 'imprevisti', '2026-11-19');
+  });
+
+  it('segnaProposta fallisce nel ramo avviso: null, come per ogni errore', async () => {
+    segnaProposta.mockRejectedValueOnce(new Error('rete'));
+    expect(await valutaDopoSalvataggio(ID)).toBeNull();
   });
 
   it('senza fondo imprevisti la lezione è imprevisti', async () => {
@@ -247,6 +266,45 @@ describe('rispondiAvviso: il fondo dopo il "Sì"', () => {
     expect(createGoal).not.toHaveBeenCalled();
     expect(collegaAObiettivo).not.toHaveBeenCalled();
     expect(rispostaAvviso).toHaveBeenCalledWith(expect.anything(), ID, 'imprevisto');
+  });
+});
+
+describe('rispondiAvviso: retry dopo un "ricomincia" a metà', () => {
+  const chiuso = { ...fondoVero(), stato: 'chiuso' };
+  beforeEach(() => {
+    // Il vecchio fondo è già chiuso e la spesa già collegata: non c è più fra gli aperti.
+    getOpenGoals.mockResolvedValue([]);
+    getGoalPersonale.mockResolvedValue(chiuso);
+    rigaCon({ importo: 300, goal_id: GOAL });
+  });
+
+  it('spesa già collegata a un fondo imprevisti chiuso: niente rifondazione, solo la risposta', async () => {
+    const r = await rispondiAvviso(ID, 'imprevisto', GOAL);
+    expect(getGoalPersonale).toHaveBeenCalledWith(expect.anything(), GOAL, 'u1');
+    expect(updateGoalPiano).not.toHaveBeenCalled();
+    expect(collegaAObiettivo).not.toHaveBeenCalled();
+    expect(closeGoal).not.toHaveBeenCalled();
+    expect(createGoal).not.toHaveBeenCalled();
+    expect(rispostaAvviso).toHaveBeenCalledWith(expect.anything(), ID, 'imprevisto');
+    expect(r).toEqual({ coperto: 0, resto: 0 });
+  });
+
+  it('il fondo chiuso non è un fondo imprevisti: lancia', async () => {
+    getGoalPersonale.mockResolvedValue({ ...chiuso, ruolo: null });
+    await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow('Obiettivo non valido');
+    expect(rispostaAvviso).not.toHaveBeenCalled();
+  });
+
+  it('il fondo non esiste o non è dell utente: lancia', async () => {
+    getGoalPersonale.mockResolvedValue(null);
+    await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow('Obiettivo non valido');
+    expect(rispostaAvviso).not.toHaveBeenCalled();
+  });
+
+  it('la spesa non è collegata a quel fondo: lancia senza nemmeno guardarlo', async () => {
+    rigaCon({ importo: 300, goal_id: null });
+    await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow('Obiettivo non valido');
+    expect(getGoalPersonale).not.toHaveBeenCalled();
   });
 });
 

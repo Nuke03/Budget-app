@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as transactions from '@/lib/data/transactions';
 import * as households from '@/lib/data/households';
 import * as casaStato from '@/lib/loadCasaStato';
-import { loadHomeData } from '@/lib/loadHomeData';
+import { loadHomeData, loadHomeBase } from '@/lib/loadHomeData';
 import { createFakeDb } from './helpers/fakeDb';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import { fineMese } from '@/lib/calculations/stipendio';
@@ -93,6 +93,41 @@ const contiPiva = [
 describe('loadHomeData: percorso', () => {
   it('senza categorie chiama crea_categorie_iniziali una volta', async () => {
     const db = createFakeDb({ accounts: [], budget_goals: [], transactions: [], categories: [] }, { userId: 'A', membri: {} });
+    db.registerRpc('crea_categorie_iniziali', () => ({ data: 0 }));
+    await loadHomeData(db.client, TODAY, 'A');
+    expect(db.rpcCalls.filter((c) => c.name === 'crea_categorie_iniziali')).toHaveLength(1);
+  });
+
+  it('senza categorie ma con movimenti personali non crea le categorie di partenza', async () => {
+    const db = createFakeDb(
+      {
+        accounts: [], budget_goals: [], categories: [],
+        // Anche un movimento vecchio, fuori dai 3 mesi della Home, vale.
+        transactions: [{
+          id: 't1', user_id: 'A', household_id: null, tipo: 'expense', importo: 12, data: '2025-01-10',
+          categoria_id: null, account_id: null, goal_id: null, descrizione: 'Pizza', nota: null,
+          created_at: '2025-01-10T10:00:00Z', stima: false,
+        }],
+      },
+      { userId: 'A', membri: {} }
+    );
+    db.registerRpc('crea_categorie_iniziali', () => ({ data: 0 }));
+    await loadHomeData(db.client, TODAY, 'A');
+    expect(db.rpcCalls).toHaveLength(0);
+  });
+
+  it('un movimento di casa non conta come movimento personale', async () => {
+    const db = createFakeDb(
+      {
+        accounts: [], budget_goals: [], categories: [],
+        transactions: [{
+          id: 't1', user_id: 'A', household_id: 'h1', tipo: 'expense', importo: 12, data: '2026-11-10',
+          categoria_id: null, account_id: null, goal_id: null, descrizione: 'Spesa', nota: null,
+          created_at: '2026-11-10T10:00:00Z', stima: false,
+        }],
+      },
+      { userId: 'A', membri: { h1: ['A'] } }
+    );
     db.registerRpc('crea_categorie_iniziali', () => ({ data: 0 }));
     await loadHomeData(db.client, TODAY, 'A');
     expect(db.rpcCalls.filter((c) => c.name === 'crea_categorie_iniziali')).toHaveLength(1);
@@ -370,5 +405,38 @@ describe('loadHomeData: stipendio', () => {
     // A = 1000 al netto del 13,7% = 860; B = 300: proposta 300, 40% sotto lo stipendio
     expect(d.prossimo?.tipo).toBe('piva');
     expect(d.prossimo?.testo).toContain('conviene abbassare lo stipendio a 300 €');
+  });
+});
+
+describe('loadHomeBase', () => {
+  const dbVuoto = () =>
+    createFakeDb(
+      {
+        accounts: [], budget_goals: [], categories: [], transactions: [{
+          id: 't1', user_id: 'A', household_id: null, tipo: 'income', importo: 100, data: '2026-11-10',
+          categoria_id: null, account_id: null, goal_id: null, descrizione: 'Stipendio', nota: null,
+          created_at: '2026-11-10T10:00:00Z', stima: false,
+        }],
+      },
+      { userId: 'A', membri: {} }
+    );
+
+  it('dà la home e le letture grezze; la home non porta le transazioni', async () => {
+    const db = dbVuoto();
+    const { home, grezzi } = await loadHomeBase(db.client, TODAY, 'A');
+    expect(grezzi.transazioni.map((t) => t.id)).toEqual(['t1']);
+    expect(grezzi.ultimaEntrata).not.toBeNull();
+    expect(grezzi.percorso.lezioni).toEqual({});
+    expect(grezzi.pivaSettings).toBeNull();
+    expect(home.storico).toHaveLength(1);
+    expect(Object.keys(home)).not.toContain('transazioni');
+    expect(Object.keys(home)).not.toContain('grezzi');
+  });
+
+  it('loadHomeData tiene la forma di sempre', async () => {
+    const d = await loadHomeData(dbVuoto().client, TODAY, 'A');
+    expect(Object.keys(d)).not.toContain('home');
+    expect(Object.keys(d)).not.toContain('grezzi');
+    expect(d.disponibileLibero).toBe(0);
   });
 });

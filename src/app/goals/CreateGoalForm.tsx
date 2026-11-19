@@ -40,7 +40,7 @@ export function CreateGoalForm({
   onSubmit: (payload: GoalPayload) => void;
 }) {
   const [nome, setNome] = useState(initial?.nome ?? '');
-  const [importoTarget, setImportoTarget] = useState(initial ? String(initial.importoTarget) : '');
+  const [importoTarget, setImportoTarget] = useState(initial && initial.importoTarget > 0 ? String(initial.importoTarget) : '');
   const [modalita, setModalita] = useState<GoalModalita>(initial?.modalita ?? 'bloccato');
   const [scadenza, setScadenza] = useState(initial?.scadenza ?? '');
   const [categoriaId, setCategoriaId] = useState<string | null>(initial?.categoriaId ?? null);

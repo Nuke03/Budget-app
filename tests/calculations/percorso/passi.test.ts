@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { settimanaFinita, statoPrimiPassi } from '@/lib/calculations/percorso/passi';
+import { riepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
 import type { Account, BudgetGoal } from '@/lib/types';
 import type { PercorsoUtente } from '@/lib/percorso/tipi';
 
@@ -101,7 +102,6 @@ describe('settimanaFinita', () => {
   });
 });
 
-import { riepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
 describe('riepilogoSettimana: finestra di 7 giorni', () => {
   it('chi torna al giorno 15 vede solo i primi 7 giorni', () => {
     const t = (id: string, data: string, importo: number) =>

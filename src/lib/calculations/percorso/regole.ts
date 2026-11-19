@@ -5,8 +5,10 @@ import { LEZIONI, lezione } from '@/lib/percorso/lezioni';
 import {
   PICCOLA_SPESA, PICCOLE_SPESE_MESE, SPESA_IMPREVISTO, SPESA_IMPULSO, ENTRATA_GRANDE,
   DISPONIBILE_BASSO, GIORNI_SENZA_ENTRATA, GIORNI_RIPROPOSTA, GIORNI_ANNUALE, GIORNI_PROPOSTA,
+  SOGLIA_REDDITO_IRREGOLARE,
 } from './soglie';
 import { piccoleSpese } from './numeri';
+import { eRata, ruoloCategoria } from './ruoli';
 
 export interface DatiRegole {
   oggi: string;
@@ -26,27 +28,6 @@ export interface DatiRegole {
 // Giorni tra due date 'YYYY-MM-DD', in UTC.
 function giorniTra(da: string, a: string): number {
   return (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${da}T00:00:00Z`)) / 86_400_000;
-}
-
-const normalizza = (s: string): string => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-
-const PAROLE_CERTE = ['auto', 'assicura', 'bollo', 'tari', 'abbonament', 'tagliando', 'revisione'];
-const PAROLE_SVAGO = ['svago', 'acquist', 'shopping', 'vestit', 'hobby', 'regal'];
-
-export function ruoloCategoria(c: Category): 'certa' | 'svago' | null {
-  if (c.ruolo) return c.ruolo;
-  const nome = normalizza(c.nome);
-  if (PAROLE_CERTE.some((p) => nome.includes(p))) return 'certa';
-  if (PAROLE_SVAGO.some((p) => nome.includes(p))) return 'svago';
-  return null;
-}
-
-// Confini di parola: "pirata" non è una rata.
-const RE_RATA = /\b(?:rata|rate|klarna|scalapay|paypal in 3|finanziament\w*)\b/;
-
-export function eRata(t: Transaction, categorie: Category[]): boolean {
-  const nomeCategoria = categorie.find((c) => c.id === t.categoriaId)?.nome ?? '';
-  return RE_RATA.test(normalizza(`${t.descrizione} ${nomeCategoria}`));
 }
 
 export function meseStretto(d: DatiRegole): boolean {
@@ -121,7 +102,7 @@ function redditoIrregolare(d: DatiRegole): boolean {
   const a = entrateDelMese(d.transazioni, meseIndietro(d.oggi, 1));
   const b = entrateDelMese(d.transazioni, meseIndietro(d.oggi, 2));
   const max = Math.max(a, b);
-  return max > 0 && Math.abs(a - b) / max >= 0.3;
+  return max > 0 && Math.abs(a - b) / max >= SOGLIA_REDDITO_IRREGOLARE;
 }
 
 export function lezioneDelGiorno(d: DatiRegole): ArgomentoId | null {

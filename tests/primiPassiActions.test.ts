@@ -30,7 +30,10 @@ import {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-11-19T10:00:00Z'));
-  for (const f of [createGoal, getOpenGoals, salvaPercorso, leggiPercorso, segnaProposta]) f.mockClear();
+  vi.resetAllMocks();
+  createGoal.mockResolvedValue({});
+  salvaPercorso.mockResolvedValue(undefined);
+  segnaProposta.mockResolvedValue(undefined);
   getOpenGoals.mockResolvedValue([]);
   leggiPercorso.mockResolvedValue({ utente: null, lezioni: {} });
 });

@@ -12,6 +12,7 @@ import { FoglioInferiore } from '../FoglioInferiore';
 import type { GoalWithQuotaMensile } from './GoalsList';
 import { ObiettiviVista } from './ObiettiviVista';
 import { CreateGoalForm, type GoalPayload } from './CreateGoalForm';
+import { leggiPrecompilato } from '@/lib/goalPrecompilato';
 import type { BudgetGoal, Category } from '@/lib/types';
 
 type GoalConSpeso = BudgetGoal & { specoCollegato: number };
@@ -25,6 +26,8 @@ export default function GoalsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [editingGoal, setEditingGoal] = useState<GoalWithQuotaMensile | null>(null);
   const [creando, setCreando] = useState(false);
+  // Nome e cifra che arrivano dall'indirizzo (la lista d'attesa): riempiono il modulo una volta sola.
+  const [precompilato, setPrecompilato] = useState<GoalPayload | null>(null);
 
   async function refresh() {
     const supabase = createClient();
@@ -41,15 +44,20 @@ export default function GoalsPage() {
     refresh().catch(fail);
   }, [fail]);
 
-  // /goals?nuovo=1 (dai primi passi) apre subito il modulo del nuovo obiettivo.
+  // /goals?nuovo=1 (dai primi passi) apre subito il modulo del nuovo obiettivo; con nome e importo
+  // validi (dalla lista d'attesa) il modulo parte già compilato.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('nuovo')) setCreando(true);
+    if (new URLSearchParams(window.location.search).has('nuovo')) {
+      setPrecompilato(leggiPrecompilato(window.location.search));
+      setCreando(true);
+    }
   }, []);
 
   async function handleCreate(payload: GoalPayload) {
     const supabase = createClient();
     await createGoal(supabase, payload);
     setCreando(false);
+    setPrecompilato(null);
     await refresh();
   }
 
@@ -97,14 +105,23 @@ export default function GoalsPage() {
       <ObiettiviVista
         goals={goalsConQuota}
         categories={categories}
-        onNuovo={() => setCreando(true)}
+        onNuovo={() => {
+          setPrecompilato(null);
+          setCreando(true);
+        }}
         onEdit={setEditingGoal}
         onClose={handleClose}
       />
 
       {creando && (
-        <FoglioInferiore titolo="Nuovo obiettivo" onClose={() => setCreando(false)}>
-          <CreateGoalForm categories={categories} onSubmit={handleCreate} />
+        <FoglioInferiore
+          titolo="Nuovo obiettivo"
+          onClose={() => {
+            setCreando(false);
+            setPrecompilato(null);
+          }}
+        >
+          <CreateGoalForm categories={categories} initial={precompilato} onSubmit={handleCreate} />
         </FoglioInferiore>
       )}
 

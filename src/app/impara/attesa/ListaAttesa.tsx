@@ -47,11 +47,14 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
     }
   }
 
-  async function decidi(id: string, stato: 'voluto' | 'non_piu') {
-    const ok = await esegui(() => decidiVoce(id, stato));
+  async function decidi(v: VoceAttesa, stato: 'voluto' | 'non_piu') {
+    const ok = await esegui(() => decidiVoce(v.id, stato));
     if (!ok) return;
-    if (stato === 'voluto') router.push('/goals');
-    else router.refresh();
+    // Il nuovo obiettivo si apre con nome e cifra già scritti.
+    if (stato === 'voluto') {
+      const params = new URLSearchParams({ nuovo: '1', nome: v.nome, importo: String(v.importo) });
+      router.push(`/goals?${params.toString()}`);
+    } else router.refresh();
   }
 
   return (
@@ -87,10 +90,10 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
                 <p className="text-sm text-ink-2">Ci ripensi il {giorno(v.rivediIl)}</p>
                 {scaduta ? (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <button type="button" disabled={occupato} className={PRIMARIO} onClick={() => decidi(v.id, 'voluto')}>
+                    <button type="button" disabled={occupato} className={PRIMARIO} onClick={() => decidi(v, 'voluto')}>
                       Lo voglio ancora
                     </button>
-                    <button type="button" disabled={occupato} className={SECONDARIO} onClick={() => decidi(v.id, 'non_piu')}>
+                    <button type="button" disabled={occupato} className={SECONDARIO} onClick={() => decidi(v, 'non_piu')}>
                       Non più
                     </button>
                   </div>
