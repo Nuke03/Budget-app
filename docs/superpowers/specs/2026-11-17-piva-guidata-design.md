@@ -206,7 +206,7 @@ Queste scelte sono mie, prese durante la verifica del documento. Fabio può corr
   - *Spese del mese:* le uscite del mese dai conti del disponibile, più i versamenti alla casa fatti nel mese, meno le spese collegate agli obiettivi (già riservate). I pagamenti dal conto tasse non contano, perché quel conto è fuori dal disponibile.
   - *Stipendio rimasto:* stipendio − spese del mese − `riservaVersamento`.
   - *Disponibile mostrato:* il minore tra `disponibileLibero` (già al netto di obiettivi, versamento, debiti e quota non spostata) e lo stipendio rimasto.
-  - *Cuscinetto:* `disponibileLibero` − stipendio rimasto, mai sotto zero. "Copre N mesi" = cuscinetto ÷ stipendio.
+  - *Cuscinetto:* `disponibileLibero` − stipendio rimasto, dove lo stipendio rimasto non scende mai sotto zero. Con le spese oltre lo stipendio il cuscinetto è uguale al disponibile e l'eccedenza si dice in una frase ("Hai già speso 120 € più dello stipendio di questo mese."), con "0 €" rimasti. "Copre N mesi" = cuscinetto ÷ stipendio.
   - *Margine giornaliero:* fino a fine mese, solo per chi ha lo stipendio. Per gli altri non cambia niente.
   - *Caricamento:* `loadHomeData` legge `piva_settings` per tutti. Le altre tabelle P.IVA le legge solo se la P.IVA è attiva.
 - **Proposta dello stipendio:**

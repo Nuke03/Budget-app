@@ -6,6 +6,8 @@ export interface Notifica {
   titolo: string;
   testo: string;
   url: string;
+  // Solo per 'scadenza': il segno di già avvisato delle scadenze raggruppate (l'ultima del gruppo).
+  marcatoreScadenza?: string;
 }
 
 export interface ScadenzaVicina {
@@ -96,6 +98,7 @@ export function decidiNotifica(p: StatoPersona, oggi: string): Notifica | null {
           ? `${sc.descrizione}: scade il ${giorno}. Controlla il vaso tasse.`
           : `${vicine.length} scadenze questa settimana, la prima il ${giorno}. Controlla il vaso tasse.`,
       url: '/piva',
+      marcatoreScadenza: marcatoreScadenze(vicine)!,
     };
   }
 

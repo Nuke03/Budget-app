@@ -181,7 +181,8 @@ export async function leggiStatiPersone(admin: SupabaseClient, oggi: string): Pr
       .eq('nascosta', false)
       .gte('data', oggi)
       .lte('data', fra7)
-      .order('data', { ascending: true });
+      .order('data', { ascending: true })
+      .order('id', { ascending: true });
     if (error) throw error;
     return (data ?? []) as RigaScadenza[];
   });

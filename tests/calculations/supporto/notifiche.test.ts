@@ -169,6 +169,7 @@ describe('decidiNotifica: scadenza P.IVA', () => {
       titolo: 'Budget',
       testo: 'F24 di novembre: scade il 18 novembre. Controlla il vaso tasse.',
       url: '/piva',
+      marcatoreScadenza: 'sc1',
     });
   });
   it('oltre 7 giorni o già passata: niente', () => {
@@ -198,6 +199,11 @@ describe('decidiNotifica: scadenza P.IVA', () => {
     expect(marcatoreScadenze(due)).toBe('sc2');
     expect(marcatoreScadenze([])).toBeNull();
     expect(decidiNotifica(st({ scadenze: due, ultimaScadenzaAvvisata: 'sc2' }), OGGI)).toBeNull();
+  });
+  it('P6: la notifica porta il marcatore delle sole scadenze raggruppate, non di quelle oltre i 7 giorni', () => {
+    const l = [scad('2026-11-13', 'sc1'), scad('2026-11-16', 'sc2'), scad('2026-11-30', 'lontana')];
+    const n = decidiNotifica(st({ scadenze: l }), OGGI);
+    expect(n?.marcatoreScadenza).toBe('sc2');
   });
   it('P6: una scadenza avvisata da sola e una nuova entrata nella settimana: si riavvisa il gruppo', () => {
     const due = [scad('2026-11-13', 'sc1'), scad('2026-11-16', 'sc2')];
