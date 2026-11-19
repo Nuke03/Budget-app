@@ -13,7 +13,7 @@ const HOST_UFFICIALI = [
   'inps.it', 'comitatoeducazionefinanziaria.gov.it', 'arbitrobancariofinanziario.it',
 ];
 
-const PRODOTTI = /(azioni|azionari[oa]?|obbligazion\w*|etf)/i;
+const PRODOTTI = /\b(azioni|azionari[oa]?|obbligazion\w*|etf)\b/i;
 
 const testo = (l: (typeof LEZIONI)[number]) =>
   [l.titolo, l.inBreve, l.esempio, l.prova?.etichetta ?? ''].join(' ');
