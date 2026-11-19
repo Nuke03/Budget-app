@@ -99,7 +99,7 @@ export const LEZIONI: Lezione[] = [
     inBreve:
       'Una rata è denaro di domani speso oggi, e occupa il tuo margine per tutti i mesi della rata. Anche "senza interessi" la rata pesa. Prima di firmare si chiede il TAEG (il costo totale all\'anno, spese comprese), il totale da restituire e se si può chiudere prima. Conta il totale, non la rata.',
     esempio:
-      'Esempio con cifre inventate: un finanziamento di 1.200 € in 12 rate da 110 € restituisce 1.320 €. Il costo è 120 €, circa il 10%.',
+      'Esempio con cifre inventate: un finanziamento di 1.200 € in 12 rate da 110 € restituisce 1.320 €. Il costo è 120 €. Il TAEG però è più alto del 10%, perché il debito scende ogni mese: per questo conviene chiederlo e non calcolarlo a mano.',
     prova: { etichetta: 'Registra la rata come impegno, così il libero la tiene già da parte', href: '/goals' },
     link: [
       { etichetta: "Guide della Banca d'Italia in parole semplici", url: 'https://www.bancaditalia.it/pubblicazioni/guide-bi/index.html' },
@@ -166,7 +166,7 @@ export const LEZIONI: Lezione[] = [
     id: 'pensione', numero: 15, fase: 'dopo',
     titolo: 'La pensione, per sapere',
     inBreve:
-      "In Italia la pensione dipende dai contributi versati negli anni. I contributi possono stare in più posti: controllarli una volta l'anno aiuta. Per sapere dove stanno i tuoi, ci si può rivolgere a chi ti segue per le tasse.",
+      "In Italia la pensione dipende dai contributi versati negli anni. I contributi possono stare in più posti: controllarli una volta l'anno aiuta. Per sapere dove stanno i tuoi, li vedi su MyINPS con SPID; per i dubbi, un patronato o chi ti segue per le tasse.",
     esempio:
       "Esempio: una volta l'anno, quindici minuti. Accedi con SPID, guardi che i contributi risultino, salvi una schermata.",
     prova: null,

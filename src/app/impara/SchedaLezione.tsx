@@ -39,7 +39,11 @@ export function SchedaLezione({
 
   function piuTardi() {
     avvia(async () => {
-      await rimandaLezione(lezione.id);
+      try {
+        await rimandaLezione(lezione.id);
+      } catch {
+        // rimandare è una comodità: si torna all'elenco lo stesso
+      }
       router.push('/impara');
     });
   }

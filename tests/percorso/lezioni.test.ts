@@ -107,3 +107,17 @@ describe('spese certe personali', () => {
     expect(new Set(SPESE_CERTE_PERSONALI.map((s) => s.chiave)).size).toBe(6);
   });
 });
+
+describe('correzioni di contenuto', () => {
+  it('la lezione sulle rate non dà il TAEG al 10%', () => {
+    const l = lezione('debiti-rate');
+    expect(l.esempio).not.toContain('circa il 10%');
+    expect(l.esempio).toContain('Il TAEG però è più alto del 10%');
+  });
+
+  it('la lezione sulla pensione manda a MyINPS con SPID', () => {
+    const l = lezione('pensione');
+    expect(l.inBreve).toContain('MyINPS con SPID');
+    expect(l.inBreve).toContain('un patronato');
+  });
+});

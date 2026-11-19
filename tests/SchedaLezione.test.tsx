@@ -54,6 +54,13 @@ describe('SchedaLezione', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith('/impara'));
   });
 
+  it('Più tardi che fallisce non blocca: si torna all elenco lo stesso', async () => {
+    rimandaLezione.mockRejectedValueOnce(new Error('rete'));
+    render(<SchedaLezione lezione={lezione('piano')} numeri={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Più tardi' }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/impara'));
+  });
+
   it('Prova chiama lezioneFatta prima di navigare', async () => {
     const l = lezione('piano');
     render(<SchedaLezione lezione={l} numeri={null} />);
