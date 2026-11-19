@@ -59,7 +59,8 @@ describe('lezioni', () => {
     for (const n of [14, 15]) {
       const l = LEZIONI[n - 1];
       expect(l.prova).toBeNull();
-      expect(testo(l)).not.toMatch(/ETF|fondo pensione [A-Z]|azion/);
+      expect(testo(l)).not.toMatch(/(azioni|azionari[oa]?|obbligazion\w*|etf)/i);
+      expect(testo(l)).not.toMatch(/fondo pensione [A-Z]/);
     }
   });
 
@@ -93,7 +94,7 @@ describe('lezioni', () => {
 
 describe('spese certe personali', () => {
   it('ha le sei voci di esempio con importi e frequenze', () => {
-    expect(SPESE_CERTE_PERSONALI.map((s) => [s.importoAnnuo, s.frequenzaMesi])).toEqual([
+    expect(SPESE_CERTE_PERSONALI.map((s) => [s.importoPerCiclo, s.frequenzaMesi])).toEqual([
       [480, 12], [150, 12], [250, 12], [400, 24], [60, 12], [300, 12],
     ]);
     expect(new Set(SPESE_CERTE_PERSONALI.map((s) => s.chiave)).size).toBe(6);

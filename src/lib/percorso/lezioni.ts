@@ -47,7 +47,7 @@ export const LEZIONI: Lezione[] = [
     id: 'imprevisti', numero: 4, fase: 'appena-entrano',
     titolo: 'Il cuscinetto per gli imprevisti',
     inBreve:
-      "Il cuscinetto serve per ciò che non si può prevedere. Per capire se una spesa è un'emergenza, tre domande: è imprevedibile? È necessaria, cioè non rimandabile? Non c'è un altro modo di pagarla? Se tutte e tre sono sì, tocca al cuscinetto. Un primo gradino piccolo conta più di un grande obiettivo lontano.",
+      "Il cuscinetto serve per ciò che non si può prevedere. Per capire se una spesa è un'emergenza, tre domande: è imprevedibile? È necessaria, cioè non rimandabile? Non c'è un altro modo di pagarla? Se tutte e tre sono sì, tocca al cuscinetto. Un primo gradino piccolo di solito pesa meno e si comincia prima di un grande obiettivo lontano.",
     esempio:
       'Esempio con cifre inventate: se le spese essenziali sono 700 € al mese, un primo gradino di 300 € copre circa due settimane. Con 50 € al mese ci arrivi in 6 mesi.',
     prova: { etichetta: 'Crea il cuscinetto con un primo traguardo piccolo', href: '/impara/primi-passi/imprevisti' },
@@ -67,7 +67,7 @@ export const LEZIONI: Lezione[] = [
     id: 'impulso', numero: 6, fase: 'appena-entrano',
     titolo: "Gli acquisti d'impulso",
     inBreve:
-      "Un acquisto d'impulso è deciso in pochi secondi e ripensato dopo. Un trucco semplice è scrivere la cosa in una lista invece di comprarla, e riguardarla dopo una settimana. Molti desideri passano; quelli che restano si comprano con più serenità. Il desiderio resta valido.",
+      "Un acquisto d'impulso è deciso in pochi secondi e ripensato dopo. Un trucco semplice è scrivere la cosa in una lista invece di comprarla, e riguardarla dopo una settimana. Spesso un desiderio passa; quelli che restano si comprano con più serenità. Il desiderio resta valido.",
     esempio:
       'Esempio con cifre inventate: cuffie da 60 € viste con 315 € liberi. Dopo 7 giorni le vuoi ancora? Il libero scende a 255 € e le compri. Se no, i 60 € restano tuoi.',
     prova: { etichetta: "Aggiungi una cosa che ti attira alla lista d'attesa", href: '/impara/attesa' },
@@ -87,7 +87,7 @@ export const LEZIONI: Lezione[] = [
     id: 'reddito-irregolare', numero: 8, fase: 'appena-entrano',
     titolo: 'Quando le entrate non sono sempre uguali',
     inBreve:
-      'Se un mese entra molto e un altro poco, è facile calibrare le spese sul mese buono. Un modo semplice: scegliere un reddito base prudente, vicino al mese più scarso, e vivere su quello. Nei mesi buoni, il di più va nel cuscinetto. Per le tasse e le scadenze di chi ha la P.IVA, la risposta giusta è quella della commercialista.',
+      'Se un mese entra molto e un altro poco, è facile calibrare le spese sul mese buono. Un modo semplice: scegliere un reddito base prudente, sotto la media e vicino ai mesi più scarsi, e vivere su quello. Nei mesi buoni, il di più va nel cuscinetto. Per le tasse e le scadenze di chi ha la P.IVA, la risposta giusta è quella di chi ti segue per le tasse.',
     esempio:
       'Esempio con cifre inventate: negli ultimi sei mesi entrano 1.400, 600, 2.200, 900, 1.800 e 1.100 €. Il minimo è 600 €. Un reddito base prudente può essere 900 €.',
     prova: { etichetta: 'Guarda le tue entrate e scegli un reddito base', href: '/impara/primi-passi/entrate' },
@@ -133,7 +133,7 @@ export const LEZIONI: Lezione[] = [
     id: 'assicurazioni', numero: 12, fase: 'dopo',
     titolo: 'Assicurazioni di base',
     inBreve:
-      "Un'assicurazione costa poco e con certezza, per non pagare tanto in un caso raro. La domanda utile è: se succedesse, potrei pagarlo da solo? L'assicurazione auto è obbligatoria; per la casa in affitto la polizza è facoltativa. Tre parole: massimale (il tetto del rimborso), franchigia (la parte che resta a te), esclusioni (ciò che non è coperto).",
+      "Un'assicurazione costa poco e con certezza, per non pagare tanto in un caso raro. La domanda utile è: se succedesse, potrei pagarlo da solo? L'assicurazione auto è obbligatoria per chi ha un'auto o una moto; per la casa in affitto la polizza è facoltativa. Tre parole: massimale (il tetto del rimborso), franchigia (la parte che resta a te), esclusioni (ciò che non è coperto).",
     esempio:
       "Esempio con cifre inventate: una polizza casa da 100 € l'anno sono circa 8 € al mese. Un danno ai mobili del vicino senza polizza potrebbe costare molto di più.",
     prova: { etichetta: "Aggiungi l'assicurazione alle tue spese certe", href: '/impara/primi-passi/spese-certe' },
@@ -145,7 +145,7 @@ export const LEZIONI: Lezione[] = [
     inBreve:
       "L'inflazione è un aumento dei prezzi in generale, che dura nel tempo. Con gli stessi euro, tra qualche anno si compra un po' meno. Non è un motivo per correre a investire: il cuscinetto serve a essere pronto, non a crescere.",
     esempio:
-      'Esempio con cifre inventate: un cuscinetto di 700 € con inflazione al 2% perde circa 14 € di potere d\'acquisto in un anno. Restare senza cuscinetto costerebbe molto di più.',
+      'Esempio con cifre inventate: un cuscinetto di 700 € con inflazione al 2% perde circa 14 € di potere d\'acquisto in un anno. Un guasto da 700 € pagato a rate costerebbe in più gli interessi.',
     prova: null,
     link: [{ etichetta: "L'economia per tutti (Banca d'Italia)", url: 'https://economiapertutti.bancaditalia.it/' }],
   },
@@ -166,9 +166,9 @@ export const LEZIONI: Lezione[] = [
     id: 'pensione', numero: 15, fase: 'dopo',
     titolo: 'La pensione, per sapere',
     inBreve:
-      "In Italia la pensione dipende dai contributi versati negli anni. Chi cambia lavoro o contratto può avere contributi in gestioni diverse, che non si sommano da sole. Controllare una volta all'anno la propria posizione costa pochi minuti e nessun euro. Per sapere quale gestione ti riguarda, ci si può rivolgere all'ente o alla commercialista.",
+      "In Italia la pensione dipende dai contributi versati negli anni. I contributi possono stare in più posti: controllarli una volta ogni tanto aiuta. Per sapere dove stanno i tuoi, ci si può rivolgere a chi ti segue per le tasse.",
     esempio:
-      "Esempio: una volta l'anno, quindici minuti. Accedi con SPID, guardi che i contributi risultino, salvi una schermata.",
+      "Esempio: una volta ogni tanto, quindici minuti. Accedi con SPID, guardi che i contributi risultino, salvi una schermata.",
     prova: null,
     link: [{ etichetta: 'INPS', url: 'https://www.inps.it' }],
   },
