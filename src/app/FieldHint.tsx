@@ -20,7 +20,7 @@ export function FieldHint({ testo }: { testo: string }) {
         <Info size={12} strokeWidth={2.5} />
       </button>
       {aperto && (
-        <span className="absolute left-0 top-5 z-10 w-56 rounded-[var(--radius-sm)] bg-foreground p-2.5 text-xs font-normal normal-case text-surface shadow-[var(--shadow-card)]">
+        <span className="absolute left-0 top-5 z-10 w-56 rounded-[var(--radius-sm)] bg-foreground p-2.5 text-xs font-normal normal-case text-surface">
           {testo}
         </span>
       )}

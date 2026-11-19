@@ -140,7 +140,7 @@ components:
   stamp:
     textColor: "{colors.stamp-red}"
     rounded: "{rounded.full}"
-    size: "64px"
+    size: "72px"
 ---
 
 # Design System: Budget — Il Libretto
@@ -153,7 +153,7 @@ The money is a savings passbook. A narrow blue cover band sits on top, white pag
 
 Density is low and glanceable, built for one thumb on an iPhone installed as a PWA: one column, about 28rem wide, cards on a quiet ground, hairlines instead of fills. Colour is flat. The system gets its identity from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp.
 
-This document describes the whole app as built: Home, the quick-add sheet, "In pari", the "Altro" notification block, the Casa section (home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia), Storico, Obiettivi, Conti, Categorie, P.IVA, the undo notice, the confirm sheet and the app icon. The login and password screens and the older tabbed add form still carry older styling; see Known drift.
+This document describes the whole app as built: Home, the quick-add sheet, "In pari", the "Altro" notification block, the Casa section (home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia), Storico, Obiettivi, Conti, Categorie, P.IVA, the undo notice, the confirm sheet and the app icon. The older tabbed add form still carries older styling; see Known drift.
 
 **Key Characteristics:**
 - Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.
@@ -173,7 +173,7 @@ A navy-and-paper palette with a single red used for one job.
 - **Cover Tint** (#e4eaf5): quiet buttons, the "Prossimo" card, empty bar tracks, the segmented control background. Dark: #1a2a4d (brand tint) and #1a2640 (muted surface).
 
 ### Secondary
-- **Stamp Red** (#c8102e): the round "REGISTRATO" stamp and the stamp ring of the app icon, nothing else. The icon use is sanctioned as a brand mark (hard-coded in `iconaApp.tsx`, since the icon renders outside the theme). In dark the in-app stamp lifts to #ff7a8c.
+- **Stamp Red** (#c8102e): the round "REGISTRATO" stamp (72px, 10px text) and the stamp ring of the app icon, nothing else. The icon use is sanctioned as a brand mark (hard-coded in `iconaApp.tsx`, since the icon renders outside the theme). In dark the in-app stamp lifts to #ff7a8c.
 
 ### Neutral
 - **Ground** (#eef2f8): the page background behind the cards. Dark: #0c1424.
@@ -204,7 +204,7 @@ Eight flat hues for user categories, used as chip borders and selected chip fill
 
 ### Hierarchy
 - **Figure** (serif 700, 56px, line-height 1): the "Disponibile libero" amount. Cents drop to 28px in the same face.
-- **Figure, secondary** (serif 700, 40px, line-height 1): the single big number of a Casa check-in step.
+- **Figure, secondary** (serif 700, 40px, line-height 1): the single big number of a Casa check-in step, and of a P.IVA card (the tax-account balance "vaso", the monthly pay, the quota prompt). Cents drop to 22px. "12.345,67 €" fits one line at 375px.
 - **Figure, entry** (serif 700, 3.75rem): the amount typed in the quick-add sheet; the euro sign beside it is serif 600, 1.875rem, soft ink.
 - **Title** (serif 600, 22px, tracking 0.02em): the cover band heading, "Il mio libretto".
 - **Section** (serif 600, 1.125rem): block headings such as "Promemoria", "Da fare", "Soldi della casa", "La nostra quota".
@@ -232,7 +232,7 @@ Touch targets are 44px minimum (chips, quiet links, tabs) and 48px for primary a
 
 ## Elevation & Depth
 
-Flat by default. Cards are separated from the ground by a 1px hairline border and the white-on-blue-grey step; `--shadow-card` is defined as `none`. Two soft shadows exist as tokens: `--shadow-hero` (0 4px 16px -4px rgb(15 23 42 / 0.08), used only on the logo tile of the login screens) and `--shadow-fab` (0 4px 16px -4px rgb(15 23 42 / 0.2), used on the quick-add save button). The + button is lifted by geometry, not shadow: it rises 20px above the bar and wears a 4px ring in the bar's own surface colour, as if punched through the page. The bottom sheet and the undo notice are flat too: the sheet is cut off by a 1px top rule over a flat 40% black scrim (no blur), the notice is a solid ink block.
+Flat by default. Cards are separated from the ground by a 1px hairline border and the white-on-blue-grey step; `--shadow-card` is defined as `none`. Two soft shadows exist as tokens: `--shadow-hero` (0 4px 16px -4px rgb(15 23 42 / 0.08), used only on the app icon logo of the login screens) and `--shadow-fab` (0 4px 16px -4px rgb(15 23 42 / 0.2), used on the quick-add save button). The + button is lifted by geometry, not shadow: it rises 20px above the bar and wears a 4px ring in the bar's own surface colour, as if punched through the page. The bottom sheet and the undo notice are flat too: the sheet is cut off by a 1px top rule over a flat 40% black scrim (no blur), the notice is a solid ink block.
 
 ### Named Rules
 **The Hairline Depth Rule.** Hierarchy comes from borders, tone and spacing. A shadow is allowed only on a control that must read as pressable above content, and stays soft and low-opacity.
@@ -339,8 +339,6 @@ Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, 1px hair
 
 Recorded so future work does not inherit these as rules:
 - Type-ramp advisories remain on large cent figures: the 28px cents beside the 56px figure and the 40px check-in figure sit off a strict ramp. The P.IVA headline (serif 3rem) is also off the ramp. Recorded as built, not as a ramp to extend.
-- The login, forgot-password and reset-password screens still wear a `shadow-[var(--shadow-hero)]` logo tile (a bold sans letter in a blue rounded square). It does not match the app icon; a defect the build carries, not a vocabulary for new surfaces.
 - The older tabbed variant inside `AddTransactionForm` still uses `text-muted`, `shadow-[var(--shadow-card)]` (resolves to none) and a sans `text-5xl` amount instead of the serif entry figure.
-- The `FieldHint` tooltip still references `--shadow-card` (resolves to none).
-- The stamp's 9px text is below the 11px label floor used elsewhere; it is a decorative mark, not a reading size.
+- The stamp's 10px text is just below the 11px label floor used elsewhere; it is a decorative mark, not a reading size.
 - Type sizes mix px and rem in the source; the values above record what the build uses.

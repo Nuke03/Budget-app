@@ -1,3 +1,4 @@
+import { IconaApp } from '@/lib/iconaApp';
 import { percorsoInternoSicuro } from '@/lib/percorsoSicuro';
 import { login } from './actions';
 import { SubmitButton } from './SubmitButton';
@@ -13,8 +14,8 @@ export default async function LoginPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
       <div className="flex flex-col items-center gap-2">
-        <span className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-lg)] bg-brand text-3xl font-bold text-brand-foreground shadow-[var(--shadow-hero)]">
-          €
+        <span aria-hidden="true" className="block h-16 w-16 overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-hero)]">
+          <IconaApp lato={64} margine={0.1} />
         </span>
         <h1 className="text-2xl font-bold">Bentornato</h1>
         <p className="text-sm text-muted">Accedi per vedere il tuo disponibile</p>

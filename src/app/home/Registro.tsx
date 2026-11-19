@@ -41,7 +41,7 @@ export function Registro({ righe, registratoId }: { righe: RigaLibretto[]; regis
                 <span className="flex min-w-0 items-center gap-2">
                   <PallinoCategoria colore={r.colore} />
                   <span className="min-w-0">
-                    <span className={`block truncate ${nuova ? 'pr-16' : ''}`}>{nomeRiga(r)}</span>
+                    <span className={`block truncate ${nuova ? 'pr-[4.5rem]' : ''}`}>{nomeRiga(r)}</span>
                     {r.stima ? <span className="block text-[11px] text-ink-2">stima</span> : null}
                   </span>
                 </span>
@@ -53,7 +53,7 @@ export function Registro({ righe, registratoId }: { righe: RigaLibretto[]; regis
                 {nuova ? (
                   <span
                     aria-hidden="true"
-                    className="timbro pointer-events-none absolute right-[11.25rem] top-1/2 -mt-8 flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-stamp text-center text-[9px] font-semibold leading-tight tracking-[0.02em] text-stamp"
+                    className="timbro pointer-events-none absolute right-[11.25rem] top-1/2 -mt-9 flex h-[72px] w-[72px] items-center justify-center rounded-full border-[3px] border-stamp text-center text-[10px] font-semibold leading-tight tracking-[0.02em] text-stamp"
                   >
                     <span>
                       REGISTRATO
