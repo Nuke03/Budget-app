@@ -12,7 +12,7 @@ vi.mock('@/lib/data/balanceChecks', async () => ({
 }));
 import { recordBalanceCheck } from '@/lib/data/balanceChecks';
 
-const conto = { id: 'ac-casa', nome: 'Conto comune', saldoAttuale: 1020, contaInDisponibile: true, targetSaldo: null };
+const conto = { id: 'ac-casa', nome: 'Conto comune', saldoAttuale: 1020, contaInDisponibile: true, targetSaldo: null, archiviato: false };
 
 function monta(conti = [conto], onFatto = vi.fn()) {
   const utente = render(<ControlloSaldo conti={conti} onFatto={onFatto} />);

@@ -25,7 +25,7 @@ vi.mock('@/lib/data/balanceChecks', async () => ({
 import { CheckinGiaFattoError, getCheckin, saveCheckin } from '@/lib/data/checkins';
 import { recordBalanceCheck } from '@/lib/data/balanceChecks';
 
-const conto = { id: 'ac', nome: 'Conto comune', saldoAttuale: 1000, contaInDisponibile: true, targetSaldo: null };
+const conto = { id: 'ac', nome: 'Conto comune', saldoAttuale: 1000, contaInDisponibile: true, targetSaldo: null, archiviato: false };
 
 // I numeri vengono sempre da computeCheckin, mai scritti a mano.
 interface Scenario {

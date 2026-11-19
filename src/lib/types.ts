@@ -10,6 +10,7 @@ export interface Account {
   contaInDisponibile: boolean;
   targetSaldo: number | null;
   createdAt?: string;
+  archiviato: boolean;
 }
 
 export interface Category {
@@ -18,6 +19,7 @@ export interface Category {
   tipo: CategoriaTipo;
   colore: string | null;
   archiviata: boolean;
+  ruolo: 'certa' | 'svago' | null;
 }
 
 export interface BudgetGoal {
@@ -32,6 +34,7 @@ export interface BudgetGoal {
   stato: GoalStato;
   createdAt: string;
   accantonaDa?: string | null;
+  ruolo?: 'imprevisti' | null;
 }
 
 export interface Transaction {

@@ -31,15 +31,15 @@ const giorniFa = (oggi: string, n: number): string => {
 };
 
 const conti: Account[] = [
-  { id: 'c1', nome: 'Conto principale', saldoAttuale: 1890.5, contaInDisponibile: true, targetSaldo: null },
-  { id: 'c2', nome: 'Risparmi', saldoAttuale: 650, contaInDisponibile: false, targetSaldo: null },
+  { id: 'c1', nome: 'Conto principale', saldoAttuale: 1890.5, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+  { id: 'c2', nome: 'Risparmi', saldoAttuale: 650, contaInDisponibile: false, targetSaldo: null, archiviato: false },
 ];
 
 const categorie: Category[] = [
-  { id: 'k1', nome: 'Spesa', tipo: 'expense', colore: null, archiviata: false },
-  { id: 'k2', nome: 'Ristoranti', tipo: 'expense', colore: null, archiviata: false },
-  { id: 'k3', nome: 'Trasporti', tipo: 'expense', colore: null, archiviata: false },
-  { id: 'k4', nome: 'Stipendio', tipo: 'income', colore: null, archiviata: false },
+  { id: 'k1', nome: 'Spesa', tipo: 'expense', colore: null, archiviata: false, ruolo: null },
+  { id: 'k2', nome: 'Ristoranti', tipo: 'expense', colore: null, archiviata: false, ruolo: null },
+  { id: 'k3', nome: 'Trasporti', tipo: 'expense', colore: null, archiviata: false, ruolo: null },
+  { id: 'k4', nome: 'Stipendio', tipo: 'income', colore: null, archiviata: false, ruolo: null },
 ];
 
 function righe(oggi: string): RigaLibretto[] {
@@ -241,7 +241,7 @@ export default async function AnteprimaPage({
     return (
       <>
         <Banner />
-        <ContiProva accounts={[...conti, { id: 'c3', nome: 'Carta prepagata', saldoAttuale: 120.3, contaInDisponibile: true, targetSaldo: 200 }]} />
+        <ContiProva accounts={[...conti, { id: 'c3', nome: 'Carta prepagata', saldoAttuale: 120.3, contaInDisponibile: true, targetSaldo: 200, archiviato: false }]} />
       </>
     );
   }

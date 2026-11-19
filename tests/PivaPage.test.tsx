@@ -41,12 +41,12 @@ import { getTransactions } from '@/lib/data/transactions';
 import { getAccantonamenti } from '@/lib/data/piva';
 
 const categories = [
-  { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false },
+  { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
 ];
 
 const conti = [
-  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
-  { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null },
+  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+  { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false },
 ];
 
 const guidata = {

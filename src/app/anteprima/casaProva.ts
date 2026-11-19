@@ -42,12 +42,12 @@ export function datiCasaProva(oggi: string, io: IoProva): CasaData {
   };
 
   const categorie: Category[] = [
-    { id: 'kp1', nome: 'Affitto', tipo: 'expense', colore: '#3B9AE1', archiviata: false },
-    { id: 'kp2', nome: 'Spesa', tipo: 'expense', colore: '#0F9D6B', archiviata: false },
-    { id: 'kp3', nome: 'Bollette', tipo: 'expense', colore: '#F5A524', archiviata: false },
-    { id: 'kp4', nome: 'Internet', tipo: 'expense', colore: '#F97362', archiviata: false },
+    { id: 'kp1', nome: 'Affitto', tipo: 'expense', colore: '#3B9AE1', archiviata: false, ruolo: null },
+    { id: 'kp2', nome: 'Spesa', tipo: 'expense', colore: '#0F9D6B', archiviata: false, ruolo: null },
+    { id: 'kp3', nome: 'Bollette', tipo: 'expense', colore: '#F5A524', archiviata: false, ruolo: null },
+    { id: 'kp4', nome: 'Internet', tipo: 'expense', colore: '#F97362', archiviata: false, ruolo: null },
   ];
-  const conti: Account[] = [{ id: 'cp1', nome: 'Conto comune', saldoAttuale: 2150, contaInDisponibile: true, targetSaldo: null }];
+  const conti: Account[] = [{ id: 'cp1', nome: 'Conto comune', saldoAttuale: 2150, contaInDisponibile: true, targetSaldo: null, archiviato: false }];
 
   const obiettivi: BudgetGoal[] = [
     {

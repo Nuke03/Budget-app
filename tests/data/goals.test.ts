@@ -33,6 +33,8 @@ describe('getOpenGoals', () => {
         frequenzaMesi: null,
         stato: 'aperto',
         createdAt: '2026-02-01T00:00:00Z',
+        accantonaDa: undefined,
+        ruolo: null,
       },
     ]);
   });
@@ -100,5 +102,23 @@ describe('closeGoal', () => {
   it('non lancia errori quando la scrittura va a buon fine', async () => {
     const supabase = fakeMutationClient(null);
     await expect(closeGoal(supabase, '1')).resolves.toBeUndefined();
+  });
+});
+
+describe('ruolo obiettivo', () => {
+  it('mappa ruolo, null se assente', async () => {
+    const result = await getOpenGoals(fakeSelectClient([{ ...row, ruolo: 'imprevisti' }, row]));
+    expect(result.map((g) => g.ruolo)).toEqual(['imprevisti', null]);
+  });
+
+  it('createGoal scrive ruolo e lo legge', async () => {
+    const { client, calls } = createRecordingClient([{ ...row, ruolo: 'imprevisti' }]);
+    const g = await createGoal(client, {
+      nome: 'Imprevisti', importoTarget: 200, modalita: 'bloccato', scadenza: null,
+      categoriaId: null, ricorrente: false, frequenzaMesi: null, ruolo: 'imprevisti',
+    });
+    expect((callsOf(calls[0], 'insert')[0][0] as { ruolo: string }).ruolo).toBe('imprevisti');
+    expect((callsOf(calls[0], 'select')[0][0] as string)).toContain('ruolo');
+    expect(g.ruolo).toBe('imprevisti');
   });
 });

@@ -17,6 +17,8 @@ const TABELLE_CON_RLS = new Set(['accounts', 'categories', 'budget_goals', 'tran
 
 function valore(row: Row, col: string): unknown {
   const v = row[col];
+  // default del database: un conto non è archiviato finché non si dice
+  if (v === undefined && col === 'archiviato') return false;
   return v === undefined ? null : v;
 }
 

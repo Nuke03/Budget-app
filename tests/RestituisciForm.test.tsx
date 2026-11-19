@@ -11,7 +11,7 @@ vi.mock('@/lib/data/transfers', async () => ({
 }));
 import { recordTransfer } from '@/lib/data/transfers';
 
-const conto = (id: string, nome: string) => ({ id, nome, saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null });
+const conto = (id: string, nome: string) => ({ id, nome, saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false });
 const debito: DebitoMembro = {
   debitoreId: 'u2',
   creditoreId: 'u1',

@@ -18,9 +18,9 @@ vi.mock('@/lib/supabase/client', () => ({
 const parametri = (n = 0) => rpc.mock.calls[n][1] as Record<string, unknown>;
 
 const personale = {
-  categories: [{ id: 'cp', nome: 'Personale cat', tipo: 'expense' as const, colore: null, archiviata: false }],
+  categories: [{ id: 'cp', nome: 'Personale cat', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null }],
   accounts: [
-    { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null },
+    { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false },
   ],
   goals: [],
 };
@@ -32,8 +32,8 @@ const casa: CasaAggiunta = {
     { userId: 'u1', nome: 'Fabio' },
     { userId: 'u2', nome: 'Anna' },
   ],
-  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null }],
-  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false }],
+  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false }],
+  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false, ruolo: null }],
   obiettivi: [],
 };
 
@@ -71,7 +71,7 @@ const contiDue = {
   ...personale,
   accounts: [
     ...personale.accounts,
-    { id: 'ap2', nome: 'Carta', saldoAttuale: 5, contaInDisponibile: true, targetSaldo: null },
+    { id: 'ap2', nome: 'Carta', saldoAttuale: 5, contaInDisponibile: true, targetSaldo: null, archiviato: false },
   ],
 };
 
@@ -164,7 +164,7 @@ describe('AddTransactionSheet', () => {
   });
 
   it('una entrata di casa aumenta il conto', async () => {
-    apri({ modoIniziale: 'casa', casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false }] } });
+    apri({ modoIniziale: 'casa', casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false, ruolo: null }] } });
     scegliEntrata();
     compila('40');
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
@@ -211,7 +211,7 @@ describe('AddTransactionSheet', () => {
       casa: null,
       personale: {
         ...personale,
-        categories: [...personale.categories, { id: 'ci', nome: 'Stipendio', tipo: 'income', colore: null, archiviata: false }],
+        categories: [...personale.categories, { id: 'ci', nome: 'Stipendio', tipo: 'income', colore: null, archiviata: false, ruolo: null }],
       },
     });
     scegliEntrata();
@@ -237,7 +237,7 @@ describe('AddTransactionSheet', () => {
     apri({
       modoIniziale: 'casa',
       contiPersonali: personale.accounts,
-      casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false }] },
+      casa: { ...casa, categorie: [...casa.categorie, { id: 'ci', nome: 'Altre entrate', tipo: 'income', colore: null, archiviata: false, ruolo: null }] },
     });
     scegliEntrata();
     fireEvent.click(pezzo('Conto comune'));
@@ -354,7 +354,7 @@ describe('AddTransactionSheet', () => {
       ...personale,
       categories: [
         ...personale.categories,
-        { id: 'cp2', nome: 'Caffè', tipo: 'expense' as const, colore: null, archiviata: false },
+        { id: 'cp2', nome: 'Caffè', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
       ],
     };
     const storico = [
@@ -482,13 +482,13 @@ describe('AddTransactionSheet', () => {
 describe('AddTransactionSheet: quota delle tasse', () => {
   const persPiva = {
     categories: [
-      { id: 'cp', nome: 'Spesa', tipo: 'expense' as const, colore: null, archiviata: false },
-      { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false },
-      { id: 'cat-altro', nome: 'Regali', tipo: 'income' as const, colore: null, archiviata: false },
+      { id: 'cp', nome: 'Spesa', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
+      { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
+      { id: 'cat-altro', nome: 'Regali', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
     ],
     accounts: [
-      { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null },
-      { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null },
+      { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+      { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false },
     ],
     goals: [],
   };

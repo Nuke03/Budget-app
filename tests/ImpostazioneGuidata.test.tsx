@@ -19,12 +19,12 @@ vi.mock('@/lib/data/categories', () => ({
 }));
 
 const conti: Account[] = [
-  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
-  { id: 'a2', nome: 'Risparmi', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null },
+  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+  { id: 'a2', nome: 'Risparmi', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false },
 ];
 const categorie: Category[] = [
-  { id: 'c1', nome: 'Fatture studio', tipo: 'income', colore: null, archiviata: false },
-  { id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false },
+  { id: 'c1', nome: 'Fatture studio', tipo: 'income', colore: null, archiviata: false, ruolo: null },
+  { id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false, ruolo: null },
 ];
 
 const dueAnniFa = format(subYears(new Date(), 2), 'yyyy-MM-dd');
@@ -66,11 +66,11 @@ function percorsoFinoAlRiepilogo(data = dueAnniFa) {
 beforeEach(() => {
   createAccount
     .mockReset()
-    .mockResolvedValue({ id: 'nuovo', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null });
+    .mockResolvedValue({ id: 'nuovo', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false });
   updateAccountDetails.mockReset().mockResolvedValue({});
   createCategory
     .mockReset()
-    .mockResolvedValue({ id: 'cnuova', nome: 'Fatture', tipo: 'income', colore: null, archiviata: false });
+    .mockResolvedValue({ id: 'cnuova', nome: 'Fatture', tipo: 'income', colore: null, archiviata: false, ruolo: null });
 });
 
 describe('ImpostazioneGuidata', () => {
@@ -156,7 +156,7 @@ describe('ImpostazioneGuidata', () => {
 
   it('senza categoria adatta crea "Fatture"', async () => {
     const onFatto = vi.fn().mockResolvedValue(undefined);
-    const senza: Category[] = [{ id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false }];
+    const senza: Category[] = [{ id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false, ruolo: null }];
     render(<ImpostazioneGuidata iniziale={null} conti={conti} categorie={senza} onFatto={onFatto} />);
     percorsoFinoAlRiepilogo();
     fireEvent.click(screen.getByRole('button', { name: 'Confermo' }));
@@ -250,7 +250,7 @@ describe('ImpostazioneGuidata', () => {
 
   it('onFatto fallisce una volta: il secondo Confermo non ricrea conto e categoria', async () => {
     const onFatto = vi.fn().mockRejectedValueOnce(new Error('rete')).mockResolvedValue(undefined);
-    const senza: Category[] = [{ id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false }];
+    const senza: Category[] = [{ id: 'c2', nome: 'Altro', tipo: 'income', colore: null, archiviata: false, ruolo: null }];
     render(<ImpostazioneGuidata iniziale={null} conti={[]} categorie={senza} onFatto={onFatto} />);
     percorsoFinoAlRiepilogo();
     fireEvent.click(screen.getByRole('button', { name: 'Confermo' }));

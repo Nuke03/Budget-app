@@ -10,7 +10,7 @@ vi.mock('@/lib/data/transfers', async () => ({
 }));
 import { recordTransfer } from '@/lib/data/transfers';
 
-const contiCasa = [{ id: 'c1', nome: 'Conto comune', saldoAttuale: 900, contaInDisponibile: true, targetSaldo: null }];
+const contiCasa = [{ id: 'c1', nome: 'Conto comune', saldoAttuale: 900, contaInDisponibile: true, targetSaldo: null, archiviato: false }];
 
 function monta(conti = contiCasa) {
   const onDone = vi.fn();

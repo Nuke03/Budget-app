@@ -3,8 +3,8 @@ import { aggregateByCategory } from '@/lib/calculations/aggregateByCategory';
 import type { Transaction, Category } from '@/lib/types';
 
 const categories: Category[] = [
-  { id: 'cat-1', nome: 'Groceries', tipo: 'expense', colore: null, archiviata: false },
-  { id: 'cat-2', nome: 'Transport', tipo: 'expense', colore: null, archiviata: false },
+  { id: 'cat-1', nome: 'Groceries', tipo: 'expense', colore: null, archiviata: false, ruolo: null },
+  { id: 'cat-2', nome: 'Transport', tipo: 'expense', colore: null, archiviata: false, ruolo: null },
 ];
 
 function tx(overrides: Partial<Transaction>): Transaction {

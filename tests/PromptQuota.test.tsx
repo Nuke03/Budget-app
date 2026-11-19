@@ -87,9 +87,9 @@ describe('PromptQuota', () => {
 
 describe('contoDaCuiSpostare', () => {
   const conti = [
-    { id: 'a1', nome: 'Corrente', saldoAttuale: 1, contaInDisponibile: true, targetSaldo: null },
-    { id: 'a2', nome: 'Risparmi', saldoAttuale: 1, contaInDisponibile: false, targetSaldo: null },
-    { id: 'tasse', nome: 'Tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null },
+    { id: 'a1', nome: 'Corrente', saldoAttuale: 1, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+    { id: 'a2', nome: 'Risparmi', saldoAttuale: 1, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+    { id: 'tasse', nome: 'Tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false },
   ];
   it('usa il conto dell incasso', () => {
     expect(contoDaCuiSpostare('a2', conti, 'tasse')).toBe('a2');

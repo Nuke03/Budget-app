@@ -39,8 +39,8 @@ const aggiunta: CasaAggiunta = {
     { userId: 'u1', nome: 'Fabio' },
     { userId: 'u2', nome: 'Anna' },
   ],
-  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null }],
-  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false }],
+  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false }],
+  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false, ruolo: null }],
   obiettivi: [],
 };
 
@@ -361,7 +361,7 @@ describe('MovimentiCasa: libretto', () => {
   it('copertina con il titolo e pallino del colore della categoria', () => {
     const conColore: CasaAggiunta = {
       ...aggiunta,
-      categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#f97362', archiviata: false }],
+      categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#f97362', archiviata: false, ruolo: null }],
     };
     const { container } = render(
       <AnnullaProvider>

@@ -8,6 +8,7 @@ const account = {
   saldoAttuale: 1200,
   contaInDisponibile: false,
   targetSaldo: 3000,
+  archiviato: false,
 };
 
 describe('AccountRow', () => {

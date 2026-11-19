@@ -8,6 +8,7 @@ interface CategoryRow {
   tipo: CategoriaTipo;
   colore: string | null;
   archiviata: boolean;
+  ruolo?: 'certa' | 'svago' | null;
 }
 
 function mapRow(row: CategoryRow): Category {
@@ -17,12 +18,13 @@ function mapRow(row: CategoryRow): Category {
     tipo: row.tipo,
     colore: row.colore,
     archiviata: row.archiviata,
+    ruolo: row.ruolo ?? null,
   };
 }
 
 export async function getCategories(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<Category[]> {
   const { data, error } = await applyScope(
-    supabase.from('categories').select('id, nome, tipo, colore, archiviata'),
+    supabase.from('categories').select('id, nome, tipo, colore, archiviata, ruolo'),
     scope
   ).order('nome');
 
@@ -44,7 +46,7 @@ export async function createCategory(
       archiviata: false,
       household_id: scopeHouseholdId(scope),
     })
-    .select('id, nome, tipo, colore, archiviata')
+    .select('id, nome, tipo, colore, archiviata, ruolo')
     .single();
 
   if (error) throw error;
@@ -54,14 +56,14 @@ export async function createCategory(
 export async function updateCategory(
   supabase: SupabaseClient,
   id: string,
-  input: { nome: string; colore: string | null }
+  input: { nome: string; colore: string | null; ruolo?: 'certa' | 'svago' | null }
 ): Promise<Category> {
   // household: per id
   const { data, error } = await supabase
     .from('categories')
-    .update({ nome: input.nome, colore: input.colore })
+    .update({ nome: input.nome, colore: input.colore, ...(input.ruolo !== undefined ? { ruolo: input.ruolo } : {}) })
     .eq('id', id)
-    .select('id, nome, tipo, colore, archiviata')
+    .select('id, nome, tipo, colore, archiviata, ruolo')
     .single();
 
   if (error) throw error;

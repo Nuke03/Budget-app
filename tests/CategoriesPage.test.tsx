@@ -18,8 +18,8 @@ vi.mock('@/lib/data/categories', () => ({
 import { getCategories, updateCategory, archiveCategory } from '@/lib/data/categories';
 
 const categories = [
-  { id: '1', nome: 'Spesa alimentare', tipo: 'expense' as const, colore: null, archiviata: false },
-  { id: '2', nome: 'Stipendio', tipo: 'income' as const, colore: null, archiviata: false },
+  { id: '1', nome: 'Spesa alimentare', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
+  { id: '2', nome: 'Stipendio', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
 ];
 
 function Pagina() {
@@ -97,6 +97,7 @@ describe('CategoriesPage', () => {
       tipo: 'expense',
       colore: '#3B9AE1',
       archiviata: false,
+      ruolo: null,
     });
     render(<Pagina />);
 

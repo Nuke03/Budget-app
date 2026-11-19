@@ -13,13 +13,13 @@ const giorniFa = (oggi: string, n: number): string => {
 };
 
 export const categoriePivaProva: Category[] = [
-  { id: 'cat-fatture', nome: 'Fatture', tipo: 'income', colore: null, archiviata: false },
-  { id: 'cat-spesa', nome: 'Spesa', tipo: 'expense', colore: null, archiviata: false },
+  { id: 'cat-fatture', nome: 'Fatture', tipo: 'income', colore: null, archiviata: false, ruolo: null },
+  { id: 'cat-spesa', nome: 'Spesa', tipo: 'expense', colore: null, archiviata: false, ruolo: null },
 ];
 
 export const contiPivaProva: Account[] = [
-  { id: 'conto-principale', nome: 'Conto principale', saldoAttuale: 3730, contaInDisponibile: true, targetSaldo: null },
-  { id: 'conto-tasse', nome: 'Conto tasse', saldoAttuale: 3100, contaInDisponibile: false, targetSaldo: null },
+  { id: 'conto-principale', nome: 'Conto principale', saldoAttuale: 3730, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+  { id: 'conto-tasse', nome: 'Conto tasse', saldoAttuale: 3100, contaInDisponibile: false, targetSaldo: null, archiviato: false },
 ];
 
 export function impostazioniPivaProva(oggi: string): PivaSettings {

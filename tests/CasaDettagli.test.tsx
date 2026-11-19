@@ -126,7 +126,7 @@ describe('CasaDettagli', () => {
 
   describe('con le finanze', () => {
     const conto: Account = {
-      id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null,
+      id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null, archiviato: false,
     };
     function aggiunta(conti: Account[]): CasaAggiunta {
       return {
@@ -137,7 +137,7 @@ describe('CasaDettagli', () => {
           { userId: 'u2', nome: 'Anna' },
         ],
         conti,
-        categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false }],
+        categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: null, archiviata: false, ruolo: null }],
         obiettivi: [],
       };
     }
@@ -259,7 +259,7 @@ describe('CasaDettagli', () => {
         crediti: { u1: 45, u2: 0 },
       };
       const contiPersonali: Account[] = [
-        { id: 'pf', nome: 'Conto Fabio', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+        { id: 'pf', nome: 'Conto Fabio', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
       ];
       const monta = () =>
         render(

@@ -4,10 +4,10 @@ import { AddTransactionForm } from '@/app/add/AddTransactionForm';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const categories = [
-  { id: 'cat-1', nome: 'Groceries', tipo: 'expense' as const, colore: null, archiviata: false },
+  { id: 'cat-1', nome: 'Groceries', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
 ];
 const accounts = [
-  { id: 'acc-1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+  { id: 'acc-1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
 ];
 const goals = [
   {
@@ -67,7 +67,7 @@ describe('AddTransactionForm', () => {
   });
 
   it('in aggiunta veloce il riepilogo mostra il pallino della categoria scelta', () => {
-    const colorate = [{ id: 'c-spesa', nome: 'Spesa', tipo: 'expense' as const, colore: '#0F9D6B', archiviata: false }];
+    const colorate = [{ id: 'c-spesa', nome: 'Spesa', tipo: 'expense' as const, colore: '#0F9D6B', archiviata: false, ruolo: null }];
     const { container } = render(<AddTransactionForm categories={colorate} accounts={[]} veloce onSubmit={vi.fn()} />);
     expect(container.querySelector('[data-colore]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Senza categoria' }));
@@ -274,7 +274,7 @@ describe('AddTransactionForm', () => {
   it('idContiSoloSpesa nasconde quei conti per le entrate', () => {
     const due = [
       ...accounts,
-      { id: 'acc-2', nome: 'Carta casa', saldoAttuale: 0, contaInDisponibile: true, targetSaldo: null },
+      { id: 'acc-2', nome: 'Carta casa', saldoAttuale: 0, contaInDisponibile: true, targetSaldo: null, archiviato: false },
     ];
     render(
       <AddTransactionForm categories={categories} accounts={due} idContiSoloSpesa={['acc-2']} onSubmit={vi.fn()} />
@@ -288,11 +288,11 @@ describe('AddTransactionForm', () => {
 
 describe('AddTransactionForm - obiettivo scelto dalla categoria', () => {
   const categorieCasa = [
-    { id: 'cat-affitto', nome: 'Affitto', tipo: 'expense' as const, colore: null, archiviata: false },
-    { id: 'cat-luce', nome: 'Luce', tipo: 'expense' as const, colore: null, archiviata: false },
+    { id: 'cat-affitto', nome: 'Affitto', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
+    { id: 'cat-luce', nome: 'Luce', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
   ];
   const contoCasa = [
-    { id: 'acc-casa', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+    { id: 'acc-casa', nome: 'Conto comune', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
   ];
   const obiettivoLuce = {
     id: 'g-luce',

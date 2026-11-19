@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { getAccounts, createAccount, updateAccountBalance, updateAccountDetails, adjustAccountBalance } from '@/lib/data/accounts';
 import { fakeRpcClient } from '../helpers/fakeRpc';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
+import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
+import { casa } from '@/lib/data/scope';
 
 describe('getAccounts', () => {
   it('mappa le righe snake_case in oggetti Account camelCase', async () => {
@@ -18,8 +20,20 @@ describe('getAccounts', () => {
     const result = await getAccounts(supabase);
 
     expect(result).toEqual([
-      { id: '1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null },
+      { id: '1', nome: 'Conto corrente', saldoAttuale: 500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
     ]);
+  });
+
+  it('getAccounts personale esclude gli archiviati', async () => {
+    const { client, calls } = createRecordingClient([]);
+    await getAccounts(client);
+    expect(callsOf(calls[0], 'eq')).toContainEqual(['archiviato', false]);
+  });
+
+  it('getAccounts casa non filtra per archiviato', async () => {
+    const { client, calls } = createRecordingClient([]);
+    await getAccounts(client, casa('h1'));
+    expect(callsOf(calls[0], 'eq').some((a) => a[0] === 'archiviato')).toBe(false);
   });
 });
 
@@ -46,6 +60,7 @@ describe('createAccount', () => {
       saldoAttuale: 0,
       contaInDisponibile: false,
       targetSaldo: 3000,
+      archiviato: false,
     });
   });
 });
@@ -79,6 +94,7 @@ describe('updateAccountDetails', () => {
       saldoAttuale: 500,
       contaInDisponibile: true,
       targetSaldo: 5000,
+      archiviato: false,
     });
   });
 });

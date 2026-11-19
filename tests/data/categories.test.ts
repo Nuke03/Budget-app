@@ -1,17 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { getCategories, createCategory, updateCategory, archiveCategory } from '@/lib/data/categories';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
+import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
 
 describe('getCategories', () => {
   it('mappa le righe in oggetti Category', async () => {
     const supabase = fakeSelectClient([
-      { id: '1', nome: 'Groceries', tipo: 'expense', colore: '#22c55e', archiviata: false },
+      { id: '1', nome: 'Groceries', tipo: 'expense', colore: '#22c55e', archiviata: false, ruolo: null },
     ]);
 
     const result = await getCategories(supabase);
 
     expect(result).toEqual([
-      { id: '1', nome: 'Groceries', tipo: 'expense', colore: '#22c55e', archiviata: false },
+      { id: '1', nome: 'Groceries', tipo: 'expense', colore: '#22c55e', archiviata: false, ruolo: null },
     ]);
   });
 });
@@ -53,5 +54,28 @@ describe('archiveCategory', () => {
   it('non lancia errori quando la scrittura va a buon fine', async () => {
     const supabase = fakeMutationClient(null);
     await expect(archiveCategory(supabase, '1')).resolves.toBeUndefined();
+  });
+});
+
+describe('ruolo categoria', () => {
+  it('mappa ruolo dalla riga, null se assente', async () => {
+    const supabase = fakeSelectClient([
+      { id: '1', nome: 'Auto', tipo: 'expense', colore: null, archiviata: false, ruolo: 'certa' },
+      { id: '2', nome: 'Altro', tipo: 'expense', colore: null, archiviata: false },
+    ]);
+    const result = await getCategories(supabase);
+    expect(result.map((c) => c.ruolo)).toEqual(['certa', null]);
+  });
+
+  it('updateCategory scrive ruolo solo se passato', async () => {
+    const { client, calls } = createRecordingClient([
+      { id: '1', nome: 'Auto', tipo: 'expense', colore: null, archiviata: false, ruolo: 'svago' },
+    ]);
+    const r = await updateCategory(client, '1', { nome: 'Auto', colore: null, ruolo: 'svago' });
+    expect(callsOf(calls[0], 'update')[0][0]).toEqual({ nome: 'Auto', colore: null, ruolo: 'svago' });
+    expect(r.ruolo).toBe('svago');
+    const b = createRecordingClient([{ id: '1', nome: 'A', tipo: 'expense', colore: null, archiviata: false }]);
+    await updateCategory(b.client, '1', { nome: 'A', colore: null });
+    expect(callsOf(b.calls[0], 'update')[0][0]).toEqual({ nome: 'A', colore: null });
   });
 });

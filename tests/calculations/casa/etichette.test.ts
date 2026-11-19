@@ -25,7 +25,7 @@ describe('nomiAltri', () => {
 });
 
 const conti: Account[] = [
-  { id: 'c1', nome: 'Conto comune', saldoAttuale: 0, contaInDisponibile: true, targetSaldo: null },
+  { id: 'c1', nome: 'Conto comune', saldoAttuale: 0, contaInDisponibile: true, targetSaldo: null, archiviato: false },
 ];
 const mappa = { u1: 'Fabio', u2: 'Anna' };
 function tx(over: Partial<Transaction>): Transaction {

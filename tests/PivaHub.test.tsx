@@ -56,8 +56,8 @@ const settings: PivaSettings = {
 };
 
 const conti = [
-  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 900, contaInDisponibile: true, targetSaldo: null },
-  { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 400, contaInDisponibile: false, targetSaldo: null },
+  { id: 'a1', nome: 'Conto corrente', saldoAttuale: 900, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+  { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 400, contaInDisponibile: false, targetSaldo: null, archiviato: false },
 ];
 
 const incasso = (id: string, data: string, importo: number): Transaction => ({

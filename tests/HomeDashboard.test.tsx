@@ -55,7 +55,7 @@ function casaPerHome(stato: Partial<CasaStato> = {}): CasaPerHome {
 }
 
 const accounts = [
-  { id: '1', nome: 'Conto corrente', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null },
+  { id: '1', nome: 'Conto corrente', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null, archiviato: false },
 ];
 const goals = [
   {
@@ -138,7 +138,7 @@ describe('HomeDashboard', () => {
   it('nel dettaglio mostra la quota accantonata (non il target) per un obiettivo dilazionato e separa i conti esclusi dal disponibile', () => {
     const accountsConFondo = [
       ...accounts,
-      { id: '2', nome: 'Fondo emergenza', saldoAttuale: 500, contaInDisponibile: false, targetSaldo: null },
+      { id: '2', nome: 'Fondo emergenza', saldoAttuale: 500, contaInDisponibile: false, targetSaldo: null, archiviato: false },
     ];
     const goalsDilazionato = [
       {
@@ -391,7 +391,7 @@ describe('il libretto', () => {
     disponibileLibero: 1240.5,
     margineGiornaliero: 62,
     dataTarget: '2026-11-27T00:00:00Z',
-    accounts: [{ id: '1', nome: 'Conto corrente', saldoAttuale: 1500, contaInDisponibile: true, targetSaldo: null }],
+    accounts: [{ id: '1', nome: 'Conto corrente', saldoAttuale: 1500, contaInDisponibile: true, targetSaldo: null, archiviato: false }],
     categories: [],
     goals: [{ ...goals[0], accantonato: 259.5 }],
     oggi: '2026-11-11',
@@ -494,8 +494,8 @@ describe('il libretto', () => {
     };
     const obiettivi = [bloccato, dilazionato].map((g) => ({ ...g, accantonato: computeAccantonatoFinora(g, oggiData, 0) }));
     const conti = [
-      { id: '1', nome: 'Conto corrente', saldoAttuale: 1500, contaInDisponibile: true, targetSaldo: null },
-      { id: '2', nome: 'Fondo', saldoAttuale: 400, contaInDisponibile: false, targetSaldo: null },
+      { id: '1', nome: 'Conto corrente', saldoAttuale: 1500, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+      { id: '2', nome: 'Fondo', saldoAttuale: 400, contaInDisponibile: false, targetSaldo: null, archiviato: false },
     ];
     const casa = casaPerHome({
       righe: [{ mese: '2026-11-01', atteso: 100, versato: 0, mancano: 100 }],

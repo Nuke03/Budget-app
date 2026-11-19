@@ -3,7 +3,7 @@ import type { BudgetGoal, GoalModalita } from '../types';
 import { applyScope, PERSONALE, scopeHouseholdId, type Scope } from './scope';
 
 const GOAL_COLUMNS =
-  'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at, accantona_da';
+  'id, nome, importo_target, modalita, scadenza, categoria_id, ricorrente, frequenza_mesi, stato, created_at, accantona_da, ruolo';
 
 interface GoalRow {
   id: string;
@@ -17,6 +17,7 @@ interface GoalRow {
   stato: 'aperto' | 'chiuso' | 'scaduto';
   created_at: string;
   accantona_da: string | null;
+  ruolo?: 'imprevisti' | null;
 }
 
 function mapRow(row: GoalRow): BudgetGoal {
@@ -32,6 +33,7 @@ function mapRow(row: GoalRow): BudgetGoal {
     stato: row.stato,
     createdAt: row.created_at,
     accantonaDa: row.accantona_da,
+    ruolo: row.ruolo ?? null,
   };
 }
 
@@ -55,6 +57,7 @@ export async function createGoal(
     ricorrente: boolean;
     frequenzaMesi: number | null;
     accantonaDa?: string | null;
+    ruolo?: 'imprevisti' | null;
   },
   scope: Scope = PERSONALE
 ): Promise<BudgetGoal> {
@@ -70,6 +73,7 @@ export async function createGoal(
       frequenza_mesi: input.frequenzaMesi,
       stato: 'aperto',
       accantona_da: input.accantonaDa ?? null,
+      ruolo: input.ruolo ?? null,
       household_id: scopeHouseholdId(scope),
     })
     .select(GOAL_COLUMNS)

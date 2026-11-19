@@ -34,8 +34,8 @@ const aggiunta: CasaAggiunta = {
     { userId: 'u1', nome: 'Fabio' },
     { userId: 'u2', nome: 'Anna' },
   ],
-  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null }],
-  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#0f9d6b', archiviata: false }],
+  conti: [{ id: 'ac', nome: 'Conto comune', saldoAttuale: 870, contaInDisponibile: true, targetSaldo: null, archiviato: false }],
+  categorie: [{ id: 'cc', nome: 'Bollette', tipo: 'expense', colore: '#0f9d6b', archiviata: false, ruolo: null }],
   obiettivi: [],
 };
 

@@ -70,7 +70,7 @@ describe('CreateGoalForm', () => {
 
   it('mostra il pannello di suggerimento quando si seleziona una categoria', async () => {
     const categories = [
-      { id: 'cat-1', nome: 'Bollette luce', tipo: 'expense' as const, colore: null, archiviata: false },
+      { id: 'cat-1', nome: 'Bollette luce', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
     ];
     render(<CreateGoalForm categories={categories} onSubmit={vi.fn()} />);
 

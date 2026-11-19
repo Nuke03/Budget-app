@@ -9,6 +9,7 @@ interface AccountRow {
   conta_in_disponibile: boolean;
   target_saldo: number | null;
   created_at?: string;
+  archiviato?: boolean;
 }
 
 function mapRow(row: AccountRow): Account {
@@ -18,15 +19,20 @@ function mapRow(row: AccountRow): Account {
     saldoAttuale: row.saldo_attuale,
     contaInDisponibile: row.conta_in_disponibile,
     targetSaldo: row.target_saldo,
+    archiviato: row.archiviato ?? false,
     ...(row.created_at ? { createdAt: row.created_at } : {}),
   };
 }
 
 export async function getAccounts(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<Account[]> {
-  const { data, error } = await applyScope(
-    supabase.from('accounts').select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo, created_at'),
+  const query = applyScope(
+    supabase
+      .from('accounts')
+      .select('id, nome, saldo_attuale, conta_in_disponibile, target_saldo, created_at, archiviato'),
     scope
-  ).order('nome');
+  );
+  // i conti archiviati ("Ricomincia da zero") restano visibili solo alla Casa che li usa
+  const { data, error } = await (scope.kind === 'personale' ? query.eq('archiviato', false) : query).order('nome');
 
   if (error) throw error;
   return (data as AccountRow[]).map(mapRow);

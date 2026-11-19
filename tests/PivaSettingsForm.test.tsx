@@ -3,9 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PivaSettingsForm } from '@/app/piva/PivaSettingsForm';
 
 const categories = [
-  { id: 'cat-fatt', nome: 'Compensi liberi professionali', tipo: 'income' as const, colore: null, archiviata: false },
-  { id: 'cat-regalo', nome: 'Regali', tipo: 'income' as const, colore: null, archiviata: false },
-  { id: 'cat-spesa', nome: 'Spesa', tipo: 'expense' as const, colore: null, archiviata: false },
+  { id: 'cat-fatt', nome: 'Compensi liberi professionali', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
+  { id: 'cat-regalo', nome: 'Regali', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
+  { id: 'cat-spesa', nome: 'Spesa', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
 ];
 
 describe('PivaSettingsForm', () => {
