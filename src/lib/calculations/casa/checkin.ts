@@ -3,6 +3,7 @@ import type { EsitoCheckin, Transaction } from '../../types';
 import type { Spiegazione } from './spiegazioni';
 import type { RigaMese } from './versamenti';
 import { meseRomaISO } from './oggi';
+import { obiettiviDelleVociMensili, spesaContaNelMensile } from './speseMensili';
 
 export interface CheckinCalcolato {
   mese: string;
@@ -43,7 +44,7 @@ export function speseMensiliDelMese(
 ): { previstoMensili: number; spesoMensili: number; nonRegistrate: number } {
   const voci = piano?.items ?? [];
   const previstoMensili = arrotonda(voci.filter((v) => v.frequenzaMesi === 1).reduce((s, v) => s + v.importoMensile, 0));
-  const obiettiviMensili = new Set(voci.filter((v) => v.frequenzaMesi === 1 && v.goalId).map((v) => v.goalId));
+  const obiettiviMensili = obiettiviDelleVociMensili(voci);
 
   let speso = 0;
   let nonRegistrate = 0;
@@ -53,7 +54,7 @@ export function speseMensiliDelMese(
       nonRegistrate += s.importo;
       continue;
     }
-    if (s.goalId && !obiettiviMensili.has(s.goalId)) continue;
+    if (!spesaContaNelMensile(s, obiettiviMensili)) continue;
     speso += s.importo;
   }
   return { previstoMensili, spesoMensili: arrotonda(speso), nonRegistrate: arrotonda(nonRegistrate) };

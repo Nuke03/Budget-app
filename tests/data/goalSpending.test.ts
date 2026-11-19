@@ -35,7 +35,8 @@ describe('getSpecoCollegato', () => {
       expect.anything(),
       'goal-1',
       '2026-01-15',
-      null
+      null,
+      false
     );
   });
 
@@ -60,7 +61,8 @@ describe('getSpecoCollegato', () => {
       expect.anything(),
       'goal-1',
       '2026-06-01',
-      '2026-07-01'
+      '2026-07-01',
+      true
     );
   });
 });
@@ -100,6 +102,34 @@ describe('getSpecoCollegatoPerObiettivi', () => {
     );
     const r = await getSpecoCollegatoPerObiettivi(db.client, [G1, G2], TODAY, casa('H1'));
     expect(r).toEqual({ G1: 40, G2: 20 });
+  });
+
+  it('sul giorno di confine di un ricorrente la spesa conta in un solo ciclo', async () => {
+    // TARI: a novembre 2026 il ciclo è (31 mar 2026, 31 mar 2027]; ad aprile 2027 è (31 mar 2027, 31 mar 2028]
+    const db = createFakeDb(
+      {
+        transactions: [
+          tx('t1', 'H1', 'expense', 25, '2026-03-31', 'G2'),
+          tx('t2', 'H1', 'expense', 10, '2026-04-01', 'G2'),
+          tx('t3', 'H1', 'expense', 5, '2027-03-31', 'G2'),
+          tx('t4', 'H1', 'expense', 7, '2027-04-01', 'G2'),
+        ],
+      },
+      { userId: 'A', membri: { H1: ['A'] } }
+    );
+    const adesso = await getSpecoCollegatoPerObiettivi(db.client, [G2], TODAY, casa('H1'));
+    const dopo = await getSpecoCollegatoPerObiettivi(db.client, [G2], new Date(2027, 3, 5), casa('H1'));
+    expect(adesso.G2).toBe(15); // il 31 mar 2026 (25) è del ciclo prima; il 31 mar 2027 (5) chiude questo
+    expect(dopo.G2).toBe(7); // il 31 mar 2027 non conta due volte
+  });
+
+  it('un non ricorrente conta anche la spesa del giorno di creazione', async () => {
+    const db = createFakeDb(
+      { transactions: [tx('t1', 'H1', 'expense', 12, '2026-11-01', 'G1')] },
+      { userId: 'A', membri: { H1: ['A'] } }
+    );
+    const r = await getSpecoCollegatoPerObiettivi(db.client, [G1], TODAY, casa('H1'));
+    expect(r.G1).toBe(12);
   });
 
   it('una sola query con scope e in(goal_id)', async () => {

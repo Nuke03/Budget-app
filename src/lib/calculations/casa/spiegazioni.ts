@@ -194,7 +194,7 @@ export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoColl
   }
 
   const ingredienti = [{ etichetta: 'Messo da parte finora', valore: messo }];
-  if (spesoReale > 0) ingredienti.push({ etichetta: 'Già speso su questa bolletta', valore: -spesoReale });
+  if (spesoReale > 0) ingredienti.push({ etichetta: goal.ricorrente ? 'Già speso su questa bolletta' : 'Già speso su questa spesa', valore: -spesoReale });
   if (spesoReale > messo) {
     ingredienti.push({ etichetta: 'Speso oltre quanto messo da parte', valore: arrotonda2(spesoReale - messo) });
     formula += ' Avete speso più di quanto era messo da parte, quindi qui non resta niente.';

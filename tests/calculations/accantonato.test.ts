@@ -4,6 +4,8 @@ import {
   computeAccantonatoFinora,
   computeQuotaMensile,
   computeFinestraGoal,
+  finestraSpeseGoal,
+  dataNellaFinestraSpese,
   nextOccurrence,
 } from '@/lib/calculations/accantonato';
 import type { GoalForCalc } from '@/lib/calculations/types';
@@ -438,5 +440,54 @@ describe('scadenze a fine mese', () => {
   it('una scadenza che non è a fine mese non cambia', () => {
     expect(format(nextOccurrence(new Date(2026, 0, 28), 1, new Date(2026, 2, 1)), 'yyyy-MM-dd')).toBe('2026-03-28');
     expect(format(nextOccurrence(new Date(2026, 0, 30), 1, new Date(2026, 2, 1)), 'yyyy-MM-dd')).toBe('2026-03-28');
+  });
+});
+
+describe('K3: giorno di confine di un ciclo ricorrente', () => {
+  const mensile: GoalForCalc = {
+    importoTarget: 100,
+    modalita: 'dilazionato',
+    stato: 'aperto',
+    scadenza: '2026-01-01',
+    createdAt: '2026-01-01',
+    ricorrente: true,
+    frequenzaMesi: 1,
+  };
+  const conta = (goal: GoalForCalc, data: string, oggi: Date) =>
+    dataNellaFinestraSpese(data, finestraSpeseGoal(goal, oggi));
+
+  it('una spesa sul giorno di scadenza conta in un solo ciclo', () => {
+    const cicloCheFinisce = new Date(2026, 4, 20); // finestra (1 mag, 1 giu]
+    const cicloCheInizia = new Date(2026, 5, 10); // finestra (1 giu, 1 lug]
+    expect(conta(mensile, '2026-06-01', cicloCheFinisce)).toBe(true);
+    expect(conta(mensile, '2026-06-01', cicloCheInizia)).toBe(false);
+  });
+
+  it('il giorno dopo il confine conta nel ciclo che inizia, il giorno stesso della fine resta dentro', () => {
+    expect(conta(mensile, '2026-06-02', new Date(2026, 5, 10))).toBe(true);
+    expect(conta(mensile, '2026-07-01', new Date(2026, 5, 10))).toBe(true);
+    expect(conta(mensile, '2026-07-02', new Date(2026, 5, 10))).toBe(false);
+  });
+
+  it("per i ricorrenti l'inizio è escluso, per i non ricorrenti resta incluso", () => {
+    const r = finestraSpeseGoal(mensile, new Date(2026, 5, 10));
+    expect(r).toEqual({ da: '2026-06-01', daEscluso: true, a: '2026-07-01' });
+    const unaTantum: GoalForCalc = { ...mensile, ricorrente: false, frequenzaMesi: null, scadenza: '2026-09-30', createdAt: '2026-06-01' };
+    const u = finestraSpeseGoal(unaTantum, new Date(2026, 5, 10));
+    expect(u).toEqual({ da: '2026-06-01', daEscluso: false, a: '2026-09-30' });
+    expect(dataNellaFinestraSpese('2026-06-01', u)).toBe(true);
+  });
+
+  it('bloccato ricorrente con scadenza: inizio escluso; bloccato senza scadenza: incluso', () => {
+    const bloccato: GoalForCalc = { ...mensile, modalita: 'bloccato' };
+    expect(finestraSpeseGoal(bloccato, new Date(2026, 5, 10)).daEscluso).toBe(true);
+    expect(finestraSpeseGoal({ ...bloccato, scadenza: null }, new Date(2026, 5, 10)).daEscluso).toBe(false);
+  });
+
+  it('le finestre di due cicli consecutivi non si sovrappongono', () => {
+    const a = finestraSpeseGoal(mensile, new Date(2026, 4, 20));
+    const b = finestraSpeseGoal(mensile, new Date(2026, 5, 10));
+    expect(a.a).toBe(b.da);
+    expect(dataNellaFinestraSpese(a.a!, a) && dataNellaFinestraSpese(a.a!, b)).toBe(false);
   });
 });

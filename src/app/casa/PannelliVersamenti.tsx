@@ -75,7 +75,7 @@ export function PannelliVersamenti({
             {debiti.map((d) => (
               <li key={`${d.creditoreId}-${d.debitoreId}`} className="flex flex-col gap-1 text-[15px]">
                 {d.mesi.map((m) => (
-                  <span key={m.mese}>
+                  <span key={`${m.mese}-${m.origine ?? 'quota'}`}>
                     {m.origine === 'tricount'
                       ? `Saldo di partenza da Tricount: ${nome(d.debitoreId)} deve${m.importo === m.versato ? '' : ' ancora'} a ${nome(d.creditoreId)} ${formatNumero(m.importo)} €.`
                       : m.versato === 0

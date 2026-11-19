@@ -224,6 +224,17 @@ describe('getTransactionAmountsForGoal', () => {
     expect(result).toEqual([50]);
   });
 
+  it('con inizio escluso usa gt, altrimenti gte', async () => {
+    const escluso = createRecordingClient([{ importo: 1 }]);
+    await getTransactionAmountsForGoal(escluso.client, 'goal-1', '2026-06-01', '2026-07-01', true);
+    expect(callsOf(escluso.calls[0], 'gt')).toContainEqual(['data', '2026-06-01']);
+    expect(callsOf(escluso.calls[0], 'gte')).toHaveLength(0);
+    const incluso = createRecordingClient([{ importo: 1 }]);
+    await getTransactionAmountsForGoal(incluso.client, 'goal-1', '2026-06-01', '2026-07-01');
+    expect(callsOf(incluso.calls[0], 'gte')).toContainEqual(['data', '2026-06-01']);
+    expect(callsOf(incluso.calls[0], 'gt')).toHaveLength(0);
+  });
+
   it('ritorna un array vuoto se non ci sono spese collegate', async () => {
     const supabase = fakeSelectClient([]);
     const result = await getTransactionAmountsForGoal(supabase, 'goal-1', '2026-01-01', null);

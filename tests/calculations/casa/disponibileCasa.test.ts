@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeDisponibileCasa, computeDaPagareMese } from '@/lib/calculations/casa/disponibileCasa';
+import { speseMensiliDelMese } from '@/lib/calculations/casa/checkin';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 import type { GoalForCalc } from '@/lib/calculations/types';
 
@@ -149,5 +150,31 @@ describe('computeDisponibileCasa con cuscinetto', () => {
     expect(r.spiegazione.formula).toContain('Cuscinetto 1.000 di 1.321 €, pieno tra circa 6 mesi.');
     const testo = [r.spiegazione.formula, ...r.spiegazione.ingredienti.map((i) => i.etichetta)].join(' ').toLowerCase();
     for (const parola of PAROLE_VIETATE) expect(testo).not.toContain(parola);
+  });
+});
+
+describe('C8: una sola regola per le spese collegate a un fondo', () => {
+  const mese = '2026-11-01';
+  const voce = { categoriaId: 'aff', importoMensile: 750, frequenzaMesi: 1, goalId: 'g1' };
+  const spesaG = (goalId: string | null) => ({
+    tipo: 'expense' as const, importo: 750, data: '2026-11-03', categoriaId: 'aff', goalId,
+  });
+
+  it('spesa collegata a un obiettivo chiuso di una voce mensile conta nel mese', () => {
+    // obiettivo g1 chiuso: la voce resta da pagare e la spesa collegata la copre
+    expect(computeDaPagareMese({ voci: [voce], spese: [spesaG('g1')], mese, obiettiviApertiIds: [] })).toBe(0);
+  });
+
+  it('spesa collegata a un fondo che non è di una voce mensile non conta', () => {
+    expect(computeDaPagareMese({ voci: [voce], spese: [spesaG('altro')], mese, obiettiviApertiIds: [] })).toBe(750);
+  });
+
+  it('il disponibile e il check-in contano la stessa spesa allo stesso modo', () => {
+    const piano = { items: [{ ...voce, id: 'v1' }] } as never;
+    const t = { ...spesaG('g1'), id: 't1', origine: null } as never;
+    const checkin = speseMensiliDelMese(piano, [t], mese);
+    const daPagare = computeDaPagareMese({ voci: [voce], spese: [spesaG('g1')], mese, obiettiviApertiIds: [] });
+    expect(checkin.spesoMensili).toBe(750);
+    expect(750 - daPagare).toBe(checkin.spesoMensili);
   });
 });

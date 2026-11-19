@@ -1,4 +1,4 @@
-import { addDays, addMonths, differenceInCalendarMonths, lastDayOfMonth, parseISO } from 'date-fns';
+import { addDays, addMonths, differenceInCalendarMonths, format, lastDayOfMonth, parseISO } from 'date-fns';
 import type { GoalForCalc } from './types';
 
 function eFineMese(d: Date): boolean {
@@ -67,6 +67,31 @@ export function computeFinestraGoal(goal: GoalForCalc, today: Date): FinestraGoa
   }
 
   return { windowStart: createdAtDate, windowEnd: null };
+}
+
+// La finestra delle spese collegate, in date 'yyyy-MM-dd'. Per i cicli ricorrenti l'inizio è escluso:
+// il giorno di scadenza appartiene al ciclo che finisce, non a quello che inizia. Per gli altri
+// (nessun ciclo: l'inizio è la creazione) l'inizio resta incluso.
+export interface FinestraSpese {
+  da: string;
+  daEscluso: boolean;
+  a: string | null;
+}
+
+export function finestraSpeseGoal(goal: GoalForCalc, today: Date): FinestraSpese {
+  const { windowStart, windowEnd } = computeFinestraGoal(goal, today);
+  const haFrequenzaValida = goal.ricorrente && !!goal.frequenzaMesi && goal.frequenzaMesi > 0;
+  const aCicli = haFrequenzaValida && (goal.modalita === 'dilazionato' || !!goal.scadenza);
+  return {
+    da: format(windowStart, 'yyyy-MM-dd'),
+    daEscluso: aCicli,
+    a: windowEnd ? format(windowEnd, 'yyyy-MM-dd') : null,
+  };
+}
+
+export function dataNellaFinestraSpese(data: string, f: FinestraSpese): boolean {
+  const dopoInizio = f.daEscluso ? data > f.da : data >= f.da;
+  return dopoInizio && (f.a === null || data <= f.a);
 }
 
 // Mesi di calendario del ciclo (`totale`) e mesi già maturati (`trascorsi`, senza il tetto al totale).

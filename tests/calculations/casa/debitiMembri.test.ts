@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { debitiMembri, debitoVersoMembri } from '@/lib/calculations/casa/debitiMembri';
+import { debitiMembri, debitoVersoMembri, descriviOrigineDebito } from '@/lib/calculations/casa/debitiMembri';
 import type { Transfer } from '@/lib/types';
 
 const tr = (extra: Partial<Transfer>): Transfer => ({
@@ -110,9 +110,50 @@ describe('debitiMembri: saldo_iniziale', () => {
 });
 
 describe('debitiMembri: origine tricount', () => {
-  it('un mese con saldo e versamento per conto di resta una quota, senza origine', () => {
-    const saldo = tr({ causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 50, data: '2026-11-10', soloRegistrazione: true });
-    const vers = tr({ causale: 'versamento', userId: 'u1', perContoDiUserId: 'u2', importo: 100, data: '2026-11-03' });
-    expect(debitiMembri([saldo, vers])[0].mesi[0].origine).toBeUndefined();
+  const saldo50 = tr({ causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 50, data: '2026-11-10', soloRegistrazione: true });
+  const vers100 = tr({ causale: 'versamento', userId: 'u1', perContoDiUserId: 'u2', importo: 100, data: '2026-11-03', meseCompetenza: '2026-11-01' });
+
+  it('un mese con saldo e versamento per conto di ha due voci: Tricount e quota', () => {
+    const d = debitiMembri([saldo50, vers100]);
+    expect(d[0].mesi).toEqual([
+      { mese: '2026-11-01', importo: 50, versato: 50, origine: 'tricount' },
+      { mese: '2026-11-01', importo: 100, versato: 100 },
+    ]);
+  });
+
+  it('il totale dovuto resta la somma di prima', () => {
+    const d = debitiMembri([saldo50, vers100]);
+    expect(d[0].importo).toBe(150);
+    expect(d[0].mesi.reduce((s, m) => s + m.importo, 0)).toBe(d[0].importo);
+  });
+
+  it('il restituito copre prima la voce più vecchia: un mese prima, poi a parità Tricount', () => {
+    const rest = (importo: number) => tr({ causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo });
+    const ott = tr({ causale: 'versamento', userId: 'u1', perContoDiUserId: 'u2', importo: 30, data: '2026-10-03', meseCompetenza: '2026-10-01' });
+    // 30 copre ottobre, altri 20 coprono parte del Tricount di novembre
+    const d = debitiMembri([ott, saldo50, vers100, rest(50)]);
+    expect(d[0].importo).toBe(130);
+    expect(d[0].mesi).toEqual([
+      { mese: '2026-11-01', importo: 30, versato: 50, origine: 'tricount' },
+      { mese: '2026-11-01', importo: 100, versato: 100 },
+    ]);
+  });
+
+  it('a parità di mese il restituito copre prima Tricount, poi la quota', () => {
+    const rest = tr({ causale: 'restituzione', userId: 'u2', beneficiarioUserId: 'u1', importo: 70 });
+    const d = debitiMembri([vers100, saldo50, rest]);
+    expect(d[0].importo).toBe(80);
+    expect(d[0].mesi).toEqual([{ mese: '2026-11-01', importo: 80, versato: 100 }]);
+  });
+});
+
+describe('descriviOrigineDebito', () => {
+  const elenco = (m: string[]) => m.join(', ');
+  it('mese misto: quota e saldo di partenza, senza ripetere il mese', () => {
+    const d = debitiMembri([
+      tr({ causale: 'saldo_iniziale', userId: 'u1', beneficiarioUserId: 'u1', perContoDiUserId: 'u2', importo: 50, data: '2026-11-10', soloRegistrazione: true }),
+      tr({ causale: 'versamento', userId: 'u1', perContoDiUserId: 'u2', importo: 100, data: '2026-11-03', meseCompetenza: '2026-11-01' }),
+    ]);
+    expect(descriviOrigineDebito(d[0].mesi, elenco)).toBe('quota di 2026-11-01 e saldo di partenza da Tricount');
   });
 });

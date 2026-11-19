@@ -4,6 +4,7 @@ import type { PlanItem, Transaction } from '@/lib/types';
 import { formatNumero } from '@/lib/format';
 import { mesiAlPieno } from './cuscinetto';
 import type { Spiegazione } from './spiegazioni';
+import { obiettiviDelleVociMensili, spesaContaNelMensile } from './speseMensili';
 
 export interface DisponibileCasa {
   valore: number;
@@ -31,6 +32,7 @@ export function computeDaPagareMese(input: {
   // Le voci legate a un obiettivo aperto sono già contate tra i soldi messi da parte;
   // quelle legate a un obiettivo chiuso o scaduto restano da pagare.
   const aperti = new Set(input.obiettiviApertiIds);
+  const obiettiviMensili = obiettiviDelleVociMensili(input.voci);
   // Più voci nella stessa categoria condividono la stessa spesa: si sottrae una volta sola.
   const previstoPerCategoria = new Map<string, number>();
   for (const v of input.voci) {
@@ -40,8 +42,8 @@ export function computeDaPagareMese(input: {
   let totale = 0;
   for (const [categoriaId, previsto] of previstoPerCategoria) {
     const speso = input.spese
-      // Le spese collegate a un obiettivo sono già contate tra i soldi messi da parte (B).
-      .filter((t) => t.tipo === 'expense' && !t.goalId && t.categoriaId === categoriaId && t.data.slice(0, 7) === meseChiave)
+      // Stessa regola del check-in: conta la spesa collegata all'obiettivo di una voce mensile.
+      .filter((t) => t.tipo === 'expense' && spesaContaNelMensile(t, obiettiviMensili) && t.categoriaId === categoriaId && t.data.slice(0, 7) === meseChiave)
       .reduce((x, t) => x + t.importo, 0);
     totale += Math.max(0, previsto - speso);
   }

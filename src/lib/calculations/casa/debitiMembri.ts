@@ -4,8 +4,8 @@ export interface DebitoMembro {
   debitoreId: string;
   creditoreId: string;
   importo: number;
-  // importo: il residuo del mese; versato: quanto il creditore aveva coperto in quel mese.
-  // origine 'tricount': il mese è il saldo di partenza, non una quota versata.
+  // importo: il residuo della voce; versato: quanto il creditore aveva coperto con quella voce.
+  // Un mese può avere due voci: origine 'tricount' è il saldo di partenza, l'altra è la quota versata.
   mesi: { mese: string; importo: number; versato: number; origine?: 'tricount' }[];
 }
 
@@ -14,7 +14,7 @@ const primoDelMese = (iso: string): string => `${iso.slice(0, 7)}-01`;
 
 // I debiti fra membri: chi ha versato per conto di un altro ha prestato, il debitore restituisce con una
 // restituzione, con un proprio versamento a favore del creditore, o il creditore rinuncia.
-// Il restituito copre prima il mese più vecchio. Solo le coppie con un residuo.
+// Il restituito copre prima la voce più vecchia (a parità di mese, Tricount). Solo le coppie con un residuo.
 export function debitiMembri(transfers: Transfer[]): DebitoMembro[] {
   const coppie = new Map<string, { debitoreId: string; creditoreId: string; prestato: Map<string, number>; daTricount: Map<string, number>; restituito: number }>();
   const coppia = (creditoreId: string, debitoreId: string) => {
@@ -56,19 +56,26 @@ export function debitiMembri(transfers: Transfer[]): DebitoMembro[] {
 
   const out: DebitoMembro[] = [];
   for (const c of coppie.values()) {
-    const prestato = [...c.prestato.entries()].sort(([a], [b]) => a.localeCompare(b));
-    const totale = arrotonda(prestato.reduce((s, [, v]) => s + v, 0) - c.restituito);
+    // Per mese due voci: il saldo da Tricount e la quota versata per conto dell'altro.
+    const voci: { mese: string; importo: number; tricount: boolean }[] = [];
+    for (const [mese, importo] of c.prestato) {
+      const daTricount = arrotonda(c.daTricount.get(mese) ?? 0);
+      const quota = arrotonda(importo - daTricount);
+      if (daTricount > 0) voci.push({ mese, importo: daTricount, tricount: true });
+      if (quota > 0) voci.push({ mese, importo: quota, tricount: false });
+    }
+    // Il restituito copre prima il mese più vecchio; a parità, prima Tricount.
+    voci.sort((x, y) => x.mese.localeCompare(y.mese) || Number(y.tricount) - Number(x.tricount));
+    const totale = arrotonda(voci.reduce((sum, v) => sum + v.importo, 0) - c.restituito);
     if (totale <= 0) continue;
     let daCoprire = c.restituito;
     const mesi: DebitoMembro['mesi'] = [];
-    for (const [mese, importo] of prestato) {
-      const coperto = Math.min(importo, daCoprire);
+    for (const v of voci) {
+      const coperto = Math.min(v.importo, daCoprire);
       daCoprire -= coperto;
-      const residuo = arrotonda(importo - coperto);
+      const residuo = arrotonda(v.importo - coperto);
       if (residuo <= 0) continue;
-      // Solo se tutto il mese viene dal saldo di partenza; se c'è anche un versamento resta la quota.
-      const soloTricount = arrotonda(c.daTricount.get(mese) ?? 0) === arrotonda(importo);
-      mesi.push({ mese, importo: residuo, versato: arrotonda(importo), ...(soloTricount ? { origine: 'tricount' as const } : {}) });
+      mesi.push({ mese: v.mese, importo: residuo, versato: arrotonda(v.importo), ...(v.tricount ? { origine: 'tricount' as const } : {}) });
     }
     out.push({ debitoreId: c.debitoreId, creditoreId: c.creditoreId, importo: totale, mesi });
   }

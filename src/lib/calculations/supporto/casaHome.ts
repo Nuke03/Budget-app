@@ -65,6 +65,22 @@ function statoCoppia(dati: CasaData, me: string, nomi: Record<string, string>): 
     : { tipo: 'devi', importo: -scelto.netto, a: nome, aUserId: scelto.id };
 }
 
+// Da quando parte la quota di un membro che nel mese non ha riga: la sua prima quota in un piano futuro,
+// altrimenti il primo piano futuro, altrimenti il mese dopo l'ingresso (chi entra il 17 versa dal mese successivo).
+function quotaDalDiMembro(dati: CasaData, meUserId: string, mese: string): string | null {
+  const futuri = dati.piani.filter((p) => p.plan.validoDal > mese).sort((a, b) => a.plan.validoDal.localeCompare(b.plan.validoDal));
+  const conMiaQuota = futuri.find((p) => p.shares.some((sh) => sh.userId === meUserId));
+  const piano = conMiaQuota ?? futuri[0];
+  if (piano) return `${piano.plan.validoDal.slice(0, 7)}-01`;
+  const joinedAt = dati.casa.members.find((m) => m.userId === meUserId)?.joinedAt;
+  if (joinedAt && `${joinedAt.slice(0, 7)}-01` >= mese) {
+    const anno = Number(joinedAt.slice(0, 4));
+    const m = Number(joinedAt.slice(5, 7));
+    return m === 12 ? `${anno + 1}-01-01` : `${anno}-${String(m + 1).padStart(2, '0')}-01`;
+  }
+  return null;
+}
+
 export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): CasaHomeDati {
   const mese = `${oggi.slice(0, 7)}-01`;
   const nomi = Object.fromEntries(dati.aggiunta.nomi.map((n) => [n.userId, n.nome]));
@@ -145,7 +161,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
     }));
 
   const rigaMese = righeMie.find((r) => r.mese === mese) ?? null;
-  const pianoFuturo = dati.piani.find((p) => p.plan.validoDal > mese);
+  const quotaDal = rigaMese ? null : quotaDalDiMembro(dati, meUserId, mese);
   const primo = promemoria[0]?.azione;
   const azione = daFare[0]?.tipo === 'promemoria' && daFare[0].azione && (primo?.tipo === 'versamento' || primo?.tipo === 'rimborso') ? daFare[0] : null;
 
@@ -158,7 +174,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
     ultime,
     vistaSemplice: {
       quota: rigaMese ? rigaMese.atteso : null,
-      quotaDal: !rigaMese && pianoFuturo ? `${pianoFuturo.plan.validoDal.slice(0, 7)}-01` : null,
+      quotaDal,
       entroGiorno: pianoOra?.plan.giornoVersamento ?? null,
       versato: rigaMese ? rigaMese.versato : 0,
       stato: statoCoppia(dati, meUserId, nomi),

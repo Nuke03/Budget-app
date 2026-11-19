@@ -179,6 +179,28 @@ describe('casaHomeDati', () => {
     expect(casaHomeDati(dati({ piani: [], righe: {} }), 'fabio', OGGI).vistaSemplice.quotaDal).toBeNull();
   });
 
+  it('vista semplice: chi entra il 17 ha la quota dal mese dopo, senza piano futuro', () => {
+    const nuova = membro('nuova', 'Nuova', '2026-11-17T09:00:00Z');
+    const r = casaHomeDati(dati({ righe: {} }, [nuova, fabio]), 'nuova', '2026-11-20').vistaSemplice;
+    expect(r.quota).toBeNull();
+    expect(r.quotaDal).toBe('2026-12-01');
+  });
+
+  it('vista semplice: la prima quota del membro vince sul primo piano futuro', () => {
+    const dic = piano([voce({})]);
+    dic.plan.validoDal = '2026-12-01';
+    const gen = piano([voce({})]);
+    gen.plan.id = 'p2';
+    gen.plan.validoDal = '2027-01-01';
+    gen.shares = [{ planId: 'p2', slot: 1, userId: 'fabio', displayName: 'Fabio', redditoNettoMensile: 0, redditoIrregolare: false, percentuale: null, inCasaDal: null, esceDal: null, quotaMensile: 300 }];
+    const r = casaHomeDati(dati({ piani: [dic, gen], righe: {} }), 'fabio', OGGI).vistaSemplice;
+    expect(r.quotaDal).toBe('2027-01-01');
+  });
+
+  it('vista semplice: chi è dentro da prima e non ha righe resta senza data', () => {
+    expect(casaHomeDati(dati({ righe: {} }), 'fabio', OGGI).vistaSemplice.quotaDal).toBeNull();
+  });
+
   it('vista semplice: il primo promemoria di versamento diventa un azione', () => {
     const versamento = casaHomeDati(
       dati({ righe: { fabio: [{ mese: '2026-11-01', atteso: 300, versato: 0, mancano: 300 }] } }),

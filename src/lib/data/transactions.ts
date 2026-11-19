@@ -225,15 +225,17 @@ export async function getTransactionAmountsForGoal(
   supabase: SupabaseClient,
   goalId: string,
   da: string,
-  a: string | null
+  a: string | null,
+  // Obiettivi ricorrenti: il giorno di inizio appartiene al ciclo precedente.
+  daEscluso = false
 ): Promise<number[]> {
   // household: per id
-  let query = supabase
+  const base = supabase
     .from('transactions')
     .select('importo')
     .eq('goal_id', goalId)
-    .eq('tipo', 'expense')
-    .gte('data', da);
+    .eq('tipo', 'expense');
+  let query = daEscluso ? base.gt('data', da) : base.gte('data', da);
 
   if (a) {
     query = query.lte('data', a);
