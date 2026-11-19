@@ -18,9 +18,13 @@ const voce = (over: Partial<PlanItem>): PlanItem => ({
   id: 'i', planId: 'p', nome: 'Affitto', categoriaId: null, frequenzaMesi: 1, importoRicorrenza: 100,
   importoMensile: 100, origineStima: 'utente', goalId: null, stimaIgnorataConN: null, ordine: 0, ...over,
 });
-const piano = (items: PlanItem[]): PlanBundle => ({
+// Il promemoria "Rivedi la quota" scatta dopo 6 mesi dall'inizio del piano: ogni test sceglie se averlo.
+// Di default il piano è recente (OGGI è novembre), cioè il promemoria è spento.
+const INIZIO_RECENTE = '2026-09-01';
+const INIZIO_VECCHIO = '2026-01-01';
+const piano = (items: PlanItem[], validoDal = INIZIO_RECENTE): PlanBundle => ({
   plan: {
-    id: 'p', householdId: 'c1', validoDal: '2026-09-01', giornoVersamento: 5, regola: 'parti_uguali',
+    id: 'p', householdId: 'c1', validoDal, giornoVersamento: 5, regola: 'parti_uguali',
     cuscinettoObiettivo: 0, cuscinettoQuotaMensile: 0, arrotondamento: 1, totaleMensile: 0, createdAt: '2026-01-01',
   },
   items,
@@ -264,14 +268,13 @@ describe('casaHomeDati', () => {
 
 describe('casaHomeDati: rivedi la quota', () => {
   const vecchio = () => {
-    const d = dati();
-    d.piani[0].plan.validoDal = '2026-05-01';
-    return d;
+    return dati({ piani: [piano([voce({})], INIZIO_VECCHIO)] });
   };
-  it('a chi gestisce arriva dopo 6 mesi, a un altro membro no', () => {
-    const tipi = (u: string) => casaHomeDati(vecchio(), u, OGGI).daFare.filter((x) => x.tipo === 'promemoria' && x.id === 'quota:tempo');
+  it('a chi gestisce arriva dopo 6 mesi, a un altro membro no, con piano recente nemmeno al gestore', () => {
+    const tipi = (u: string) => casaHomeDati(vecchio(), u, OGGI).daFare.filter((x) => x.tipo === 'promemoria' && x.id === `quota:tempo:${INIZIO_VECCHIO}`);
     expect(tipi('fabio')).toHaveLength(1);
     expect(tipi('fabio')[0]).toMatchObject({ href: '/casa/quota' });
     expect(tipi('giulia')).toHaveLength(0);
+    expect(casaHomeDati(dati(), 'fabio', OGGI).daFare.some((x) => x.tipo === 'promemoria' && x.id.startsWith('quota'))).toBe(false);
   });
 });

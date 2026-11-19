@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { MASSIMO_PROMEMORIA, type AzionePromemoria, type Promemoria } from '@/lib/calculations/casa/promemoria';
-import { usePromemoriaRimandati } from './rimandaPromemoria';
+import { MASSIMO_PROMEMORIA, MESI_DALLA_QUOTA, type AzionePromemoria, type Promemoria } from '@/lib/calculations/casa/promemoria';
+import { dataFraMesi, usePromemoriaRimandati } from './rimandaPromemoria';
 
 // I promemoria della casa: pochi, neutri, sempre rimandabili con "Più tardi" (per la giornata).
 // compatta: una sola riga, il primo promemoria, che porta a /casa (al controllo o al check-in se è quello il promemoria).
@@ -17,7 +17,7 @@ export function StrisciaPromemoria({
   onAzione?: (azione: AzionePromemoria) => void;
   compatta?: boolean;
 }) {
-  const { rimandati: nascosti, rimanda } = usePromemoriaRimandati(promemoria.map((p) => p.id), oggi);
+  const { rimandati: nascosti, rimanda, rimandaFino } = usePromemoriaRimandati(promemoria.map((p) => p.id), oggi);
 
   const visibili = promemoria.filter((p) => !nascosti.has(p.id)).slice(0, MASSIMO_PROMEMORIA);
   if (visibili.length === 0) return null;
@@ -58,6 +58,15 @@ export function StrisciaPromemoria({
             <button type="button" onClick={() => rimanda(p.id)} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2">
               Più tardi
             </button>
+            {p.silenzia ? (
+              <button
+                type="button"
+                onClick={() => rimandaFino(p.silenzia as string[], dataFraMesi(oggi, MESI_DALLA_QUOTA))}
+                className="inline-flex min-h-11 items-center text-[15px] font-semibold text-ink-2"
+              >
+                Va bene così
+              </button>
+            ) : null}
           </div>
         </div>
       ))}

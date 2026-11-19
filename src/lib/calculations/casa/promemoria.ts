@@ -21,10 +21,11 @@ export interface StatoPromemoria {
   // Il check-in: mese è l'ultimo mese chiuso ancora da controllare, null se non c'è niente da fare.
   checkin?: { mese: string | null };
   // Rivedere la quota: il motivo per cui conviene farlo, null se non c'è (o se chi guarda non gestisce).
-  quota?: { motivo: MotivoRivediQuota | null };
+  quota?: { motivo: MotivoRivediQuota | null; validoDal: string | null };
 }
 
 export type MotivoRivediQuota = 'spese' | 'tempo';
+const NUMERI: Record<number, string> = { 2: 'due', 3: 'tre', 4: 'quattro', 5: 'cinque', 6: 'sei' };
 
 export interface AzionePromemoria {
   tipo: 'versamento' | 'rimborso' | 'restituisci' | 'controllo' | 'checkin' | 'quota';
@@ -39,6 +40,8 @@ export interface Promemoria {
   tipo: 'versamento' | 'credito' | 'debito' | 'controllo' | 'checkin' | 'quota';
   testo: string;
   azione: AzionePromemoria | null;
+  // Gli id da nascondere insieme con "Va bene così" (i due motivi della quota).
+  silenzia?: string[];
 }
 
 // Quanti promemoria mostrare insieme: il taglio si fa dopo aver tolto quelli rimandati.
@@ -123,7 +126,12 @@ export function statoPromemoria(input: {
     crediti: input.crediti,
     debiti: input.debiti,
     controllo: input.controllo,
-    quota: input.rivediQuota ? { motivo: motivoRivediQuota({ ...input.rivediQuota, oggi: input.rivediQuota.oggi ?? input.oggi }) } : undefined,
+    quota: input.rivediQuota
+      ? {
+          motivo: motivoRivediQuota({ ...input.rivediQuota, oggi: input.rivediQuota.oggi ?? input.oggi }),
+          validoDal: pianoInVigore(input.rivediQuota.piani, `${input.oggi.slice(0, 7)}-01`)?.plan.validoDal ?? null,
+        }
+      : undefined,
     checkin:
       input.ultimoCheckinMese === undefined
         ? undefined
@@ -213,14 +221,17 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
 
   const motivoQuota = stato.quota?.motivo ?? null;
   if (motivoQuota) {
+    const validoDal = stato.quota?.validoDal ?? '';
+    const idTempo = `quota:tempo:${validoDal}`;
     out.push({
-      id: `quota:${motivoQuota}`,
+      id: motivoQuota === 'spese' ? 'quota:spese' : idTempo,
       tipo: 'quota',
       testo:
         motivoQuota === 'spese'
-          ? 'Le spese della casa sono sopra il previsto da due mesi: rivedere la quota?'
+          ? `Le spese della casa sono sopra il previsto da ${NUMERI[MESI_SOPRA_PREVISTO] ?? MESI_SOPRA_PREVISTO} mesi: rivedere la quota?`
           : `Sono passati ${MESI_DALLA_QUOTA} mesi dall'ultima quota: vale un controllo?`,
       azione: { tipo: 'quota', etichetta: 'Rivedi', href: '/casa/quota' },
+      silenzia: ['quota:spese', idTempo],
     });
   }
 

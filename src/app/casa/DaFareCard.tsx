@@ -7,7 +7,8 @@ import type { DaFareCasa } from '@/lib/calculations/supporto/casaHome';
 import { formatEuro } from '@/lib/format';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import { azioneDaPromemoria, useCasaAzioni } from './CasaAzioni';
-import { usePromemoriaRimandati } from './rimandaPromemoria';
+import { dataFraMesi, usePromemoriaRimandati } from './rimandaPromemoria';
+import { MESI_DALLA_QUOTA } from '@/lib/calculations/casa/promemoria';
 import { useMettiDaParte } from './useMettiDaParte';
 
 const CARD = 'rounded-[var(--radius-md)] border border-rule bg-surface-muted p-4';
@@ -33,7 +34,7 @@ export function DaFareCard({
 }) {
   const { metti, inCorso, errore, fatte } = useMettiDaParte({ householdId, oggi });
   const { apri } = useCasaAzioni();
-  const { rimandati, rimanda } = usePromemoriaRimandati(
+  const { rimandati, rimanda, rimandaFino } = usePromemoriaRimandati(
     candidati.flatMap((d) => (d.tipo === 'promemoria' ? [d.id] : [])),
     oggi
   );
@@ -41,13 +42,24 @@ export function DaFareCard({
   if (!daFare) return null;
   const piuTardi =
     daFare.tipo === 'promemoria' ? (
-      <button
-        type="button"
-        onClick={() => rimanda(daFare.id)}
-        className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-ink-2"
-      >
-        Più tardi
-      </button>
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={() => rimanda(daFare.id)}
+          className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-ink-2"
+        >
+          Più tardi
+        </button>
+        {daFare.silenzia ? (
+          <button
+            type="button"
+            onClick={() => rimandaFino(daFare.silenzia as string[], dataFraMesi(oggi, MESI_DALLA_QUOTA))}
+            className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-ink-2"
+          >
+            Va bene così
+          </button>
+        ) : null}
+      </div>
     ) : null;
 
   if (daFare.tipo !== 'da_parte') {

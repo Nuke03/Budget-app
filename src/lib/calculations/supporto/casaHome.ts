@@ -9,7 +9,7 @@ import { pianoDelMese, pianoInVigore } from '../casa/versamenti';
 import { chiGestisce } from './gestore';
 
 export type DaFareCasa =
-  | { tipo: 'promemoria'; id: string; testo: string; href: string; azione?: AzionePromemoria }
+  | { tipo: 'promemoria'; id: string; testo: string; href: string; azione?: AzionePromemoria; silenzia?: string[] }
   | { tipo: 'da_parte'; testo: string; importo: number; voci: { nome: string; importo: number }[] }
   | { tipo: 'quota'; testo: string; href: '/casa/quota' };
 
@@ -123,6 +123,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
     tipo: 'promemoria',
     id: p.id,
     testo: p.testo,
+    ...(p.silenzia ? { silenzia: p.silenzia } : {}),
     href: p.azione?.href ?? '/casa',
     ...(p.azione && !p.azione.href ? { azione: p.azione } : {}),
   }));

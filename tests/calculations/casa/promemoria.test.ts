@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { computeReminders, motivoRivediQuota, statoPromemoria, type StatoPromemoria } from '@/lib/calculations/casa/promemoria';
 import { giornoEMeseScadenza } from '@/lib/format';
+import { dataFraMesi, promemoriaRimandato, rimandaFinoAl, rimandaPromemoria } from '@/app/casa/rimandaPromemoria';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 
 const me = { userId: 'u1' };
@@ -276,7 +277,7 @@ describe('rivedi la quota', () => {
   it('statoPromemoria porta il motivo solo se gli arrivano i dati', () => {
     const b = { piano: null, righe: [], oggi, nomi: {}, crediti: {}, debiti: [] };
     expect(statoPromemoria(b).quota).toBeUndefined();
-    expect(statoPromemoria({ ...b, rivediQuota: input() }).quota).toEqual({ motivo: 'spese' });
+    expect(statoPromemoria({ ...b, rivediQuota: input() }).quota).toEqual({ motivo: 'spese', validoDal: '2026-06-01' });
   });
 
   it('i testi sono calmi e il link va alla quota', () => {
@@ -284,10 +285,11 @@ describe('rivedi la quota', () => {
       ['spese', 'Le spese della casa sono sopra il previsto da due mesi: rivedere la quota?'],
       ['tempo', 'Sono passati 6 mesi dall\'ultima quota: vale un controllo?'],
     ] as const) {
-      const r = computeReminders({ ...base, giornoVersamento: null, versamentoMese: null, quota: { motivo } }, me, oggi);
+      const r = computeReminders({ ...base, giornoVersamento: null, versamentoMese: null, quota: { motivo, validoDal: '2026-05-01' } }, me, oggi);
       expect(r).toHaveLength(1);
-      expect(r[0]).toMatchObject({ id: `quota:${motivo}`, tipo: 'quota', testo });
+      expect(r[0]).toMatchObject({ id: motivo === 'spese' ? 'quota:spese' : 'quota:tempo:2026-05-01', tipo: 'quota', testo });
       expect(r[0].azione).toEqual({ tipo: 'quota', etichetta: 'Rivedi', href: '/casa/quota' });
+      expect(r[0].silenzia).toEqual(['quota:spese', 'quota:tempo:2026-05-01']);
       for (const v of [...PAROLE_VIETATE, 'colpa', 'ritardo', 'scaduto']) expect(r[0].testo.toLowerCase()).not.toContain(v);
     }
   });
@@ -299,11 +301,45 @@ describe('rivedi la quota', () => {
         debiti: [debito('u2', 'u1')],
         checkin: { mese: '2026-10-01' },
         controllo: { ultimo: null, riferimento: '2026-01-01', haConto: true },
-        quota: { motivo: 'spese' },
+        quota: { motivo: 'spese', validoDal: '2026-06-01' },
       },
       me,
       '2026-11-09'
     );
     expect(r.map((p) => p.tipo)).toEqual(['versamento', 'debito', 'checkin', 'controllo', 'quota']);
+  });
+});
+
+describe('rivedi la quota: Più tardi e Va bene così', () => {
+  const q = (motivo: 'spese' | 'tempo', validoDal: string) =>
+    computeReminders({ ...base, giornoVersamento: null, versamentoMese: null, quota: { motivo, validoDal } }, me, '2026-11-19')[0];
+  beforeEach(() => window.localStorage.clear());
+
+  it('Va bene così nasconde entrambi i motivi per 6 mesi, poi tornano', () => {
+    const tempo = q('tempo', '2026-05-01');
+    const finoAl = dataFraMesi('2026-11-19', 6);
+    expect(finoAl).toBe('2027-05-19');
+    for (const id of tempo.silenzia ?? []) rimandaFinoAl(id, finoAl);
+    expect(promemoriaRimandato(q('tempo', '2026-05-01').id, '2026-11-19')).toBe(true);
+    expect(promemoriaRimandato('quota:spese', '2027-03-01')).toBe(true);
+    expect(promemoriaRimandato('quota:tempo:2026-05-01', '2027-05-18')).toBe(true);
+    expect(promemoriaRimandato('quota:spese', '2027-05-19')).toBe(false);
+    expect(promemoriaRimandato('quota:tempo:2026-05-01', '2027-05-19')).toBe(false);
+  });
+
+  it('una nuova versione del piano riporta il promemoria del tempo', () => {
+    rimandaFinoAl('quota:tempo:2026-05-01', '2027-05-19');
+    expect(q('tempo', '2026-05-01').id).not.toBe(q('tempo', '2026-11-01').id);
+    expect(promemoriaRimandato(q('tempo', '2026-11-01').id, '2026-11-20')).toBe(false);
+  });
+
+  it('Più tardi vale un giorno', () => {
+    rimandaPromemoria('quota:spese', '2026-11-19');
+    expect(promemoriaRimandato('quota:spese', '2026-11-19')).toBe(true);
+    expect(promemoriaRimandato('quota:spese', '2026-11-20')).toBe(false);
+  });
+
+  it('il testo del pulsante passa le parole vietate', () => {
+    for (const v of PAROLE_VIETATE) expect('va bene così').not.toContain(v);
   });
 });
