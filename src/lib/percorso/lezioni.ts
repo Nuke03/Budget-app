@@ -166,9 +166,9 @@ export const LEZIONI: Lezione[] = [
     id: 'pensione', numero: 15, fase: 'dopo',
     titolo: 'La pensione, per sapere',
     inBreve:
-      "In Italia la pensione dipende dai contributi versati negli anni. I contributi possono stare in più posti: controllarli una volta ogni tanto aiuta. Per sapere dove stanno i tuoi, ci si può rivolgere a chi ti segue per le tasse.",
+      "In Italia la pensione dipende dai contributi versati negli anni. I contributi possono stare in più posti: controllarli una volta l'anno aiuta. Per sapere dove stanno i tuoi, ci si può rivolgere a chi ti segue per le tasse.",
     esempio:
-      "Esempio: una volta ogni tanto, quindici minuti. Accedi con SPID, guardi che i contributi risultino, salvi una schermata.",
+      "Esempio: una volta l'anno, quindici minuti. Accedi con SPID, guardi che i contributi risultino, salvi una schermata.",
     prova: null,
     link: [{ etichetta: 'INPS', url: 'https://www.inps.it' }],
   },

@@ -13,6 +13,8 @@ const HOST_UFFICIALI = [
   'inps.it', 'comitatoeducazionefinanziaria.gov.it', 'arbitrobancariofinanziario.it',
 ];
 
+const PRODOTTI = /(azioni|azionari[oa]?|obbligazion\w*|etf)/i;
+
 const testo = (l: (typeof LEZIONI)[number]) =>
   [l.titolo, l.inBreve, l.esempio, l.prova?.etichetta ?? ''].join(' ');
 
@@ -59,9 +61,14 @@ describe('lezioni', () => {
     for (const n of [14, 15]) {
       const l = LEZIONI[n - 1];
       expect(l.prova).toBeNull();
-      expect(testo(l)).not.toMatch(/(azioni|azionari[oa]?|obbligazion\w*|etf)/i);
+      expect(testo(l)).not.toMatch(PRODOTTI);
       expect(testo(l)).not.toMatch(/fondo pensione [A-Z]/);
     }
+  });
+
+  it('il controllo dei prodotti non scambia informazioni per azioni', () => {
+    expect(PRODOTTI.test('informazioni sulla pensione')).toBe(false);
+    expect(PRODOTTI.test('comprare azioni')).toBe(true);
   });
 
   it('le lezioni 10 e 13 non hanno prova', () => {
