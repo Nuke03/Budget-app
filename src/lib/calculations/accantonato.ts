@@ -69,24 +69,27 @@ export function computeFinestraGoal(goal: GoalForCalc, today: Date): FinestraGoa
   return { windowStart: createdAtDate, windowEnd: null };
 }
 
+// Mesi di calendario del ciclo (`totale`) e mesi già maturati (`trascorsi`, senza il tetto al totale).
+// Un obiettivo creato a metà ciclo matura "da adesso": i mesi si contano da
+// accantonaDa, ma la quota mensile resta quella del ciclo intero.
+export function computeMesiGoal(goal: GoalForCalc, today: Date): { totale: number; trascorsi: number } {
+  const { windowStart, windowEnd } = computeFinestraGoal(goal, today);
+  const totale = Math.max(1, differenceInCalendarMonths(windowEnd!, windowStart));
+  const inizio =
+    goal.accantonaDa && parseISO(goal.accantonaDa) > windowStart
+      ? parseISO(goal.accantonaDa)
+      : windowStart;
+  return { totale, trascorsi: Math.max(differenceInCalendarMonths(today, inizio), 0) };
+}
+
 function computeAccantonatoTeorico(goal: GoalForCalc, today: Date): number {
   if (goal.modalita === 'bloccato') {
     return goal.importoTarget;
   }
 
-  const { windowStart, windowEnd } = computeFinestraGoal(goal, today);
-  const totalMonths = Math.max(1, differenceInCalendarMonths(windowEnd!, windowStart));
-  // Un obiettivo creato a metà ciclo matura "da adesso": i mesi si contano da
-  // accantonaDa, ma la quota mensile resta quella del ciclo intero.
-  const inizio =
-    goal.accantonaDa && parseISO(goal.accantonaDa) > windowStart
-      ? parseISO(goal.accantonaDa)
-      : windowStart;
-  const elapsedMonthsRaw = differenceInCalendarMonths(today, inizio);
-  const elapsedMonths = Math.min(Math.max(elapsedMonthsRaw, 0), totalMonths);
-
-  const quotaMensile = goal.importoTarget / totalMonths;
-  return quotaMensile * elapsedMonths;
+  const { totale, trascorsi } = computeMesiGoal(goal, today);
+  const quotaMensile = goal.importoTarget / totale;
+  return quotaMensile * Math.min(trascorsi, totale);
 }
 
 // `specoCollegato` è il totale delle spese che l'utente ha esplicitamente

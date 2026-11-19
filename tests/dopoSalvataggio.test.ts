@@ -6,6 +6,10 @@ const rispostaAvviso = vi.fn(async () => {});
 const segnaProposta = vi.fn(async () => {});
 const collegaAObiettivo = vi.fn(async () => {});
 const getOpenGoals = vi.fn();
+const closeGoal = vi.fn(async () => {});
+const createGoal = vi.fn(async () => ({}));
+const reopenGoal = vi.fn(async () => {});
+const updateGoalPiano = vi.fn(async () => {});
 const revalidatePath = vi.fn();
 const utenteOLogin = vi.fn(async () => ({ id: 'u1' }));
 // La lettura di una transazione per id (rispondiAvviso).
@@ -21,7 +25,13 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 vi.mock('@/lib/utenteOLogin', () => ({ utenteOLogin: () => utenteOLogin() }));
 vi.mock('@/lib/loadPercorsoData', () => ({ loadPercorsoData: (...a: unknown[]) => loadPercorsoData(...a) }));
-vi.mock('@/lib/data/goals', () => ({ getOpenGoals: (...a: unknown[]) => getOpenGoals(...a) }));
+vi.mock('@/lib/data/goals', () => ({
+  getOpenGoals: (...a: unknown[]) => getOpenGoals(...a),
+  closeGoal: (...a: unknown[]) => closeGoal(...(a as [])),
+  createGoal: (...a: unknown[]) => createGoal(...(a as [])),
+  reopenGoal: (...a: unknown[]) => reopenGoal(...(a as [])),
+  updateGoalPiano: (...a: unknown[]) => updateGoalPiano(...(a as [])),
+}));
 vi.mock('@/lib/data/percorso', () => ({
   avvisoGiaDato: (...a: unknown[]) => avvisoGiaDato(...a),
   rispostaAvviso: (...a: unknown[]) => rispostaAvviso(...(a as [])),
@@ -85,6 +95,13 @@ describe('valutaDopoSalvataggio', () => {
     expect((r as { avviso: { fondoImprevisti: unknown } }).avviso.fondoImprevisti).toBeNull();
   });
 
+  it('spesa già collegata a un obiettivo: l avviso non offre il fondo', async () => {
+    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ goalId: 'altro' })] }));
+    const r = await valutaDopoSalvataggio(ID);
+    expect(r).toMatchObject({ tipo: 'avviso' });
+    expect((r as { avviso: { fondoImprevisti: unknown } }).avviso.fondoImprevisti).toBeNull();
+  });
+
   it('spesa casa: null', async () => {
     // Le righe di casa non stanno fra le transazioni personali.
     loadPercorsoData.mockResolvedValue(dati({ transazioni: [] }));
@@ -102,7 +119,7 @@ describe('valutaDopoSalvataggio', () => {
   it('avviso già dato: niente avviso, eventuale lezione', async () => {
     avvisoGiaDato.mockResolvedValue(true);
     // 200 € senza fondo collegato: la regola propone imprevisti.
-    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ importo: 200 })], disponibileReale: -20 }));
+    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ importo: 200 })], disponibileReale: 60 }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r).toEqual({ tipo: 'lezione', lezione: 'imprevisti' });
     expect(rispostaAvviso).not.toHaveBeenCalled();
@@ -145,13 +162,101 @@ describe('valutaDopoSalvataggio', () => {
   });
 });
 
+// Un fondo imprevisti vero: 200 € in 10 mesi (20 al mese), nato il 19/6; il 19/11 ci sono 5 mesi, 100 € accantonati.
+const fondoVero = (over = {}) => ({
+  id: GOAL, nome: 'Imprevisti', importoTarget: 200, modalita: 'dilazionato', scadenza: '2027-04-19',
+  categoriaId: null, ricorrente: false, frequenzaMesi: null, stato: 'aperto',
+  createdAt: '2026-06-19T10:00:00.000Z', accantonaDa: '2026-06-19', ruolo: 'imprevisti', ...over,
+});
+function fondoCon(accantonato: number, over = {}) {
+  getOpenGoals.mockResolvedValue([fondoVero(over)]);
+  loadPercorsoData.mockResolvedValue(dati({ goals: [{ ...fondoVero(over), accantonato }] }));
+}
+const rigaCon = (over = {}) =>
+  riga.mockResolvedValue({
+    data: { id: ID, tipo: 'expense', importo: 50, user_id: 'u1', household_id: null, goal_id: null, ...over },
+    error: null,
+  });
+
+describe('rispondiAvviso: il fondo dopo il "Sì"', () => {
+  it('spesa più piccola di quanto accantonato: stesso fondo allungato, poi il collegamento', async () => {
+    fondoCon(100);
+    rigaCon({ importo: 50 });
+    const r = await rispondiAvviso(ID, 'imprevisto', GOAL);
+    expect(updateGoalPiano).toHaveBeenCalledWith(expect.anything(), GOAL, { importoTarget: 260, scadenza: '2027-07-19' });
+    expect(collegaAObiettivo).toHaveBeenCalledWith(expect.anything(), ID, GOAL);
+    expect(closeGoal).not.toHaveBeenCalled();
+    expect(createGoal).not.toHaveBeenCalled();
+    expect(r).toEqual({ coperto: 50, resto: 0 });
+  });
+
+  it('allungare ok ma collegare fallisce: il fondo torna com era e si rilancia', async () => {
+    fondoCon(100);
+    rigaCon({ importo: 50 });
+    collegaAObiettivo.mockRejectedValueOnce(new Error('rete'));
+    await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow('rete');
+    expect(updateGoalPiano).toHaveBeenLastCalledWith(expect.anything(), GOAL, { importoTarget: 200, scadenza: '2027-04-19' });
+    expect(rispostaAvviso).not.toHaveBeenCalled();
+  });
+
+  it('spesa più grande di quanto accantonato: collega, chiude il vecchio, crea il nuovo con stessa quota', async () => {
+    fondoCon(40, { createdAt: '2026-09-19T10:00:00.000Z', accantonaDa: '2026-09-19', scadenza: '2027-07-19' });
+    rigaCon({ importo: 300 });
+    const r = await rispondiAvviso(ID, 'imprevisto', GOAL);
+    const ordine = [collegaAObiettivo, closeGoal, createGoal].map((f) => f.mock.invocationCallOrder[0]);
+    expect(ordine).toEqual([...ordine].sort((a, b) => a - b));
+    expect(collegaAObiettivo).toHaveBeenCalledWith(expect.anything(), ID, GOAL);
+    expect(closeGoal).toHaveBeenCalledWith(expect.anything(), GOAL);
+    expect(createGoal).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        importoTarget: 200, modalita: 'dilazionato', ruolo: 'imprevisti', ricorrente: false,
+        scadenza: '2027-09-19', accantonaDa: '2026-11-19', categoriaId: null,
+      })
+    );
+    expect(updateGoalPiano).not.toHaveBeenCalled();
+    expect(r).toEqual({ coperto: 40, resto: 260 });
+    expect(rispostaAvviso).toHaveBeenCalledWith(expect.anything(), ID, 'imprevisto');
+  });
+
+  it('creare il nuovo fallisce: il vecchio si riapre, la spesa si scollega e si rilancia', async () => {
+    fondoCon(40);
+    rigaCon({ importo: 300 });
+    createGoal.mockRejectedValueOnce(new Error('indice'));
+    await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow('indice');
+    expect(reopenGoal).toHaveBeenCalledWith(expect.anything(), GOAL);
+    expect(collegaAObiettivo).toHaveBeenLastCalledWith(expect.anything(), ID, null);
+    expect(rispostaAvviso).not.toHaveBeenCalled();
+  });
+
+  it('chiudere fallisce: non si crea niente e la spesa si scollega', async () => {
+    fondoCon(40);
+    rigaCon({ importo: 300 });
+    closeGoal.mockRejectedValueOnce(new Error('rete'));
+    await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow('rete');
+    expect(createGoal).not.toHaveBeenCalled();
+    expect(collegaAObiettivo).toHaveBeenLastCalledWith(expect.anything(), ID, null);
+  });
+
+  it('spesa già collegata a questo fondo: non si rifà niente', async () => {
+    fondoCon(40);
+    rigaCon({ importo: 300, goal_id: GOAL });
+    await rispondiAvviso(ID, 'imprevisto', GOAL);
+    expect(updateGoalPiano).not.toHaveBeenCalled();
+    expect(closeGoal).not.toHaveBeenCalled();
+    expect(createGoal).not.toHaveBeenCalled();
+    expect(collegaAObiettivo).not.toHaveBeenCalled();
+    expect(rispostaAvviso).toHaveBeenCalledWith(expect.anything(), ID, 'imprevisto');
+  });
+});
+
 describe('rispondiAvviso', () => {
   beforeEach(() => {
+    fondoCon(100);
     riga.mockResolvedValue({
-      data: { id: ID, tipo: 'expense', user_id: 'u1', household_id: null, goal_id: null },
+      data: { id: ID, tipo: 'expense', importo: 50, user_id: 'u1', household_id: null, goal_id: null },
       error: null,
     });
-    getOpenGoals.mockResolvedValue([{ id: GOAL, ruolo: 'imprevisti', stato: 'aperto' }]);
   });
 
   it('imprevisto: collega al fondo e risponde', async () => {
@@ -188,7 +293,7 @@ describe('rispondiAvviso', () => {
       { user_id: 'u1', household_id: null, tipo: 'income', goal_id: null },
       { user_id: 'u1', household_id: null, tipo: 'expense', goal_id: 'altro-obiettivo' },
     ]) {
-      riga.mockResolvedValueOnce({ data: { id: ID, ...r }, error: null });
+      riga.mockResolvedValueOnce({ data: { id: ID, importo: 50, ...r }, error: null });
       await expect(rispondiAvviso(ID, 'imprevisto', GOAL)).rejects.toThrow();
     }
     riga.mockResolvedValueOnce({ data: null, error: null });

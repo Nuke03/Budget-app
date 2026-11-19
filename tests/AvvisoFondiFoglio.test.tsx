@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
-const rispondiAvviso = vi.fn(async () => {});
+const rispondiAvviso = vi.fn(async (..._a: unknown[]): Promise<{ coperto: number; resto: number } | undefined> => undefined);
+const rimandaLezione = vi.fn(async (..._a: unknown[]): Promise<void> => {});
+vi.mock('@/app/impara/actions', () => ({ rimandaLezione: (...a: unknown[]) => rimandaLezione(...a) }));
 vi.mock('@/app/impara/dopoSalvataggio', () => ({
   rispondiAvviso: (...a: unknown[]) => rispondiAvviso(...(a as [])),
 }));
@@ -33,6 +35,24 @@ describe('AvvisoFondiFoglio', () => {
     expect(screen.getByRole('button', { name: 'No, è una spesa normale' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Sì, prendili dal fondo imprevisti' }));
     await waitFor(() => expect(rispondiAvviso).toHaveBeenCalledWith(ID, 'imprevisto', 'g1'));
+    expect(await screen.findByText('Il fondo ha fatto il suo lavoro.')).toBeInTheDocument();
+  });
+
+  it('Sì con spesa più grande del fondo: dice quanto ha coperto il fondo e quanto la prossima entrata', async () => {
+    rispondiAvviso.mockResolvedValueOnce({ coperto: 80, resto: 220 });
+    apri(conFondo);
+    fireEvent.click(screen.getByRole('button', { name: 'Sì, prendili dal fondo imprevisti' }));
+    expect(
+      await screen.findByText('Il fondo ha coperto 80 €. Gli altri 220 € li copre la prossima entrata.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Il fondo ha fatto il suo lavoro.')).not.toBeInTheDocument();
+    assertNessunaParolaVietata(document.body);
+  });
+
+  it('Sì con spesa coperta per intero: il fondo ha fatto il suo lavoro', async () => {
+    rispondiAvviso.mockResolvedValueOnce({ coperto: 30, resto: 0 });
+    apri(conFondo);
+    fireEvent.click(screen.getByRole('button', { name: 'Sì, prendili dal fondo imprevisti' }));
     expect(await screen.findByText('Il fondo ha fatto il suo lavoro.')).toBeInTheDocument();
   });
 

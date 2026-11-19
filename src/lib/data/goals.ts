@@ -121,3 +121,24 @@ export async function closeGoal(supabase: SupabaseClient, id: string): Promise<v
   const { error } = await supabase.from('budget_goals').update({ stato: 'chiuso' }).eq('id', id);
   if (error) throw error;
 }
+
+// Annulla una chiusura (solo per rimediare a un errore a metà di un'operazione).
+export async function reopenGoal(supabase: SupabaseClient, id: string): Promise<void> {
+  // household: per id
+  const { error } = await supabase.from('budget_goals').update({ stato: 'aperto' }).eq('id', id);
+  if (error) throw error;
+}
+
+// Cambia solo traguardo e scadenza, come il cuscinetto che si allunga dopo una spesa.
+export async function updateGoalPiano(
+  supabase: SupabaseClient,
+  id: string,
+  input: { importoTarget: number; scadenza: string }
+): Promise<void> {
+  // household: per id
+  const { error } = await supabase
+    .from('budget_goals')
+    .update({ importo_target: input.importoTarget, scadenza: input.scadenza })
+    .eq('id', id);
+  if (error) throw error;
+}

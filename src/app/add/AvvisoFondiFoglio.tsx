@@ -42,6 +42,8 @@ export function AvvisoFondiFoglio({
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState(false);
   const [vediLezione, setVediLezione] = useState(false);
+  // Quanto ha coperto il fondo, quando la spesa era più grande di quello che aveva messo da parte.
+  const [parziale, setParziale] = useState<{ coperto: number; resto: number } | null>(null);
 
   if (vediLezione) return <LezioneFoglio lezioneId={lezioneId} onChiudi={onChiudi} />;
 
@@ -53,7 +55,8 @@ export function AvvisoFondiFoglio({
     setInCorso(true);
     setErrore(false);
     try {
-      await rispondiAvviso(transactionId, risposta, risposta === 'imprevisto' ? fondo?.goalId : undefined);
+      const esito = await rispondiAvviso(transactionId, risposta, risposta === 'imprevisto' ? fondo?.goalId : undefined);
+      setParziale(risposta === 'imprevisto' && esito && esito.resto > 0 ? esito : null);
       setFase(risposta === 'imprevisto' ? 'fondo' : 'normale');
     } catch {
       setErrore(true);
@@ -72,7 +75,11 @@ export function AvvisoFondiFoglio({
     <FoglioInferiore titolo={titolo(avviso)} onClose={onChiudi}>
       <div className="flex flex-col gap-4 px-5 pb-5">
         {fase === 'fondo' ? (
-          <p className="text-[15px]">Il fondo ha fatto il suo lavoro.</p>
+          <p className="text-[15px]">
+            {parziale
+              ? `Il fondo ha coperto ${euroInFrase(parziale.coperto)}. Gli altri ${euroInFrase(parziale.resto)} li copre la prossima entrata.`
+              : 'Il fondo ha fatto il suo lavoro.'}
+          </p>
         ) : fase === 'normale' ? (
           <>
             <p className="text-[15px]">{`Va bene. ${prossima}`}</p>

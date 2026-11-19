@@ -194,11 +194,11 @@ export async function decidiAttesa(
   if (error) throw error;
 }
 
-// Solo goal_id: il resto del movimento non cambia.
+// Solo goal_id: il resto del movimento non cambia. null scollega.
 export async function collegaAObiettivo(
   supabase: SupabaseClient,
   transactionId: string,
-  goalId: string
+  goalId: string | null
 ): Promise<void> {
   // household: per id
   const { error } = await supabase.from('transactions').update({ goal_id: goalId }).eq('id', transactionId);
