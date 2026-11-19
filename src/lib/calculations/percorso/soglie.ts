@@ -10,5 +10,7 @@ export const GIORNI_PIU_TARDI = 14;
 export const GIORNI_RIPROPOSTA = 60;
 export const GIORNI_ANNUALE = 365;
 export const GIORNI_ATTESA = 7;
+export const GIORNI_SETTIMANA = 7;
+export const MESI_MASSIMI_IMPREVISTI = 600;
 export const TRAGUARDO_IMPREVISTI = 200;
 export const QUOTA_IMPREVISTI = 20;

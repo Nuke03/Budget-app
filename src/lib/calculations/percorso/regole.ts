@@ -1,7 +1,7 @@
 // Quando proporre una lezione: regole pure, nessun accesso ai dati.
 import type { BudgetGoal, Category, Transaction } from '@/lib/types';
 import type { ArgomentoId, PercorsoUtente, StatiLezioni } from '@/lib/percorso/tipi';
-import { lezione } from '@/lib/percorso/lezioni';
+import { LEZIONI, lezione } from '@/lib/percorso/lezioni';
 import {
   PICCOLA_SPESA, PICCOLE_SPESE_MESE, SPESA_IMPREVISTO, SPESA_IMPULSO, ENTRATA_GRANDE,
   DISPONIBILE_BASSO, GIORNI_SENZA_ENTRATA, GIORNI_RIPROPOSTA, GIORNI_ANNUALE,
@@ -108,6 +108,12 @@ function redditoIrregolare(d: DatiRegole): boolean {
 
 export function lezioneDelGiorno(d: DatiRegole): ArgomentoId | null {
   if (d.primiPassiVisibili) return null;
+  // La lezione già proposta oggi resta visibile tutto il giorno, finché non la si apre o rimanda.
+  const giaOggi = LEZIONI.find((l) => {
+    const s = d.lezioni[l.id];
+    return s?.propostaIl === d.oggi && s.vistaIl !== d.oggi && !(s.rimandataAl && s.rimandataAl > d.oggi);
+  });
+  if (giaOggi) return giaOggi.id;
   const fondo = d.goals.find((g) => g.ruolo === 'imprevisti');
   const piuVecchia = d.transazioni.reduce<string | null>((m, t) => (m === null || t.data < m ? t.data : m), null);
   const candidati: { id: ArgomentoId; ok: boolean; giorni?: number }[] = [

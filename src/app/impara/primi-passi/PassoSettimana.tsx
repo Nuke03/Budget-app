@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { euroInFrase } from '@/lib/format';
 import { piuGiorni } from '@/lib/data/percorso';
-import { GIORNI_ATTESA, PICCOLA_SPESA } from '@/lib/calculations/percorso/soglie';
+import { GIORNI_SETTIMANA, PICCOLA_SPESA } from '@/lib/calculations/percorso/soglie';
 import type { FaseSettimana, RiepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
 import { avviaSettimana, chiudiSettimana, ripartiSettimana } from './actions';
 import { ERRORE_TESTO, PRIMARIO } from './stili';
@@ -52,7 +52,7 @@ export function PassoSettimana({
   } else if (fase === 'in-corso') {
     corpo = (
       <p className="text-[15px]">
-        {`Segna le spese, il resto lo guardiamo il ${giornoEMese(piuGiorni(dal, GIORNI_ATTESA))}.`}
+        {`Segna le spese, il resto lo guardiamo il ${giornoEMese(piuGiorni(dal, GIORNI_SETTIMANA))}.`}
       </p>
     );
   } else if (!riepilogo || riepilogo.numeroSpese === 0) {

@@ -1,4 +1,4 @@
-import { GIORNI_ATTESA } from './soglie';
+import { GIORNI_SETTIMANA } from './soglie';
 import type { PassoId, PercorsoUtente } from '@/lib/percorso/tipi';
 import type { Account, BudgetGoal } from '@/lib/types';
 
@@ -18,7 +18,7 @@ function giorniTra(da: string, a: string): number {
 // La settimana di prova è finita dopo 7 giorni dall'avvio.
 export function settimanaFinita(percorso: PercorsoUtente | null, oggi: string): boolean {
   if (!percorso?.settimanaDal) return false;
-  return giorniTra(percorso.settimanaDal, oggi) >= GIORNI_ATTESA;
+  return giorniTra(percorso.settimanaDal, oggi) >= GIORNI_SETTIMANA;
 }
 
 // I primi passi di avvio. `goals` sono gli obiettivi personali aperti.

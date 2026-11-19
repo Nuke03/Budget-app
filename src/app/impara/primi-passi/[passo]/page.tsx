@@ -6,6 +6,7 @@ import { loadPercorsoData } from '@/lib/loadPercorsoData';
 import { lezione } from '@/lib/percorso/lezioni';
 import { PASSI_ID, PASSI_TESTI } from '@/lib/percorso/passiTesti';
 import { faseSettimana, riepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
+import { SPESE_CERTE_PERSONALI } from '@/lib/percorso/speseCerte';
 import type { PassoId } from '@/lib/percorso/tipi';
 import { CoverHeader } from '../../../CoverHeader';
 import { PassoEntrate } from '../PassoEntrate';
@@ -57,7 +58,10 @@ export default async function PassoPage({ params }: { params: Promise<{ passo: s
       );
       break;
     case 'spese-certe':
-      azione = <PassoSpeseCerte oggi={dati.oggi} />;
+      azione = <PassoSpeseCerte
+          oggi={dati.oggi}
+          giaCreate={SPESE_CERTE_PERSONALI.filter((s) => dati.goals.some((g) => g.nome === s.nome)).map((s) => s.chiave)}
+        />;
       break;
     case 'imprevisti':
       azione = <PassoImprevisti giaCreato={dati.goals.some((g) => g.ruolo === 'imprevisti')} />;

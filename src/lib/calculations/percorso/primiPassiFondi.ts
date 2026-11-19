@@ -1,7 +1,7 @@
 // Calcoli dei primi passi: scadenze dei fondi e riepilogo della settimana di prova.
 import { addMonths, endOfMonth, format } from 'date-fns';
 import type { Category, Transaction } from '@/lib/types';
-import { GIORNI_ATTESA } from './soglie';
+import { GIORNI_SETTIMANA } from './soglie';
 import { piccoleSpese } from './numeri';
 
 // Mesi per arrivare al traguardo versando la quota ogni mese (arrotondati per eccesso).
@@ -31,6 +31,11 @@ function giorniTra(da: string, a: string): number {
   return (Date.parse(`${a}T00:00:00Z`) - Date.parse(`${da}T00:00:00Z`)) / 86_400_000;
 }
 
+// Il settimo giorno, compreso: dal + 6.
+export function ultimoGiornoSettimana(dal: string): string {
+  return new Date(Date.parse(`${dal}T00:00:00Z`) + (GIORNI_SETTIMANA - 1) * 86_400_000).toISOString().slice(0, 10);
+}
+
 export interface RiepilogoSettimana {
   numeroSpese: number;
   totale: number;
@@ -46,7 +51,9 @@ export function riepilogoSettimana(
   dal: string,
   oggi: string
 ): RiepilogoSettimana {
-  const spese = transazioni.filter((t) => t.tipo === 'expense' && t.data >= dal && t.data <= oggi);
+  // Solo i sette giorni della settimana, anche se si torna dopo molto tempo.
+  const fine = ultimoGiornoSettimana(dal);
+  const spese = transazioni.filter((t) => t.tipo === 'expense' && t.data >= dal && t.data <= fine && t.data <= oggi);
   const perCategoria = new Map<string, number>();
   let centesimi = 0;
   for (const t of spese) {
@@ -67,5 +74,5 @@ export type FaseSettimana = 'da-avviare' | 'in-corso' | 'finita';
 
 export function faseSettimana(settimanaDal: string | null, oggi: string): FaseSettimana {
   if (!settimanaDal) return 'da-avviare';
-  return giorniTra(settimanaDal, oggi) >= GIORNI_ATTESA ? 'finita' : 'in-corso';
+  return giorniTra(settimanaDal, oggi) >= GIORNI_SETTIMANA ? 'finita' : 'in-corso';
 }

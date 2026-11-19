@@ -121,7 +121,20 @@ describe('passo spese certe', () => {
   });
 });
 
+describe('passo spese certe già create', () => {
+  it('mostra come già creata la voce con il fondo e non la offre', () => {
+    render(<PassoSpeseCerte oggi="2026-11-19" giaCreate={['gomme']} />);
+    expect(screen.queryByRole('checkbox', { name: /Gomme/ })).toBeNull();
+    expect(screen.getByText(/il fondo c’è già/)).toBeTruthy();
+  });
+});
+
 describe('passo imprevisti', () => {
+  it('dice che il cuscinetto cresce un poco ogni mese', () => {
+    render(<PassoImprevisti giaCreato={false} />);
+    expect(screen.getByText(/cresce un poco ogni mese/)).toBeTruthy();
+  });
+
   it('crea il cuscinetto con traguardo e quota di partenza', async () => {
     const { container } = render(<PassoImprevisti giaCreato={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'Crea il cuscinetto' }));

@@ -5,10 +5,12 @@ import { createClient } from '@/lib/supabase/server';
 import { utenteOLogin } from '@/lib/utenteOLogin';
 import { createGoal, getOpenGoals } from '@/lib/data/goals';
 import { leggiPercorso, salvaPercorso, segnaProposta } from '@/lib/data/percorso';
+import { MESI_MASSIMI_IMPREVISTI } from '@/lib/calculations/percorso/soglie';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { settimanaFinita } from '@/lib/calculations/percorso/passi';
 import {
   fineDelMese,
+  mesiPerTraguardo,
   meseValido,
   scadenzaImprevisti,
 } from '@/lib/calculations/percorso/primiPassiFondi';
@@ -99,7 +101,10 @@ export async function creaFondiSpeseCerte(voci: VoceCertaInput[]): Promise<strin
   });
   if (new Set(scelte.map((s) => s.base.chiave)).size !== scelte.length) throw new Error('Voce ripetuta');
   const supabase = await sessione();
-  for (const s of scelte) {
+  // Una voce che ha già un fondo aperto con lo stesso nome non se ne crea una seconda.
+  const nomiAperti = new Set((await getOpenGoals(supabase)).map((g) => g.nome));
+  const nuove = scelte.filter((s) => !nomiAperti.has(s.base.nome));
+  for (const s of nuove) {
     await createGoal(supabase, {
       nome: s.base.nome,
       importoTarget: s.importo,
@@ -112,7 +117,7 @@ export async function creaFondiSpeseCerte(voci: VoceCertaInput[]): Promise<strin
     });
   }
   aggiorna();
-  return scelte.map((s) => s.base.chiave);
+  return nuove.map((s) => s.base.chiave);
 }
 
 export async function nessunaSpesaCerta(): Promise<void> {
@@ -124,6 +129,7 @@ export async function nessunaSpesaCerta(): Promise<void> {
 // Un solo cuscinetto aperto per utente: se c'è già, non se ne crea un secondo.
 export async function creaFondoImprevisti(input: { traguardo: number; quota: number }): Promise<{ creato: boolean }> {
   if (!importoValido(input.traguardo) || !importoValido(input.quota)) throw new Error('Importo non valido');
+  if (mesiPerTraguardo(input.traguardo, input.quota) > MESI_MASSIMI_IMPREVISTI) throw new Error('Tempo troppo lungo');
   const supabase = await sessione();
   const aperti = await getOpenGoals(supabase);
   if (aperti.some((g) => g.ruolo === 'imprevisti')) {

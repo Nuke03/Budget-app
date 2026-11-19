@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { QUOTA_IMPREVISTI, TRAGUARDO_IMPREVISTI } from '@/lib/calculations/percorso/soglie';
+import { MESI_MASSIMI_IMPREVISTI, QUOTA_IMPREVISTI, TRAGUARDO_IMPREVISTI } from '@/lib/calculations/percorso/soglie';
 import { mesiPerTraguardo } from '@/lib/calculations/percorso/primiPassiFondi';
 import { creaFondoImprevisti } from './actions';
 import { CAMPO, ERRORE_TESTO, ETICHETTA, PRIMARIO } from './stili';
@@ -25,7 +25,8 @@ export function PassoImprevisti({ giaCreato }: { giaCreato: boolean }) {
 
   const t = comeNumero(traguardo);
   const q = comeNumero(quota);
-  const validi = Number.isFinite(t) && t > 0 && Number.isFinite(q) && q > 0;
+  const validi =
+    Number.isFinite(t) && t > 0 && Number.isFinite(q) && q > 0 && mesiPerTraguardo(t, q) <= MESI_MASSIMI_IMPREVISTI;
   const quanteSi = si.filter(Boolean).length;
 
   function crea() {
@@ -46,6 +47,7 @@ export function PassoImprevisti({ giaCreato }: { giaCreato: boolean }) {
 
   return (
     <div className="mt-5 flex flex-col gap-4">
+      <p className="text-[15px]">Il cuscinetto cresce un poco ogni mese: non si mette da parte tutto in una volta.</p>
       <fieldset className="flex flex-col gap-1">
         <legend className={ETICHETTA}>Tre domande per scegliere la cifra</legend>
         {DOMANDE.map((d, i) => (

@@ -85,6 +85,21 @@ describe('azioni primi passi', () => {
     expect(createGoal).toHaveBeenNthCalledWith(2, {}, expect.objectContaining({ frequenzaMesi: 24, scadenza: '2028-01-31' }));
   });
 
+  it('spese certe salta la voce che ha già un fondo aperto con lo stesso nome', async () => {
+    getOpenGoals.mockResolvedValue([{ nome: 'Gomme' }]);
+    const fatte = await creaFondiSpeseCerte([
+      { chiave: 'gomme', importo: 400, mese: '2028-01' },
+      { chiave: 'bollo', importo: 150, mese: '2027-03' },
+    ]);
+    expect(fatte).toEqual(['bollo']);
+    expect(createGoal).toHaveBeenCalledTimes(1);
+  });
+
+  it('imprevisti rifiuta un tempo oltre 600 mesi', async () => {
+    await expect(creaFondoImprevisti({ traguardo: 100000, quota: 1 })).rejects.toThrow();
+    expect(createGoal).not.toHaveBeenCalled();
+  });
+
   it('spese certe rifiuta voci e mesi non validi senza scrivere', async () => {
     await expect(creaFondiSpeseCerte([{ chiave: 'boh', importo: 5, mese: '2027-03' }])).rejects.toThrow();
     await expect(creaFondiSpeseCerte([{ chiave: 'gomme', importo: 0, mese: '2027-03' }])).rejects.toThrow();

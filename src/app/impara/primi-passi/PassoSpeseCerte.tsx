@@ -14,7 +14,7 @@ interface Riga {
   mese: string;
 }
 
-export function PassoSpeseCerte({ oggi }: { oggi: string }) {
+export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCreate?: string[] }) {
   const router = useRouter();
   const [inCorso, avvia] = useTransition();
   const [errore, setErrore] = useState(false);
@@ -33,7 +33,7 @@ export function PassoSpeseCerte({ oggi }: { oggi: string }) {
   );
   const [create, setCreate] = useState<string[] | null>(null);
 
-  const spuntate = SPESE_CERTE_PERSONALI.filter((s) => righe[s.chiave].scelta);
+  const spuntate = SPESE_CERTE_PERSONALI.filter((s) => righe[s.chiave].scelta && !giaCreate.includes(s.chiave));
   const validi = spuntate.every((s) => Number(righe[s.chiave].importo.replace(',', '.')) > 0 && righe[s.chiave].mese >= oggi.slice(0, 7));
 
   function cambia(chiave: string, parti: Partial<Riga>) {
@@ -93,6 +93,14 @@ export function PassoSpeseCerte({ oggi }: { oggi: string }) {
       <ul className="flex flex-col gap-3">
         {SPESE_CERTE_PERSONALI.map((s) => {
           const r = righe[s.chiave];
+          if (giaCreate.includes(s.chiave)) {
+            return (
+              <li key={s.chiave} className="rounded-[var(--radius-md)] border border-rule bg-surface p-3 text-[15px]">
+                <span className="font-semibold">{s.nome}</span>
+                <span className="text-ink-2">: il fondo c’è già</span>
+              </li>
+            );
+          }
           return (
             <li key={s.chiave} className="rounded-[var(--radius-md)] border border-rule bg-surface p-3">
               <label className="flex min-h-11 items-center gap-3 text-[15px] font-semibold">

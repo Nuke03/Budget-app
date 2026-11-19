@@ -149,6 +149,28 @@ describe('lezioneDopoSalvataggio', () => {
   });
 });
 
+describe('lezioneDelGiorno: proposta di oggi', () => {
+  const stato = (over: object) => ({ vistaIl: null, rimandataAl: null, azioneIl: null, propostaIl: null, ...over });
+  it('la lezione proposta oggi resta visibile tutto il giorno', () => {
+    const d = dati({
+      lezioni: { imprevisti: stato({ propostaIl: OGGI }) },
+      percorso: percorso({ ultimaPropostaIl: OGGI }),
+    });
+    expect(lezioneDelGiorno(d)).toBe('imprevisti');
+  });
+  it('dopo averla aperta oggi non torna', () => {
+    const d = dati({
+      lezioni: { imprevisti: stato({ propostaIl: OGGI, vistaIl: OGGI }) },
+      percorso: percorso({ ultimaPropostaIl: OGGI }),
+    });
+    expect(lezioneDelGiorno(d)).toBeNull();
+  });
+  it('con i primi passi visibili resta null anche se proposta oggi', () => {
+    const d = dati({ primiPassiVisibili: true, lezioni: { imprevisti: stato({ propostaIl: OGGI }) } });
+    expect(lezioneDelGiorno(d)).toBeNull();
+  });
+});
+
 describe('lezioneDelGiorno', () => {
   it('null con primi passi visibili', () => {
     expect(lezioneDelGiorno(dati({ primiPassiVisibili: true, disponibileReale: 0 }))).toBeNull();

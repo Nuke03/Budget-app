@@ -100,3 +100,14 @@ describe('settimanaFinita', () => {
     expect(settimanaFinita(percorso(), '2026-11-19')).toBe(false);
   });
 });
+
+import { riepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
+describe('riepilogoSettimana: finestra di 7 giorni', () => {
+  it('chi torna al giorno 15 vede solo i primi 7 giorni', () => {
+    const t = (id: string, data: string, importo: number) =>
+      ({ id, tipo: 'expense', importo, data, categoriaId: null, accountId: 'c', goalId: null, descrizione: '', nota: null, createdAt: '', stima: false }) as never;
+    const r = riepilogoSettimana([t('a', '2026-11-01', 10), t('b', '2026-11-07', 5), t('c', '2026-11-08', 99), t('d', '2026-11-15', 1)], [], '2026-11-01', '2026-11-15');
+    expect(r.numeroSpese).toBe(2);
+    expect(r.totale).toBe(15);
+  });
+});
