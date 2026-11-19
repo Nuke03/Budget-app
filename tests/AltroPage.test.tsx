@@ -24,11 +24,12 @@ import AltroPage from '@/app/altro/page';
 import { serveConferma, nonAvvisarePiu } from '@/lib/conferme';
 
 describe('pagina Altro', () => {
-  it('ha sei link con gli href previsti', async () => {
+  it('ha sette link con gli href previsti', async () => {
     render(await AltroPage());
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(7);
     expect(screen.getByRole('link', { name: /Impara/ })).toHaveAttribute('href', '/impara');
+    expect(screen.getByRole('link', { name: /Lista d'attesa/ })).toHaveAttribute('href', '/impara/attesa');
     expect(screen.getByRole('link', { name: /Obiettivi/ })).toHaveAttribute('href', '/goals');
     expect(screen.getByRole('link', { name: /Conti/ })).toHaveAttribute('href', '/accounts');
     expect(screen.getByRole('link', { name: /Categorie/ })).toHaveAttribute('href', '/categories');

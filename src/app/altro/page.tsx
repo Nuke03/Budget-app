@@ -6,11 +6,12 @@ import { chiaviVapid } from '@/lib/chiaviVapid';
 import { CoverHeader } from '../CoverHeader';
 import { Notifiche } from './Notifiche';
 import { RiattivaAvvisi } from './RiattivaAvvisi';
-import { GraduationCap, Target, Wallet, Tags, Receipt, Bell, ChevronRight } from 'lucide-react';
+import { GraduationCap, Target, Wallet, Tags, Receipt, Bell, Hourglass, ChevronRight } from 'lucide-react';
 
 const voci = [
   { href: '/impara', label: 'Impara', icon: GraduationCap },
   { href: '/goals', label: 'Obiettivi', icon: Target },
+  { href: '/impara/attesa', label: "Lista d'attesa", icon: Hourglass },
   { href: '/accounts', label: 'Conti', icon: Wallet },
   { href: '/categories', label: 'Categorie', icon: Tags },
   { href: '/piva', label: 'P.IVA', icon: Receipt },

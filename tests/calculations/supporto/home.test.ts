@@ -122,3 +122,14 @@ describe('promemoriaPiva', () => {
     expect(prossimaCosa({ inPari: { dal: '2026-11-15', al: OGGI }, promemoriaCasa: [], promemoriaPiva: piva })?.tipo).toBe('in_pari');
   });
 });
+
+describe('prossimaCosa con la lista d attesa', () => {
+  const attesa = { testo: 'Ci ripensi? Cuffie, 89,90 €', href: '/impara/attesa' };
+  it('prossimo attesa compare solo senza promemoria più urgenti', () => {
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], attesa })).toEqual({ ...attesa, tipo: 'attesa' });
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [{ testo: 'Versa la quota' }], attesa })?.tipo).toBe('casa');
+    const piva = [{ testo: 'F24', href: '/piva', urgente: false }];
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], promemoriaPiva: piva, attesa })?.tipo).toBe('piva');
+    expect(prossimaCosa({ inPari: { dal: '2026-11-15', al: '2026-11-18' }, promemoriaCasa: [], attesa })?.tipo).toBe('in_pari');
+  });
+});

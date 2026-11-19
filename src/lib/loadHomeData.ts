@@ -19,6 +19,7 @@ import { casaDelMese, finestraIncassi, inizioLetturaIncassi, inizioMesiFa, spese
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
+import { formatEuro } from '@/lib/format';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { calcolaAndamento, type Andamento } from '@/lib/calculations/supporto/andamento';
 import { scegliConsiglio, obiettiviCorti, type Consiglio } from '@/lib/calculations/supporto/consiglio';
@@ -31,10 +32,10 @@ import {
   type RigaLibretto,
   type Prossimo,
 } from '@/lib/calculations/supporto/home';
-import { creaCategorieIniziali, leggiPercorso } from '@/lib/data/percorso';
+import { creaCategorieIniziali, leggiListaAttesa, leggiPercorso } from '@/lib/data/percorso';
 import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/passi';
 import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
-import type { ArgomentoId, StatiLezioni } from '@/lib/percorso/tipi';
+import type { ArgomentoId, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { getAccantonamenti, getFatture, getScadenze } from '@/lib/data/piva';
@@ -76,6 +77,14 @@ export interface PivaHome {
   scadenze: PivaScadenza[];
   // Le fatture dell'utente; vuote se non si leggono (la home si apre lo stesso).
   fatture: PivaFattura[];
+}
+
+// La voce in attesa da rivedere più vecchia, già scritta per il "Da fare" della home.
+function voceDaRivedere(voci: VoceAttesa[], oggi: string): { testo: string; href: string } | null {
+  const scadute = voci.filter((v) => v.stato === 'in_attesa' && v.rivediIl <= oggi);
+  scadute.sort((a, b) => a.rivediIl.localeCompare(b.rivediIl));
+  const v = scadute[0];
+  return v ? { testo: `Ci ripensi? ${v.nome}, ${formatEuro(v.importo)}`, href: '/impara/attesa' } : null;
 }
 
 export interface HomeData {
@@ -230,7 +239,7 @@ export async function loadHomeData(
   const oggi = oggiRomaISO(today);
   // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
   const pivaSettings = getPivaSettings(supabase).catch(() => null);
-  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, percorso, pivaImpostazioni] = await Promise.all([
+  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -249,6 +258,8 @@ export async function loadHomeData(
     pivaOpzionale(supabase, pivaSettings, today),
     // Il percorso non deve rompere la home: se non si legge, i primi passi partono da zero.
     leggiPercorso(supabase).catch(() => ({ utente: null, lezioni: {} as StatiLezioni })),
+    // Anche la lista d'attesa non deve rompere la home.
+    leggiListaAttesa(supabase).catch(() => [] as VoceAttesa[]),
     pivaSettings,
   ]);
   const piva = pivaLetta?.piva ?? null;
@@ -347,6 +358,7 @@ export async function loadHomeData(
           oggi
         )
       : [],
+    attesa: voceDaRivedere(listaAttesa, oggi),
   });
 
   const primiPassi = statoPrimiPassi({

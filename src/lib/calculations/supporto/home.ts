@@ -20,7 +20,7 @@ export interface RigaLibretto {
 export interface Prossimo {
   testo: string;
   href: string;
-  tipo: 'in_pari' | 'casa' | 'piva';
+  tipo: 'in_pari' | 'casa' | 'piva' | 'attesa';
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -111,11 +111,13 @@ export function promemoriaPiva(
   return out;
 }
 
-// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA.
+// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA, poi la lista d'attesa.
 export function prossimaCosa(input: {
   inPari: { dal: string; al: string } | null;
   promemoriaCasa: { testo: string; href?: string }[];
   promemoriaPiva?: PromemoriaPiva[];
+  // La voce della lista d'attesa da rivedere: passa per ultima.
+  attesa?: { testo: string; href: string } | null;
 }): Prossimo | null {
   if (input.inPari) {
     return {
@@ -131,6 +133,7 @@ export function prossimaCosa(input: {
   if (primo) return { testo: primo.testo, href: primo.href ?? '/casa', tipo: 'casa' };
   const resto = piva[0];
   if (resto) return { testo: resto.testo, href: resto.href, tipo: 'piva' };
+  if (input.attesa) return { ...input.attesa, tipo: 'attesa' };
   return null;
 }
 
