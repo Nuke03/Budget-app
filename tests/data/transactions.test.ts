@@ -4,14 +4,15 @@ import { parseISO } from 'date-fns';
 import {
   getTransactions,
   createTransaction,
-  updateTransaction,
-  deleteTransaction,
+  modificaMovimento,
+  eliminaMovimento,
   getLastIncomeDate,
   getRecentTransactionAmounts,
   getTransactionAmountsForGoal,
   getSpeseCasaPerCategorie,
 } from '@/lib/data/transactions';
 import { fakeSelectClient, fakeMutationClient } from '../helpers/fakeSupabase';
+import { fakeRpcClient } from '../helpers/fakeRpc';
 import { createRecordingClient, callsOf } from '../helpers/recordingSupabase';
 
 const row = {
@@ -100,24 +101,6 @@ describe('createTransaction con casa', () => {
   });
 });
 
-describe('updateTransaction', () => {
-  it('aggiorna e ritorna la transazione mappata', async () => {
-    const supabase = fakeMutationClient(row);
-    const result = await updateTransaction(supabase, '1', {
-      tipo: 'expense',
-      importo: 26,
-      data: '2026-02-14',
-      categoriaId: 'cat-1',
-      accountId: 'acc-1',
-      goalId: null,
-      descrizione: 'Spesa',
-      nota: null,
-    });
-
-    expect(result.id).toBe('1');
-  });
-});
-
 describe('stima', () => {
   const base = {
     tipo: 'expense' as const,
@@ -141,39 +124,64 @@ describe('stima', () => {
     await createTransaction(client, base);
     expect(callsOf(calls[0], 'insert')[0][0]).toMatchObject({ stima: false });
   });
+});
 
-  it('updateTransaction con categoria toglie la stima', async () => {
-    const { client, calls } = createRecordingClient([row]);
-    await updateTransaction(client, '1', { ...base, categoriaId: 'cat-1' });
-    expect(callsOf(calls[0], 'update')[0][0]).toMatchObject({ stima: false });
+describe('modificaMovimento', () => {
+  const input = {
+    tipo: 'expense' as const,
+    importo: 70,
+    data: '2026-11-05',
+    categoriaId: 'cat-1' as string | null,
+    accountId: 'acc-1' as string | null,
+    goalId: 'g-1' as string | null,
+    descrizione: 'Luce',
+    nota: 'bolletta' as string | null,
+  };
+
+  it('chiama modifica_movimento con TUTTI i campi (categoria, obiettivo e nota si sovrascrivono)', async () => {
+    const { client, calls } = fakeRpcClient({ modifica_movimento: {} });
+    await modificaMovimento(client, 'm1', input);
+    expect(calls).toEqual([
+      {
+        name: 'modifica_movimento',
+        args: {
+          p_id: 'm1',
+          p_tipo: 'expense',
+          p_importo: 70,
+          p_data: '2026-11-05',
+          p_categoria: 'cat-1',
+          p_account: 'acc-1',
+          p_goal: 'g-1',
+          p_descrizione: 'Luce',
+          p_nota: 'bolletta',
+          p_stima: false,
+        },
+      },
+    ]);
   });
 
-  it('updateTransaction senza categoria non manda stima', async () => {
-    const { client, calls } = createRecordingClient([row]);
-    await updateTransaction(client, '1', base);
-    expect(callsOf(calls[0], 'update')[0][0]).not.toHaveProperty('stima');
+  it('con una categoria la stima si toglie; senza categoria resta com è (null)', async () => {
+    const a = fakeRpcClient({ modifica_movimento: {} });
+    await modificaMovimento(a.client, 'm1', { ...input, categoriaId: null, accountId: null, goalId: null, nota: null });
+    expect(a.calls[0].args).toMatchObject({ p_categoria: null, p_account: null, p_goal: null, p_nota: null, p_stima: null });
+  });
+
+  it('rilancia l errore della rpc', async () => {
+    const { client } = fakeRpcClient({ modifica_movimento: { error: { message: 'movimento non modificabile' } } });
+    await expect(modificaMovimento(client, 'm1', input)).rejects.toMatchObject({ message: 'movimento non modificabile' });
   });
 });
 
-// delete().eq().select('id') risolve con le righe davvero cancellate.
-function cancellaClient(righe: { id: string }[]) {
-  const b: any = {
-    delete: () => b,
-    eq: () => b,
-    select: () => Promise.resolve({ data: righe, error: null }),
-  };
-  return { from: () => b } as any;
-}
-
-describe('deleteTransaction', () => {
-  it('non lancia errori quando la cancellazione va a buon fine', async () => {
-    const supabase = cancellaClient([{ id: '1' }]);
-    await expect(deleteTransaction(supabase, '1')).resolves.toBe(1);
+describe('eliminaMovimento', () => {
+  it('chiama elimina_movimento con p_id', async () => {
+    const { client, calls } = fakeRpcClient({ elimina_movimento: {} });
+    await eliminaMovimento(client, 'm1');
+    expect(calls).toEqual([{ name: 'elimina_movimento', args: { p_id: 'm1' } }]);
   });
 
-  it('ritorna 0 se la riga non c era più (nessun saldo da toccare)', async () => {
-    const supabase = cancellaClient([]);
-    await expect(deleteTransaction(supabase, '1')).resolves.toBe(0);
+  it('rilancia l errore della rpc', async () => {
+    const { client } = fakeRpcClient({ elimina_movimento: { error: { message: 'rete' } } });
+    await expect(eliminaMovimento(client, 'm1')).rejects.toMatchObject({ message: 'rete' });
   });
 });
 

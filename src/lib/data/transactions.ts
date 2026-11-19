@@ -132,7 +132,11 @@ export async function createTransaction(
   return mapRow(data as TransactionRow);
 }
 
-export async function updateTransaction(
+// Modifica atomica: la riga e i saldi dei conti cambiano insieme, in una sola transazione SQL
+// (modifica_movimento, 0012). Vanno mandati TUTTI i campi: categoria, obiettivo, nota e descrizione si
+// sovrascrivono. Chi ha pagato, la casa e l'origine non cambiano mai. Una spesa con categoria non è più una
+// stima; senza categoria la colonna resta com'è (null).
+export async function modificaMovimento(
   supabase: SupabaseClient,
   id: string,
   input: {
@@ -145,37 +149,27 @@ export async function updateTransaction(
     descrizione: string;
     nota: string | null;
   }
-): Promise<Transaction> {
-  // household: per id
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({
-      tipo: input.tipo,
-      importo: input.importo,
-      data: input.data,
-      categoria_id: input.categoriaId,
-      account_id: input.accountId,
-      goal_id: input.goalId,
-      descrizione: input.descrizione,
-      nota: input.nota,
-      // Una spesa con categoria non e piu una stima; senza categoria la colonna resta com'e.
-      ...(input.categoriaId !== null ? { stima: false } : {}),
-    })
-    .eq('id', id)
-    .select(TRANSACTION_COLUMNS)
-    .single();
-
+): Promise<void> {
+  const { error } = await supabase.rpc('modifica_movimento', {
+    p_id: id,
+    p_tipo: input.tipo,
+    p_importo: input.importo,
+    p_data: input.data,
+    p_categoria: input.categoriaId,
+    p_account: input.accountId,
+    p_goal: input.goalId,
+    p_descrizione: input.descrizione,
+    p_nota: input.nota,
+    p_stima: input.categoriaId !== null ? false : null,
+  });
   if (error) throw error;
-  return mapRow(data as TransactionRow);
 }
 
-// Quante righe ha cancellato davvero: 0 vuol dire che era già sparita (un secondo tentativo),
-// e allora il saldo non va toccato una seconda volta.
-export async function deleteTransaction(supabase: SupabaseClient, id: string): Promise<number> {
-  // household: per id
-  const { data, error } = await supabase.from('transactions').delete().eq('id', id).select('id');
+// Eliminazione atomica: riga e saldo insieme (elimina_movimento, 0012). Idempotente: una riga già
+// sparita non fa niente, quindi si può ripetere senza muovere il saldo due volte.
+export async function eliminaMovimento(supabase: SupabaseClient, id: string): Promise<void> {
+  const { error } = await supabase.rpc('elimina_movimento', { p_id: id });
   if (error) throw error;
-  return (data as { id: string }[] | null)?.length ?? 0;
 }
 
 // Una riga sola: c'è almeno un movimento personale (di qualunque data)?

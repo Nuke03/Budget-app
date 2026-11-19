@@ -34,7 +34,6 @@ export function StoricoProva({
       righeNeutreFiltrate={righeNeutre}
       categories={categories}
       caricato
-      erroreSaldo={false}
       periodo={periodo}
       rangePersonalizzato={{ da: '', a: '' }}
       onChangePeriodo={setPeriodo}

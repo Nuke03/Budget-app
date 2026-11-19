@@ -86,6 +86,7 @@ export function AddTransactionForm({
   onImportoChange,
   bloccato = false,
   erroreMessaggio,
+  tipoFisso = false,
 }: {
   categories: Category[];
   accounts: Account[];
@@ -120,6 +121,8 @@ export function AddTransactionForm({
   // Aggiunta veloce: importo e scelte non si toccano (c'è un salvataggio a metà da finire).
   bloccato?: boolean;
   erroreMessaggio?: string;
+  // Modifica di una spesa che non può diventare un'entrata (es. pagata con la carta personale).
+  tipoFisso?: boolean;
 }) {
   const [tipo, setTipo] = useState<TransactionTipo>(initial?.tipo ?? tipoIniziale ?? 'expense');
   const [importo, setImporto] = useState(initial ? String(initial.importo) : importoIniziale);
@@ -549,20 +552,22 @@ export function AddTransactionForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 pb-5">
       {nota && <p className="text-xs text-muted">{nota}</p>}
 
-      <div className="flex gap-1.5 rounded-full bg-surface-muted p-1">
-        {(['expense', 'income'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTipo(t)}
-            className={`flex-1 rounded-full py-2.5 text-sm font-semibold transition-colors duration-150 ${
-              tipo === t ? 'bg-surface text-foreground shadow-[var(--shadow-card)]' : 'text-muted'
-            }`}
-          >
-            {t === 'expense' ? 'Spesa' : 'Entrata'}
-          </button>
-        ))}
-      </div>
+      {!tipoFisso && (
+        <div className="flex gap-1.5 rounded-full bg-surface-muted p-1">
+          {(['expense', 'income'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTipo(t)}
+              className={`flex-1 rounded-full py-2.5 text-sm font-semibold transition-colors duration-150 ${
+                tipo === t ? 'bg-surface text-foreground shadow-[var(--shadow-card)]' : 'text-muted'
+              }`}
+            >
+              {t === 'expense' ? 'Spesa' : 'Entrata'}
+            </button>
+          ))}
+        </div>
+      )}
 
       <label className="flex flex-col items-center gap-1 py-2 text-center">
         <span className="text-xs font-medium text-muted">Importo</span>

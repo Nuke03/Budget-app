@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { creaCodaRimandata } from '@/lib/eliminazioneRimandata';
+import { riprendiEliminazioniInSospeso, salvaInSospeso, togliInSospeso } from '@/lib/eliminazioniInSospeso';
+import { createClient } from '@/lib/supabase/client';
 import { AvvisoAnnulla } from './AvvisoAnnulla';
 
 const ATTESA_MS = 5000;
@@ -12,6 +14,9 @@ export interface EliminaConAnnulla {
   id: string;
   testo: string;
   esegui: () => Promise<void>;
+  // Solo per l'eliminazione di un movimento (elimina_movimento, idempotente): l'attesa si scrive in
+  // localStorage, così se l'app viene chiusa prima della scrittura si ripete alla riapertura.
+  riprendibile?: boolean;
   nascondi: () => void;
   ripristina: () => void;
 }
@@ -44,18 +49,23 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
       setErrore(null);
       setNascosto(false);
       setPendente({ id: r.id, testo: r.testo });
+      // Prima del timer: se l'app muore ora, l'eliminazione non si perde.
+      if (r.riprendibile) salvaInSospeso(r.id);
       coda.current!.aggiungi({
         id: r.id,
         testo: r.testo,
         esegui: async () => {
           try {
             await r.esegui();
+            if (r.riprendibile) togliInSospeso(r.id);
             // Le pagine del server (Home) mostrano i dati nuovi; un errore qui non rimette in gioco la scrittura.
             try {
               router.refresh();
             } catch {}
             setPendente((p) => (p && p.id === r.id ? null : p));
           } catch {
+            // La riga torna com'era (la scrittura è atomica): niente da ripetere alla riapertura.
+            if (r.riprendibile) togliInSospeso(r.id);
             r.ripristina();
             setPendente((p) => (p && p.id === r.id ? null : p));
             // Se c'è un'altra eliminazione in attesa, il suo Annulla resta: l'errore si aggiunge allo stesso avviso.
@@ -69,6 +79,22 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     },
     [mostraErrore, router],
   );
+
+  // All'avvio dell'app: le eliminazioni rimaste a metà (app chiusa prima della scrittura) si ripetono.
+  useEffect(() => {
+    let vivo = true;
+    void riprendiEliminazioniInSospeso(createClient, [coda.current!.inAttesa()?.id ?? '']).then((fatte) => {
+      if (!vivo || fatte === 0) return;
+      try {
+        router.refresh();
+      } catch {}
+    });
+    return () => {
+      vivo = false;
+    };
+    // una volta sola, all'avvio
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Se la pagina si nasconde o si chiude, la scrittura parte comunque, una volta sola:
   // l'avviso sparisce subito, così Annulla non resta lì a non fare niente.
@@ -106,6 +132,7 @@ export function AnnullaProvider({ children }: { children: ReactNode }) {
     const ripristina = ripristini.current.get(pendente.id);
     if (coda.current!.annulla(pendente.id)) {
       ripristini.current.delete(pendente.id);
+      togliInSospeso(pendente.id);
       ripristina?.();
       setPendente(null);
     }

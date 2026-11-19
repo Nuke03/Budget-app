@@ -14,14 +14,12 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transactions', () => ({
-  deleteTransaction: vi.fn().mockResolvedValue(1),
-  updateTransaction: vi.fn().mockResolvedValue(undefined),
+  eliminaMovimento: vi.fn().mockResolvedValue(undefined),
+  modificaMovimento: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/lib/data/transfers', () => ({ deleteTransfer: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/data/accounts', () => ({ adjustAccountBalance: vi.fn().mockResolvedValue(undefined) }));
 
-import { deleteTransaction, updateTransaction } from '@/lib/data/transactions';
-import { adjustAccountBalance } from '@/lib/data/accounts';
+import { eliminaMovimento, modificaMovimento } from '@/lib/data/transactions';
 import { deleteTransfer } from '@/lib/data/transfers';
 
 const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: '2026-01-01', slot: 1, attivo: true };
@@ -65,10 +63,23 @@ function trasf(over: Partial<Transfer>): Transfer {
   };
 }
 
-function apri(trasferimenti: Transfer[] = [], transazioni: Transaction[] = lista) {
+const cartaFabio = { id: 'ap', nome: 'Carta Fabio', saldoAttuale: 200, contaInDisponibile: true, targetSaldo: null, archiviato: false };
+
+function apri(
+  trasferimenti: Transfer[] = [],
+  transazioni: Transaction[] = lista,
+  extra: { meUserId?: string; contiPersonali?: (typeof cartaFabio)[] } = {}
+) {
   return render(
     <AnnullaProvider>
-      <MovimentiCasa casa={casa} aggiunta={aggiunta} transazioni={transazioni} trasferimenti={trasferimenti} meUserId="u1" />
+      <MovimentiCasa
+        casa={casa}
+        aggiunta={aggiunta}
+        transazioni={transazioni}
+        trasferimenti={trasferimenti}
+        meUserId={extra.meUserId ?? 'u1'}
+        contiPersonali={extra.contiPersonali}
+      />
     </AnnullaProvider>
   );
 }
@@ -117,20 +128,17 @@ describe('MovimentiCasa', () => {
     fireEvent.click(riga.querySelector('button:last-of-type') as HTMLElement);
     expect(screen.queryByText('Luce')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Spesa eliminata.');
-    expect(deleteTransaction).not.toHaveBeenCalled();
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    expect(eliminaMovimento).not.toHaveBeenCalled();
   });
 
-  it('dopo 5 secondi cancella una volta e chiama adjustAccountBalance con +64.2', async () => {
+  it('dopo 5 secondi chiama una sola rpc elimina_movimento (riga e saldo insieme)', async () => {
     timerFinti();
     apri();
     const riga = screen.getByText('Luce').closest('li') as HTMLElement;
     fireEvent.click(riga.querySelector('button:last-of-type') as HTMLElement);
     await passa(5000);
-    expect(deleteTransaction).toHaveBeenCalledTimes(1);
-    expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 'luce');
-    expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
-    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', 64.2);
+    expect(eliminaMovimento).toHaveBeenCalledTimes(1);
+    expect(eliminaMovimento).toHaveBeenCalledWith(expect.anything(), 'luce');
     expect(refresh).toHaveBeenCalled();
   });
 
@@ -141,21 +149,26 @@ describe('MovimentiCasa', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
     expect(screen.getByText('Luce')).toBeInTheDocument();
     await passa(10000);
-    expect(deleteTransaction).not.toHaveBeenCalled();
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    expect(eliminaMovimento).not.toHaveBeenCalled();
+    expect(window.localStorage.length).toBe(0);
   });
 
-  it('modificare applica la differenza sul conto', async () => {
+  it('modificare chiama una sola rpc modifica_movimento con tutti i campi', async () => {
     apri();
     fireEvent.click(screen.getAllByText('Modifica')[0]);
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '70' } });
     fireEvent.click(screen.getByText('Salva modifiche'));
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'ac', -5.8));
-    expect(updateTransaction).toHaveBeenCalledWith(
-      expect.anything(),
-      'luce',
-      expect.objectContaining({ importo: 70, data: '2026-11-05' })
-    );
+    await waitFor(() => expect(modificaMovimento).toHaveBeenCalledTimes(1));
+    expect(modificaMovimento).toHaveBeenCalledWith(expect.anything(), 'luce', {
+      tipo: 'expense',
+      importo: 70,
+      data: '2026-11-05',
+      categoriaId: 'cc',
+      accountId: 'ac',
+      goalId: null,
+      descrizione: 'Luce',
+      nota: null,
+    });
     expect(screen.getByText('−70,00 €')).toBeInTheDocument();
   });
 
@@ -168,25 +181,13 @@ describe('MovimentiCasa', () => {
 
   it('se la scrittura fallisce mostra l avviso di errore e rimette la riga', async () => {
     timerFinti();
-    vi.mocked(deleteTransaction).mockRejectedValueOnce(new Error('rete'));
+    vi.mocked(eliminaMovimento).mockRejectedValueOnce(new Error('rete'));
     apri();
     fireEvent.click(screen.getAllByText('Elimina')[0]);
     await passa(5000);
     expect(screen.getByRole('status')).toHaveTextContent('Non è andata: riprova.');
     expect(screen.getByText('Luce')).toBeInTheDocument();
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
-  });
-
-  it('se la riga è cancellata ma il saldo fallisce, la riga non torna e compare l errore', async () => {
-    timerFinti();
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
-    apri();
-    fireEvent.click(screen.getAllByText('Elimina')[0]);
-    await passa(5000);
-    expect(deleteTransaction).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Luce')).not.toBeInTheDocument();
-    expect(screen.getByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
-    expect(refresh).toHaveBeenCalled();
+    expect(window.localStorage.length).toBe(0);
   });
 
   it('mostra un versamento in stile neutro e senza importo nei totali', () => {
@@ -262,36 +263,62 @@ describe('MovimentiCasa', () => {
     });
   });
 
-  it('una spesa pagata da Fabio con la sua carta mostra "Fabio" come chi ha pagato', () => {
-    apri([], [tx({ id: 'carta', descrizione: 'Spesa carta', accountId: 'ap', pagataDaUserId: 'u1' })]);
-    const riga = screen.getByText('Spesa carta').closest('li') as HTMLElement;
-    expect(riga.textContent).toContain('Fabio');
-    expect(screen.getByText('Elimina')).toBeInTheDocument();
-    expect(screen.queryByText('Modifica')).not.toBeInTheDocument();
+  describe('spesa pagata con una carta personale', () => {
+    const carta = tx({ id: 'carta', descrizione: 'Spesa carta', importo: 40, accountId: 'ap', pagataDaUserId: 'u1' });
+
+    it('senza il conto personale caricato non si può modificare, ma si elimina', () => {
+      apri([], [carta]);
+      const riga = screen.getByText('Spesa carta').closest('li') as HTMLElement;
+      expect(riga.textContent).toContain('Fabio');
+      expect(screen.getByText('Elimina')).toBeInTheDocument();
+      expect(screen.queryByText('Modifica')).not.toBeInTheDocument();
+    });
+
+    it('chi ha pagato vede Modifica, il conto è "Io, con <conto>" e non si cambia', async () => {
+      apri([], [carta], { contiPersonali: [cartaFabio] });
+      fireEvent.click(screen.getByText('Modifica'));
+      const conti = screen.getByText('Chi ha pagato') as HTMLElement;
+      expect(within(conti).getAllByRole('button')).toHaveLength(1);
+      expect(within(conti).getByRole('button', { name: 'Io, con Carta Fabio' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Conto comune' })).not.toBeInTheDocument();
+      // una spesa pagata con la carta non diventa un'entrata
+      expect(screen.queryByRole('button', { name: 'Entrata' })).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '55' } });
+      fireEvent.click(screen.getByText('Salva modifiche'));
+      await waitFor(() => expect(modificaMovimento).toHaveBeenCalledTimes(1));
+      expect(modificaMovimento).toHaveBeenCalledWith(
+        expect.anything(),
+        'carta',
+        expect.objectContaining({ importo: 55, accountId: 'ap', tipo: 'expense' })
+      );
+    });
+
+    it('l altro membro non vede Modifica né Elimina, anche con un conto dallo stesso id', () => {
+      apri([], [carta], { meUserId: 'u2', contiPersonali: [cartaFabio] });
+      const riga = screen.getByText('Spesa carta').closest('li') as HTMLElement;
+      expect(riga.querySelector('button')).toBeNull();
+    });
+
+    it('errore della rpc: la riga torna com era e compare il messaggio', async () => {
+      vi.mocked(modificaMovimento).mockRejectedValueOnce(new Error('movimento non modificabile'));
+      apri([], [carta], { contiPersonali: [cartaFabio] });
+      fireEvent.click(screen.getByText('Modifica'));
+      fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '55' } });
+      fireEvent.click(screen.getByText('Salva modifiche'));
+      expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+      expect(screen.getByText('−40,00 €')).toBeInTheDocument();
+    });
   });
 
-  it('se la spesa è salvata ma il saldo fallisce la riga resta nuova, si ricarica e compare l errore', async () => {
-    vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
-    apri();
-    fireEvent.click(screen.getAllByText('Modifica')[0]);
-    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '70' } });
-    fireEvent.click(screen.getByText('Salva modifiche'));
-    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
-    expect(updateTransaction).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('−70,00 €')).toBeInTheDocument();
-    expect(screen.queryByText('−64,20 €')).not.toBeInTheDocument();
-    expect(refresh).toHaveBeenCalled();
-  });
-
-  it('se è la spesa a non salvarsi la riga torna quella vecchia', async () => {
-    vi.mocked(updateTransaction).mockRejectedValueOnce(new Error('rete'));
+  it('se la rpc di modifica fallisce la riga torna quella vecchia e compare l errore', async () => {
+    vi.mocked(modificaMovimento).mockRejectedValueOnce(new Error('rete'));
     apri();
     fireEvent.click(screen.getAllByText('Modifica')[0]);
     fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '70' } });
     fireEvent.click(screen.getByText('Salva modifiche'));
     expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
     expect(screen.getByText('−64,20 €')).toBeInTheDocument();
-    expect(adjustAccountBalance).not.toHaveBeenCalled();
+    expect(modificaMovimento).toHaveBeenCalledTimes(1);
   });
 
   describe('conferma prima di lasciare qualcuno senza soldi', () => {
@@ -304,12 +331,12 @@ describe('MovimentiCasa', () => {
       fireEvent.click(screen.getByText('Elimina'));
       expect(screen.getByText(/già stata rimborsata a Fabio/)).toBeInTheDocument();
       expect(screen.getByText(/la casa resta senza 100,00 €/)).toBeInTheDocument();
-      expect(deleteTransaction).not.toHaveBeenCalled();
+      expect(eliminaMovimento).not.toHaveBeenCalled();
       assertNessunaParolaVietata(screen.getByLabelText('Conferma'));
       fireEvent.click(screen.getByText('Procedi lo stesso'));
       expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
       await passa(5000);
-      expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 'carta');
+      expect(eliminaMovimento).toHaveBeenCalledWith(expect.anything(), 'carta');
     });
 
     it('Lascia com è non cancella niente', () => {
@@ -318,7 +345,7 @@ describe('MovimentiCasa', () => {
       fireEvent.click(screen.getByText("Lascia com'è"));
       expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
       expect(screen.getByText('Spesa carta')).toBeInTheDocument();
-      expect(deleteTransaction).not.toHaveBeenCalled();
+      expect(eliminaMovimento).not.toHaveBeenCalled();
     });
 
     it('una spesa non rimborsata si elimina senza conferma', async () => {
@@ -327,7 +354,7 @@ describe('MovimentiCasa', () => {
       fireEvent.click(screen.getByText('Elimina'));
       expect(screen.queryByLabelText('Conferma')).not.toBeInTheDocument();
       await passa(5000);
-      expect(deleteTransaction).toHaveBeenCalled();
+      expect(eliminaMovimento).toHaveBeenCalled();
     });
 
     it('annullare un versamento per conto di un altro già restituito chiede conferma', async () => {

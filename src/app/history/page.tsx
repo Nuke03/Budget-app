@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
-import { getTransactions, updateTransaction, deleteTransaction } from '@/lib/data/transactions';
+import { getTransactions, modificaMovimento, eliminaMovimento } from '@/lib/data/transactions';
 import { getCategories } from '@/lib/data/categories';
 import { getMyHousehold } from '@/lib/data/households';
 import { getTransfers } from '@/lib/data/transfers';
@@ -13,10 +13,9 @@ import { leggiSessione } from '@/lib/utenteOLogin';
 import { righeNeutreAccantonamenti, righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { annullaAccantonamento, getAccantonamenti } from '@/lib/data/piva';
-import { getAccounts, adjustAccountBalance } from '@/lib/data/accounts';
+import { getAccounts } from '@/lib/data/accounts';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
-import { deltaPerModifica } from '@/lib/calculations/accountBalance';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { StoricoVista } from './StoricoVista';
@@ -28,7 +27,6 @@ export default function HistoryPage() {
   const eliminaConAnnulla = useEliminaConAnnulla();
   // Righe tolte alla vista in attesa della scrittura vera: Annulla le rimette al loro posto.
   const [nascoste, setNascoste] = useState<Set<string>>(new Set());
-  const [erroreSaldo, setErroreSaldo] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -134,17 +132,6 @@ export default function HistoryPage() {
     refresh().catch(fail);
   }, [fail]);
 
-  async function applicaAggiornamentiSaldo(
-    vecchia: { accountId: string | null; tipo: TransactionTipo; importo: number },
-    nuova: { accountId: string | null; tipo: TransactionTipo; importo: number }
-  ) {
-    const supabase = createClient();
-    // Per differenza: le altre scritture sugli stessi conti (casa, rimborsi) non si perdono.
-    for (const { accountId, delta } of deltaPerModifica(vecchia, nuova)) {
-      await adjustAccountBalance(supabase, accountId, delta);
-    }
-  }
-
   function handleDelete(t: Transaction) {
     const cambia = (nascondi: boolean) =>
       setNascoste((prima) => {
@@ -158,24 +145,10 @@ export default function HistoryPage() {
       testo: t.tipo === 'income' ? 'Entrata eliminata.' : 'Spesa eliminata.',
       nascondi: () => cambia(true),
       ripristina: () => cambia(false),
+      riprendibile: true,
       esegui: async () => {
-        const supabase = createClient();
-        const cancellate = await deleteTransaction(supabase, t.id);
-        // Da qui la riga è cancellata: niente più eccezioni, o un nuovo tentativo sposterebbe il saldo due volte.
-        if (cancellate > 0) {
-          try {
-            await applicaAggiornamentiSaldo(
-              { accountId: t.accountId, tipo: t.tipo, importo: t.importo },
-              { accountId: null, tipo: t.tipo, importo: 0 }
-            );
-          } catch {
-            // La riga è già cancellata: non va rimessa. Si ricarica lo stato vero e si avvisa.
-            setErroreSaldo(true);
-            await refresh(letteDalRef.current).catch(() => {});
-            return;
-          }
-        }
-        setErroreSaldo(false);
+        // Una sola rpc: riga e saldo insieme. Se fallisce non è cambiato niente e la riga torna (lo fa AnnullaProvider).
+        await eliminaMovimento(createClient(), t.id);
         await refresh(letteDalRef.current).catch(() => {});
       },
     });
@@ -211,16 +184,12 @@ export default function HistoryPage() {
     descrizione: string;
   }) {
     if (!editingTransaction) return;
-    const supabase = createClient();
-    await updateTransaction(supabase, editingTransaction.id, {
+    // Una sola rpc con tutti i campi: riga e saldi cambiano insieme o per niente.
+    await modificaMovimento(createClient(), editingTransaction.id, {
       ...payload,
       data: editingTransaction.data,
       nota: editingTransaction.nota,
     });
-    await applicaAggiornamentiSaldo(
-      { accountId: editingTransaction.accountId, tipo: editingTransaction.tipo, importo: editingTransaction.importo },
-      { accountId: payload.accountId, tipo: payload.tipo, importo: payload.importo }
-    );
     setEditingTransaction(null);
     await refresh();
   }
@@ -253,7 +222,6 @@ export default function HistoryPage() {
         onEliminaTasse={handleEliminaTasse}
         categories={categories}
         caricato={caricato}
-        erroreSaldo={erroreSaldo}
         periodo={periodo}
         rangePersonalizzato={rangePersonalizzato}
         onChangePeriodo={cambiaPeriodo}

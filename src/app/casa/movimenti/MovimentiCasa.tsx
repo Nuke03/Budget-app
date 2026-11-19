@@ -7,9 +7,7 @@ import { useRouter } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
-import { deleteTransaction, updateTransaction } from '@/lib/data/transactions';
-import { adjustAccountBalance } from '@/lib/data/accounts';
-import { deltaPerModifica } from '@/lib/calculations/accountBalance';
+import { eliminaMovimento, modificaMovimento } from '@/lib/data/transactions';
 import { deleteTransfer } from '@/lib/data/transfers';
 import { descriviTrasferimento } from '@/lib/calculations/casa/descriviTrasferimento';
 import { etichettaChiHaPagato } from '@/lib/calculations/casa/etichette';
@@ -22,7 +20,7 @@ import {
 import { formatDateIt, formatEuro } from '@/lib/format';
 import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
-import type { Transaction, TransactionTipo, Transfer } from '@/lib/types';
+import type { Account, Transaction, TransactionTipo, Transfer } from '@/lib/types';
 import { AddTransactionForm } from '../../add/AddTransactionForm';
 import { useEliminaConAnnulla } from '../../AnnullaProvider';
 import { ConfermaPesante } from '../../ConfermaPesante';
@@ -44,12 +42,15 @@ export function MovimentiCasa({
   transazioni,
   trasferimenti = [],
   meUserId,
+  contiPersonali = [],
 }: {
   casa: CasaCorrente;
   aggiunta: CasaAggiunta;
   transazioni: Transaction[];
   trasferimenti?: Transfer[];
   meUserId: string;
+  // I conti personali di chi guarda: servono per modificare una spesa pagata con la propria carta.
+  contiPersonali?: Account[];
 }) {
   const router = useRouter();
   const eliminaConAnnulla = useEliminaConAnnulla();
@@ -88,9 +89,15 @@ export function MovimentiCasa({
   });
   const puoModificare = (t: Transaction) =>
     !t.pagataDaUserId || t.pagataDaUserId === meUserId;
-  // Una spesa pagata con la carta personale si cambia dal conto personale: il modulo qui conosce solo i conti di casa.
+  // Una spesa pagata con la carta personale: il conto è quello di chi ha pagato e non si cambia (il trigger
+  // vieta di cambiare chi ha pagato). Si modifica solo se il conto personale è tra quelli di chi guarda.
   const conCartaPersonale = (t: Transaction) =>
     !!t.accountId && !aggiunta.conti.some((c) => c.id === t.accountId);
+  const cartaDi = (t: Transaction): Account | null =>
+    conCartaPersonale(t) && t.pagataDaUserId === meUserId
+      ? (contiPersonali.find((c) => c.id === t.accountId) ?? null)
+      : null;
+  const puoModificareForm = (t: Transaction) => !conCartaPersonale(t) || cartaDi(t) !== null;
 
   function frase(sc: Scoperto, cosa: 'spesa' | 'versamento'): string {
     const nome = (id: string | null) => (id ? (nomi[id] ?? 'Un altro membro') : 'La casa');
@@ -144,7 +151,6 @@ export function MovimentiCasa({
     const posizione = righe.findIndex((r) => r.id === t.id);
     setErrore(false);
     setConferma(null);
-    let cancellata = false;
     eliminaConAnnulla({
       id: t.id,
       testo: t.tipo === 'expense' ? 'Spesa eliminata.' : 'Entrata eliminata.',
@@ -156,26 +162,10 @@ export function MovimentiCasa({
           copia.splice(Math.min(posizione, copia.length), 0, t);
           return copia;
         }),
+      riprendibile: true,
       esegui: async () => {
-        try {
-          const supabase = createClient();
-          const cancellate = await deleteTransaction(supabase, t.id);
-          cancellata = true;
-          if (cancellate > 0 && t.accountId) {
-            await adjustAccountBalance(
-              supabase,
-              t.accountId,
-              t.tipo === 'expense' ? t.importo : -t.importo,
-            );
-          }
-        } catch (e) {
-          // Se la riga e gia stata cancellata e fallisce solo il saldo, non va rimessa.
-          if (cancellata) {
-            setErrore(true);
-            return;
-          }
-          throw e;
-        }
+        // Una sola rpc: riga e saldo insieme. Se fallisce non è cambiato niente e la riga torna (lo fa AnnullaProvider).
+        await eliminaMovimento(createClient(), t.id);
       },
     });
   }
@@ -195,10 +185,9 @@ export function MovimentiCasa({
     setErrore(false);
     setRighe((r) => r.map((x) => (x.id === t.id ? nuova : x)));
     setInModifica(null);
-    let aggiornata = false;
     try {
-      const supabase = createClient();
-      await updateTransaction(supabase, t.id, {
+      // Una sola rpc con tutti i campi: riga e saldi cambiano insieme o per niente.
+      await modificaMovimento(createClient(), t.id, {
         tipo: payload.tipo,
         importo: payload.importo,
         data: t.data,
@@ -208,19 +197,10 @@ export function MovimentiCasa({
         descrizione: payload.descrizione,
         nota: t.nota,
       });
-      aggiornata = true;
-      for (const { accountId, delta } of deltaPerModifica(t, nuova)) {
-        await adjustAccountBalance(supabase, accountId, delta);
-      }
       router.refresh();
     } catch {
+      // Non è cambiato niente: si torna alla riga di prima e si avvisa.
       setErrore(true);
-      // Se la spesa è già stata salvata e fallisce solo il saldo, tornare alla riga vecchia
-      // farebbe applicare due volte la differenza: si ricarica lo stato vero.
-      if (aggiornata) {
-        router.refresh();
-        return;
-      }
       setRighe((r) => r.map((x) => (x.id === t.id ? t : x)));
     }
   }
@@ -311,13 +291,15 @@ export function MovimentiCasa({
               }
               const t = voce.t;
               const cat = aggiunta.categorie.find((c) => c.id === t.categoriaId);
+              const carta = cartaDi(t);
               return (
                 <li key={t.id} className={RIGA}>
                   {inModifica === t.id ? (
                     <div className="-mx-4">
                       <AddTransactionForm
                         categories={aggiunta.categorie}
-                        accounts={aggiunta.conti}
+                        accounts={carta ? [{ ...carta, nome: `Io, con ${carta.nome}` }] : aggiunta.conti}
+                        tipoFisso={!!carta}
                         goals={aggiunta.obiettivi}
                         initial={{
                           tipo: t.tipo,
@@ -356,7 +338,7 @@ export function MovimentiCasa({
                       </div>
                       {puoModificare(t) && (
                         <div className="flex gap-4">
-                          {!conCartaPersonale(t) && (
+                          {puoModificareForm(t) && (
                             <button type="button" onClick={() => setInModifica(t.id)} className={`${AZIONE} text-brand-dark`}>
                               Modifica
                             </button>

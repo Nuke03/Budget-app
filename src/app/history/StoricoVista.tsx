@@ -23,7 +23,6 @@ export function StoricoVista({
   righeTasse = [],
   categories,
   caricato,
-  erroreSaldo,
   periodo,
   rangePersonalizzato,
   onChangePeriodo,
@@ -39,7 +38,6 @@ export function StoricoVista({
   righeTasse?: RigaNeutra[];
   categories: Category[];
   caricato: boolean;
-  erroreSaldo: boolean;
   periodo: Periodo;
   rangePersonalizzato: { da: string; a: string };
   onChangePeriodo: (p: Periodo) => void;
@@ -65,12 +63,6 @@ export function StoricoVista({
     <>
       <CoverHeader titolo="Storico" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
-        {erroreSaldo && (
-          <p role="alert" className="rounded-[var(--radius-md)] bg-danger-tint p-3 text-[15px] text-danger">
-            Spesa eliminata, ma il saldo del conto non si è aggiornato: controllalo in Conti.
-          </p>
-        )}
-
         <PeriodoFilter
           periodo={periodo}
           onChangePeriodo={onChangePeriodo}

@@ -46,13 +46,12 @@ vi.mock('@/lib/data/accounts', () => ({
     { id: 'a', nome: 'A', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null },
     { id: 'b', nome: 'B', saldoAttuale: 50, contaInDisponibile: true, targetSaldo: null },
   ],
-  adjustAccountBalance: vi.fn().mockResolvedValue(undefined),
   updateAccountBalance: vi.fn(),
 }));
 vi.mock('@/lib/data/goals', () => ({ getOpenGoals: async () => [], createGoal: vi.fn() }));
 vi.mock('@/lib/data/transactions', () => ({
-  updateTransaction: vi.fn().mockResolvedValue(undefined),
-  deleteTransaction: vi.fn().mockResolvedValue(1),
+  modificaMovimento: vi.fn().mockResolvedValue(undefined),
+  eliminaMovimento: vi.fn().mockResolvedValue(undefined),
   getTransactions: vi.fn(async () => [
     {
       id: 't1', tipo: 'expense', importo: 10, data: '2026-11-04', categoriaId: null, accountId: 'a',
@@ -70,8 +69,8 @@ vi.mock('@/lib/data/transfers', () => ({ getTransfers: async () => [] }));
 
 import HistoryPage from '@/app/history/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
-import { deleteTransaction, getTransactions } from '@/lib/data/transactions';
-import { adjustAccountBalance, updateAccountBalance } from '@/lib/data/accounts';
+import { eliminaMovimento, modificaMovimento, getTransactions } from '@/lib/data/transactions';
+import { updateAccountBalance } from '@/lib/data/accounts';
 
 function Pagina() {
   return (
@@ -107,49 +106,35 @@ describe('Storico: saldi personali per differenza', () => {
       fireEvent.click(screen.getByLabelText('Elimina transazione'));
       expect(screen.queryByText('Pane')).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Spesa eliminata.');
-      expect(deleteTransaction).not.toHaveBeenCalled();
-      expect(adjustAccountBalance).not.toHaveBeenCalled();
+      expect(eliminaMovimento).not.toHaveBeenCalled();
     });
 
-    it('dopo 5 secondi scrive una volta e restituisce l importo con un delta, mai un saldo assoluto', async () => {
+    it('dopo 5 secondi chiama una sola rpc elimina_movimento (riga e saldo insieme, mai un delta dal client)', async () => {
       await apri();
       fireEvent.click(screen.getByLabelText('Elimina transazione'));
       await passa(5000);
-      expect(deleteTransaction).toHaveBeenCalledTimes(1);
-      expect(deleteTransaction).toHaveBeenCalledWith(expect.anything(), 't1');
-      expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'a', 10);
-      expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+      expect(eliminaMovimento).toHaveBeenCalledTimes(1);
+      expect(eliminaMovimento).toHaveBeenCalledWith(expect.anything(), 't1');
       expect(updateAccountBalance).not.toHaveBeenCalled();
     });
 
-    it('cancellata ma saldo non aggiornato: la riga non torna, si ricarica e compare l avviso', async () => {
-      vi.mocked(adjustAccountBalance).mockRejectedValueOnce(new Error('rete'));
-      await apri();
-      const prima = vi.mocked(getTransactions).mock.calls.length;
-      fireEvent.click(screen.getByLabelText('Elimina transazione'));
-      await passa(5000);
-      expect(deleteTransaction).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('alert')).toHaveTextContent('Spesa eliminata, ma il saldo del conto non si è aggiornato: controllalo in Conti.');
-      expect(vi.mocked(getTransactions).mock.calls.length).toBeGreaterThan(prima);
-    });
-
-    it('già cancellata (0 righe): il saldo non si tocca una seconda volta', async () => {
-      vi.mocked(deleteTransaction).mockResolvedValueOnce(0);
+    it('errore della rpc: la riga torna e compare il messaggio', async () => {
+      vi.mocked(eliminaMovimento).mockRejectedValueOnce(new Error('rete'));
       await apri();
       fireEvent.click(screen.getByLabelText('Elimina transazione'));
       await passa(5000);
-      expect(deleteTransaction).toHaveBeenCalledTimes(1);
-      expect(adjustAccountBalance).not.toHaveBeenCalled();
+      expect(screen.getByText('Pane')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Non è andata: riprova.');
+      expect(eliminaMovimento).toHaveBeenCalledTimes(1);
     });
 
-    it('ricarica fallita dopo la scrittura: nessun errore, nessun secondo tentativo, saldo mosso una volta', async () => {
+    it('ricarica fallita dopo la scrittura: nessun errore, nessun secondo tentativo', async () => {
       await apri();
       fireEvent.click(screen.getByLabelText('Elimina transazione'));
       vi.mocked(getTransactions).mockRejectedValueOnce(new Error('rete'));
       await passa(5000);
       await passa(10000);
-      expect(deleteTransaction).toHaveBeenCalledTimes(1);
-      expect(adjustAccountBalance).toHaveBeenCalledTimes(1);
+      expect(eliminaMovimento).toHaveBeenCalledTimes(1);
       expect(screen.queryByText(/riprova/)).not.toBeInTheDocument();
       expect(screen.queryByText('Pane')).not.toBeInTheDocument();
     });
@@ -160,19 +145,26 @@ describe('Storico: saldi personali per differenza', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
       expect(screen.getByText('Pane')).toBeInTheDocument();
       await passa(10000);
-      expect(deleteTransaction).not.toHaveBeenCalled();
-      expect(adjustAccountBalance).not.toHaveBeenCalled();
+      expect(eliminaMovimento).not.toHaveBeenCalled();
     });
   });
 
-  it('modificare con cambio di conto sposta +10 sul vecchio e -15 sul nuovo', async () => {
+  it('modificare chiama una sola rpc modifica_movimento con tutti i campi', async () => {
     render(<Pagina />);
     await waitFor(() => expect(screen.getByText('Pane')).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText('Modifica transazione'));
     fireEvent.click(await screen.findByText('Salva simulato'));
-    await waitFor(() => expect(adjustAccountBalance).toHaveBeenCalledTimes(2));
-    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'a', 10);
-    expect(adjustAccountBalance).toHaveBeenCalledWith(expect.anything(), 'b', -15);
+    await waitFor(() => expect(modificaMovimento).toHaveBeenCalledTimes(1));
+    expect(modificaMovimento).toHaveBeenCalledWith(expect.anything(), 't1', {
+      tipo: 'expense',
+      importo: 15,
+      categoriaId: null,
+      accountId: 'b',
+      goalId: null,
+      descrizione: 'Pane',
+      data: '2026-11-04',
+      nota: null,
+    });
     expect(updateAccountBalance).not.toHaveBeenCalled();
   });
 });
