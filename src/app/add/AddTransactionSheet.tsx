@@ -13,6 +13,9 @@ import type { Account, BudgetGoal, Category, Transaction, TransactionTipo } from
 import { FoglioInferiore } from '../FoglioInferiore';
 import { PromptQuota, contoDaCuiSpostare } from '../piva/PromptQuota';
 import { AddTransactionForm } from './AddTransactionForm';
+import { AvvisoFondiFoglio } from './AvvisoFondiFoglio';
+import { LezioneFoglio } from './LezioneFoglio';
+import { valutaDopoSalvataggio, type DopoSalvataggio } from '../impara/dopoSalvataggio';
 
 type Modo = 'personale' | 'casa';
 
@@ -116,6 +119,9 @@ export function AddTransactionSheet({
     nomeConto: string;
   } | null>(null);
 
+  // L'avviso o la lezione dopo un salvataggio personale: come la quota, sopravvive alla chiusura del foglio.
+  const [dopo, setDopo] = useState<DopoSalvataggio>(null);
+
   if (quotaDaSpostare) {
     return (
       <PromptQuota
@@ -135,6 +141,21 @@ export function AddTransactionSheet({
           onAccantonato?.();
         }}
       />
+    );
+  }
+
+  // La quota P.IVA ha la precedenza: l'avviso o la lezione si vedono dopo.
+  if (dopo) {
+    const chiudiDopo = () => setDopo(null);
+    return dopo.tipo === 'avviso' ? (
+      <AvvisoFondiFoglio
+        avviso={dopo.avviso}
+        transactionId={dopo.transactionId}
+        lezione={dopo.lezione}
+        onChiudi={chiudiDopo}
+      />
+    ) : (
+      <LezioneFoglio lezioneId={dopo.lezione} onChiudi={chiudiDopo} />
     );
   }
 
@@ -194,6 +215,15 @@ export function AddTransactionSheet({
           nomeConto: conto.nome,
         });
       }
+    }
+    // Solo lo spazio personale. Non si aspetta: il foglio si chiude subito e l'esito arriva dopo.
+    // Qualunque errore vale come "niente da dire": il salvataggio è già fatto.
+    if (modo === 'personale') {
+      valutaDopoSalvataggio(id)
+        .then((r) => {
+          if (r) setDopo(r);
+        })
+        .catch(() => {});
     }
     onSaved(id, modo);
     setImportoBozza('');

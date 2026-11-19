@@ -14,6 +14,13 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ rpc }),
 }));
 
+const valutaDopoSalvataggio = vi.hoisted(() => vi.fn());
+const rispondiAvviso = vi.hoisted(() => vi.fn());
+vi.mock('@/app/impara/dopoSalvataggio', () => ({
+  valutaDopoSalvataggio: (...a: unknown[]) => valutaDopoSalvataggio(...a),
+  rispondiAvviso: (...a: unknown[]) => rispondiAvviso(...a),
+}));
+
 // Tutti i salvataggi passano da una sola rpc: movimento e saldo insieme.
 const parametri = (n = 0) => rpc.mock.calls[n][1] as Record<string, unknown>;
 
@@ -78,6 +85,7 @@ const contiDue = {
 beforeEach(() => {
   vi.clearAllMocks();
   rpc.mockResolvedValue({ data: 't-nuova', error: null });
+  valutaDopoSalvataggio.mockResolvedValue(null);
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
@@ -568,5 +576,73 @@ describe('AddTransactionSheet: quota delle tasse', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Più tardi' }));
     await waitFor(() => expect(screen.queryByText(/metti da parte/)).not.toBeInTheDocument());
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AddTransactionSheet: dopo il salvataggio', () => {
+  const avviso = {
+    tipo: 'avviso' as const,
+    avviso: { buco: 50, toccati: ['obiettivi' as const], fondoImprevisti: null },
+    transactionId: 't-nuova',
+    lezione: 'imprevisti' as const,
+  };
+
+  it('dopo un salvataggio personale chiama valutaDopoSalvataggio, dopo uno di casa no', async () => {
+    const { unmount } = apri({ modoIniziale: 'personale' });
+    compila('20');
+    await waitFor(() => expect(valutaDopoSalvataggio).toHaveBeenCalledWith('t-nuova'));
+    unmount();
+    valutaDopoSalvataggio.mockClear();
+    const onSaved = vi.fn();
+    apri({ modoIniziale: 'casa', onSaved });
+    compila('20');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(valutaDopoSalvataggio).not.toHaveBeenCalled();
+  });
+
+  it('mostra l avviso quando arriva, anche a foglio chiuso', async () => {
+    valutaDopoSalvataggio.mockResolvedValue(avviso);
+    const { rerender } = apri({ modoIniziale: 'personale' });
+    compila('20');
+    rerender(
+      <AddTransactionSheet aperto={false} onClose={vi.fn()} personale={personale} casa={casa} meUserId="u1" onSaved={vi.fn()} />
+    );
+    expect(await screen.findByText('Questa spesa usa 50 € che avevi messo da parte.')).toBeInTheDocument();
+  });
+
+  it('un errore del calcolo non rompe il salvataggio', async () => {
+    valutaDopoSalvataggio.mockRejectedValue(new Error('x'));
+    const onSaved = vi.fn();
+    apri({ modoIniziale: 'personale', onSaved });
+    compila('20');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('la quota P.IVA viene prima dell avviso', async () => {
+    valutaDopoSalvataggio.mockResolvedValue({ tipo: 'lezione', lezione: 'prima-da-parte' });
+    const persPiva = {
+      categories: [{ id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null }],
+      accounts: [
+        { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+        { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+      ],
+      goals: [],
+    };
+    apri({
+      casa: null,
+      personale: persPiva,
+      piva: { categoriaFatturatoId: 'cat-fatt', percentuale: 13.7, contoTasseId: 'tasse' },
+      modoIniziale: 'personale',
+    });
+    scegliEntrata();
+    fireEvent.click(pezzo('Senza categoria'));
+    fireEvent.click(pezzo('Compensi'));
+    compila('600');
+    expect(await screen.findByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+    await waitFor(() => expect(valutaDopoSalvataggio).toHaveBeenCalled());
+    expect(screen.queryByText('In breve')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Più tardi' }));
+    expect(await screen.findByText('In breve')).toBeInTheDocument();
   });
 });

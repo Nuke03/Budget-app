@@ -3,9 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
 import { leggiPromemoriaUtente } from '@/lib/data/notifiche';
 import { chiaviVapid } from '@/lib/chiaviVapid';
+import { getMyHousehold } from '@/lib/data/households';
+import { loadCasaStato } from '@/lib/loadCasaStato';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { CoverHeader } from '../CoverHeader';
 import { Notifiche } from './Notifiche';
 import { RiattivaAvvisi } from './RiattivaAvvisi';
+import { RicominciaDaZero } from './RicominciaDaZero';
 import { GraduationCap, Target, Wallet, Tags, Receipt, Bell, Hourglass, ChevronRight } from 'lucide-react';
 
 const voci = [
@@ -18,11 +22,32 @@ const voci = [
   { href: '/altro#notifiche', label: 'Notifiche', icon: Bell },
 ];
 
+// Credito e debito aperti dell'utente verso la casa, per dirlo prima del reset. Se non si legge,
+// il reset non cambia: non tocca la casa.
+async function casaAperta(
+  supabase: SupabaseClient,
+  userId: string | null
+): Promise<{ credito: number; debito: number } | null> {
+  if (!userId) return null;
+  try {
+    const corrente = await getMyHousehold(supabase, userId);
+    if (!corrente) return null;
+    const stato = await loadCasaStato(supabase, corrente);
+    return { credito: stato.crediti[stato.me.userId] ?? 0, debito: stato.debitoDaRestituire };
+  } catch {
+    return null;
+  }
+}
+
 export default async function AltroPage() {
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, () =>
-    leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null }))
-  );
+  const { dati } = await conUtente(supabase, async (userId) => {
+    const [promemoria, casa] = await Promise.all([
+      leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null })),
+      casaAperta(supabase, userId),
+    ]);
+    return { ...promemoria, casa };
+  });
   return (
     <>
       <CoverHeader titolo="Altro" />
@@ -43,6 +68,7 @@ export default async function AltroPage() {
       </ul>
       <Notifiche chiavePubblica={chiaviVapid()?.pubblica ?? null} notificheAttive={dati.notificheAttive} />
       <RiattivaAvvisi />
+      <RicominciaDaZero casa={dati.casa} />
       </main>
     </>
   );

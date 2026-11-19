@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }),
   redirect: (url: string) => {
     throw new Error(`REDIRECT:${url}`);
   },
@@ -24,6 +25,11 @@ import AltroPage from '@/app/altro/page';
 import { serveConferma, nonAvvisarePiu } from '@/lib/conferme';
 
 describe('pagina Altro', () => {
+  it('in fondo c e il pulsante Ricomincia da zero, che non è un link', async () => {
+    render(await AltroPage());
+    expect(screen.getByRole('button', { name: 'Ricomincia da zero' })).toBeInTheDocument();
+  });
+
   it('ha sette link con gli href previsti', async () => {
     render(await AltroPage());
     const links = screen.getAllByRole('link');
