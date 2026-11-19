@@ -111,10 +111,10 @@ begin
   assert not exists (select 1 from public.categories where id = cat_a), 'la vecchia categoria di A è rimasta';
 
   -- nessuna riga di B toccata
-  assert (select n from zz_b_prima where k = 'conto') = (select count(*) from public.accounts where user_id = b), 'conti di B cambiati';
+  assert (select zz_b_prima.n from zz_b_prima where k = 'conto') = (select count(*) from public.accounts where user_id = b), 'conti di B cambiati';
   assert (select s from zz_b_prima where k = 'conto') = (select coalesce(sum(saldo_attuale), 0) from public.accounts where user_id = b), 'saldo di B cambiato';
-  assert (select n from zz_b_prima where k = 'cat') = (select count(*) from public.categories where user_id = b), 'categorie di B cambiate';
-  assert (select n from zz_b_prima where k = 'tx') = (select count(*) from public.transactions where user_id = b and household_id is null), 'movimenti di B cambiati';
+  assert (select zz_b_prima.n from zz_b_prima where k = 'cat') = (select count(*) from public.categories where user_id = b), 'categorie di B cambiate';
+  assert (select zz_b_prima.n from zz_b_prima where k = 'tx') = (select count(*) from public.transactions where user_id = b and household_id is null), 'movimenti di B cambiati';
   assert exists (select 1 from public.transactions where id = tx_b), 'il movimento di B è sparito';
   assert exists (select 1 from public.transactions where id = tx_b_casa and categoria_id = cat_casa and account_id = conto_casa and household_id = h),
     'la spesa di casa di B è stata toccata';
