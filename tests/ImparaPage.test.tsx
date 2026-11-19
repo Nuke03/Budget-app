@@ -40,6 +40,7 @@ function dati(over: Record<string, unknown> = {}) {
     lezioni: {},
     percorso: null,
     disponibileReale: 0,
+    disponibileLibero: 0,
     ultimaEntrataIl: null,
     primiPassiVisibili: false,
     primiPassi: { passi: [], fatti: 0, totale: 0, prossimo: null, visibile: false },
@@ -72,13 +73,20 @@ describe('pagina Impara', () => {
     assertNessunaParolaVietata(container);
   });
 
-  it('Primi passi si vede solo se non finiti, la Lista d attesa sempre', async () => {
-    loadPercorsoData.mockResolvedValue(dati());
+  it('Primi passi si vede finché non sono finiti, anche se nascosti dalla Home; la Lista d attesa sempre', async () => {
+    // Tutti fatti: la porta non serve più.
+    loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 6, totale: 6, prossimo: null, visibile: false } }));
     const { unmount } = render(await ImparaPage());
     expect(screen.queryByRole('link', { name: /Primi passi/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Lista d.attesa/ })).toHaveAttribute('href', '/impara/attesa');
     unmount();
+    // Non finiti e visibili nella Home.
     loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: true } }));
+    const b = render(await ImparaPage());
+    expect(screen.getByRole('link', { name: /Primi passi/ })).toHaveAttribute('href', '/impara/primi-passi');
+    b.unmount();
+    // Non finiti ma nascosti: restano raggiungibili da qui.
+    loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: false } }));
     render(await ImparaPage());
     expect(screen.getByRole('link', { name: /Primi passi/ })).toHaveAttribute('href', '/impara/primi-passi');
   });

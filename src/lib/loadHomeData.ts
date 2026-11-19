@@ -376,6 +376,7 @@ export async function loadHomeData(
     lezioni: percorso.lezioni,
     percorso: percorso.utente,
     disponibileReale,
+    disponibileLibero,
     ultimaEntrataIl: ultimaEntrata ? format(ultimaEntrata, 'yyyy-MM-dd') : null,
     primiPassiVisibili: primiPassi.visibile,
   });

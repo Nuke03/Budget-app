@@ -11,7 +11,7 @@ export default async function ImparaPage() {
     <>
       <CoverHeader titolo="Impara" />
       <main className="mx-auto max-w-xl px-4 pb-28 pt-5">
-        <ElencoImpara primiPassiVisibili={dati.primiPassi.visibile} lezioni={dati.lezioni} />
+        <ElencoImpara primiPassiDaFinire={dati.primiPassi.fatti < dati.primiPassi.totale} lezioni={dati.lezioni} />
       </main>
     </>
   );

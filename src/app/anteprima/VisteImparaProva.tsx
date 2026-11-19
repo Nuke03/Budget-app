@@ -45,7 +45,7 @@ export function ImparaProva({ oggi }: { oggi: string }) {
     <>
       <CoverHeader titolo="Impara" />
       <main className="mx-auto max-w-xl px-4 pb-28 pt-5">
-        <ElencoImpara primiPassiVisibili lezioni={lezioni} />
+        <ElencoImpara primiPassiDaFinire lezioni={lezioni} />
       </main>
     </>
   );

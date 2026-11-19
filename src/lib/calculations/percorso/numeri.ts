@@ -68,7 +68,7 @@ export function numeriLezione(id: ArgomentoId, d: DatiRegole): string | null {
       return `Hai ${fondi.length} ${fondi.length === 1 ? 'fondo aperto' : 'fondi aperti'}, in tutto ${euroInFrase(Math.round(quota * 100) / 100)} al mese.`;
     }
     case 'piano':
-      return `Adesso il tuo libero è ${euroInFrase(d.disponibileReale)}.`;
+      return `Adesso il tuo libero è ${euroInFrase(d.disponibileLibero)}.`;
     default:
       return null;
   }

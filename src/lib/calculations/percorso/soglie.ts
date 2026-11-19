@@ -8,6 +8,8 @@ export const DISPONIBILE_BASSO = 50;
 export const GIORNI_SENZA_ENTRATA = 30;
 export const GIORNI_PIU_TARDI = 14;
 export const GIORNI_RIPROPOSTA = 60;
+// Una lezione proposta e ignorata non si ripropone prima di una settimana.
+export const GIORNI_PROPOSTA = 7;
 export const GIORNI_ANNUALE = 365;
 export const GIORNI_ATTESA = 7;
 export const GIORNI_SETTIMANA = 7;

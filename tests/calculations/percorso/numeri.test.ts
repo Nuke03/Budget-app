@@ -16,7 +16,7 @@ const goal = (over: Partial<BudgetGoal & { accantonato: number }> = {}): BudgetG
 });
 const dati = (over: Partial<DatiRegole> = {}): DatiRegole => ({
   oggi: '2026-11-19', transazioni: [], categorie: [], goals: [], lezioni: {}, percorso: null,
-  disponibileReale: 500, ultimaEntrataIl: '2026-11-10', primiPassiVisibili: false, ...over,
+  disponibileReale: 500, disponibileLibero: 500, ultimaEntrataIl: '2026-11-10', primiPassiVisibili: false, ...over,
 });
 
 describe('piccoleSpese', () => {
@@ -65,7 +65,9 @@ describe('numeriLezione', () => {
     expect(numeriLezione('imprevisti', dati({ goals: [goal({ ruolo: 'imprevisti', accantonato: 80 })] }))).toContain('80 €');
   });
   it('piano: il disponibile', () => {
-    expect(numeriLezione('piano', dati({ disponibileReale: 315 }))).toContain('315 €');
+    expect(numeriLezione('piano', dati({ disponibileLibero: 315 }))).toContain('315 €');
+    // Il numero mostrato è quello della Home (libero), non quello grezzo usato dalle regole.
+    expect(numeriLezione('piano', dati({ disponibileReale: 900, disponibileLibero: 315 }))).not.toContain('900');
   });
   it('spese-certe: quanti fondi e quota mensile', () => {
     const f = numeriLezione('spese-certe', dati({ goals: [goal(), goal({ id: 'g2' })] }));

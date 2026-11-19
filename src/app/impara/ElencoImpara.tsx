@@ -6,11 +6,11 @@ import type { StatiLezioni } from '@/lib/percorso/tipi';
 const linkClasse = 'flex min-h-[44px] items-center gap-3 px-4 py-3 text-base text-brand-dark';
 
 // L'elenco della pagina Impara: le due porte in alto e le lezioni, con la spunta su quelle lette.
-export function ElencoImpara({ primiPassiVisibili, lezioni }: { primiPassiVisibili: boolean; lezioni: StatiLezioni }) {
+export function ElencoImpara({ primiPassiDaFinire, lezioni }: { primiPassiDaFinire: boolean; lezioni: StatiLezioni }) {
   return (
     <>
       <ul className="mb-4 overflow-hidden rounded-[var(--radius-lg)] border border-rule bg-surface">
-        {primiPassiVisibili ? (
+        {primiPassiDaFinire ? (
           <li className="border-b border-rule">
             <Link href="/impara/primi-passi" className={linkClasse}>
               <span className="flex-1 font-semibold">Primi passi</span>

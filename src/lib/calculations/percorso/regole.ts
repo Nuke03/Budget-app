@@ -4,7 +4,7 @@ import type { ArgomentoId, PercorsoUtente, StatiLezioni } from '@/lib/percorso/t
 import { LEZIONI, lezione } from '@/lib/percorso/lezioni';
 import {
   PICCOLA_SPESA, PICCOLE_SPESE_MESE, SPESA_IMPREVISTO, SPESA_IMPULSO, ENTRATA_GRANDE,
-  DISPONIBILE_BASSO, GIORNI_SENZA_ENTRATA, GIORNI_RIPROPOSTA, GIORNI_ANNUALE,
+  DISPONIBILE_BASSO, GIORNI_SENZA_ENTRATA, GIORNI_RIPROPOSTA, GIORNI_ANNUALE, GIORNI_PROPOSTA,
 } from './soglie';
 import { piccoleSpese } from './numeri';
 
@@ -15,7 +15,10 @@ export interface DatiRegole {
   goals: (BudgetGoal & { accantonato: number })[];
   lezioni: StatiLezioni;
   percorso: PercorsoUtente | null;
+  // Quello che serve alle regole (soglie, avviso)...
   disponibileReale: number;
+  // ...e quello che l'utente vede nella Home: è il numero da mostrare nelle frasi.
+  disponibileLibero: number;
   ultimaEntrataIl: string | null;
   primiPassiVisibili: boolean;
 }
@@ -57,9 +60,16 @@ export function puoProporre(id: ArgomentoId, d: DatiRegole, giorniMinimi: number
   const stato = d.lezioni[id];
   if (stato?.rimandataAl && stato.rimandataAl > d.oggi) return false;
   if (stato?.vistaIl && giorniTra(stato.vistaIl, d.oggi) < giorniMinimi) return false;
+  // Proposta e ignorata: non torna ogni giorno. Lo stesso giorno la tiene visibile lezioneDelGiorno.
+  if (stato?.propostaIl && stato.propostaIl !== d.oggi && giorniTra(stato.propostaIl, d.oggi) < GIORNI_PROPOSTA) return false;
   if (meseStretto(d) && lezione(id).fase === 'dopo') return false;
   return true;
 }
+
+// A mese stretto le lezioni che servono adesso passano davanti a quelle per quando entrano soldi.
+// Ordinamento stabile: a parità di fase resta l'ordine di priorità delle regole.
+const ORDINE_FASE: Record<string, number> = { adesso: 0, 'appena-entrano': 1, dopo: 2 };
+const perFase = (id: ArgomentoId): number => ORDINE_FASE[lezione(id).fase] ?? 3;
 
 export function lezioneDopoSalvataggio(t: Transaction, d: DatiRegole): ArgomentoId | null {
   const spesa = t.tipo === 'expense';
@@ -69,8 +79,14 @@ export function lezioneDopoSalvataggio(t: Transaction, d: DatiRegole): Argomento
   const candidati: (ArgomentoId | null)[] = [
     spesa && eRata(t, d.categorie) ? 'debiti-rate' : null,
     spesa && t.importo > SPESA_IMPREVISTO && !t.goalId ? 'imprevisti' : null,
+    // Un fondo ricorrente creato nei Primi passi non ha categoria né ruolo: conta lo stesso.
     spesa && ruolo === 'certa' &&
-      !d.goals.some((g) => g.stato === 'aperto' && g.categoriaId !== null && g.categoriaId === t.categoriaId)
+      !d.goals.some(
+        (g) =>
+          g.stato === 'aperto' &&
+          ((g.categoriaId !== null && g.categoriaId === t.categoriaId) ||
+            (g.ricorrente && g.modalita === 'dilazionato' && !g.ruolo))
+      )
       ? 'spese-certe' : null,
     spesa && t.importo > SPESA_IMPULSO && ruolo === 'svago' &&
       !d.lezioni.impulso?.propostaIl?.startsWith(d.oggi.slice(0, 7))
@@ -82,7 +98,9 @@ export function lezioneDopoSalvataggio(t: Transaction, d: DatiRegole): Argomento
     spesa && t.importo < PICCOLA_SPESA && piccoleSpese(d.transazioni, mese).totale > PICCOLE_SPESE_MESE
       ? 'dove-vanno' : null,
   ];
-  for (const id of candidati) if (id && puoProporre(id, d)) return id;
+  const ordinati = candidati.filter((id): id is ArgomentoId => id !== null);
+  if (meseStretto(d)) ordinati.sort((a, b) => perFase(a) - perFase(b));
+  for (const id of ordinati) if (puoProporre(id, d)) return id;
   return null;
 }
 
@@ -125,6 +143,7 @@ export function lezioneDelGiorno(d: DatiRegole): ArgomentoId | null {
     { id: 'pensione', ok: true, giorni: GIORNI_ANNUALE },
     { id: 'inflazione', ok: piuVecchia !== null && giorniTra(piuVecchia, d.oggi) >= GIORNI_ANNUALE, giorni: GIORNI_ANNUALE },
   ];
+  if (meseStretto(d)) candidati.sort((a, b) => perFase(a.id) - perFase(b.id));
   for (const c of candidati) if (c.ok && puoProporre(c.id, d, c.giorni)) return c.id;
   return null;
 }

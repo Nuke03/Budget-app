@@ -41,6 +41,7 @@ export async function loadPercorsoData(
     lezioni: percorso.lezioni,
     percorso: percorso.utente,
     disponibileReale: home.disponibileReale,
+    disponibileLibero: home.disponibileLibero,
     ultimaEntrataIl: ultimaEntrata ? format(ultimaEntrata, 'yyyy-MM-dd') : null,
     primiPassiVisibili: primiPassi.visibile,
     primiPassi,

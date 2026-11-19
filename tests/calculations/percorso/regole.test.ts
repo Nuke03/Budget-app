@@ -30,7 +30,7 @@ const percorso = (over: Partial<PercorsoUtente> = {}): PercorsoUtente => ({
 
 const dati = (over: Partial<DatiRegole> = {}): DatiRegole => ({
   oggi: OGGI, transazioni: [], categorie: [], goals: [], lezioni: {}, percorso: percorso(),
-  disponibileReale: 500, ultimaEntrataIl: '2026-11-10', primiPassiVisibili: false, ...over,
+  disponibileReale: 500, disponibileLibero: 500, ultimaEntrataIl: '2026-11-10', primiPassiVisibili: false, ...over,
 });
 
 const giorniFa = (n: number): string => new Date(Date.parse(`${OGGI}T00:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
@@ -85,6 +85,14 @@ describe('puoProporre', () => {
     expect(puoProporre('piano', dati({ lezioni: vista(60) }))).toBe(true);
     expect(puoProporre('piano', dati({ lezioni: vista(100) }), 365)).toBe(false);
   });
+  it('una lezione proposta e ignorata non torna per 7 giorni', () => {
+    const proposta = (n: number) => ({ piano: { vistaIl: null, rimandataAl: null, azioneIl: null, propostaIl: giorniFa(n) } });
+    expect(puoProporre('piano', dati({ lezioni: proposta(1) }))).toBe(false);
+    expect(puoProporre('piano', dati({ lezioni: proposta(6) }))).toBe(false);
+    expect(puoProporre('piano', dati({ lezioni: proposta(7) }))).toBe(true);
+    // lo stesso giorno lo gestisce lezioneDelGiorno (la proposta resta visibile): qui non blocca
+    expect(puoProporre('piano', dati({ lezioni: proposta(0) }))).toBe(true);
+  });
   it('in mese stretto le lezioni dopo no', () => {
     const stretto = dati({ disponibileReale: -5 });
     expect(puoProporre('risparmio-investimento', stretto)).toBe(false); // fase dopo
@@ -113,6 +121,21 @@ describe('lezioneDopoSalvataggio', () => {
     expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, goals: [goal({ categoriaId: 'auto' })] }))).toBeNull();
     // obiettivo chiuso non conta
     expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, goals: [goal({ categoriaId: 'auto', stato: 'chiuso' })] }))).toBe('spese-certe');
+  });
+  it('3: un fondo ricorrente senza ruolo e senza categoria (Primi passi) conta come fondo per la spesa certa', () => {
+    const t = tr({ importo: 60, categoriaId: 'auto' });
+    const primiPassi = goal({ ricorrente: true, frequenzaMesi: 12, scadenza: '2027-03-31', categoriaId: null });
+    expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, goals: [primiPassi] }))).toBeNull();
+    // un fondo non ricorrente o chiuso, o il cuscinetto imprevisti, non lo sostituisce
+    expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, goals: [goal({ ricorrente: false })] }))).toBe('spese-certe');
+    expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, goals: [{ ...primiPassi, stato: 'chiuso' }] }))).toBe('spese-certe');
+    expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, goals: [{ ...primiPassi, ruolo: 'imprevisti' }] }))).toBe('spese-certe');
+  });
+  it('mese stretto: prima le lezioni "adesso", poi "appena entrano"', () => {
+    // 200 € su una categoria certa senza fondo: imprevisti (appena-entrano) e spese-certe (adesso)
+    const t = tr({ importo: 200, categoriaId: 'auto' });
+    expect(lezioneDopoSalvataggio(t, dati({ categorie: cats }))).toBe('imprevisti');
+    expect(lezioneDopoSalvataggio(t, dati({ categorie: cats, disponibileReale: -5 }))).toBe('spese-certe');
   });
   it('4: svago sopra 40, una volta al mese', () => {
     const t = tr({ importo: 41, categoriaId: 'svago' });
@@ -172,6 +195,10 @@ describe('lezioneDelGiorno: proposta di oggi', () => {
 });
 
 describe('lezioneDelGiorno', () => {
+  it('mese stretto: prima le lezioni "adesso" (truffe) di quelle "appena entrano" (imprevisti)', () => {
+    expect(lezioneDelGiorno(dati())).toBe('imprevisti');
+    expect(lezioneDelGiorno(dati({ ultimaEntrataIl: giorniFa(40) }))).toBe('truffe');
+  });
   it('null con primi passi visibili', () => {
     expect(lezioneDelGiorno(dati({ primiPassiVisibili: true, disponibileReale: 0 }))).toBeNull();
   });
