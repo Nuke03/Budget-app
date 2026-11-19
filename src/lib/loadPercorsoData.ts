@@ -1,0 +1,45 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { format } from 'date-fns';
+import { loadHomeData } from '@/lib/loadHomeData';
+import { leggiPercorso } from '@/lib/data/percorso';
+import { getPivaSettings } from '@/lib/data/pivaSettings';
+import { getLastIncomeDate, getTransactions } from '@/lib/data/transactions';
+import { PERSONALE } from '@/lib/data/scope';
+import { inizioMesiFa } from '@/lib/pivaHome';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/passi';
+import type { DatiRegole } from '@/lib/calculations/percorso/regole';
+
+// Tutto ciò che serve a decidere e a scrivere le lezioni: i dati della home più lo stato del percorso.
+export async function loadPercorsoData(
+  supabase: SupabaseClient,
+  today: Date = new Date()
+): Promise<DatiRegole & { primiPassi: PrimiPassi }> {
+  const oggi = oggiRomaISO(today);
+  const [home, percorso, piva, transazioni, ultimaEntrata] = await Promise.all([
+    loadHomeData(supabase, today),
+    leggiPercorso(supabase),
+    getPivaSettings(supabase).catch(() => null),
+    getTransactions(supabase, PERSONALE, { da: inizioMesiFa(oggi, 3) }),
+    getLastIncomeDate(supabase).catch(() => null),
+  ]);
+  const primiPassi = statoPrimiPassi({
+    conti: home.accounts,
+    goals: home.goals,
+    percorso: percorso.utente,
+    pivaGuidata: !!piva?.guidataDal,
+    oggi,
+  });
+  return {
+    oggi,
+    transazioni,
+    categorie: home.categories,
+    goals: home.goals,
+    lezioni: percorso.lezioni,
+    percorso: percorso.utente,
+    disponibileReale: home.disponibileReale,
+    ultimaEntrataIl: ultimaEntrata ? format(ultimaEntrata, 'yyyy-MM-dd') : null,
+    primiPassiVisibili: primiPassi.visibile,
+    primiPassi,
+  };
+}

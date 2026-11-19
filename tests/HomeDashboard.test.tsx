@@ -451,6 +451,13 @@ describe('il libretto', () => {
     expect(screen.getByText('Il libretto parte dal primo movimento.')).toBeInTheDocument();
   });
 
+  it('aperto il Perché, c è il link alla lezione del consiglio', () => {
+    render(<HomeDashboard {...base} />);
+    expect(screen.queryByRole('link', { name: 'Leggi la lezione' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Perché?' }));
+    expect(screen.getByRole('link', { name: 'Leggi la lezione' })).toHaveAttribute('href', '/impara/dove-vanno');
+  });
+
   it('il registro vuoto dice che è vuoto, senza prossimo non c è la card', () => {
     render(<HomeDashboard {...base} />);
     expect(screen.getByText('Il libretto è vuoto: la prima spesa che segni compare qui.')).toBeInTheDocument();

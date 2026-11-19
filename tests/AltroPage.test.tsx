@@ -24,15 +24,23 @@ import AltroPage from '@/app/altro/page';
 import { serveConferma, nonAvvisarePiu } from '@/lib/conferme';
 
 describe('pagina Altro', () => {
-  it('ha cinque link con gli href previsti', async () => {
+  it('ha sei link con gli href previsti', async () => {
     render(await AltroPage());
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
+    expect(screen.getByRole('link', { name: /Impara/ })).toHaveAttribute('href', '/impara');
     expect(screen.getByRole('link', { name: /Obiettivi/ })).toHaveAttribute('href', '/goals');
     expect(screen.getByRole('link', { name: /Conti/ })).toHaveAttribute('href', '/accounts');
     expect(screen.getByRole('link', { name: /Categorie/ })).toHaveAttribute('href', '/categories');
     expect(screen.getByRole('link', { name: /P\.IVA/ })).toHaveAttribute('href', '/piva');
     expect(screen.getByRole('link', { name: /Notifiche/ })).toHaveAttribute('href', '/altro#notifiche');
+  });
+
+  it('ha la voce Impara prima di Obiettivi', async () => {
+    render(await AltroPage());
+    const nomi = screen.getAllByRole('link').map((l) => l.textContent);
+    expect(nomi[0]).toBe('Impara');
+    expect(nomi[1]).toBe('Obiettivi');
   });
 
   it('Riattiva gli avvisi rimette le conferme', async () => {

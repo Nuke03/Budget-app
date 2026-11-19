@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import Link from 'next/link';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 
 export function ConsiglioCard({ consiglio }: { consiglio: Consiglio }) {
@@ -19,9 +20,15 @@ export function ConsiglioCard({ consiglio }: { consiglio: Consiglio }) {
         Perché?
       </button>
       {aperto ? (
-        <p id={id} className="text-sm text-ink-2">
-          {consiglio.perche}
-        </p>
+        <div id={id}>
+          <p className="text-sm text-ink-2">{consiglio.perche}</p>
+          <Link
+            href={`/impara/${consiglio.lezione}`}
+            className="-mx-2 inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand-dark underline"
+          >
+            Leggi la lezione
+          </Link>
+        </div>
       ) : null}
     </section>
   );
