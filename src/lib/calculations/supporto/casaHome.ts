@@ -105,6 +105,11 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
         haConto: dati.aggiunta.conti.length > 0,
       },
       ultimoCheckinMese: dati.controlli.ultimoCheckinMese,
+      rivediQuota: {
+        gestisce: chiGestisce(dati.casa.household, dati.casa.members) === meUserId,
+        piani: dati.piani,
+        spese: dati.transazioni,
+      },
     }),
     { userId: meUserId },
     oggi,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeReminders, statoPromemoria, type StatoPromemoria } from '@/lib/calculations/casa/promemoria';
+import { computeReminders, motivoRivediQuota, statoPromemoria, type StatoPromemoria } from '@/lib/calculations/casa/promemoria';
 import { giornoEMeseScadenza } from '@/lib/format';
 import { PAROLE_VIETATE } from '../../helpers/paroleVietate';
 
@@ -221,5 +221,89 @@ describe('check-in', () => {
     expect(statoPromemoria({ ...input, ultimoCheckinMese: '2026-09-01' }).checkin).toEqual({ mese: '2026-10-01' });
     expect(statoPromemoria({ ...input, ultimoCheckinMese: '2026-10-01' }).checkin).toEqual({ mese: null });
     expect(statoPromemoria(input).checkin).toBeUndefined();
+  });
+});
+
+describe('rivedi la quota', () => {
+  const piano = (validoDal: string, previsto = 1000) =>
+    ({ plan: { validoDal, giornoVersamento: 5 }, items: [{ frequenzaMesi: 1, importoMensile: previsto, goalId: null }], shares: [] }) as never;
+  const spesa = (data: string, importo: number) =>
+    ({ tipo: 'expense', importo, data, categoriaId: null, origine: 'manuale', goalId: null }) as never;
+  const oggi = '2026-11-19';
+  const input = (over: Partial<Parameters<typeof motivoRivediQuota>[0]> = {}) => ({
+    gestisce: true,
+    piani: [piano('2026-06-01')],
+    spese: [spesa('2026-09-10', 1200), spesa('2026-10-10', 1200)],
+    oggi,
+    ...over,
+  });
+
+  it('due mesi completi sopra il previsto del 10%: scatta per le spese', () => {
+    expect(motivoRivediQuota(input())).toBe('spese');
+  });
+
+  it('un solo mese sopra: non scatta', () => {
+    expect(motivoRivediQuota(input({ spese: [spesa('2026-09-10', 1000), spesa('2026-10-10', 1200)] }))).toBeNull();
+  });
+
+  it('9,9% sopra: non scatta, e il 10% esatto nemmeno', () => {
+    expect(motivoRivediQuota(input({ spese: [spesa('2026-09-10', 1099), spesa('2026-10-10', 1099)] }))).toBeNull();
+    expect(motivoRivediQuota(input({ spese: [spesa('2026-09-10', 1100), spesa('2026-10-10', 1100)] }))).toBeNull();
+  });
+
+  it('il mese in corso non conta', () => {
+    expect(motivoRivediQuota(input({ spese: [spesa('2026-10-10', 1200), spesa('2026-11-10', 1200)] }))).toBeNull();
+  });
+
+  it('se un mese era fuori dal piano non scatta per le spese', () => {
+    expect(motivoRivediQuota(input({ piani: [piano('2026-10-01')] }))).toBeNull();
+  });
+
+  it('sei mesi dall inizio del piano in vigore: scatta per il tempo', () => {
+    expect(motivoRivediQuota(input({ piani: [piano('2026-05-01')], spese: [] }))).toBe('tempo');
+    expect(motivoRivediQuota(input({ piani: [piano('2026-06-01')], spese: [] }))).toBeNull();
+  });
+
+  it('conta la versione in vigore, non la prima', () => {
+    expect(motivoRivediQuota(input({ piani: [piano('2026-01-01'), piano('2026-09-01')], spese: [] }))).toBeNull();
+  });
+
+  it('chi non gestisce non lo vede mai', () => {
+    expect(motivoRivediQuota(input({ gestisce: false }))).toBeNull();
+    expect(motivoRivediQuota(input({ gestisce: false, piani: [piano('2026-01-01')] }))).toBeNull();
+  });
+
+  it('statoPromemoria porta il motivo solo se gli arrivano i dati', () => {
+    const b = { piano: null, righe: [], oggi, nomi: {}, crediti: {}, debiti: [] };
+    expect(statoPromemoria(b).quota).toBeUndefined();
+    expect(statoPromemoria({ ...b, rivediQuota: input() }).quota).toEqual({ motivo: 'spese' });
+  });
+
+  it('i testi sono calmi e il link va alla quota', () => {
+    for (const [motivo, testo] of [
+      ['spese', 'Le spese della casa sono sopra il previsto da due mesi: rivedere la quota?'],
+      ['tempo', 'Sono passati 6 mesi dall\'ultima quota: vale un controllo?'],
+    ] as const) {
+      const r = computeReminders({ ...base, giornoVersamento: null, versamentoMese: null, quota: { motivo } }, me, oggi);
+      expect(r).toHaveLength(1);
+      expect(r[0]).toMatchObject({ id: `quota:${motivo}`, tipo: 'quota', testo });
+      expect(r[0].azione).toEqual({ tipo: 'quota', etichetta: 'Rivedi', href: '/casa/quota' });
+      for (const v of [...PAROLE_VIETATE, 'colpa', 'ritardo', 'scaduto']) expect(r[0].testo.toLowerCase()).not.toContain(v);
+    }
+  });
+
+  it('viene dopo versamento, debiti, check-in e controllo', () => {
+    const r = computeReminders(
+      {
+        ...base,
+        debiti: [debito('u2', 'u1')],
+        checkin: { mese: '2026-10-01' },
+        controllo: { ultimo: null, riferimento: '2026-01-01', haConto: true },
+        quota: { motivo: 'spese' },
+      },
+      me,
+      '2026-11-09'
+    );
+    expect(r.map((p) => p.tipo)).toEqual(['versamento', 'debito', 'checkin', 'controllo', 'quota']);
   });
 });

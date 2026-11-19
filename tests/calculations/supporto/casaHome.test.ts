@@ -20,7 +20,7 @@ const voce = (over: Partial<PlanItem>): PlanItem => ({
 });
 const piano = (items: PlanItem[]): PlanBundle => ({
   plan: {
-    id: 'p', householdId: 'c1', validoDal: '2026-01-01', giornoVersamento: 5, regola: 'parti_uguali',
+    id: 'p', householdId: 'c1', validoDal: '2026-09-01', giornoVersamento: 5, regola: 'parti_uguali',
     cuscinettoObiettivo: 0, cuscinettoQuotaMensile: 0, arrotondamento: 1, totaleMensile: 0, createdAt: '2026-01-01',
   },
   items,
@@ -259,5 +259,19 @@ describe('casaHomeDati', () => {
     const marco = membro('marco', 'Marco', '2026-01-03T00:00:00Z');
     const d = dati({ debiti: [debito('fabio', 'giulia', 10), debito('fabio', 'marco', 70)] }, [fabio, giulia, marco]);
     expect(casaHomeDati(d, 'fabio', OGGI).vistaSemplice.stato).toEqual({ tipo: 'devi', importo: 70, a: 'Marco', aUserId: 'marco' });
+  });
+});
+
+describe('casaHomeDati: rivedi la quota', () => {
+  const vecchio = () => {
+    const d = dati();
+    d.piani[0].plan.validoDal = '2026-05-01';
+    return d;
+  };
+  it('a chi gestisce arriva dopo 6 mesi, a un altro membro no', () => {
+    const tipi = (u: string) => casaHomeDati(vecchio(), u, OGGI).daFare.filter((x) => x.tipo === 'promemoria' && x.id === 'quota:tempo');
+    expect(tipi('fabio')).toHaveLength(1);
+    expect(tipi('fabio')[0]).toMatchObject({ href: '/casa/quota' });
+    expect(tipi('giulia')).toHaveLength(0);
   });
 });

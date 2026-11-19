@@ -4,7 +4,9 @@ import type { DebitoMembro } from './debitiMembri';
 import { descriviOrigineDebito } from './debitiMembri';
 import type { RigaMese } from './versamenti';
 import { meseRomaISO } from './oggi';
-import { meseDaControllare } from './checkin';
+import { meseDaControllare, mesePrecedente, speseMensiliDelMese } from './checkin';
+import { pianoInVigore } from './versamenti';
+import type { Transaction } from '../../types';
 
 export interface StatoPromemoria {
   giornoVersamento: number | null;
@@ -18,10 +20,14 @@ export interface StatoPromemoria {
   controllo?: { ultimo: string | null; riferimento: string; haConto: boolean };
   // Il check-in: mese è l'ultimo mese chiuso ancora da controllare, null se non c'è niente da fare.
   checkin?: { mese: string | null };
+  // Rivedere la quota: il motivo per cui conviene farlo, null se non c'è (o se chi guarda non gestisce).
+  quota?: { motivo: MotivoRivediQuota | null };
 }
 
+export type MotivoRivediQuota = 'spese' | 'tempo';
+
 export interface AzionePromemoria {
-  tipo: 'versamento' | 'rimborso' | 'restituisci' | 'controllo' | 'checkin';
+  tipo: 'versamento' | 'rimborso' | 'restituisci' | 'controllo' | 'checkin' | 'quota';
   etichetta: string;
   importo?: number;
   altroUserId?: string;
@@ -30,7 +36,7 @@ export interface AzionePromemoria {
 
 export interface Promemoria {
   id: string;
-  tipo: 'versamento' | 'credito' | 'debito' | 'controllo' | 'checkin';
+  tipo: 'versamento' | 'credito' | 'debito' | 'controllo' | 'checkin' | 'quota';
   testo: string;
   azione: AzionePromemoria | null;
 }
@@ -40,6 +46,11 @@ export const MASSIMO_PROMEMORIA = 2;
 const GIORNI_DI_PREAVVISO = 3;
 // Dopo più di questi giorni dall'ultimo controllo del saldo il promemoria ricompare.
 const GIORNI_CONTROLLO = 14;
+// Rivedere la quota: spese reali oltre il previsto di più di questa quota per MESI_SOPRA_PREVISTO mesi completi
+// di fila, oppure MESI_DALLA_QUOTA mesi dall'inizio della versione del piano in vigore.
+export const SOGLIA_SOPRA_PREVISTO = 0.1;
+export const MESI_SOPRA_PREVISTO = 2;
+export const MESI_DALLA_QUOTA = 6;
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
 const euro = (n: number): string => `${formatNumero(n)} €`;
 
@@ -59,6 +70,33 @@ function elencoMesi(mesi: string[]): string {
   return nomi.length <= 1 ? (nomi[0] ?? '') : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`;
 }
 
+const indiceMese = (m: string): number => Number(m.slice(0, 4)) * 12 + Number(m.slice(5, 7));
+
+// Perché proporre di rivedere la quota. Solo a chi gestisce la casa. Le spese sono quelle della stima contro reale
+// (speseMensiliDelMese) degli ultimi mesi completi, ognuna contro il piano in vigore quel mese.
+export function motivoRivediQuota(input: {
+  gestisce: boolean;
+  piani: PlanBundle[];
+  spese: Transaction[];
+  oggi: string;
+}): MotivoRivediQuota | null {
+  if (!input.gestisce) return null;
+  const corrente = `${meseRomaISO(new Date(`${input.oggi}T12:00:00Z`)).slice(0, 7)}-01`;
+
+  let sopra = 0;
+  let mese = corrente;
+  for (let i = 0; i < MESI_SOPRA_PREVISTO; i++) {
+    mese = mesePrecedente(mese);
+    const { previstoMensili, spesoMensili } = speseMensiliDelMese(pianoInVigore(input.piani, mese), input.spese, mese);
+    if (previstoMensili > 0 && spesoMensili > previstoMensili * (1 + SOGLIA_SOPRA_PREVISTO) + 1e-9) sopra++;
+  }
+  if (sopra === MESI_SOPRA_PREVISTO) return 'spese';
+
+  const inVigore = pianoInVigore(input.piani, corrente);
+  if (inVigore && indiceMese(corrente) - indiceMese(inVigore.plan.validoDal) >= MESI_DALLA_QUOTA) return 'tempo';
+  return null;
+}
+
 // Dallo stato della casa di chi guarda ai dati dei promemoria: il giorno dal piano in vigore,
 // il versamento dalla riga del mese corrente.
 export function statoPromemoria(input: {
@@ -72,6 +110,8 @@ export function statoPromemoria(input: {
   debiti: DebitoMembro[];
   controllo?: StatoPromemoria['controllo'];
   ultimoCheckinMese?: string | null;
+  // Se arriva, si valuta anche il promemoria della quota (oggi è quello di input.oggi).
+  rivediQuota?: Omit<Parameters<typeof motivoRivediQuota>[0], 'oggi'> & { oggi?: string };
 }): StatoPromemoria {
   const mese = meseRomaISO(new Date(`${input.oggi}T12:00:00Z`));
   const riga = input.righe.find((r) => r.mese === mese) ?? null;
@@ -83,6 +123,7 @@ export function statoPromemoria(input: {
     crediti: input.crediti,
     debiti: input.debiti,
     controllo: input.controllo,
+    quota: input.rivediQuota ? { motivo: motivoRivediQuota({ ...input.rivediQuota, oggi: input.rivediQuota.oggi ?? input.oggi }) } : undefined,
     checkin:
       input.ultimoCheckinMese === undefined
         ? undefined
@@ -168,6 +209,19 @@ export function computeReminders(stato: StatoPromemoria, utente: { userId: strin
         azione: { tipo: 'controllo', etichetta: 'Controlla', href: '/casa/controllo/conto' },
       });
     }
+  }
+
+  const motivoQuota = stato.quota?.motivo ?? null;
+  if (motivoQuota) {
+    out.push({
+      id: `quota:${motivoQuota}`,
+      tipo: 'quota',
+      testo:
+        motivoQuota === 'spese'
+          ? 'Le spese della casa sono sopra il previsto da due mesi: rivedere la quota?'
+          : `Sono passati ${MESI_DALLA_QUOTA} mesi dall'ultima quota: vale un controllo?`,
+      azione: { tipo: 'quota', etichetta: 'Rivedi', href: '/casa/quota' },
+    });
   }
 
   return out;
