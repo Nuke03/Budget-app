@@ -126,14 +126,16 @@ export function StoricoVista({
                       {t.tipo === 'income' ? '+' : '−'}
                       {formatEuro(t.importo)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => onEdit(t)}
-                      aria-label="Modifica transazione"
-                      className={BOTTONE_ICONA}
-                    >
-                      <Pencil size={18} aria-hidden="true" />
-                    </button>
+                    {t.origine === 'riconciliazione' ? null : (
+                      <button
+                        type="button"
+                        onClick={() => onEdit(t)}
+                        aria-label="Modifica transazione"
+                        className={BOTTONE_ICONA}
+                      >
+                        <Pencil size={18} aria-hidden="true" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => onDelete(t)}
