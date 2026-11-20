@@ -1,6 +1,7 @@
 'use client';
 
 import { CoverHeader } from '../CoverHeader';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { GoalsList, type GoalWithQuotaMensile } from './GoalsList';
 import type { Category } from '@/lib/types';
 
@@ -29,6 +30,7 @@ export function ObiettiviVista({
         <button
           type="button"
           onClick={onNuovo}
+          data-fumetto={goals.length === 0 ? 'cassetti' : undefined}
           className="min-h-12 rounded-[var(--radius-md)] bg-brand px-4 py-3 text-base font-semibold text-brand-foreground"
         >
           Nuovo obiettivo
@@ -40,6 +42,12 @@ export function ObiettiviVista({
           onClose={onClose}
           onHoMessoDaParte={onHoMessoDaParte}
           versaId={versaId}
+          ancoraPrimo="cassetti"
+        />
+        <FumettoPrimaVolta
+          id="cassetti"
+          ancora="cassetti"
+          testo="Un cassetto tiene da parte i soldi per una cosa che arriva. L'app li toglie dal disponibile un po' alla volta."
         />
       </main>
     </>

@@ -610,3 +610,11 @@ describe('PivaHub', () => {
     expect(screen.queryByText(/da mettere da parte sul conto tasse/)).not.toBeInTheDocument();
   });
 });
+
+describe('PivaHub fumetto', () => {
+  it('la cifra del vaso porta data-fumetto="piva"', async () => {
+    apri();
+    const cifra = await screen.findByTestId('saldo-vaso');
+    expect(cifra).toHaveAttribute('data-fumetto', 'piva');
+  });
+});

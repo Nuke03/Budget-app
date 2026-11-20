@@ -65,6 +65,17 @@ describe('useQualcosaAperto', () => {
     document.body.innerHTML = '';
   });
 
+  it('con un dialog già nel body parte già da true al primo render', () => {
+    document.body.innerHTML = '<div role="dialog" aria-modal="true"></div>';
+    let primo: boolean | null = null;
+    renderHook(() => {
+      const v = useQualcosaAperto();
+      if (primo === null) primo = v;
+      return v;
+    });
+    expect(primo).toBe(true);
+  });
+
   it('passa da false a true quando compare un dialog', async () => {
     const { result } = renderHook(() => useQualcosaAperto());
     expect(result.current).toBe(false);

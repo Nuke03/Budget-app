@@ -40,7 +40,7 @@ export function qualcosaAperto(doc?: Document): boolean {
 
 // Lo stesso valore di qualcosaAperto, aggiornato a ogni cambiamento del body.
 export function useQualcosaAperto(): boolean {
-  const [aperto, setAperto] = useState(false);
+  const [aperto, setAperto] = useState(() => typeof document !== 'undefined' && qualcosaAperto());
 
   useEffect(() => {
     const aggiorna = () => setAperto(qualcosaAperto());

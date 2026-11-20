@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ricominciaDaZero } from '@/lib/data/percorso';
+import { azzeraFumetti } from '@/lib/fumetti/visti';
+import { useUtenteId } from '@/lib/fumetti/ambiente';
 import { euroInFrase } from '../piva/PromptQuota';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { CLASSE_CAMPO, CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
@@ -13,6 +15,7 @@ const PAROLA = 'RICOMINCIA';
 // Cosa c'è di aperto nella casa per chi guarda: dirlo prima, senza bloccare. Il reset non tocca la casa.
 export function RicominciaDaZero({ casa }: { casa: { credito: number; debito: number } | null }) {
   const router = useRouter();
+  const utente = useUtenteId();
   const [aperto, setAperto] = useState(false);
   const [testo, setTesto] = useState('');
   const [inCorso, setInCorso] = useState(false);
@@ -38,6 +41,7 @@ export function RicominciaDaZero({ casa }: { casa: { credito: number; debito: nu
       setInCorso(false);
       return;
     }
+    if (utente) azzeraFumetti(utente);
     router.replace('/impara/primi-passi');
   }
 

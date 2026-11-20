@@ -7,6 +7,7 @@ import { piuGiorni } from '@/lib/data/percorso';
 import { GIORNI_ATTESA } from '@/lib/calculations/percorso/soglie';
 import type { VoceAttesa } from '@/lib/percorso/tipi';
 import { aggiungiVoce, decidiVoce } from './actions';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { CAMPO, ETICHETTA, ERRORE_TESTO, PRIMARIO, SECONDARIO } from '../primi-passi/stili';
 
 const giorno = (iso: string): string => `${Number(iso.slice(8, 10))} ${nomeMese(iso)}`;
@@ -68,13 +69,18 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
 
   return (
     <div className="space-y-5">
+      <FumettoPrimaVolta
+        id="attesa"
+        ancora="attesa"
+        testo="Scrivi qui una cosa che vuoi comprare. Fra qualche giorno l'app ti chiede se la vuoi ancora."
+      />
       <p className="text-[15px] text-ink-2">
         Un acquisto che non serve subito aspetta {GIORNI_ATTESA} giorni. Poi decidi.
       </p>
       <form onSubmit={aggiungi} className="space-y-3 rounded-[var(--radius-md)] border border-rule bg-surface p-4">
         <div className="space-y-1">
           <label htmlFor="attesa-nome" className={ETICHETTA}>Cosa</label>
-          <input id="attesa-nome" className={CAMPO} value={nome} maxLength={80} onChange={(e) => setNome(e.target.value)} />
+          <input id="attesa-nome" data-fumetto="attesa" className={CAMPO} value={nome} maxLength={80} onChange={(e) => setNome(e.target.value)} />
         </div>
         <div className="space-y-1">
           <label htmlFor="attesa-cifra" className={ETICHETTA}>Quanto</label>

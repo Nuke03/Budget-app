@@ -13,6 +13,7 @@ import { raggruppaPerGiorno } from './raggruppaPerGiorno';
 import { HistoryChartCard } from './HistoryChartCard';
 import { StoricoCasa } from './StoricoCasa';
 import { PeriodoFilter } from './PeriodoFilter';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import type { Transaction, Category } from '@/lib/types';
 
 // Il corpo dello Storico, senza letture né scritture: la pagina gli passa dati e azioni.
@@ -63,11 +64,18 @@ export function StoricoVista({
     <>
       <CoverHeader titolo="Storico" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
-        <PeriodoFilter
-          periodo={periodo}
-          onChangePeriodo={onChangePeriodo}
-          rangePersonalizzato={rangePersonalizzato}
-          onChangeRangePersonalizzato={onChangeRange}
+        <div data-fumetto="storico">
+          <PeriodoFilter
+            periodo={periodo}
+            onChangePeriodo={onChangePeriodo}
+            rangePersonalizzato={rangePersonalizzato}
+            onChangeRangePersonalizzato={onChangeRange}
+          />
+        </div>
+        <FumettoPrimaVolta
+          id="storico"
+          ancora="storico"
+          testo="Scegli il periodo. Sotto vedi quanto è andato in ogni categoria."
         />
 
         <HistoryChartCard chartData={chartData} colorByCategoryName={colorByCategoryName} />

@@ -17,6 +17,7 @@ import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
 import { ApriDaIndirizzo } from './ApriDaIndirizzo';
 import { CasaAzioni } from './CasaAzioni';
 import { DaFareCard } from './DaFareCard';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { RimandatiProvider } from './rimandaPromemoria';
 import type { Rimandati } from '@/lib/data/notifiche';
 import { SegnalaCasa } from '../CasaSegnale';
@@ -93,6 +94,11 @@ export function CasaHome({
       <CoverHeader titolo="La casa" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
 
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
+        <FumettoPrimaVolta
+          id="casa"
+          ancora="casa"
+          testo="Qui c'è una cosa da fare alla volta. Quando è fatta, compare la prossima."
+        />
         <section className="rounded-b-[var(--radius-md)] border border-t-0 border-rule bg-page px-[18px] pb-4 pt-5">
           <p className="text-[13px] text-ink-2">Disponibile di casa</p>
           <p data-testid="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
@@ -111,11 +117,13 @@ export function CasaHome({
         </section>
 
         {libretto.daFare.length > 0 ? (
-          <DaFareCard daFare={libretto.daFare} householdId={casa.household.id} oggi={oggi} voci={vociDaParte}
-            meUserId={casa.me.userId}
-            debiti={debiti}
-            nomi={nomi}
-          />
+          <div data-fumetto="casa">
+            <DaFareCard daFare={libretto.daFare} householdId={casa.household.id} oggi={oggi} voci={vociDaParte}
+              meUserId={casa.me.userId}
+              debiti={debiti}
+              nomi={nomi}
+            />
+          </div>
         ) : (
           <SegnalaCasa attivo={false} />
         )}

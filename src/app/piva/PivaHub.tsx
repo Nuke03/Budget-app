@@ -43,6 +43,7 @@ import { formatDataLunga, formatEuro, formatNumero, giornoEMeseScadenza } from '
 import { dividiCifra } from '../home/formati';
 import type { PivaSettingsInput } from '@/lib/data/pivaSettings';
 import { CoverHeader } from '../CoverHeader';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { CLASSE_NEUTRO, CLASSE_PRIMARIO, CLASSE_SCHEDA, CLASSE_SECONDARIO } from '../casa/CampiMovimento';
 import { PercheQuote, PerchePercentuale, PercheSaldoVaso, PercheVaso } from './PerchePiva';
@@ -393,6 +394,11 @@ export function PivaHub({
     <>
       <CoverHeader titolo="P.IVA" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
+        <FumettoPrimaVolta
+          id="piva"
+          ancora="piva"
+          testo="Qui vedi quanto c'è da parte per le tasse e le prossime scadenze."
+        />
         <section aria-label="Stipendio" className={CLASSE_SCHEDA}>
           <StipendioPiva
             stipendio={settings.stipendioMensile}
@@ -406,7 +412,7 @@ export function PivaHub({
 
         <section aria-label="Conto tasse" className={CLASSE_SCHEDA}>
           <h2 className="text-[13px] text-ink-2">{contoTasse.nome}</h2>
-          <p data-testid="saldo-vaso" className="num font-serif text-[40px] font-bold leading-none">
+          <p data-testid="saldo-vaso" data-fumetto="piva" className="num font-serif text-[40px] font-bold leading-none">
             {saldoVaso.intero}
             {saldoVaso.resto ? <span className="text-[22px]">{saldoVaso.resto}</span> : null}
           </p>

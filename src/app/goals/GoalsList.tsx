@@ -34,6 +34,7 @@ export function GoalsList({
   onHoMessoDaParte,
   versaId = null,
   variante,
+  ancoraPrimo,
 }: {
   goals: GoalWithQuotaMensile[];
   categories: Category[];
@@ -44,6 +45,8 @@ export function GoalsList({
   // Il cassetto con questo id (dall'indirizzo ?versa=) si apre già sulla conferma.
   versaId?: string | null;
   variante?: 'casa';
+  // Se c'è, il primo cassetto della lista porta questo data-fumetto.
+  ancoraPrimo?: string;
 }) {
   const casa = variante === 'casa';
   const oggi = oggiRomaISO();
@@ -59,7 +62,7 @@ export function GoalsList({
 
   return (
     <ul className="flex flex-col gap-3.5">
-      {goals.map((g) => {
+      {goals.map((g, i) => {
         const tuttoSubito = g.modalita === 'bloccato';
         const categoriaNome = g.categoriaId
           ? categories.find((c) => c.id === g.categoriaId)?.nome
@@ -68,6 +71,7 @@ export function GoalsList({
           <li
             key={g.id}
             id={`goal-${g.id}`}
+            data-fumetto={i === 0 ? ancoraPrimo : undefined}
             className="scroll-mt-20 rounded-[var(--radius-md)] border border-rule bg-surface p-4"
           >
             <div className="flex items-center justify-between gap-2">

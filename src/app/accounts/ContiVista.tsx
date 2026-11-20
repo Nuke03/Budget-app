@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { CoverHeader } from '../CoverHeader';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { AccountRow } from './AccountRow';
 import type { Account } from '@/lib/types';
 
@@ -34,15 +35,21 @@ export function ContiVista({
       <CoverHeader titolo="Conti" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
         <div className="flex flex-col gap-3.5">
-          {accounts.map((a) => (
-            <AccountRow
-              key={a.id}
-              account={a}
-              contoTasse={a.id === contoTasseId}
-              onUpdateBalance={onUpdateBalance}
-              onUpdateDetails={onUpdateDetails}
-            />
+          {accounts.map((a, i) => (
+            <div key={a.id} data-fumetto={i === 0 ? 'conti' : undefined}>
+              <AccountRow
+                account={a}
+                contoTasse={a.id === contoTasseId}
+                onUpdateBalance={onUpdateBalance}
+                onUpdateDetails={onUpdateDetails}
+              />
+            </div>
           ))}
+          <FumettoPrimaVolta
+            id="conti"
+            ancora="conti"
+            testo="Qui scrivi il saldo dei tuoi conti come lo vedi in banca. L'app non si collega alla banca."
+          />
         </div>
 
         <section className="flex flex-col gap-4 rounded-[var(--radius-md)] border border-rule bg-page p-4">

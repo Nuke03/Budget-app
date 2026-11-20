@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CoverHeader } from '../CoverHeader';
 import { Notifiche } from './Notifiche';
 import { RiattivaAvvisi } from './RiattivaAvvisi';
+import { RivediGiro } from './RivediGiro';
 import { RicominciaDaZero } from './RicominciaDaZero';
 import { GraduationCap, Target, Wallet, Tags, Receipt, Bell, Hourglass, ChevronRight } from 'lucide-react';
 
@@ -68,6 +69,7 @@ export default async function AltroPage() {
       </ul>
       <Notifiche chiavePubblica={chiaviVapid()?.pubblica ?? null} notificheAttive={dati.notificheAttive} />
       <RiattivaAvvisi />
+      <RivediGiro />
       <RicominciaDaZero casa={dati.casa} />
       </main>
     </>

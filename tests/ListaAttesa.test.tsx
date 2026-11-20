@@ -92,3 +92,10 @@ describe('lista d attesa', () => {
     expect(screen.getAllByText('Cuffie')).toHaveLength(1);
   });
 });
+
+describe('lista d attesa fumetto', () => {
+  it('il campo Cosa porta data-fumetto="attesa"', () => {
+    const { container } = render(<ListaAttesa voci={[]} oggi={OGGI} />);
+    expect(container.querySelector('[data-fumetto="attesa"]')).toBe(screen.getByLabelText('Cosa'));
+  });
+});

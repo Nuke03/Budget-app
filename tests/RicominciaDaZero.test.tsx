@@ -8,6 +8,10 @@ const ricominciaDaZero = vi.fn(async () => {});
 vi.mock('@/lib/data/percorso', () => ({ ricominciaDaZero: (...a: unknown[]) => ricominciaDaZero(...(a as [])) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ marca: 'client' }) }));
 
+const azzeraFumetti = vi.fn();
+vi.mock('@/lib/fumetti/visti', () => ({ azzeraFumetti: (...a: unknown[]) => azzeraFumetti(...a) }));
+vi.mock('@/lib/fumetti/ambiente', () => ({ useUtenteId: () => 'u1' }));
+
 import { RicominciaDaZero } from '@/app/altro/RicominciaDaZero';
 
 function apri(casa: { credito: number; debito: number } | null = null) {
@@ -69,6 +73,15 @@ describe('RicominciaDaZero', () => {
     apri(null);
     expect(screen.queryByText(/da restituire/)).not.toBeInTheDocument();
     expect(screen.queryByText(/credito di/)).not.toBeInTheDocument();
+  });
+
+  it('al successo azzera i fumetti dell utente prima di andare ai primi passi', async () => {
+    apri();
+    fireEvent.change(campo(), { target: { value: 'RICOMINCIA' } });
+    fireEvent.click(conferma());
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/impara/primi-passi'));
+    expect(azzeraFumetti).toHaveBeenCalledWith('u1');
+    expect(azzeraFumetti.mock.invocationCallOrder[0]).toBeLessThan(replace.mock.invocationCallOrder[0]);
   });
 
   it('al successo va ai primi passi', async () => {

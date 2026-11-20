@@ -329,3 +329,18 @@ describe('CasaHome del libretto', () => {
     assertNessunaParolaVietata(container);
   });
 });
+
+describe('CasaHome fumetto', () => {
+  it('la card "Da fare" porta data-fumetto="casa"', () => {
+    const { container } = monta({
+      ...base,
+      daFare: [{ tipo: 'promemoria', id: 'checkin', testo: 'Il check-in di ottobre è pronto.', href: '/casa/controllo' }],
+    });
+    expect(container.querySelector('[data-fumetto="casa"]')).not.toBeNull();
+  });
+
+  it('senza "Da fare" non c è l ancora', () => {
+    const { container } = monta(base);
+    expect(container.querySelector('[data-fumetto="casa"]')).toBeNull();
+  });
+});

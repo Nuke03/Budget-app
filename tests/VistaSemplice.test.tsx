@@ -212,3 +212,15 @@ describe('VistaSemplice', () => {
     assertNessunaParolaVietata(container);
   });
 });
+
+describe('VistaSemplice fumetto', () => {
+  it('la cifra della quota porta data-fumetto="casa-semplice"', () => {
+    const { container } = vista({});
+    expect(container.querySelector('[data-fumetto="casa-semplice"]')).toBe(screen.getByTestId('quota'));
+  });
+
+  it('senza cifra non c è l ancora', () => {
+    const { container } = vista({ quota: null });
+    expect(container.querySelector('[data-fumetto="casa-semplice"]')).toBeNull();
+  });
+});

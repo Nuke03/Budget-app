@@ -18,6 +18,7 @@ import { DaFareCard } from './DaFareCard';
 import { RimandatiProvider } from './rimandaPromemoria';
 import type { Rimandati } from '@/lib/data/notifiche';
 import { SegnalaCasa } from '../CasaSegnale';
+import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 const RIGA = 'flex min-h-11 items-center border-b border-rule py-3 text-[15px]';
@@ -112,6 +113,11 @@ export function VistaSemplice({
       <ApriDaIndirizzo />
       <CoverHeader titolo="La casa" lato={`${mese} ${oggi.slice(0, 4)}`} />
       <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pb-6 pt-5">
+        <FumettoPrimaVolta
+          id="casa-semplice"
+          ancora="casa-semplice"
+          testo="Questa è la tua quota del mese: quanto versare nel conto di casa."
+        />
         <section>
           {quota === null ? (
             <p className="text-[15px]">
@@ -126,7 +132,7 @@ export function VistaSemplice({
               <p className="text-[15px] text-ink-2">
                 {parziale ? <>Per {mese} ti mancano</> : <>La tua quota di {mese}</>}
               </p>
-              <p data-testid="quota" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
+              <p data-testid="quota" data-fumetto="casa-semplice" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
                 {cifra?.intero}
                 {cifra?.resto ? <span className="text-[28px]">{cifra.resto}</span> : null}
               </p>
