@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { LEZIONI, lezione } from '@/lib/percorso/lezioni';
+import { PASSI_TESTI } from '@/lib/percorso/passiTesti';
 import { SPESE_CERTE_PERSONALI } from '@/lib/percorso/speseCerte';
 import { PAROLE_VIETATE } from '../helpers/paroleVietate';
 
@@ -119,5 +120,12 @@ describe('correzioni di contenuto', () => {
     const l = lezione('pensione');
     expect(l.inBreve).toContain('MyINPS con SPID');
     expect(l.inBreve).toContain('un patronato');
+  });
+
+  it('nessuna lezione né primo passo usa la parola obiettivo', () => {
+    for (const l of LEZIONI) expect(testo(l)).not.toMatch(/obiettiv/i);
+    expect(lezione('prima-da-parte').inBreve).toContain('Per i cassetti con scadenza');
+    expect(JSON.stringify(Object.values(PASSI_TESTI))).not.toMatch(/obiettiv/i);
+    expect(PASSI_TESTI.obiettivo.titolo).toBe('Un cassetto tuo');
   });
 });

@@ -47,7 +47,7 @@ export const LEZIONI: Lezione[] = [
     id: 'imprevisti', numero: 4, fase: 'appena-entrano',
     titolo: 'Il cuscinetto per gli imprevisti',
     inBreve:
-      "Il cuscinetto serve per ciò che non si può prevedere. Per capire se una spesa è un'emergenza, tre domande: è imprevedibile? È necessaria, cioè non rimandabile? Non c'è un altro modo di pagarla? Se tutte e tre sono sì, tocca al cuscinetto. Un primo gradino piccolo di solito pesa meno e si comincia prima di un grande obiettivo lontano.",
+      "Il cuscinetto serve per ciò che non si può prevedere. Per capire se una spesa è un'emergenza, tre domande: è imprevedibile? È necessaria, cioè non rimandabile? Non c'è un altro modo di pagarla? Se tutte e tre sono sì, tocca al cuscinetto. Un primo gradino piccolo di solito pesa meno e si comincia prima di un grande traguardo lontano.",
     esempio:
       'Esempio con cifre inventate: se le spese essenziali sono 700 € al mese, un primo gradino di 300 € copre circa due settimane. Con 50 € al mese ci arrivi in 6 mesi.',
     prova: { etichetta: 'Crea il cuscinetto con un primo traguardo piccolo', href: '/impara/primi-passi/imprevisti' },
@@ -57,7 +57,7 @@ export const LEZIONI: Lezione[] = [
     id: 'prima-da-parte', numero: 5, fase: 'appena-entrano',
     titolo: 'Mettere da parte prima',
     inBreve:
-      "Se si risparmia quello che avanza, spesso non avanza niente. Soldi messi da parte ma ancora visibili sembrano spendibili: è così che funziona la mente, non è mancanza di carattere. Per gli obiettivi con scadenza l'app toglie già ogni mese la quota dal libero. Il giorno in cui arriva un incasso, l'abitudine che aiuta è mettere da parte subito anche il cuscinetto.",
+      "Se si risparmia quello che avanza, spesso non avanza niente. Soldi messi da parte ma ancora visibili sembrano spendibili: è così che funziona la mente, non è mancanza di carattere. Per i cassetti con scadenza l'app toglie già ogni mese la quota dal libero. Il giorno in cui arriva un incasso, l'abitudine che aiuta è mettere da parte subito anche il cuscinetto.",
     esempio:
       'Esempio con cifre inventate: arrivano 1.150 € e metti da parte 50 € subito. Il libero parte da 1.100 € meno gli impegni: quei 50 € non si vedono più.',
     prova: { etichetta: 'Metti da parte la quota del mese', href: '/impara/primi-passi/imprevisti' },

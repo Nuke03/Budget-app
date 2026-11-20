@@ -75,7 +75,7 @@ export function numeriLezione(id: ArgomentoId, d: DatiRegole): string | null {
         return `Questo mese hai confermato ${euroInFrase(g.confermatoMese as number)} messi da parte per ${g.nome}.`;
       }
       const totale = confermati.reduce((t, g) => t + (g.confermatoMese as number), 0);
-      return `Questo mese hai confermato ${euroInFrase(Math.round(totale * 100) / 100)} messi da parte, su ${confermati.length} obiettivi.`;
+      return `Questo mese hai confermato ${euroInFrase(Math.round(totale * 100) / 100)} messi da parte, su ${confermati.length} cassetti.`;
     }
     case 'piano':
       return `Adesso il tuo libero è ${euroInFrase(d.disponibileLibero)}.`;

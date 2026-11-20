@@ -64,6 +64,11 @@ describe('numeriLezione', () => {
     expect(numeriLezione('imprevisti', dati())).toContain('non c’è ancora');
     expect(numeriLezione('imprevisti', dati({ goals: [goal({ ruolo: 'imprevisti', accantonato: 80 })] }))).toContain('80 €');
   });
+  it('prima-da-parte con più confermati parla di cassetti', () => {
+    const f = numeriLezione('prima-da-parte', dati({ goals: [goal({ id: 'a', confermatoMese: 50 }), goal({ id: 'b', confermatoMese: 30 })] }));
+    expect(f).toContain('su 2 cassetti');
+    expect(f).not.toMatch(/obiettiv/i);
+  });
   it('piano: il disponibile', () => {
     expect(numeriLezione('piano', dati({ disponibileLibero: 315 }))).toContain('315 €');
     // Il numero mostrato è quello della Home (libero), non quello grezzo usato dalle regole.

@@ -22,7 +22,7 @@ export const PASSI_TESTI: Record<PassoId, TestoPasso> = {
     lezioni: ['spese-certe'],
   },
   imprevisti: { titolo: 'Il cuscinetto per gli imprevisti', riga: 'Una piccola somma da parte per quando serve.', lezioni: ['imprevisti'] },
-  obiettivo: { titolo: 'Un obiettivo tuo', riga: 'Qualcosa a cui vuoi arrivare.', lezioni: ['piano'] },
+  obiettivo: { titolo: 'Un cassetto tuo', riga: 'Qualcosa a cui vuoi arrivare.', lezioni: ['piano'] },
 };
 
 export const PASSI_ID = Object.keys(PASSI_TESTI) as PassoId[];
