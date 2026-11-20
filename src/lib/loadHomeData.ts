@@ -5,6 +5,7 @@ import { getCategories } from '@/lib/data/categories';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getLastIncomeDate, getTransactions, haMovimentiPersonali } from '@/lib/data/transactions';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
+import { getConfermePerObiettivi, type ConfermeObiettivo } from '@/lib/data/goalVersamenti';
 import { PERSONALE } from '@/lib/data/scope';
 import { computeDisponibileLibero, riservatoObiettivi } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
@@ -17,7 +18,7 @@ import {
 } from '@/lib/calculations/stipendio';
 import { anniScadenzeHome, casaDelMese, finestraIncassi, inizioLetturaIncassi, inizioMesiFa, speseUltimiMesi } from '@/lib/pivaHome';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
-import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { accantonatoObiettivo } from '@/lib/calculations/accantonato';
 import { leggiPromemoriaUtente, leggiRimandati } from '@/lib/data/notifiche';
 import { formatEuro } from '@/lib/format';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
@@ -29,6 +30,7 @@ import {
   prossimaCosa,
   promemoriaDaCasa,
   promemoriaPiva,
+  promemoriaVersamento,
   type RigaLibretto,
   type Prossimo,
 } from '@/lib/calculations/supporto/home';
@@ -98,7 +100,8 @@ export interface HomeData {
   dataTarget: Date;
   accounts: Account[];
   categories: Category[];
-  goals: (BudgetGoal & { accantonato: number })[];
+  // `versatoNellaFinestra` e `confermatoMese`: i versamenti confermati con "Ho messo da parte" (null/0 = nessuno).
+  goals: (BudgetGoal & { accantonato: number; versatoNellaFinestra: number | null; confermatoMese: number })[];
   casa: CasaPerHome | null;
   // null: P.IVA non attiva o guida non completata.
   piva: PivaHome | null;
@@ -284,7 +287,7 @@ export async function loadHomeBase(
     pivaNonLetta = true;
     return null;
   });
-  const [contiLetti, categories, goals, speso, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, rimandati, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
+  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, rimandati, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -292,6 +295,11 @@ export async function loadHomeBase(
     // collegate): va sottratto da quanto resta riservato, altrimenti quei soldi
     // verrebbero contati sia come spesi dal conto sia come ancora bloccati.
     obiettivi.then((g) => getSpecoCollegatoPerObiettivi(supabase, g, today, PERSONALE)),
+    // I versamenti confermati dall'utente, nella stessa finestra dello speso. Se non si leggono la Home si
+    // apre con i numeri di sempre (riservato a tempo): è lo stesso risultato di chi non ha mai confermato.
+    obiettivi
+      .then((g) => getConfermePerObiettivi(supabase, g, today))
+      .catch(() => ({}) as Record<string, ConfermeObiettivo>),
     getLastIncomeDate(supabase),
     casaOpzionale(supabase, userId, today),
     // Una sola lettura: righe, andamento, stime e ultimo giorno segnato.
@@ -329,7 +337,12 @@ export async function loadHomeBase(
       { categoriaDal: pivaLetta.settings.categoriaDal, contiChePesano, scartate: pivaLetta.scartate }
     );
   }
-  const goalsConSpeso = goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
+  const goalsConSpeso = goals.map((g) => ({
+    ...g,
+    specoCollegato: speso[g.id] ?? 0,
+    versatoNellaFinestra: conferme[g.id]?.versato ?? null,
+    confermatoMese: conferme[g.id]?.mese ?? 0,
+  }));
 
   const riservati = {
     obiettivi: riservatoObiettivi(goalsConSpeso, today),
@@ -393,7 +406,7 @@ export async function loadHomeBase(
   // accantonato finora (non l'intero importoTarget), esattamente come fa computeDisponibileLibero.
   const goalsWithAccantonato = goalsConSpeso.map((g) => ({
     ...g,
-    accantonato: computeAccantonatoFinora(g, today, g.specoCollegato),
+    accantonato: accantonatoObiettivo(g, today),
   }));
 
   const andamento = calcolaAndamento(transazioni, oggi);
@@ -428,6 +441,7 @@ export async function loadHomeBase(
         )
       : [],
     attesa: voceDaRivedere(listaAttesa, oggi),
+    versamento: promemoriaVersamento(goalsConSpeso, today),
   });
 
   const primiPassi = statoPrimiPassi({

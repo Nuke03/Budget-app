@@ -5,7 +5,7 @@ import { spiegaRiserva } from '@/lib/calculations/casa/spiegazioni';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { Account, BudgetGoal } from '@/lib/types';
 
-type Obiettivo = BudgetGoal & { accantonato: number };
+type Obiettivo = BudgetGoal & { accantonato: number; versatoNellaFinestra?: number | null };
 
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 
@@ -89,7 +89,13 @@ export function DettaglioDisponibile({
             <Riga
               key={g.id}
               nome={g.nome}
-              nota={g.modalita === 'bloccato' ? 'tutto messo da parte' : 'messo da parte finora'}
+              nota={
+                g.modalita === 'bloccato'
+                  ? 'tutto messo da parte'
+                  : g.versatoNellaFinestra != null
+                    ? 'conta quanto hai confermato'
+                    : 'messo da parte finora'
+              }
               valore={`-${formatEuro(g.accantonato)}`}
             />
           ))}

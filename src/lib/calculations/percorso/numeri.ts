@@ -66,6 +66,17 @@ export function numeriLezione(id: ArgomentoId, d: DatiRegole): string | null {
       }
       return `Hai ${fondi.length} ${fondi.length === 1 ? 'fondo aperto' : 'fondi aperti'}, in tutto ${euroInFrase(Math.round(quota * 100) / 100)} al mese.`;
     }
+    case 'prima-da-parte': {
+      // Solo chi ha confermato qualcosa questo mese: per gli altri la lezione resta com'è.
+      const confermati = d.goals.filter((g) => g.stato === 'aperto' && (g.confermatoMese ?? 0) > 0);
+      if (confermati.length === 0) return null;
+      if (confermati.length === 1) {
+        const g = confermati[0];
+        return `Questo mese hai confermato ${euroInFrase(g.confermatoMese as number)} messi da parte per ${g.nome}.`;
+      }
+      const totale = confermati.reduce((t, g) => t + (g.confermatoMese as number), 0);
+      return `Questo mese hai confermato ${euroInFrase(Math.round(totale * 100) / 100)} messi da parte, su ${confermati.length} obiettivi.`;
+    }
     case 'piano':
       return `Adesso il tuo libero è ${euroInFrase(d.disponibileLibero)}.`;
     default:

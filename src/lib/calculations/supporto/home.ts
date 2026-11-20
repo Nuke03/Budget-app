@@ -1,8 +1,9 @@
 import { computeReminders, statoPromemoria } from '../casa/promemoria';
 import { riferimentoControllo } from '../casa/controlloSaldo';
-import { formatEuro, nomeMese } from '@/lib/format';
+import { formatEuro, nomeMese, euroInFrase } from '@/lib/format';
+import { computeQuotaMensile } from '../accantonato';
 import type { CasaPerHome } from '@/lib/loadHomeData';
-import type { Category, PivaFattura, PivaScadenza, Transaction } from '@/lib/types';
+import type { BudgetGoal, Category, PivaFattura, PivaScadenza, Transaction } from '@/lib/types';
 
 export interface RigaLibretto {
   id: string;
@@ -20,7 +21,7 @@ export interface RigaLibretto {
 export interface Prossimo {
   testo: string;
   href: string;
-  tipo: 'in_pari' | 'casa' | 'piva' | 'attesa';
+  tipo: 'in_pari' | 'casa' | 'piva' | 'attesa' | 'obiettivo';
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -111,13 +112,42 @@ export function promemoriaPiva(
   return out;
 }
 
-// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA, poi la lista d'attesa.
+// Un obiettivo dilazionato di cui hai già confermato almeno un versamento: se questo mese non hai ancora
+// confermato la quota, la Home lo chiede (una voce sola, la prima). Chi non ha mai confermato non riceve
+// niente: la conferma è una scelta, non un compito.
+export function promemoriaVersamento(
+  goals: (BudgetGoal & { versatoNellaFinestra?: number | null; confermatoMese?: number })[],
+  oggi: Date
+): { testo: string; href: string } | null {
+  for (const g of goals) {
+    if (g.stato !== 'aperto' || g.modalita !== 'dilazionato') continue;
+    if (g.versatoNellaFinestra === null || g.versatoNellaFinestra === undefined) continue;
+    let quota: number | null;
+    try {
+      quota = computeQuotaMensile(g, oggi);
+    } catch {
+      continue;
+    }
+    if (quota === null || quota <= 0) continue;
+    if ((g.confermatoMese ?? 0) >= quota - 0.005) continue;
+    return {
+      testo: `Hai messo da parte i ${euroInFrase(arrotonda(quota))} per ${g.nome} questo mese?`,
+      href: `/goals#goal-${g.id}`,
+    };
+  }
+  return null;
+}
+
+// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA, poi la lista d'attesa,
+// per ultima la conferma del versamento di un obiettivo.
 export function prossimaCosa(input: {
   inPari: { dal: string; al: string } | null;
   promemoriaCasa: { testo: string; href?: string }[];
   promemoriaPiva?: PromemoriaPiva[];
   // La voce della lista d'attesa da rivedere: passa per ultima.
   attesa?: { testo: string; href: string } | null;
+  // La conferma del versamento mensile di un obiettivo (promemoriaVersamento): passa dopo tutto il resto.
+  versamento?: { testo: string; href: string } | null;
 }): Prossimo | null {
   if (input.inPari) {
     return {
@@ -134,6 +164,7 @@ export function prossimaCosa(input: {
   const resto = piva[0];
   if (resto) return { testo: resto.testo, href: resto.href, tipo: 'piva' };
   if (input.attesa) return { ...input.attesa, tipo: 'attesa' };
+  if (input.versamento) return { ...input.versamento, tipo: 'obiettivo' };
   return null;
 }
 

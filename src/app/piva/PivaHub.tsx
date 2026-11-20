@@ -77,7 +77,7 @@ export type CampiStipendio = Partial<
 export interface DatiStipendio {
   spese: Transaction[];
   casa: CasaStato | null;
-  goals: (BudgetGoal & { specoCollegato: number })[];
+  goals: (BudgetGoal & { specoCollegato: number; versatoNellaFinestra?: number | null })[];
 }
 
 // Tutto quello che la pagina legge. Si passa già pronto solo per l'anteprima, senza rete.

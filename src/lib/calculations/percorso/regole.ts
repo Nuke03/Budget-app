@@ -14,7 +14,8 @@ export interface DatiRegole {
   oggi: string;
   transazioni: Transaction[]; // personali, ultimi 3 mesi
   categorie: Category[];
-  goals: (BudgetGoal & { accantonato: number })[];
+  // `confermatoMese`: quanto hai confermato questo mese con "Ho messo da parte" (solo dilazionati personali).
+  goals: (BudgetGoal & { accantonato: number; versatoNellaFinestra?: number | null; confermatoMese?: number })[];
   lezioni: StatiLezioni;
   percorso: PercorsoUtente | null;
   // Quello che serve alle regole (soglie, avviso)...

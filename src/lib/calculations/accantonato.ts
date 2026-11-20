@@ -132,6 +132,29 @@ export function computeAccantonatoFinora(
   return Math.max(0, teorico - specoCollegato);
 }
 
+// Il riservato di un obiettivo personale dilazionato di cui l'utente ha confermato almeno un versamento
+// nella finestra corrente (`versatoNellaFinestra`, vedi goalVersamenti.ts): il minore fra la quota a
+// tempo e quanto è stato confermato, meno lo speso collegato (mai sotto zero). `null` = nessuna conferma:
+// resta il vecchio calcolo (computeAccantonatoFinora), cifra per cifra. I bloccati non cambiano mai.
+export function computeAccantonatoConVersamenti(
+  goal: GoalForCalc,
+  today: Date,
+  specoCollegato: number,
+  versatoNellaFinestra: number | null
+): number {
+  if (versatoNellaFinestra === null || goal.modalita !== 'dilazionato') {
+    return computeAccantonatoFinora(goal, today, specoCollegato);
+  }
+  const teorico = computeAccantonatoTeorico(goal, today);
+  return Math.max(0, Math.min(teorico, versatoNellaFinestra) - specoCollegato);
+}
+
+// Il riservato di un obiettivo, letto dai suoi campi (speso collegato e versato nella finestra): è il
+// numero che Home, card degli obiettivi, "Come si calcola?" e percorso devono mostrare.
+export function accantonatoObiettivo(goal: GoalForCalc, today: Date): number {
+  return computeAccantonatoConVersamenti(goal, today, goal.specoCollegato ?? 0, goal.versatoNellaFinestra ?? null);
+}
+
 // Quanto spostare in un mese/ricorrenza "tipica" verso un fondo separato
 // (es. un conto non incluso nel disponibile) — a differenza di
 // computeAccantonatoFinora, che dice quanto è già stato maturato/riservato ad

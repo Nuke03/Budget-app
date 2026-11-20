@@ -2,6 +2,8 @@ import { Lock, Clock, Pencil, Archive, PiggyBank } from 'lucide-react';
 import { formatEuro, formatDataLunga, formatNumero } from '@/lib/format';
 import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { ComeSiCalcola } from '@/app/casa/ComeSiCalcola';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { HoMessoDaParte } from './HoMessoDaParte';
 import type { BudgetGoal, Category } from '@/lib/types';
 
 function frequenzaLabel(mesi: number | null): string {
@@ -16,6 +18,8 @@ function frequenzaLabel(mesi: number | null): string {
 export interface GoalWithQuotaMensile extends BudgetGoal {
   quotaMensile: number | null;
   accantonato: number;
+  // Quanto hai confermato con "Ho messo da parte" nel mese in corso (assente/0 = niente).
+  confermatoMese?: number;
   spiegazione?: Spiegazione;
 }
 
@@ -24,15 +28,19 @@ export function GoalsList({
   categories,
   onEdit,
   onClose,
+  onHoMessoDaParte,
   variante,
 }: {
   goals: GoalWithQuotaMensile[];
   categories: Category[];
   onEdit?: (goal: GoalWithQuotaMensile) => void;
   onClose?: (goal: GoalWithQuotaMensile) => void;
+  // Solo gli obiettivi personali a rate: la pagina passa la scrittura del versamento.
+  onHoMessoDaParte?: (goal: GoalWithQuotaMensile, importo: number, data: string) => Promise<void>;
   variante?: 'casa';
 }) {
   const casa = variante === 'casa';
+  const oggi = oggiRomaISO();
   if (goals.length === 0) {
     return (
       <p
@@ -53,7 +61,8 @@ export function GoalsList({
         return (
           <li
             key={g.id}
-            className="rounded-[var(--radius-md)] border border-rule bg-surface p-4"
+            id={`goal-${g.id}`}
+            className="scroll-mt-20 rounded-[var(--radius-md)] border border-rule bg-surface p-4"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="min-w-0 break-words text-[15px] font-semibold">{g.nome}</span>
@@ -129,6 +138,20 @@ export function GoalsList({
                   </>
                 )}
               </div>
+            )}
+            {!casa && onHoMessoDaParte && g.modalita === 'dilazionato' && g.quotaMensile !== null && (
+              <>
+                {(g.confermatoMese ?? 0) > 0 && (
+                  <p className="num mt-2 text-[13px] text-ink-2">
+                    Confermato questo mese: {formatEuro(g.confermatoMese as number)}
+                  </p>
+                )}
+                <HoMessoDaParte
+                  quota={g.quotaMensile}
+                  oggi={oggi}
+                  onConferma={(importo, data) => onHoMessoDaParte(g, importo, data)}
+                />
+              </>
             )}
           </li>
         );

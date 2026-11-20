@@ -1,11 +1,11 @@
-import { computeAccantonatoFinora } from './accantonato';
+import { accantonatoObiettivo } from './accantonato';
 import type { AccountBalance, GoalForCalc } from './types';
 
 // Quanto gli obiettivi aperti hanno messo da parte finora.
 export function riservatoObiettivi(goals: GoalForCalc[], today: Date): number {
   return goals
     .filter((g) => g.stato === 'aperto')
-    .reduce((sum, g) => sum + computeAccantonatoFinora(g, today, g.specoCollegato ?? 0), 0);
+    .reduce((sum, g) => sum + accantonatoObiettivo(g, today), 0);
 }
 
 export function computeDisponibileLibero(

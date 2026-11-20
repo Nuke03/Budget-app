@@ -3,6 +3,7 @@ import { incassiPerMese, speseDelMese } from '@/lib/calculations/stipendio';
 import type { RigaMese } from '@/lib/calculations/casa/versamenti';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
+import { getVersatoNelleFinestre } from '@/lib/data/goalVersamenti';
 import { getMyHousehold } from '@/lib/data/households';
 import { PERSONALE } from '@/lib/data/scope';
 import { loadCasaStato, type CasaStato } from '@/lib/loadCasaStato';
@@ -81,8 +82,12 @@ export async function leggiCasaPerStipendio(supabase: SupabaseClient, now: Date)
 export async function leggiGoalsConSpeso(
   supabase: SupabaseClient,
   now: Date
-): Promise<(BudgetGoal & { specoCollegato: number })[]> {
+): Promise<(BudgetGoal & { specoCollegato: number; versatoNellaFinestra: number | null })[]> {
   const goals = await getOpenGoals(supabase);
-  const speso = await getSpecoCollegatoPerObiettivi(supabase, goals, now, PERSONALE);
-  return goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
+  const [speso, versato] = await Promise.all([
+    getSpecoCollegatoPerObiettivi(supabase, goals, now, PERSONALE),
+    // I versamenti confermati contano come nella Home; se non si leggono, il riservato resta a tempo.
+    getVersatoNelleFinestre(supabase, goals, now).catch(() => ({}) as Record<string, number | null>),
+  ]);
+  return goals.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0, versatoNellaFinestra: versato[g.id] ?? null }));
 }

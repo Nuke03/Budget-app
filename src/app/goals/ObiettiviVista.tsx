@@ -11,12 +11,14 @@ export function ObiettiviVista({
   onNuovo,
   onEdit,
   onClose,
+  onHoMessoDaParte,
 }: {
   goals: GoalWithQuotaMensile[];
   categories: Category[];
   onNuovo: () => void;
   onEdit: (goal: GoalWithQuotaMensile) => void;
   onClose: (goal: GoalWithQuotaMensile) => void;
+  onHoMessoDaParte?: (goal: GoalWithQuotaMensile, importo: number, data: string) => Promise<void>;
 }) {
   return (
     <>
@@ -34,6 +36,7 @@ export function ObiettiviVista({
           categories={categories}
           onEdit={onEdit}
           onClose={onClose}
+          onHoMessoDaParte={onHoMessoDaParte}
         />
       </main>
     </>

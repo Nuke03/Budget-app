@@ -3,7 +3,7 @@ import { formatEuro } from '@/lib/format';
 import type { BudgetGoal } from '@/lib/types';
 import type { ArgomentoId } from '@/lib/percorso/tipi';
 import type { Andamento } from './andamento';
-import { computeAccantonatoFinora, computeFinestraGoal, computeQuotaMensile } from '../accantonato';
+import { accantonatoObiettivo, computeFinestraGoal, computeQuotaMensile } from '../accantonato';
 
 export type TipoConsiglio = 'senza_dettaglio' | 'categoria_sopra' | 'obiettivo_corto' | 'in_linea';
 
@@ -22,7 +22,7 @@ export interface ObiettivoCorto {
   mancano: number;
 }
 
-type GoalConSpeso = BudgetGoal & { specoCollegato: number };
+type GoalConSpeso = BudgetGoal & { specoCollegato: number; versatoNellaFinestra?: number | null };
 
 const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 
@@ -163,7 +163,7 @@ export function obiettiviCorti(
       const quota = computeQuotaMensile(g, oggi);
       if (quota === null) continue;
       const mesiRimasti = Math.max(0, differenceInCalendarMonths(windowEnd, oggi));
-      const mancano = g.importoTarget - computeAccantonatoFinora(g, oggi, g.specoCollegato);
+      const mancano = g.importoTarget - accantonatoObiettivo(g, oggi);
       if (quota * mesiRimasti < mancano - 0.005) {
         risultato.push({ goalId: g.id, nome: g.nome, mancano });
       }

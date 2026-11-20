@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
 import { getCategories } from '@/lib/data/categories';
 import { getSpecoCollegato } from '@/lib/data/goalSpending';
-import { computeQuotaMensile, computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { confermaVersamento, getConfermePerObiettivi, type ConfermeObiettivo } from '@/lib/data/goalVersamenti';
+import { computeQuotaMensile, accantonatoObiettivo } from '@/lib/calculations/accantonato';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
 import type { GoalWithQuotaMensile } from './GoalsList';
@@ -15,7 +16,7 @@ import { CreateGoalForm, type GoalPayload } from './CreateGoalForm';
 import { leggiPrecompilato } from '@/lib/goalPrecompilato';
 import type { BudgetGoal, Category } from '@/lib/types';
 
-type GoalConSpeso = BudgetGoal & { specoCollegato: number };
+type GoalConSpeso = BudgetGoal & { specoCollegato: number; versatoNellaFinestra: number | null; confermatoMese: number };
 
 export default function GoalsPage() {
   const fail = useThrowToBoundary();
@@ -36,7 +37,18 @@ export default function GoalsPage() {
     const speseCollegate = await Promise.all(
       openGoals.map((g) => getSpecoCollegato(supabase, g, today))
     );
-    setGoals(openGoals.map((g, i) => ({ ...g, specoCollegato: speseCollegate[i] })));
+    // Se i versamenti non si leggono la pagina si apre con il riservato a tempo, come sempre.
+    const conferme = await getConfermePerObiettivi(supabase, openGoals, today).catch(
+      () => ({}) as Record<string, ConfermeObiettivo>
+    );
+    setGoals(
+      openGoals.map((g, i) => ({
+        ...g,
+        specoCollegato: speseCollegate[i],
+        versatoNellaFinestra: conferme[g.id]?.versato ?? null,
+        confermatoMese: conferme[g.id]?.mese ?? 0,
+      }))
+    );
     setCategories(cats);
   }
 
@@ -69,6 +81,13 @@ export default function GoalsPage() {
     await refresh();
   }
 
+  async function handleHoMessoDaParte(goal: GoalWithQuotaMensile, importo: number, data: string) {
+    const supabase = createClient();
+    await confermaVersamento(supabase, goal.id, importo, data);
+    // Dopo la scrittura niente eccezioni: la conferma è fatta, la riga si aggiorna alla prossima apertura.
+    await refresh().catch(() => {});
+  }
+
   function handleClose(goal: GoalWithQuotaMensile) {
     const cambia = (nascondi: boolean) =>
       setNascosti((prima) => {
@@ -96,7 +115,7 @@ export default function GoalsPage() {
     return {
       ...g,
       quotaMensile: computeQuotaMensile(g, oggi),
-      accantonato: computeAccantonatoFinora(g, oggi, g.specoCollegato),
+      accantonato: accantonatoObiettivo(g, oggi),
     };
   });
 
@@ -111,6 +130,7 @@ export default function GoalsPage() {
         }}
         onEdit={setEditingGoal}
         onClose={handleClose}
+        onHoMessoDaParte={handleHoMessoDaParte}
       />
 
       {creando && (

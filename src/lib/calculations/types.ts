@@ -19,4 +19,7 @@ export interface GoalForCalc {
   // perché quel denaro è già uscito dal conto. Assente/0 = nessuna spesa
   // ancora collegata.
   specoCollegato?: number;
+  // Totale dei versamenti confermati ("Ho messo da parte") nella finestra attuale, solo per gli
+  // obiettivi personali dilazionati. Assente/null = nessuna conferma: vale il calcolo a tempo di sempre.
+  versatoNellaFinestra?: number | null;
 }
