@@ -7,45 +7,46 @@ export interface QuotaDaRiportare {
   importo: number;
 }
 
-const CHIAVE = 'quote-da-riportare';
-let inMemoria: QuotaDaRiportare[] = [];
+const chiave = (utente: string) => `quote-da-riportare:${utente}`;
+const inMemoria = new Map<string, QuotaDaRiportare[]>();
 const ascoltatori = new Set<() => void>();
 
-function leggi(): QuotaDaRiportare[] {
+function leggi(utente: string): QuotaDaRiportare[] {
   try {
-    const grezzo = sessionStorage.getItem(CHIAVE);
+    const grezzo = sessionStorage.getItem(chiave(utente));
     if (grezzo) {
       const v = JSON.parse(grezzo);
       if (Array.isArray(v)) return v as QuotaDaRiportare[];
     }
     return [];
   } catch {
-    return inMemoria;
+    return inMemoria.get(utente) ?? [];
   }
 }
 
-function scrivi(v: QuotaDaRiportare[]) {
-  inMemoria = v;
+function scrivi(utente: string, v: QuotaDaRiportare[]) {
+  inMemoria.set(utente, v);
   try {
-    sessionStorage.setItem(CHIAVE, JSON.stringify(v));
+    sessionStorage.setItem(chiave(utente), JSON.stringify(v));
   } catch {
     // niente memoria di sessione: resta quella del programma, finché la pagina non si ricarica
   }
   ascoltatori.forEach((f) => f());
 }
 
-export function quoteDaRiportare(): QuotaDaRiportare[] {
-  return leggi();
+// Ogni utente ha la sua coda: un id di un altro account non si mostra mai.
+export function quoteDaRiportare(utente: string): QuotaDaRiportare[] {
+  return leggi(utente);
 }
 
-export function aggiungiQuotaDaRiportare(q: QuotaDaRiportare): void {
-  const v = leggi();
+export function aggiungiQuotaDaRiportare(utente: string, q: QuotaDaRiportare): void {
+  const v = leggi(utente);
   if (v.some((x) => x.id === q.id)) return;
-  scrivi([...v, q]);
+  scrivi(utente, [...v, q]);
 }
 
-export function togliQuotaDaRiportare(id: string): void {
-  scrivi(leggi().filter((x) => x.id !== id));
+export function togliQuotaDaRiportare(utente: string, id: string): void {
+  scrivi(utente, leggi(utente).filter((x) => x.id !== id));
 }
 
 export function ascoltaQuoteDaRiportare(f: () => void): () => void {

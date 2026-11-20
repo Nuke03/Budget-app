@@ -169,17 +169,10 @@ describe('P9: stipendio superato, una sola regola', () => {
     expect(r.mostrato).toBe(0);
     expect(r.rimastoMostrato).toBeGreaterThanOrEqual(0);
   });
-  it('disponibile vero sotto zero: mostra 0 con la frase calma del necessario', () => {
+  it('disponibile vero sotto zero: mostra 0 (la frase la dice già la Home)', () => {
     const r = homeConStipendio({ ...sopra, disponibileLibero: -50, speseMese: 100 });
     expect(r.mostrato).toBe(0);
-    expect(r.frase).toBe('Fino al prossimo stipendio conviene spendere solo per il necessario.');
-  });
-  it('disponibile a zero o positivo con stipendio non superato: nessuna frase', () => {
-    expect(homeConStipendio({ ...sopra, disponibileLibero: 0, speseMese: 100 }).frase).toBeNull();
-  });
-  it('se le spese superano lo stipendio resta la frase dell eccedenza, anche con il disponibile sotto zero', () => {
-    const r = homeConStipendio({ ...sopra, disponibileLibero: -10 });
-    expect(r.frase).toBe('Hai già speso 120 € più dello stipendio di questo mese.');
+    expect(r.frase).toBeNull();
   });
   it('stipendio non superato: nessuna frase, nessuna eccedenza', () => {
     const r = homeConStipendio({ ...sopra, speseMese: 400 });

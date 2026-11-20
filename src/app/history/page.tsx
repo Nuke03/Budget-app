@@ -46,8 +46,10 @@ export default function HistoryPage() {
   // Sta nella memoria di sessione: se si lascia lo Storico prima dell'eliminazione, la domanda aspetta la prossima apertura.
   const [codaQuote, setCodaQuote] = useState<QuotaDaRiportare[]>([]);
   const quotaDaRiportare = codaQuote[0] ?? null;
+  // La coda è dell'utente che ha eliminato: un altro account sullo stesso browser non la vede.
+  const utenteRef = useRef('');
   const setQuotaDaRiportare = (q: null) => {
-    if (q === null && quotaDaRiportare) togliQuotaDaRiportare(quotaDaRiportare.id);
+    if (q === null && quotaDaRiportare) togliQuotaDaRiportare(utenteRef.current, quotaDaRiportare.id);
   };
   const [riportoInCorso, setRiportoInCorso] = useState(false);
   const [riportoFallito, setRiportoFallito] = useState(false);
@@ -161,8 +163,19 @@ export default function HistoryPage() {
   }, [fail]);
 
   useEffect(() => {
-    setCodaQuote(quoteDaRiportare());
-    return ascoltaQuoteDaRiportare(() => setCodaQuote(quoteDaRiportare()));
+    let vivo = true;
+    const rileggi = () => setCodaQuote(quoteDaRiportare(utenteRef.current));
+    const stacca = ascoltaQuoteDaRiportare(rileggi);
+    leggiSessione(createClient())
+      .then(({ userId }) => {
+        utenteRef.current = userId ?? '';
+        if (vivo) rileggi();
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+      stacca();
+    };
   }, []);
 
   function handleDelete(t: Transaction) {
@@ -188,7 +201,7 @@ export default function HistoryPage() {
         // L'incasso è andato (anche dopo l'attesa dell'Annulla): ora si chiede della quota rimasta nel conto tasse.
         if (spostamento) {
           setRiportoFallito(false);
-          aggiungiQuotaDaRiportare({ id: spostamento.id, importo: spostamento.importo });
+          aggiungiQuotaDaRiportare(utenteRef.current, { id: spostamento.id, importo: spostamento.importo });
         }
         await refresh(letteDalRef.current).catch(() => {});
       },

@@ -248,15 +248,19 @@ async function pivaOpzionale(
       s.stipendioMensile !== null ? inizioLetturaIncassi(s.guidataDal, oggiRomaISO(today)) : s.guidataDal;
     // Le scadenze dell'anno (e, dopo il 15 dicembre, dell'anno dopo) si creano anche da qui, senza aspettare la pagina
     // P.IVA. Il database ignora i doppioni; un errore non rompe la Home.
-    for (const anno of anniScadenzeHome(oggiRomaISO(today))) {
-      await assicuraScadenze(supabase, scadenzeDaCreare(anno, s.guidataDal)).catch(() => {});
-    }
+    // Parte insieme alle altre letture; solo la lettura delle scadenze aspetta che le righe esistano.
+    const guidataDal = s.guidataDal;
+    const anni = anniScadenzeHome(oggiRomaISO(today));
+    const scadenzeCreate = Promise.all(
+      anni.map((anno) => assicuraScadenze(supabase, scadenzeDaCreare(anno, guidataDal)).catch(() => {}))
+    );
     const [incassi, accantonamenti, scadenze, fatture, scartate] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da: s.guidataDal }),
       // Una scadenza che non si legge non toglie la P.IVA dalla home: niente promemoria di scadenza.
       // Dopo il 15 dicembre anche quelle dell'anno dopo.
-      Promise.all(anniScadenzeHome(oggiRomaISO(today)).map((anno) => getScadenze(supabase, anno)))
+      scadenzeCreate
+        .then(() => Promise.all(anni.map((anno) => getScadenze(supabase, anno))))
         .then((perAnno) => perAnno.flat())
         .catch(() => [] as PivaScadenza[]),
       // Come le scadenze: una fattura che non si legge non toglie la P.IVA dalla home.
