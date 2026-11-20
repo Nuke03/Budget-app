@@ -231,3 +231,62 @@ describe('GoalsList variante casa', () => {
     expect(screen.getByText('Nessun cassetto aperto.')).toBeInTheDocument();
   });
 });
+
+describe('GoalsList: rientri', () => {
+  const cassetto = (over = {}) => ({
+    id: 'g1', nome: 'Vacanza', importoTarget: 900, modalita: 'dilazionato' as const, scadenza: '2027-06-01',
+    categoriaId: null, ricorrente: false, frequenzaMesi: null, stato: 'aperto' as const,
+    createdAt: '2026-01-01T00:00:00Z', quotaMensile: 50, accantonato: 200, confermatoMese: 0,
+    versatoNellaFinestra: 100, ...over,
+  });
+  const rientro = (over = {}) => ({
+    id: 'r1', userId: 'u', householdId: null, goalId: 'g1', accountId: null, importo: 300, mesi: 3 as const,
+    creatoIl: '2099-01-01', stato: 'aperto' as const, fermatoIl: null, ...over,
+  });
+
+  it('un rientro aperto: riga con la frase e Ferma', () => {
+    const onFermaRientro = vi.fn().mockResolvedValue(undefined);
+    const { container } = render(
+      <GoalsList goals={[cassetto()]} categories={[]} rientri={[rientro()]} onFermaRientro={onFermaRientro} />
+    );
+    expect(screen.getByText('Rientro: 100 € al mese fino a marzo')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ferma' }));
+    expect(onFermaRientro).toHaveBeenCalledWith('r1');
+    assertNessunaParolaVietata(container);
+    expect(container.textContent!.toLowerCase()).not.toMatch(/autorata|debito|rimborso/);
+  });
+
+  it('con speso collegato e nessun rientro aperto: link Rimetti a rate verso quel cassetto', () => {
+    render(<GoalsList goals={[cassetto({ specoCollegato: 120 })]} categories={[]} rientri={[]} />);
+    expect(screen.getByRole('link', { name: 'Rimetti a rate' })).toHaveAttribute('href', '/?rimetti=g1');
+  });
+
+  it("con un rientro aperto il link non c'e'; senza speso nemmeno", () => {
+    const { unmount } = render(
+      <GoalsList goals={[cassetto({ specoCollegato: 120 })]} categories={[]} rientri={[rientro()]} />
+    );
+    expect(screen.queryByRole('link', { name: 'Rimetti a rate' })).toBeNull();
+    unmount();
+    render(<GoalsList goals={[cassetto()]} categories={[]} rientri={[]} />);
+    expect(screen.queryByRole('link', { name: 'Rimetti a rate' })).toBeNull();
+  });
+
+  it('Ho messo da parte propone la quota piu la rata del rientro in corso', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-20T10:00:00Z'));
+    try {
+      render(
+        <GoalsList
+          goals={[cassetto()]}
+          categories={[]}
+          rientri={[rientro({ creatoIl: '2026-11-01' })]}
+          onHoMessoDaParte={vi.fn()}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
+      expect(screen.getByLabelText('Importo')).toHaveValue(150);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

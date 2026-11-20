@@ -19,10 +19,15 @@ export function ContiVista({
   onUpdateDetails,
   onCreate,
   contoTasseId = null,
+  rientriConti = [],
+  onFermaRientro,
+  onLasciaStare,
 }: {
   accounts: Account[];
-  // I rientri verso i conti, con quanto resta da spostare: le righe le disegna il Task 8.
+  // I rientri verso i conti, con quanto resta da spostare: una riga sotto il conto.
   rientriConti?: SituazioneRientroConto[];
+  onFermaRientro?: (id: string) => Promise<void>;
+  onLasciaStare?: (id: string) => Promise<void>;
   // Il conto tasse della P.IVA guidata, se c'è.
   contoTasseId?: string | null;
   nome: string;
@@ -43,6 +48,9 @@ export function ContiVista({
               <AccountRow
                 account={a}
                 contoTasse={a.id === contoTasseId}
+                rientri={rientriConti.filter((s) => s.rientro.accountId === a.id)}
+                onFermaRientro={onFermaRientro}
+                onLasciaStare={onLasciaStare}
                 onUpdateBalance={onUpdateBalance}
                 onUpdateDetails={onUpdateDetails}
               />

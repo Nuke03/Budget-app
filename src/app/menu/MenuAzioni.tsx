@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowDownLeft, PiggyBank, Hourglass, CircleCheck, Building2, ArrowLeftRight, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ArrowDownLeft, PiggyBank, Hourglass, CircleCheck, Building2, ArrowLeftRight, ChevronRight, ChevronLeft, Undo2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { EVENTO_AGGIUNGI, type DettaglioAggiungi } from '@/lib/eventoAggiungi';
@@ -134,6 +134,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
         <Riga icona={ArrowDownLeft} nome="Entrata" sotto="Uno stipendio, un rimborso" onClick={() => aggiungi('income', '/?aggiungi=entrata')} />
         <Riga icona={PiggyBank} nome="Metti da parte" sotto="Crea un cassetto per una cosa che arriva" onClick={() => vai('/goals?nuovo=1')} />
         <Riga icona={Hourglass} nome="Ci penso su" sotto="Lista d'attesa prima di comprare" onClick={() => vai('/impara/attesa?nuovo=1')} />
+        <Riga icona={Undo2} nome="Rimetti a rate" sotto="Riporta un po' al mese soldi presi dai risparmi" onClick={() => vai('/?rimetti=1')} />
         {(voci?.contiPersonali ?? 0) >= 2 ? (
           <Riga icona={ArrowLeftRight} nome="Sposta tra i tuoi conti" sotto="Da un conto all'altro, i saldi si aggiornano" onClick={() => vai('/?sposta=1')} />
         ) : null}

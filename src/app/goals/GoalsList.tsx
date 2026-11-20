@@ -1,9 +1,12 @@
+import Link from 'next/link';
 import { Lock, Clock, Pencil, Archive, PiggyBank } from 'lucide-react';
 import { formatEuro, formatDataLunga, formatNumero } from '@/lib/format';
 import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { ComeSiCalcola } from '@/app/casa/ComeSiCalcola';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
+import { rataRientro, ultimoMeseRientro, type Rientro } from '@/lib/calculations/rientri';
+import { RigaRientro } from '@/app/rientri/RigaRientro';
 import { HoMessoDaParte } from './HoMessoDaParte';
 import type { BudgetGoal, Category } from '@/lib/types';
 
@@ -24,6 +27,8 @@ export interface GoalWithQuotaMensile extends BudgetGoal {
   // Quanto hai confermato nella finestra corrente (null/assente = nessuna conferma ancora).
   versatoNellaFinestra?: number | null;
   spiegazione?: Spiegazione;
+  // Quanto è stato speso da questo cassetto (le spese collegate): se c'è, si può rimettere a rate.
+  specoCollegato?: number;
 }
 
 export function GoalsList({
@@ -33,6 +38,8 @@ export function GoalsList({
   onClose,
   onHoMessoDaParte,
   versaId = null,
+  rientri,
+  onFermaRientro,
   variante,
   ancoraPrimo,
 }: {
@@ -44,6 +51,9 @@ export function GoalsList({
   onHoMessoDaParte?: (goal: GoalWithQuotaMensile, importo: number, data: string) => Promise<void>;
   // Il cassetto con questo id (dall'indirizzo ?versa=) si apre già sulla conferma.
   versaId?: string | null;
+  // I rientri verso i cassetti (personali o della casa): sotto la card, la riga con "Ferma".
+  rientri?: Rientro[];
+  onFermaRientro?: (id: string) => Promise<void>;
   variante?: 'casa';
   // Se c'è, il primo cassetto della lista porta questo data-fumetto.
   ancoraPrimo?: string;
@@ -64,6 +74,13 @@ export function GoalsList({
     <ul className="flex flex-col gap-3.5">
       {goals.map((g, i) => {
         const tuttoSubito = g.modalita === 'bloccato';
+        // I rientri aperti verso questo cassetto, finché non è passato il loro ultimo mese.
+        const rientriCassetto = (rientri ?? []).filter(
+          (r) => r.goalId === g.id && r.stato === 'aperto' && oggi.slice(0, 7) <= ultimoMeseRientro(r)
+        );
+        // Quanto di un rientro in corso si propone con "Ho messo da parte": la sua rata di questo mese.
+        const quotaConRientri = (g.quotaMensile ?? 0) + rientriCassetto.reduce((t, r) => t + rataRientro(r), 0);
+        const quotaProposta = Math.round((quotaConRientri + Number.EPSILON) * 100) / 100;
         const categoriaNome = g.categoriaId
           ? categories.find((c) => c.id === g.categoriaId)?.nome
           : null;
@@ -157,7 +174,7 @@ export function GoalsList({
                   </p>
                 )}
                 <HoMessoDaParte
-                  quota={g.quotaMensile}
+                  quota={quotaProposta}
                   finora={g.versatoNellaFinestra == null ? g.accantonato : null}
                   primoMese={g.versatoNellaFinestra == null && computeAccantonatoFinora(g, new Date()) === 0}
                   oggi={oggi}
@@ -166,6 +183,17 @@ export function GoalsList({
                 />
               </>
             )}
+            {rientriCassetto.map((r) => (
+              <RigaRientro key={r.id} rientro={r} onFerma={() => onFermaRientro?.(r.id) ?? Promise.resolve()} />
+            ))}
+            {rientri && rientriCassetto.length === 0 && (g.specoCollegato ?? 0) > 0 ? (
+              <Link
+                href={`/?rimetti=${g.id}`}
+                className="mt-2 inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark"
+              >
+                Rimetti a rate
+              </Link>
+            ) : null}
           </li>
         );
       })}

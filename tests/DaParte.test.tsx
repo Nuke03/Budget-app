@@ -14,6 +14,8 @@ vi.mock('@/lib/data/fondiCasa', () => ({
   creaFondiIngresso: vi.fn(),
 }));
 vi.mock('@/lib/data/goals', () => ({ closeGoal: vi.fn() }));
+vi.mock('@/lib/data/rientri', () => ({ fermaRientro: vi.fn() }));
+import { fermaRientro } from '@/lib/data/rientri';
 import { closeGoal } from '@/lib/data/goals';
 import { creaFondoBolletta } from '@/lib/data/fondiCasa';
 
@@ -217,5 +219,27 @@ describe('DaParte', () => {
     const { container } = monta({ voci: [] });
     expect(screen.getByText('Nel piano non ci sono bollette da mettere da parte.')).toBeInTheDocument();
     assertNessunaParolaVietata(container);
+  });
+});
+
+describe('DaParte: rientri', () => {
+  it('un fondo con un rientro aperto mostra la riga e Ferma chiama fermaRientro', async () => {
+    vi.mocked(fermaRientro).mockResolvedValue(undefined);
+    monta({
+      fondi: [fondo],
+      rientri: [
+        { id: 'r1', userId: 'u', householdId: 'h1', goalId: 'g1', accountId: null, importo: 300, mesi: 3,
+          creatoIl: '2026-11-01', stato: 'aperto', fermatoIl: null },
+      ],
+    });
+    expect(screen.getByText('Rientro: 100 € al mese fino a gennaio')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ferma' }));
+    await waitFor(() => expect(fermaRientro).toHaveBeenCalledWith(expect.anything(), 'r1', '2026-11-09'));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it('un fondo con speso collegato e nessun rientro: link Rimetti a rate', () => {
+    monta({ fondi: [{ ...fondo, specoCollegato: 80 }], rientri: [] });
+    expect(screen.getByRole('link', { name: 'Rimetti a rate' })).toHaveAttribute('href', '/?rimetti=g1');
   });
 });

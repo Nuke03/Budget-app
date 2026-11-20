@@ -4,6 +4,8 @@ import { utenteECasa } from '@/lib/utenteOLogin';
 import { getPlanVersions } from '@/lib/data/householdPlans';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
+import { getRientri } from '@/lib/data/rientri';
+import type { Rientro } from '@/lib/calculations/rientri';
 import { casa as scopeCasa } from '@/lib/data/scope';
 import { meseRomaISO, oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
@@ -25,13 +27,18 @@ export default async function DaPartePage() {
     getOpenGoals(supabase, scope),
   ]);
   const piano = pianoInVigore(piani, meseRomaISO(adesso));
-  const speso = await getSpecoCollegatoPerObiettivi(supabase, obiettivi, today, scope);
+  const [speso, rientri] = await Promise.all([
+    getSpecoCollegatoPerObiettivi(supabase, obiettivi, today, scope),
+    // I rientri dei cassetti di casa: se non si leggono, si vede la pagina senza le righe.
+    getRientri(supabase, scope).catch(() => [] as Rientro[]),
+  ]);
   const conSpiegazione = obiettiviCasaConSpiegazione(obiettivi, speso, today);
 
   return (
     <DaParte
       householdId={casa.household.id}
       oggi={oggiRomaISO(adesso)}
+      rientri={rientri}
       haPiano={piano !== null}
       voci={piano ? statoVociDaParte(piano.items, obiettivi) : []}
       fondi={conSpiegazione.filter((g) => g.ricorrente)}

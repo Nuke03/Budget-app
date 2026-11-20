@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AccountRow } from '@/app/accounts/AccountRow';
+import type { SituazioneRientroConto } from '@/lib/calculations/rientri';
 
 const account = {
   id: '1',
@@ -103,5 +104,37 @@ describe('AccountRow', () => {
 
     expect(onUpdateDetails).not.toHaveBeenCalled();
     expect(screen.queryByLabelText('Nome conto')).not.toBeInTheDocument();
+  });
+});
+
+describe('AccountRow: rientri', () => {
+  const situazione = (over = {}): SituazioneRientroConto => ({
+    rientro: {
+      id: 'r1', userId: 'u', householdId: null, goalId: null, accountId: '1', importo: 300, mesi: 3,
+      creatoIl: '2026-11-01', stato: 'aperto', fermatoIl: null,
+    },
+    maturato: 200, spostato: 0, daSpostare: 200, finito: false, ...over,
+  });
+
+  it('mostra la riga, il da spostare, Ferma e Lascia stare', async () => {
+    const onFermaRientro = vi.fn().mockResolvedValue(undefined);
+    const onLasciaStare = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AccountRow account={account} rientri={[situazione()]} onFermaRientro={onFermaRientro} onLasciaStare={onLasciaStare} onUpdateBalance={vi.fn()} />
+    );
+    expect(screen.getByText('Rientro: 100 € al mese fino a gennaio')).toBeInTheDocument();
+    expect(screen.getByText('Da spostare: 200 €')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ferma' }));
+    expect(onFermaRientro).toHaveBeenCalledWith('r1');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Lascia stare' })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Lascia stare' }));
+    expect(onLasciaStare).toHaveBeenCalledWith('r1');
+  });
+
+  it('un rientro chiuso o finito non si vede', () => {
+    const chiuso = situazione();
+    chiuso.rientro.stato = 'chiuso';
+    render(<AccountRow account={account} rientri={[chiuso, situazione({ finito: true })]} onUpdateBalance={vi.fn()} />);
+    expect(screen.queryByText(/Rientro/)).toBeNull();
   });
 });

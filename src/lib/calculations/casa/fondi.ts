@@ -92,6 +92,8 @@ export type ObiettivoCasa = BudgetGoal & {
   quotaMensile: number | null;
   accantonato: number;
   spiegazione: Spiegazione;
+  // Le spese collegate a questo fondo: da qui si propone "Rimetti a rate".
+  specoCollegato?: number;
 };
 
 // Gli obiettivi con quanto è messo da parte, la quota al mese e la spiegazione.
@@ -105,6 +107,7 @@ export function obiettiviCasaConSpiegazione(
     return {
       ...g,
       quotaMensile: computeQuotaMensile(g, today),
+      specoCollegato: spesoCollegato,
       accantonato: accantonatoObiettivo({ ...g, specoCollegato: spesoCollegato }, today),
       spiegazione: spiegaDaParte({ goal: g, today, spesoCollegato }),
     };

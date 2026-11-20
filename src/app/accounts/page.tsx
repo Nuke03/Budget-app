@@ -5,6 +5,7 @@ import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount } from '@/lib/data/accounts';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
+import { chiudiRientro, fermaRientro } from '@/lib/data/rientri';
 import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
 import { rientriEffettivi, type SituazioneRientroConto } from '@/lib/calculations/rientri';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
@@ -40,6 +41,16 @@ export default function AccountsPage() {
     refresh().catch(fail);
   }, [fail]);
 
+  async function handleFermaRientro(id: string) {
+    await fermaRientro(createClient(), id, oggiRomaISO());
+    await refresh();
+  }
+
+  async function handleLasciaStare(id: string) {
+    await chiudiRientro(createClient(), id, oggiRomaISO());
+    await refresh();
+  }
+
   async function handleUpdateBalance(id: string, saldo: number) {
     const supabase = createClient();
     await updateAccountBalance(supabase, id, saldo);
@@ -74,6 +85,8 @@ export default function AccountsPage() {
         accounts={accounts}
         contoTasseId={contoTasseId}
         rientriConti={rientriConti}
+        onFermaRientro={handleFermaRientro}
+        onLasciaStare={handleLasciaStare}
         nome={nome}
         onNome={setNome}
         contaInDisponibile={contaInDisponibile}

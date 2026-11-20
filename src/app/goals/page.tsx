@@ -9,7 +9,7 @@ import { getCategories } from '@/lib/data/categories';
 import { getSpecoCollegato } from '@/lib/data/goalSpending';
 import { confermaVersamento, getConfermePerObiettivi, type ConfermeObiettivo } from '@/lib/data/goalVersamenti';
 import { computeQuotaMensile, accantonatoObiettivo } from '@/lib/calculations/accantonato';
-import { getRientri } from '@/lib/data/rientri';
+import { fermaRientro, getRientri } from '@/lib/data/rientri';
 import { maturatoPerCassetto, type Rientro } from '@/lib/calculations/rientri';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
@@ -142,6 +142,11 @@ export default function GoalsPage() {
     await refresh().catch(() => {});
   }
 
+  async function handleFermaRientro(id: string) {
+    await fermaRientro(createClient(), id, oggiRomaISO());
+    await refresh().catch(() => {});
+  }
+
   function handleClose(goal: GoalWithQuotaMensile) {
     const cambia = (nascondi: boolean) =>
       setNascosti((prima) => {
@@ -187,6 +192,7 @@ export default function GoalsPage() {
         onClose={handleClose}
         onHoMessoDaParte={handleHoMessoDaParte}
         versaId={versaId}
+        onFermaRientro={handleFermaRientro}
       />
 
       {creando && (

@@ -30,6 +30,7 @@ export default async function HomePage() {
       prossimoDati={data.prossimoDati}
       riservaRientri={data.riservaRientri}
       rientriConti={data.rientriConti}
+      rientri={data.rientri}
       notificheAttive={data.notificheAttive}
       primiPassi={data.primiPassi}
       lezioneDelGiorno={data.lezioneDelGiorno}

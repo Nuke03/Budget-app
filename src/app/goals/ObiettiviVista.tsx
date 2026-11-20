@@ -9,16 +9,19 @@ import type { Category } from '@/lib/types';
 // Il corpo di Obiettivi, senza letture né scritture: la pagina gli passa dati e azioni.
 export function ObiettiviVista({
   goals,
+  rientri,
   categories,
   onNuovo,
   onEdit,
   onClose,
   onHoMessoDaParte,
   versaId = null,
+  onFermaRientro,
 }: {
   goals: GoalWithQuotaMensile[];
-  // I rientri personali: le righe dei cassetti le disegna il Task 8.
+  // I rientri personali: la riga sotto ogni cassetto.
   rientri?: Rientro[];
+  onFermaRientro?: (id: string) => Promise<void>;
   categories: Category[];
   onNuovo: () => void;
   onEdit: (goal: GoalWithQuotaMensile) => void;
@@ -45,6 +48,8 @@ export function ObiettiviVista({
           onClose={onClose}
           onHoMessoDaParte={onHoMessoDaParte}
           versaId={versaId}
+          rientri={rientri}
+          onFermaRientro={onFermaRientro}
           ancoraPrimo="cassetti"
         />
         <FumettoPrimaVolta

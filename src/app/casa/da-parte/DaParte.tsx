@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   anteprimaDaParte,
@@ -14,6 +15,9 @@ import { formatDateIt, formatNumero } from '@/lib/format';
 import type { PlanItem } from '@/lib/types';
 import { GoalsList } from '@/app/goals/GoalsList';
 import { closeGoal } from '@/lib/data/goals';
+import { fermaRientro } from '@/lib/data/rientri';
+import { ultimoMeseRientro, type Rientro } from '@/lib/calculations/rientri';
+import { RigaRientro } from '@/app/rientri/RigaRientro';
 import { useEliminaConAnnulla } from '../../AnnullaProvider';
 import { ConfermaPesante } from '../../ConfermaPesante';
 import { CoverHeader } from '../../CoverHeader';
@@ -42,6 +46,7 @@ export function DaParte({
   fondi,
   unaVolta,
   canonePiano = 0,
+  rientri = [],
 }: {
   householdId: string;
   oggi: string;
@@ -50,7 +55,10 @@ export function DaParte({
   fondi: ObiettivoCasa[];
   unaVolta: ObiettivoCasa[];
   canonePiano?: number;
+  // I rientri dei cassetti di casa (quelli che vede tutta la casa).
+  rientri?: Rientro[];
 }) {
+  const router = useRouter();
   const [scelte, setScelte] = useState<Record<string, string>>({});
   const [aperte, setAperte] = useState<Record<string, boolean>>({});
   const { metti: mettiVoci, inCorso, errore, fatte } = useMettiDaParte({ householdId, oggi });
@@ -78,6 +86,11 @@ export function DaParte({
         await closeGoal(createClient(), id);
       },
     });
+  }
+
+  async function fermaERinfresca(id: string) {
+    await fermaRientro(createClient(), id, oggi);
+    router.refresh();
   }
 
   const daMettere = voci.filter((v) => v.stato === 'da_mettere' && !fatte.includes(v.item.id));
@@ -186,7 +199,13 @@ export function DaParte({
           </p>
         ) : null}
 
-        <GoalsList goals={fondi} categories={[]} variante="casa" />
+        <GoalsList
+          goals={fondi}
+          categories={[]}
+          variante="casa"
+          rientri={rientri}
+          onFermaRientro={fermaERinfresca}
+        />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -212,6 +231,17 @@ export function DaParte({
                 >
                   L&apos;ho pagato
                 </button>
+                {rientri
+                  .filter((r) => r.goalId === g.id && r.stato === 'aperto' && oggi.slice(0, 7) <= ultimoMeseRientro(r))
+                  .map((r) => (
+                    <RigaRientro key={r.id} rientro={r} onFerma={() => fermaERinfresca(r.id)} />
+                  ))}
+                {!rientri.some((r) => r.goalId === g.id && r.stato === 'aperto' && oggi.slice(0, 7) <= ultimoMeseRientro(r)) &&
+                (g.specoCollegato ?? 0) > 0 ? (
+                  <Link href={`/?rimetti=${g.id}`} className={`${CLASSE_LINK} self-start`}>
+                    Rimetti a rate
+                  </Link>
+                ) : null}
               </li>
             ))}
           </ul>

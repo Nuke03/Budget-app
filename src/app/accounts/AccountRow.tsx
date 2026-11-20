@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { formatEuro, formatNumero } from '@/lib/format';
 import { parseImporto } from '@/lib/calculations/casa/parseImporto';
+import { RigaRientro } from '@/app/rientri/RigaRientro';
+import type { SituazioneRientroConto } from '@/lib/calculations/rientri';
 import type { Account } from '@/lib/types';
 
 const fieldClass =
@@ -14,10 +16,17 @@ export function AccountRow({
   onUpdateBalance,
   onUpdateDetails,
   contoTasse = false,
+  rientri = [],
+  onFermaRientro,
+  onLasciaStare,
 }: {
   account: Account;
   // Il conto delle tasse della P.IVA: non conta mai nel disponibile, quindi niente interruttore.
   contoTasse?: boolean;
+  // I rientri verso questo conto: sotto il saldo, la riga con "Ferma" e, se c'è da spostare, "Lascia stare".
+  rientri?: SituazioneRientroConto[];
+  onFermaRientro?: (id: string) => Promise<void>;
+  onLasciaStare?: (id: string) => Promise<void>;
   onUpdateBalance: (id: string, saldo: number) => void;
   onUpdateDetails?: (
     id: string,
@@ -138,6 +147,18 @@ export function AccountRow({
           )}
         </div>
       </div>
+
+      {rientri
+        .filter((s) => s.rientro.stato !== 'chiuso' && !s.finito && (s.rientro.stato === 'aperto' || s.daSpostare > 0))
+        .map((s) => (
+          <RigaRientro
+            key={s.rientro.id}
+            rientro={s.rientro}
+            situazione={s}
+            onFerma={() => onFermaRientro?.(s.rientro.id) ?? Promise.resolve()}
+            onLasciaStare={onLasciaStare ? () => onLasciaStare(s.rientro.id) : undefined}
+          />
+        ))}
 
       {hasTarget && (
         <div className="flex flex-col gap-1.5">

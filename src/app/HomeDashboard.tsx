@@ -8,6 +8,7 @@ import { CoverHeader } from './CoverHeader';
 import { GiroBarra } from './fumetti/GiroBarra';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { SpostaFoglio } from './sposta/SpostaFoglio';
+import { RimettiARateFoglio, type DestinazioneRientro } from './rientri/RimettiARateFoglio';
 import { contoDaCuiSpostare } from './piva/PromptQuota';
 import { AndamentoCard } from './home/AndamentoCard';
 import { ConsiglioCard } from './home/ConsiglioCard';
@@ -29,7 +30,7 @@ import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
 import type { CasaPerHome, PivaHome } from '@/lib/loadHomeData';
 import { totaleInSospeso } from '@/lib/calculations/piva';
-import type { SituazioneRientroConto } from '@/lib/calculations/rientri';
+import { maturatoPerCassetto, type Rientro, type SituazioneRientroConto } from '@/lib/calculations/rientri';
 import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
@@ -39,6 +40,8 @@ import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 // per far tornare i conti con la cifra principale.
 export interface GoalWithAccantonato extends BudgetGoal {
   accantonato: number;
+  // Le spese collegate al cassetto (assente = non lette): da qui la cifra proposta in "Rimetti a rate".
+  specoCollegato?: number;
 }
 
 // Scritta dal foglio di aggiunta dopo un salvataggio: l'id della riga appena creata.
@@ -67,6 +70,7 @@ export function HomeDashboard({
   prossimoDati = null,
   riservaRientri = 0,
   rientriConti = [],
+  rientri = [],
   notificheAttive = null,
   chiavePubblica = null,
   primiPassi = null,
@@ -95,13 +99,17 @@ export function HomeDashboard({
   riservaRientri?: number;
   // I rientri verso i conti risparmio: da qui il foglio "Sposta" si apre già compilato.
   rientriConti?: SituazioneRientroConto[];
+  // Tutti i rientri personali: da qui quanto resta da rimettere in un cassetto.
+  rientri?: Rientro[];
   notificheAttive?: boolean | null;
   chiavePubblica?: string | null;
   primiPassi?: PrimiPassi | null;
   lezioneDelGiorno?: ArgomentoId | null;
 }) {
   const router = useRouter();
-  const spostaParam = useSearchParams().get('sposta');
+  const parametri = useSearchParams();
+  const spostaParam = parametri.get('sposta');
+  const rimettiParam = parametri.get('rimetti');
   // Il server toglie i "Più tardi" del database; il browser toglie anche quelli che il telefono ha solo in
   // localStorage (stessa memoria della Casa) e ricalcola il prossimo passo.
   const promemoriaCasa = prossimoDati?.promemoriaCasa ?? [];
@@ -168,6 +176,41 @@ export function HomeDashboard({
     router.replace('/');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spostaParam]);
+
+  // "Rimetti a rate": dal menu (?rimetti=1) senza scelta, da un cassetto (?rimetti=<id>) con quel cassetto già scelto.
+  const [rimettiAperto, setRimettiAperto] = useState<{ chiave: number; scelta?: string } | null>(null);
+  useEffect(() => {
+    if (!rimettiParam) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- l'ingresso arriva dall'indirizzo
+    setRimettiAperto({ chiave: Date.now(), scelta: rimettiParam === '1' ? undefined : rimettiParam });
+    router.replace('/');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rimettiParam]);
+
+  // Dove si può rimettere: conti risparmio (non il conto tasse), cassetti aperti, cassetti aperti della casa.
+  const destinazioniRientro: DestinazioneRientro[] = [
+    ...accounts
+      .filter((a) => !a.archiviato && !a.contaInDisponibile && a.id !== (piva?.contoTasseId ?? ''))
+      .map((a): DestinazioneRientro => ({ tipo: 'conto', id: a.id, nome: a.nome })),
+    ...goals
+      .filter((g) => g.stato === 'aperto')
+      .map((g): DestinazioneRientro => ({
+        tipo: 'cassetto',
+        id: g.id,
+        nome: g.nome,
+        spesoDaRientrare: Math.max(0, Math.round(((g.specoCollegato ?? 0) - maturatoPerCassetto(rientri, g.id, oggi)) * 100) / 100),
+      })),
+    ...(casa?.aggiunta?.obiettivi ?? [])
+      .filter((g) => g.stato === 'aperto')
+      .map((g): DestinazioneRientro => ({
+        tipo: 'cassetto-casa',
+        id: g.id,
+        nome: g.nome,
+        householdId: casa!.aggiunta!.householdId,
+      })),
+  ];
+  const altriDiCasa = (casa?.aggiunta?.nomi ?? []).filter((n) => n.userId !== casa?.aggiunta?.meUserId).map((n) => n.nome);
+  const notaCasa = altriDiCasa.length > 0 ? `Lo vedrà anche ${altriDiCasa.join(' e ')}.` : undefined;
 
   // Il timbro: se il foglio ha appena registrato una riga che è fra quelle mostrate.
   useEffect(() => {
@@ -284,6 +327,20 @@ export function HomeDashboard({
           onClose={() => setSpostaAperto(null)}
           onFatto={() => {
             setSpostaAperto(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {rimettiAperto ? (
+        <RimettiARateFoglio
+          key={rimettiAperto.chiave}
+          destinazioni={destinazioniRientro}
+          scelta={rimettiAperto.scelta}
+          notaCasa={notaCasa}
+          onClose={() => setRimettiAperto(null)}
+          onFatto={() => {
+            setRimettiAperto(null);
             router.refresh();
           }}
         />

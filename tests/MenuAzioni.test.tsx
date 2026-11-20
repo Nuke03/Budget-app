@@ -101,6 +101,16 @@ describe('MenuAzioni', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('Rimetti a rate c e sempre, dopo Ci penso su, e porta a /?rimetti=1', () => {
+    const { onClose } = apri();
+    expect(screen.getByText("Riporta un po' al mese soldi presi dai risparmi")).toBeInTheDocument();
+    const nomi = screen.getAllByRole('button').map((b) => b.textContent ?? '');
+    expect(nomi.findIndex((t) => t.includes('Rimetti a rate'))).toBe(nomi.findIndex((t) => t.includes('Ci penso su')) + 1);
+    fireEvent.click(screen.getByRole('button', { name: /Rimetti a rate/ }));
+    expect(push).toHaveBeenCalledWith('/?rimetti=1');
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('un cassetto a rate: Versa nel cassetto porta dritto a lui', async () => {
     leggi.mockResolvedValue(voci({ cassettiARate: [g('g1', 'Vacanza', 100)] }));
     apri();
@@ -156,13 +166,13 @@ describe('MenuAzioni', () => {
     expect(push).toHaveBeenCalledWith('/casa?azione=versamento');
   });
 
-  it('se leggiVociMenu lancia: solo le prime 4 voci, nessun errore', async () => {
+  it('se leggiVociMenu lancia: solo le prime 5 voci, nessun errore', async () => {
     leggi.mockRejectedValue(new Error('giù'));
     apri();
     await waitFor(() => expect(leggi).toHaveBeenCalled());
     await Promise.resolve();
     const voceBottoni = screen.getAllByRole('button').filter((b) => b.getAttribute('aria-label') !== 'Chiudi');
-    expect(voceBottoni).toHaveLength(4);
+    expect(voceBottoni).toHaveLength(5);
     expect(screen.queryByText(/giù/)).not.toBeInTheDocument();
   });
 
