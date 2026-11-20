@@ -2,6 +2,7 @@ import { Lock, Clock, Pencil, Archive, PiggyBank } from 'lucide-react';
 import { formatEuro, formatDataLunga, formatNumero } from '@/lib/format';
 import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { ComeSiCalcola } from '@/app/casa/ComeSiCalcola';
+import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { HoMessoDaParte } from './HoMessoDaParte';
 import type { BudgetGoal, Category } from '@/lib/types';
@@ -20,6 +21,8 @@ export interface GoalWithQuotaMensile extends BudgetGoal {
   accantonato: number;
   // Quanto hai confermato con "Ho messo da parte" nel mese in corso (assente/0 = niente).
   confermatoMese?: number;
+  // Quanto hai confermato nella finestra corrente (null/assente = nessuna conferma ancora).
+  versatoNellaFinestra?: number | null;
   spiegazione?: Spiegazione;
 }
 
@@ -148,6 +151,8 @@ export function GoalsList({
                 )}
                 <HoMessoDaParte
                   quota={g.quotaMensile}
+                  finora={g.versatoNellaFinestra == null ? g.accantonato : null}
+                  primoMese={g.versatoNellaFinestra == null && computeAccantonatoFinora(g, new Date()) === 0}
                   oggi={oggi}
                   onConferma={(importo, data) => onHoMessoDaParte(g, importo, data)}
                 />

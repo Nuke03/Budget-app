@@ -1,19 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import { formatEuro } from '@/lib/format';
 
 const fieldClass =
   'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
 
 // "Ho messo da parte": un tocco per confermare che i soldi della quota del mese sono davvero spostati.
 // Importo e data sono già scritti (la quota e oggi) e si possono cambiare; la data non può essere nel futuro.
+// Alla prima conferma di un obiettivo (`finora` presente) l'importo parte da quanto dovrebbe esserci già da parte,
+// non dalla quota di un mese: da lì in poi il riservato è il minore fra quota a tempo e confermato, e una cifra
+// piccola lo farebbe crollare. `primoMese` = niente è ancora maturato: nessuna cifra, solo una frase calma.
 // La scrittura la fa chi usa il componente: se non riesce, la conferma resta aperta con una frase.
 export function HoMessoDaParte({
   quota,
+  finora,
+  primoMese = false,
   oggi,
   onConferma,
 }: {
   quota: number;
+  // Quanto dovrebbe esserci già da parte; solo alla prima conferma (null/assente = conferma successiva).
+  finora?: number | null;
+  primoMese?: boolean;
   // 'yyyy-MM-dd'
   oggi: string;
   onConferma: (importo: number, data: string) => Promise<void>;
@@ -24,13 +33,15 @@ export function HoMessoDaParte({
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
 
+  const primaConferma = finora !== null && finora !== undefined;
   const valore = Number(importo);
   const importoOk = importo.trim() !== '' && Number.isFinite(valore) && valore > 0 && valore < 1e9;
   const dataOk = /^\d{4}-\d{2}-\d{2}$/.test(data) && data <= oggi;
   const valido = importoOk && dataOk;
 
   function apri() {
-    setImporto(String(Math.round(quota * 100) / 100));
+    const iniziale = primaConferma && finora > 0 ? finora : quota;
+    setImporto(String(Math.round(iniziale * 100) / 100));
     setData(oggi);
     setErrore(null);
     setAperto(true);
@@ -64,6 +75,13 @@ export function HoMessoDaParte({
 
   return (
     <div className="mt-2 flex flex-col gap-2.5 rounded-[var(--radius-sm)] bg-surface-muted p-3">
+      {primaConferma ? (
+        <p className="num text-[13px] text-ink-2">
+          {primoMese
+            ? "Conta dal mese prossimo: per ora non c'è niente da mettere da parte."
+            : `Finora dovrebbero esserci ${formatEuro(finora)} per questo obiettivo.`}
+        </p>
+      ) : null}
       <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
         Importo
         <input

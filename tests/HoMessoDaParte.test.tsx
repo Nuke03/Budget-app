@@ -5,6 +5,13 @@ import { GoalsList, type GoalWithQuotaMensile } from '@/app/goals/GoalsList';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 describe('HoMessoDaParte', () => {
+  it('con finora il campo parte da quella cifra e la frase la riporta', () => {
+    render(<HoMessoDaParte quota={200} finora={600} oggi="2026-11-19" onConferma={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
+    expect(screen.getByLabelText('Importo')).toHaveValue(600);
+    expect(screen.getByText(/Finora dovrebbero esserci 600,00 €/)).toBeInTheDocument();
+  });
+
   it('apre una conferma con la quota del mese e la data di oggi già scritte', () => {
     render(<HoMessoDaParte quota={200} oggi="2026-11-19" onConferma={vi.fn()} />);
     expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
@@ -79,10 +86,40 @@ describe('GoalsList: Ho messo da parte', () => {
     expect(screen.queryByRole('button', { name: 'Ho messo da parte' })).not.toBeInTheDocument();
   });
 
-  it('il bottone è preimpostato sulla quota del mese', () => {
+  it('la prima conferma è preimpostata su quanto dovrebbe esserci finora, con la frase sopra il campo', () => {
     render(<GoalsList goals={[dilazionato]} categories={[]} onHoMessoDaParte={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
+    expect(screen.getByLabelText('Importo')).toHaveValue(150);
+    expect(screen.getByText(/Finora dovrebbero esserci 150,00 € per questo obiettivo\./)).toBeInTheDocument();
+  });
+
+  it('le conferme successive restano sulla quota del mese', () => {
+    render(
+      <GoalsList
+        goals={[{ ...dilazionato, versatoNellaFinestra: 100 }]}
+        categories={[]}
+        onHoMessoDaParte={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
     expect(screen.getByLabelText('Importo')).toHaveValue(30);
+    expect(screen.queryByText(/Finora dovrebbero esserci/)).not.toBeInTheDocument();
+  });
+
+  it('nel primo mese dell obiettivo dice che conta dal mese prossimo e il bottone resta usabile', () => {
+    const oggi = new Date();
+    const nuovo: GoalWithQuotaMensile = {
+      ...dilazionato,
+      createdAt: oggi.toISOString(),
+      scadenza: new Date(oggi.getFullYear() + 1, oggi.getMonth(), 15).toISOString().slice(0, 10),
+      accantonato: 0,
+    };
+    render(<GoalsList goals={[nuovo]} categories={[]} onHoMessoDaParte={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
+    expect(
+      screen.getByText("Conta dal mese prossimo: per ora non c'è niente da mettere da parte.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Conferma' })).toBeEnabled();
   });
 
   it('una riga piccola dice quanto hai confermato questo mese, solo se più di zero', () => {
