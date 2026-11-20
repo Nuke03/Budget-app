@@ -245,6 +245,8 @@ describe('GoalsList: rientri', () => {
   });
 
   it('un rientro aperto: riga con la frase e Ferma', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2099-01-15T10:00:00Z'));
     const onFermaRientro = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
       <GoalsList goals={[cassetto()]} categories={[]} rientri={[rientro()]} onFermaRientro={onFermaRientro} />
@@ -254,6 +256,39 @@ describe('GoalsList: rientri', () => {
     expect(onFermaRientro).toHaveBeenCalledWith('r1');
     assertNessunaParolaVietata(container);
     expect(container.textContent!.toLowerCase()).not.toMatch(/autorata|debito|rimborso/);
+    vi.useRealTimers();
+  });
+
+  it('un rientro fermato non finito resta sulla card, senza Ferma', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-20T10:00:00Z'));
+    try {
+      render(
+        <GoalsList
+          goals={[cassetto()]}
+          categories={[]}
+          rientri={[rientro({ creatoIl: '2026-10-01', stato: 'fermato', fermatoIl: '2026-11-05' })]}
+        />
+      );
+      expect(screen.getByText('Rientro fermato: 200 € rimessi su 300 €')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ferma' })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('Ho messo da parte non aggiunge la rata prima del primo mese del rientro', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-20T10:00:00Z'));
+    try {
+      render(
+        <GoalsList goals={[cassetto()]} categories={[]} rientri={[rientro({ creatoIl: '2026-12-01' })]} onHoMessoDaParte={vi.fn()} />
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
+      expect(screen.getByLabelText('Importo')).toHaveValue(50);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('con speso collegato e nessun rientro aperto: link Rimetti a rate verso quel cassetto', () => {
@@ -262,6 +297,8 @@ describe('GoalsList: rientri', () => {
   });
 
   it("con un rientro aperto il link non c'e'; senza speso nemmeno", () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2099-01-15T10:00:00Z'));
     const { unmount } = render(
       <GoalsList goals={[cassetto({ specoCollegato: 120 })]} categories={[]} rientri={[rientro()]} />
     );
@@ -269,6 +306,7 @@ describe('GoalsList: rientri', () => {
     unmount();
     render(<GoalsList goals={[cassetto()]} categories={[]} rientri={[]} />);
     expect(screen.queryByRole('link', { name: 'Rimetti a rate' })).toBeNull();
+    vi.useRealTimers();
   });
 
   it('Ho messo da parte propone la quota piu la rata del rientro in corso', () => {

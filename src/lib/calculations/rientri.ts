@@ -57,6 +57,33 @@ export function ultimoMeseRientro(r: Pick<Rientro, 'creatoIl' | 'mesi'>): string
   return `${anno}-${String(mese).padStart(2, '0')}`;
 }
 
+// Aperto e dentro i suoi mesi: dal mese in cui è nato fino all'ultimo.
+export function rientroInCorso(r: Rientro, oggi: string): boolean {
+  if (r.stato !== 'aperto') return false;
+  const mese = oggi.slice(0, 7);
+  return r.creatoIl.slice(0, 7) <= mese && mese <= ultimoMeseRientro(r);
+}
+
+// Quelli da far vedere sulla card di un cassetto: gli aperti in corso e i fermati non finiti
+// (fermare non nasconde il rientro). Chiusi e finiti no.
+export function rientriDaMostrare(rientri: Rientro[], goalId: string, oggi: string): Rientro[] {
+  return rientri.filter(
+    (r) =>
+      r.goalId === goalId &&
+      (rientroInCorso(r, oggi) || (r.stato === 'fermato' && maturatoRientro(r, oggi) < r.importo))
+  );
+}
+
+// Quanto di un cassetto è stato speso e non è ancora rientrato (mai sotto zero).
+export function spesoDaRientrare(
+  speso: number | undefined,
+  rientri: Rientro[],
+  goalId: string,
+  oggi: string
+): number {
+  return Math.max(0, arrotonda2((speso ?? 0) - maturatoPerCassetto(rientri, goalId, oggi)));
+}
+
 export function maturatoPerCassetto(rientri: Rientro[], goalId: string, oggi: string): number {
   let tot = 0;
   for (const r of rientri) {

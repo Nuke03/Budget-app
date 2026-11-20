@@ -46,6 +46,7 @@ vi.mock('@/lib/data/accounts', () => ({
     { id: 'a', nome: 'A', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null },
     { id: 'b', nome: 'B', saldoAttuale: 50, contaInDisponibile: true, targetSaldo: null },
   ],
+  getContiArchiviati: vi.fn(async () => [] as { id: string; nome: string }[]),
   updateAccountBalance: vi.fn(),
 }));
 vi.mock('@/lib/data/goals', () => ({ getOpenGoals: async () => [], createGoal: vi.fn() }));
@@ -77,6 +78,7 @@ import HistoryPage from '@/app/history/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
 import { eliminaMovimento, modificaMovimento, getTransactions } from '@/lib/data/transactions';
 import { updateAccountBalance } from '@/lib/data/accounts';
+import { getContiArchiviati } from '@/lib/data/accounts';
 import { annullaSpostamento, getSpostamenti } from '@/lib/data/spostamenti';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
@@ -187,6 +189,14 @@ describe('Storico: la casa non rompe quello personale', () => {
 });
 
 describe('Storico: spostamenti fra i propri conti', () => {
+  it('uno spostamento verso un conto archiviato mostra il suo nome', async () => {
+    vi.mocked(getContiArchiviati).mockResolvedValueOnce([{ id: 'z', nome: 'Vecchio' }]);
+    vi.mocked(getSpostamenti).mockResolvedValueOnce([
+      { id: 's8', daAccountId: 'a', aAccountId: 'z', importo: 30, data: '2026-11-07', createdAt: '' },
+    ]);
+    render(<Pagina />);
+    await screen.findByText('Spostato da A a Vecchio');
+  });
   it('un giorno con soli spostamenti non mostra il totale del giorno', async () => {
     vi.mocked(getSpostamenti).mockResolvedValueOnce([
       { id: 's9', daAccountId: 'a', aAccountId: 'b', importo: 30, data: '2026-11-07', createdAt: '' },

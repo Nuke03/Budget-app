@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { formatEuro, nomeMese } from '@/lib/format';
+import { euroInFrase, formatEuro, nomeMese } from '@/lib/format';
 import { CoverHeader } from './CoverHeader';
 import { GiroBarra } from './fumetti/GiroBarra';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
@@ -30,7 +30,7 @@ import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
 import type { CasaPerHome, PivaHome } from '@/lib/loadHomeData';
 import { totaleInSospeso } from '@/lib/calculations/piva';
-import { maturatoPerCassetto, type Rientro, type SituazioneRientroConto } from '@/lib/calculations/rientri';
+import { spesoDaRientrare, type Rientro, type SituazioneRientroConto } from '@/lib/calculations/rientri';
 import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
@@ -47,8 +47,6 @@ export interface GoalWithAccantonato extends BudgetGoal {
 // Scritta dal foglio di aggiunta dopo un salvataggio: l'id della riga appena creata.
 const CHIAVE_REGISTRATO = 'libretto:registrato';
 
-// Nelle frasi gli importi tondi si scrivono senza decimali: "45 €".
-const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
 
 export function HomeDashboard({
   disponibileLibero,
@@ -198,7 +196,7 @@ export function HomeDashboard({
         tipo: 'cassetto',
         id: g.id,
         nome: g.nome,
-        spesoDaRientrare: Math.max(0, Math.round(((g.specoCollegato ?? 0) - maturatoPerCassetto(rientri, g.id, oggi)) * 100) / 100),
+        spesoDaRientrare: spesoDaRientrare(g.specoCollegato, rientri, g.id, oggi),
       })),
     ...(casa?.aggiunta?.obiettivi ?? [])
       .filter((g) => g.stato === 'aperto')
@@ -207,6 +205,7 @@ export function HomeDashboard({
         id: g.id,
         nome: g.nome,
         householdId: casa!.aggiunta!.householdId,
+        spesoDaRientrare: casa!.aggiunta!.spesoDaRientrare?.[g.id] ?? 0,
       })),
   ];
   const altriDiCasa = (casa?.aggiunta?.nomi ?? []).filter((n) => n.userId !== casa?.aggiunta?.meUserId).map((n) => n.nome);

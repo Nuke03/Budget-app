@@ -13,7 +13,7 @@ import { leggiSessione } from '@/lib/utenteOLogin';
 import { righeNeutreAccantonamenti, righeNeutreStorico, type RigaNeutra } from '@/lib/calculations/casa/righeNeutre';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { annullaAccantonamento, getAccantonamenti } from '@/lib/data/piva';
-import { getAccounts } from '@/lib/data/accounts';
+import { getAccounts, getContiArchiviati } from '@/lib/data/accounts';
 import { annullaSpostamento, getSpostamenti } from '@/lib/data/spostamenti';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
@@ -34,6 +34,7 @@ export default function HistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [contiArchiviati, setContiArchiviati] = useState<{ id: string; nome: string }[]>([]);
   const [goals, setGoals] = useState<BudgetGoal[]>([]);
   const [righeNeutre, setRigheNeutre] = useState<RigaNeutra[]>([]);
   const [righeTasse, setRigheTasse] = useState<RigaNeutra[]>([]);
@@ -66,6 +67,8 @@ export default function HistoryPage() {
     const tasseInCorso = caricaRigheTasse(supabase, da).catch(() => [] as RigaNeutra[]);
     // Gli spostamenti sono un di più, come la casa: se non si leggono lo storico resta intero.
     const spostamentiInCorso = getSpostamenti(supabase, da || undefined).catch(() => [] as Spostamento[]);
+    // Anche i nomi dei conti archiviati, per uno spostamento da o verso di loro.
+    const archiviatiInCorso = getContiArchiviati(supabase).catch(() => [] as { id: string; nome: string }[]);
     const [tx, cats, accs, openGoals] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da }),
       getCategories(supabase),
@@ -79,6 +82,8 @@ export default function HistoryPage() {
     setGoals(openGoals);
     setLetteDal(da);
     setCaricato(true);
+    const archiviatiLetti = await archiviatiInCorso;
+    if (lettura === ultimaLettura.current) setContiArchiviati(archiviatiLetti);
     const spostamentiLetti = await spostamentiInCorso;
     if (lettura === ultimaLettura.current) setSpostamenti(spostamentiLetti);
     const righeCasa = await casaInCorso;
@@ -275,7 +280,7 @@ export default function HistoryPage() {
     new Date(),
     rangePersonalizzato
   );
-  const nomeConto = (id: string | null) => accounts.find((a) => a.id === id)?.nome ?? 'un conto';
+  const nomeConto = (id: string | null) => (accounts.find((a) => a.id === id) ?? contiArchiviati.find((a) => a.id === id))?.nome ?? 'un conto';
   const righeSpostamenti: RigaSpostamento[] = filterTransactionsByPeriodo(
     spostamenti
       .filter((s) => !nascoste.has(`sp-${s.id}`))

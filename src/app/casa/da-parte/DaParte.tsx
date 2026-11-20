@@ -16,7 +16,7 @@ import type { PlanItem } from '@/lib/types';
 import { GoalsList } from '@/app/goals/GoalsList';
 import { closeGoal } from '@/lib/data/goals';
 import { fermaRientro } from '@/lib/data/rientri';
-import { ultimoMeseRientro, type Rientro } from '@/lib/calculations/rientri';
+import { rientriDaMostrare, rientroInCorso, type Rientro } from '@/lib/calculations/rientri';
 import { RigaRientro } from '@/app/rientri/RigaRientro';
 import { useEliminaConAnnulla } from '../../AnnullaProvider';
 import { ConfermaPesante } from '../../ConfermaPesante';
@@ -231,12 +231,10 @@ export function DaParte({
                 >
                   L&apos;ho pagato
                 </button>
-                {rientri
-                  .filter((r) => r.goalId === g.id && r.stato === 'aperto' && oggi.slice(0, 7) <= ultimoMeseRientro(r))
-                  .map((r) => (
-                    <RigaRientro key={r.id} rientro={r} onFerma={() => fermaERinfresca(r.id)} />
-                  ))}
-                {!rientri.some((r) => r.goalId === g.id && r.stato === 'aperto' && oggi.slice(0, 7) <= ultimoMeseRientro(r)) &&
+                {rientriDaMostrare(rientri, g.id, oggi).map((r) => (
+                  <RigaRientro key={r.id} rientro={r} onFerma={() => fermaERinfresca(r.id)} />
+                ))}
+                {!rientri.some((r) => r.goalId === g.id && rientroInCorso(r, oggi)) &&
                 (g.specoCollegato ?? 0) > 0 ? (
                   <Link href={`/?rimetti=${g.id}`} className={`${CLASSE_LINK} self-start`}>
                     Rimetti a rate

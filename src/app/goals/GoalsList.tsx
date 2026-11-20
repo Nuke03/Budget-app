@@ -5,7 +5,7 @@ import type { Spiegazione } from '@/lib/calculations/casa/spiegazioni';
 import { ComeSiCalcola } from '@/app/casa/ComeSiCalcola';
 import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
-import { rataRientro, ultimoMeseRientro, type Rientro } from '@/lib/calculations/rientri';
+import { rataRientro, rientriDaMostrare, rientroInCorso, type Rientro } from '@/lib/calculations/rientri';
 import { RigaRientro } from '@/app/rientri/RigaRientro';
 import { HoMessoDaParte } from './HoMessoDaParte';
 import type { BudgetGoal, Category } from '@/lib/types';
@@ -74,12 +74,11 @@ export function GoalsList({
     <ul className="flex flex-col gap-3.5">
       {goals.map((g, i) => {
         const tuttoSubito = g.modalita === 'bloccato';
-        // I rientri aperti verso questo cassetto, finché non è passato il loro ultimo mese.
-        const rientriCassetto = (rientri ?? []).filter(
-          (r) => r.goalId === g.id && r.stato === 'aperto' && oggi.slice(0, 7) <= ultimoMeseRientro(r)
-        );
+        // I rientri da far vedere sotto la card: quelli in corso e i fermati non finiti.
+        const rientriCassetto = rientriDaMostrare(rientri ?? [], g.id, oggi);
+        const rientriInCorso = rientriCassetto.filter((r) => rientroInCorso(r, oggi));
         // Quanto di un rientro in corso si propone con "Ho messo da parte": la sua rata di questo mese.
-        const quotaConRientri = (g.quotaMensile ?? 0) + rientriCassetto.reduce((t, r) => t + rataRientro(r), 0);
+        const quotaConRientri = (g.quotaMensile ?? 0) + rientriInCorso.reduce((t, r) => t + rataRientro(r), 0);
         const quotaProposta = Math.round((quotaConRientri + Number.EPSILON) * 100) / 100;
         const categoriaNome = g.categoriaId
           ? categories.find((c) => c.id === g.categoriaId)?.nome
@@ -186,7 +185,7 @@ export function GoalsList({
             {rientriCassetto.map((r) => (
               <RigaRientro key={r.id} rientro={r} onFerma={() => onFermaRientro?.(r.id) ?? Promise.resolve()} />
             ))}
-            {rientri && rientriCassetto.length === 0 && (g.specoCollegato ?? 0) > 0 ? (
+            {rientri && rientriInCorso.length === 0 && (g.specoCollegato ?? 0) > 0 ? (
               <Link
                 href={`/?rimetti=${g.id}`}
                 className="mt-2 inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark"

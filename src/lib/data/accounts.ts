@@ -38,6 +38,16 @@ export async function getAccounts(supabase: SupabaseClient, scope: Scope = PERSO
   return (data as AccountRow[]).map(mapRow);
 }
 
+// I conti archiviati personali, solo per leggerne il nome (lo storico di uno spostamento da o verso di loro).
+export async function getContiArchiviati(supabase: SupabaseClient): Promise<{ id: string; nome: string }[]> {
+  const { data, error } = await applyScope(supabase.from('accounts').select('id, nome'), PERSONALE).eq(
+    'archiviato',
+    true
+  );
+  if (error) throw error;
+  return (data ?? []) as { id: string; nome: string }[];
+}
+
 export async function createAccount(
   supabase: SupabaseClient,
   input: { nome: string; saldoAttuale: number; contaInDisponibile: boolean; targetSaldo: number | null },

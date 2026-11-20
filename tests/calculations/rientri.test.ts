@@ -3,6 +3,9 @@ import {
   maturatoPerCassetto,
   maturatoRientro,
   rataRientro,
+  rientriDaMostrare,
+  rientroInCorso,
+  spesoDaRientrare,
   situazioneRientriConti,
   totaleDaSpostare,
   ultimoMeseRientro,
@@ -142,5 +145,72 @@ describe('situazioneRientriConti', () => {
     const b = rientro({ id: 'b', accountId: 'risp', importo: 100 });
     const res = situazioneRientriConti([a, b], [], pesano, '2026-11-28');
     expect(totaleDaSpostare(res)).toBe(66.66);
+  });
+});
+
+describe('rate vere, senza drift', () => {
+  it('12 rate da 33,33 su 400 danno esattamente 400', () => {
+    const r = rientro({ importo: 400, mesi: 12, creatoIl: '2026-01-10' });
+    expect(rataRientro(r)).toBe(33.33);
+    expect(maturatoRientro(r, '2026-11-10')).toBe(366.63);
+    expect(maturatoRientro(r, '2026-12-10')).toBe(400);
+    expect(maturatoRientro(r, '2027-06-10')).toBe(400);
+  });
+});
+
+describe('ultimoMeseRientro a cavallo d anno', () => {
+  it('partenza a dicembre, 12 mesi: finisce a novembre dopo', () => {
+    expect(ultimoMeseRientro({ creatoIl: '2026-12-15', mesi: 12 })).toBe('2027-11');
+  });
+});
+
+describe('spostamenti e rientri sullo stesso conto', () => {
+  it('uno spostamento con data uguale a creatoIl conta', () => {
+    const r = rientro({ accountId: 'risp', creatoIl: '2026-11-20' });
+    const [s] = situazioneRientriConti([r], [spost({ data: '2026-11-20', importo: 100 })], pesano, '2026-11-20');
+    expect(s.spostato).toBe(100);
+  });
+  it('un rientro chiuso e uno aperto: lo spostamento va all aperto', () => {
+    const chiuso = rientro({ id: 'a', accountId: 'risp', creatoIl: '2026-10-01', stato: 'chiuso', fermatoIl: '2026-10-20' });
+    const aperto = rientro({ id: 'b', accountId: 'risp', creatoIl: '2026-11-01' });
+    const sit = situazioneRientriConti([chiuso, aperto], [spost({ data: '2026-11-25', importo: 100 })], pesano, '2026-11-28');
+    expect(sit.find((x) => x.rientro.id === 'a')!.spostato).toBe(0);
+    expect(sit.find((x) => x.rientro.id === 'b')!.spostato).toBe(100);
+  });
+});
+
+describe('rientroInCorso', () => {
+  const r = rientro({ creatoIl: '2026-11-20', mesi: 3 }); // nov, dic, gen
+  it('solo fra il primo e l ultimo mese', () => {
+    expect(rientroInCorso(r, '2026-10-31')).toBe(false);
+    expect(rientroInCorso(r, '2026-11-20')).toBe(true);
+    expect(rientroInCorso(r, '2027-01-31')).toBe(true);
+    expect(rientroInCorso(r, '2027-02-01')).toBe(false);
+  });
+  it('fermato non e in corso', () => {
+    expect(rientroInCorso({ ...r, stato: 'fermato', fermatoIl: '2026-12-01' }, '2026-12-02')).toBe(false);
+  });
+});
+
+describe('rientriDaMostrare', () => {
+  const g = { goalId: 'g1' };
+  it('aperti in corso e fermati non finiti; non chiusi, non finiti, non altri', () => {
+    const aperto = rientro({ id: 'a', ...g, creatoIl: '2026-11-01' });
+    const scaduto = rientro({ id: 'b', ...g, creatoIl: '2026-01-01' });
+    const fermato = rientro({ id: 'c', ...g, creatoIl: '2026-10-01', stato: 'fermato', fermatoIl: '2026-11-05' });
+    const fermatoFinito = rientro({ id: 'd', ...g, creatoIl: '2026-08-01', stato: 'fermato', fermatoIl: '2026-10-05' });
+    const chiuso = rientro({ id: 'e', ...g, stato: 'chiuso', fermatoIl: '2026-11-05' });
+    const altro = rientro({ id: 'f', goalId: 'g2', creatoIl: '2026-11-01' });
+    const ids = rientriDaMostrare([aperto, scaduto, fermato, fermatoFinito, chiuso, altro], 'g1', '2026-11-20').map((x) => x.id);
+    expect(ids).toEqual(['a', 'c']);
+  });
+});
+
+describe('spesoDaRientrare', () => {
+  it('speso meno maturato, mai sotto zero', () => {
+    const r = rientro({ goalId: 'g1', creatoIl: '2026-11-01' }); // maturato 100 a novembre
+    expect(spesoDaRientrare(250, [r], 'g1', '2026-11-20')).toBe(150);
+    expect(spesoDaRientrare(50, [r], 'g1', '2026-11-20')).toBe(0);
+    expect(spesoDaRientrare(undefined, [r], 'g1', '2026-11-20')).toBe(0);
   });
 });

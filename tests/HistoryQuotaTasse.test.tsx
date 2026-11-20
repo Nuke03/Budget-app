@@ -18,6 +18,7 @@ vi.mock('@/app/add/AddTransactionForm', () => ({ AddTransactionForm: () => null 
 vi.mock('@/lib/data/categories', () => ({ getCategories: async () => [] }));
 vi.mock('@/lib/data/accounts', () => ({
   getAccounts: async () => [{ id: 'a', nome: 'A', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null }],
+  getContiArchiviati: async () => [],
   updateAccountBalance: vi.fn(),
 }));
 vi.mock('@/lib/data/goals', () => ({ getOpenGoals: async () => [], createGoal: vi.fn() }));

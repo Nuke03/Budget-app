@@ -26,6 +26,8 @@ export interface CasaAggiunta {
   conti: Account[];
   categorie: Category[];
   obiettivi: BudgetGoal[];
+  // Solo per la Home: per ogni fondo, quanto è stato speso e non è ancora rientrato (da qui parte "Rimetti a rate").
+  spesoDaRientrare?: Record<string, number>;
 }
 
 export interface CasaData {

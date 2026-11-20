@@ -114,7 +114,7 @@ describe('Home: foglio Rimetti a rate dall indirizzo', () => {
         goals={[{ id: 'g1', nome: 'Vacanza', stato: 'aperto', accantonato: 0, specoCollegato: 300 } as never]}
         rientri={[{ id: 'r1', goalId: 'g1', accountId: null, importo: 100, mesi: 2, creatoIl: '2026-11-01', stato: 'aperto', fermatoIl: null } as never]}
         casa={{
-          aggiunta: { householdId: 'h1', meUserId: 'me', nomi: [{ userId: 'me', nome: 'Fabio' }, { userId: 'm', nome: 'Miriam' }], conti: [], categorie: [], obiettivi: [{ id: 'g9', nome: 'Gas', stato: 'aperto' }] },
+          aggiunta: { householdId: 'h1', meUserId: 'me', nomi: [{ userId: 'me', nome: 'Fabio' }, { userId: 'm', nome: 'Miriam' }], conti: [], categorie: [], obiettivi: [{ id: 'g9', nome: 'Gas', stato: 'aperto' }], spesoDaRientrare: { g9: 120 } },
           stato: null,
         } as never}
         piva={{ contoTasseId: 'tasse', categoriaFatturatoId: 'x', percentuale: 20, inSospeso: [], stipendio: null, scadenze: [], fatture: [] } as never}
@@ -131,7 +131,7 @@ describe('Home: foglio Rimetti a rate dall indirizzo', () => {
     expect(p.destinazioni).toEqual([
       { tipo: 'conto', id: 'ris', nome: 'Risparmio' },
       { tipo: 'cassetto', id: 'g1', nome: 'Vacanza', spesoDaRientrare: 250 },
-      { tipo: 'cassetto-casa', id: 'g9', nome: 'Gas', householdId: 'h1' },
+      { tipo: 'cassetto-casa', id: 'g9', nome: 'Gas', householdId: 'h1', spesoDaRientrare: 120 },
     ]);
     expect(p.notaCasa).toBe('Lo vedrà anche Miriam.');
     expect(replace).toHaveBeenCalledWith('/');

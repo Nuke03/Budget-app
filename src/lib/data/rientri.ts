@@ -66,6 +66,8 @@ export async function creaRientro(
   if ((input.goalId === null) === (input.accountId === null)) {
     throw new Error('Serve un obiettivo oppure un conto, non entrambi');
   }
+  // La casa ha cassetti, non conti: lo rifiuta anche il database, qui si dice subito.
+  if (input.accountId !== null && scopeHouseholdId(scope) !== null) throw new Error('Rientro non valido');
   const { data, error } = await supabase
     .from('rientri')
     .insert({

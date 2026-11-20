@@ -238,6 +238,18 @@ describe('DaParte: rientri', () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 
+  it('un rientro fermato non finito resta sulla card, senza Ferma', () => {
+    monta({
+      fondi: [fondo],
+      rientri: [
+        { id: 'r1', userId: 'u', householdId: 'h1', goalId: 'g1', accountId: null, importo: 300, mesi: 3,
+          creatoIl: '2026-10-01', stato: 'fermato', fermatoIl: '2026-11-05' },
+      ],
+    });
+    expect(screen.getByText('Rientro fermato: 200 € rimessi su 300 €')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ferma' })).toBeNull();
+  });
+
   it('un fondo con speso collegato e nessun rientro: link Rimetti a rate', () => {
     monta({ fondi: [{ ...fondo, specoCollegato: 80 }], rientri: [] });
     expect(screen.getByRole('link', { name: 'Rimetti a rate' })).toHaveAttribute('href', '/?rimetti=g1');

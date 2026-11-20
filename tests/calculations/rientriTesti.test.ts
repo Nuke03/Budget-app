@@ -25,7 +25,7 @@ describe('fraseRientro', () => {
     expect(fraseRientro(rientro())).toBe('Rientro: 100 € al mese fino a gennaio');
   });
   it('un rientro fermato non promette niente', () => {
-    expect(fraseRientro(rientro({ stato: 'fermato', fermatoIl: '2026-12-01' }))).toBe('Rientro fermato');
+    expect(fraseRientro(rientro({ stato: 'fermato', fermatoIl: '2026-12-01' }))).toBe('Rientro fermato: 200 € rimessi su 300 €');
   });
   it('niente parole vietate', () => {
     const testo = [fraseRata(300, 3, '2026-11-20'), fraseRientro(rientro())].join(' ').toLowerCase();

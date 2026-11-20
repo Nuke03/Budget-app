@@ -14,7 +14,9 @@ import {
   type Rientro,
   type SituazioneRientroConto,
 } from '@/lib/calculations/rientri';
-import { PERSONALE } from '@/lib/data/scope';
+import { PERSONALE, casa as scopeCasa } from '@/lib/data/scope';
+import { getRientri } from '@/lib/data/rientri';
+import { spesoDaRientrare } from '@/lib/calculations/rientri';
 import { computeDisponibileLibero, riservatoObiettivi } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
 import {
@@ -172,6 +174,27 @@ function inizioFinestra(oggi: string): string {
   return inizioMesiFa(oggi, 3);
 }
 
+// Per "Rimetti a rate" sui fondi di casa: quanto è stato speso e non ancora rientrato. Se non si legge,
+// la cifra non si propone, ma la casa resta.
+async function conSpesoDaRientrare(supabase: SupabaseClient, aggiunta: CasaAggiunta, now: Date): Promise<CasaAggiunta> {
+  try {
+    const scope = scopeCasa(aggiunta.householdId);
+    const oggi = oggiRomaISO(now);
+    const [speso, rientri] = await Promise.all([
+      getSpecoCollegatoPerObiettivi(supabase, aggiunta.obiettivi, now, scope),
+      getRientri(supabase, scope).catch(() => [] as Rientro[]),
+    ]);
+    return {
+      ...aggiunta,
+      spesoDaRientrare: Object.fromEntries(
+        aggiunta.obiettivi.map((g) => [g.id, spesoDaRientrare(speso[g.id], rientri, g.id, oggi)])
+      ),
+    };
+  } catch {
+    return aggiunta;
+  }
+}
+
 // La parte di casa non deve mai rompere la home personale. Se non si legge la casa corrente
 // si apre come senza casa; se si legge ma non il suo stato, si tiene il numero personale e
 // si segnala che la quota non è inclusa.
@@ -189,7 +212,9 @@ async function casaOpzionale(
   }
   if (!corrente) return null;
   const [aggiunta, stato] = await Promise.all([
-    loadCasaAggiunta(supabase, corrente).catch(() => null),
+    loadCasaAggiunta(supabase, corrente)
+      .then((a) => conSpesoDaRientrare(supabase, a, now))
+      .catch(() => null),
     loadCasaStato(supabase, corrente, now).catch(() => null),
   ]);
   return { aggiunta, stato };

@@ -79,6 +79,13 @@ describe('creaRientro', () => {
     await expect(creaRientro(client, input)).rejects.toThrow();
     expect(from).not.toHaveBeenCalled();
   });
+  it('rifiuta nel client un conto con lo spazio della casa', async () => {
+    const { client, from } = fake({ data: { id: 'x' }, error: null });
+    await expect(
+      creaRientro(client, { ...base, goalId: null, accountId: 'a1' }, casa('h1'))
+    ).rejects.toThrow('Rientro non valido');
+    expect(from).not.toHaveBeenCalled();
+  });
   it('rilancia l errore del database', async () => {
     const { client } = fake({ data: null, error: new Error('rls') });
     await expect(creaRientro(client, base)).rejects.toThrow('rls');
