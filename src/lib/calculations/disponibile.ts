@@ -15,7 +15,9 @@ export function computeDisponibileLibero(
   riservaVersamento = 0,
   riservaDebiti = 0,
   // Le quote delle tasse degli incassi non ancora spostate sul conto tasse.
-  riservaPiva = 0
+  riservaPiva = 0,
+  // Le somme che i rientri chiedono di spostare sui conti risparmio, non ancora spostate.
+  riservaRientri = 0
 ): number {
   const saldoDisponibile = accounts
     .filter((a) => a.contaInDisponibile)
@@ -25,5 +27,5 @@ export function computeDisponibileLibero(
 
   // Il versamento alla casa e i debiti verso gli altri membri sono già "usati": si tolgono come gli obiettivi.
   // Anche le quote delle tasse ancora sul conto sono già "usate".
-  return saldoDisponibile - riservato - riservaVersamento - riservaDebiti - riservaPiva;
+  return saldoDisponibile - riservato - riservaVersamento - riservaDebiti - riservaPiva - riservaRientri;
 }

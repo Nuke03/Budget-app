@@ -113,6 +113,18 @@ describe('computeDisponibileLibero', () => {
     expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 0, 0, 82)).toBe(918);
   });
 
+  it('sottrae riservaRientri: saldo 1000, da spostare 100 dà 900', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 0, 0, 0, 100)).toBe(900);
+  });
+
+  it('con riservaRientri 0 il risultato non cambia', () => {
+    const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
+    expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 777, 0, 82, 0)).toBe(
+      computeDisponibileLibero(accounts, [], new Date(2026, 5, 1), 777, 0, 82)
+    );
+  });
+
   it('i parametri omessi valgono 0', () => {
     const accounts: AccountBalance[] = [{ saldoAttuale: 1000, contaInDisponibile: true }];
     expect(computeDisponibileLibero(accounts, [], new Date(2026, 5, 1))).toBe(1000);

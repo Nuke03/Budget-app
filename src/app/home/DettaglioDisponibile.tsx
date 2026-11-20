@@ -42,6 +42,7 @@ export function DettaglioDisponibile({
   casa,
   riservaPiva = 0,
   cuscinetto = 0,
+  daSpostare = 0,
 }: {
   accounts: Account[];
   goals: Obiettivo[];
@@ -50,6 +51,8 @@ export function DettaglioDisponibile({
   riservaPiva?: number;
   // Quanto hai oltre lo stipendio di questo mese: la Home non lo mostra come disponibile.
   cuscinetto?: number;
+  // Le somme dei rientri da spostare sui conti risparmio, non ancora spostate.
+  daSpostare?: number;
 }) {
   const conti = accounts.filter((a) => a.contaInDisponibile);
   const esclusi = accounts.filter((a) => !a.contaInDisponibile);
@@ -119,6 +122,12 @@ export function DettaglioDisponibile({
             nota="Ce l'hai, ma non lo conto nel disponibile"
             valore={`-${formatEuro(cuscinetto)}`}
           />
+        </Gruppo>
+      ) : null}
+
+      {daSpostare > 0 ? (
+        <Gruppo titolo="Da spostare" subtotale={-daSpostare}>
+          <Riga nome="Da spostare sui conti risparmio" valore={`-${formatEuro(daSpostare)}`} />
         </Gruppo>
       ) : null}
 
