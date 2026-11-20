@@ -61,4 +61,33 @@ describe('fumetti visti', () => {
     segnaGiroInQuestaApertura();
     expect(giroInQuestaApertura()).toBe(true);
   });
+
+  it('se solo setItem fallisce, il visto vale comunque per la sessione', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    expect(eVisto('u1', 'casa')).toBe(false);
+    segnaVisto('u1', 'casa');
+    expect(eVisto('u1', 'casa')).toBe(true);
+  });
+
+  it('se solo sessionStorage.setItem fallisce, il giro vale comunque per la sessione', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    segnaGiroInQuestaApertura();
+    expect(giroInQuestaApertura()).toBe(true);
+  });
+
+  it('azzeraFumetti svuota anche la memoria di sessione di quell utente', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    segnaVisto('u1', 'piva');
+    segnaVisto('u2', 'piva');
+    azzeraFumetti('u1');
+    vi.restoreAllMocks();
+    expect(eVisto('u1', 'piva')).toBe(false);
+    expect(eVisto('u2', 'piva')).toBe(true);
+  });
 });

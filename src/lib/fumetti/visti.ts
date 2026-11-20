@@ -27,10 +27,11 @@ export function eVisto(
   versioni: Record<FumettoId, number> = VERSIONI_FUMETTI,
 ): boolean {
   const k = chiave(userId, id, versioni[id]);
+  if (memoria.has(k)) return true;
   try {
     return window.localStorage.getItem(k) === 'si';
   } catch {
-    return memoria.has(k);
+    return false;
   }
 }
 
@@ -79,10 +80,11 @@ export function segnaGiroInQuestaApertura(): void {
 }
 
 export function giroInQuestaApertura(): boolean {
+  if (giroInMemoria) return true;
   try {
     return window.sessionStorage.getItem(CHIAVE_GIRO_ORA) === 'si';
   } catch {
-    return giroInMemoria;
+    return false;
   }
 }
 
