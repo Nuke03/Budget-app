@@ -141,15 +141,18 @@ export function promemoriaVersamento(
 
 // In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA, poi la lista d'attesa,
 // per ultima la conferma del versamento di un obiettivo.
-export function prossimaCosa(input: {
+export interface InputProssimaCosa {
   inPari: { dal: string; al: string } | null;
-  promemoriaCasa: { testo: string; href?: string }[];
+  // L'id serve al browser per togliere i promemoria rimandati sul telefono (localStorage).
+  promemoriaCasa: { id?: string; testo: string; href?: string }[];
   promemoriaPiva?: PromemoriaPiva[];
   // La voce della lista d'attesa da rivedere: passa per ultima.
   attesa?: { testo: string; href: string } | null;
   // La conferma del versamento mensile di un obiettivo (promemoriaVersamento): passa dopo tutto il resto.
   versamento?: { testo: string; href: string } | null;
-}): Prossimo | null {
+}
+
+export function prossimaCosa(input: InputProssimaCosa): Prossimo | null {
   if (input.inPari) {
     return {
       testo: `Rimettiti in pari: dal ${giornoEMese(input.inPari.dal, input.inPari.al)} non hai segnato spese`,

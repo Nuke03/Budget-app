@@ -50,6 +50,23 @@ export async function leggiPromemoriaUtente(
   };
 }
 
+// Le scelte e i rimandati insieme, con una sola lettura della riga (la Home li vuole tutti e tre).
+export async function leggiPromemoriaUtenteCompleto(
+  supabase: SupabaseClient
+): Promise<{ notificheAttive: boolean | null; nessunaSpesaFinoAl: string | null; rimandati: Rimandati }> {
+  const { data, error } = await supabase
+    .from('promemoria_utente')
+    .select('notifiche_attive, nessuna_spesa_fino_al, rimandati')
+    .maybeSingle();
+  if (error) throw error;
+  const riga = data as { notifiche_attive?: boolean | null; nessuna_spesa_fino_al?: string | null; rimandati?: unknown } | null;
+  return {
+    notificheAttive: riga?.notifiche_attive ?? null,
+    nessunaSpesaFinoAl: riga?.nessuna_spesa_fino_al ?? null,
+    rimandati: pulisciRimandati(riga?.rimandati),
+  };
+}
+
 // "Più tardi" e "Va bene così" dei promemoria della casa: { id: primo giorno in cui ricompaiono }.
 // Stanno nel database, così valgono su ogni telefono.
 export type Rimandati = Record<string, string>;

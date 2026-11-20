@@ -16,7 +16,9 @@ import { SchedaNotifiche } from './home/SchedaNotifiche';
 import { dividiCifra, giornoEMese } from './home/formati';
 import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
-import { useSegnalaCasa } from './CasaSegnale';
+import { useSegnalaCasaSeCe } from './CasaSegnale';
+import { usePromemoriaRimandati } from './casa/rimandaPromemoria';
+import { prossimaCosa, type InputProssimaCosa } from '@/lib/calculations/supporto/home';
 import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
 import type { ArgomentoId } from '@/lib/percorso/tipi';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
@@ -57,7 +59,8 @@ export function HomeDashboard({
   storico,
   andamento,
   consiglio,
-  prossimo,
+  prossimo: prossimoServer,
+  prossimoDati = null,
   notificheAttive = null,
   chiavePubblica = null,
   primiPassi = null,
@@ -80,14 +83,27 @@ export function HomeDashboard({
   andamento: Andamento;
   consiglio: Consiglio;
   prossimo: Prossimo | null;
+  // I dati da cui il server ha calcolato `prossimo`: col browser si tolgono anche i promemoria rimandati solo qui.
+  prossimoDati?: InputProssimaCosa | null;
   notificheAttive?: boolean | null;
   chiavePubblica?: string | null;
   primiPassi?: PrimiPassi | null;
   lezioneDelGiorno?: ArgomentoId | null;
 }) {
   const router = useRouter();
-  // La barra segna la Casa quando il prossimo passo della Home è un promemoria della casa.
-  useSegnalaCasa(prossimo?.tipo === 'casa');
+  // Il server toglie i "Più tardi" del database; il browser toglie anche quelli che il telefono ha solo in
+  // localStorage (stessa memoria della Casa) e ricalcola il prossimo passo.
+  const promemoriaCasa = prossimoDati?.promemoriaCasa ?? [];
+  const { rimandati } = usePromemoriaRimandati(
+    promemoriaCasa.flatMap((p) => (p.id ? [p.id] : [])),
+    oggi ?? oggiRomaISO()
+  );
+  const casaVisibile = promemoriaCasa.filter((p) => !(p.id && rimandati.has(p.id)));
+  const prossimo = prossimoDati
+    ? prossimaCosa({ ...prossimoDati, promemoriaCasa: casaVisibile })
+    : prossimoServer;
+  // La barra segna la Casa se c'è un promemoria della casa non rimandato, anche se il prossimo passo è altro.
+  useSegnalaCasaSeCe(prossimoDati ? casaVisibile.length > 0 : prossimoServer?.tipo === 'casa');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [registratoId, setRegistratoId] = useState<string | null>(null);

@@ -27,6 +27,7 @@ export default async function HomePage() {
       andamento={data.andamento}
       consiglio={data.consiglio}
       prossimo={data.prossimo}
+      prossimoDati={data.prossimoDati}
       notificheAttive={data.notificheAttive}
       primiPassi={data.primiPassi}
       lezioneDelGiorno={data.lezioneDelGiorno}

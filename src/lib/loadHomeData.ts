@@ -19,7 +19,7 @@ import {
 import { anniScadenzeHome, casaDelMese, finestraIncassi, inizioLetturaIncassi, inizioMesiFa, speseUltimiMesi } from '@/lib/pivaHome';
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { accantonatoObiettivo } from '@/lib/calculations/accantonato';
-import { leggiPromemoriaUtente, leggiRimandati } from '@/lib/data/notifiche';
+import { leggiPromemoriaUtenteCompleto } from '@/lib/data/notifiche';
 import { formatEuro } from '@/lib/format';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { calcolaAndamento, type Andamento } from '@/lib/calculations/supporto/andamento';
@@ -33,6 +33,7 @@ import {
   promemoriaVersamento,
   type RigaLibretto,
   type Prossimo,
+  type InputProssimaCosa,
 } from '@/lib/calculations/supporto/home';
 import { creaCategorieIniziali, leggiListaAttesa, leggiPercorso } from '@/lib/data/percorso';
 import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/passi';
@@ -113,6 +114,8 @@ export interface HomeData {
   andamento: Andamento;
   consiglio: Consiglio;
   prossimo: Prossimo | null;
+  // Gli stessi dati da cui è nato `prossimo`, per ricalcolarlo nel browser senza i promemoria rimandati sul telefono.
+  prossimoDati: InputProssimaCosa;
   // I giorni senza niente di segnato (la pagina "in pari"); null se si è in pari.
   inPari: { dal: string; al: string } | null;
   // null: non ha ancora risposto (o non si legge).
@@ -287,7 +290,7 @@ export async function loadHomeBase(
     pivaNonLetta = true;
     return null;
   });
-  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelte, ultimaMia, pivaLetta, rimandati, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
+  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -304,21 +307,25 @@ export async function loadHomeBase(
     casaOpzionale(supabase, userId, today),
     // Una sola lettura: righe, andamento, stime e ultimo giorno segnato.
     getTransactions(supabase, PERSONALE, { da: inizioFinestra(oggi) }),
-    // Le scelte sui promemoria non devono rompere la home.
-    leggiPromemoriaUtente(supabase).catch(() => ({ notificheAttive: null, nessunaSpesaFinoAl: null })),
+    // Le scelte sui promemoria e i "Più tardi" della Casa (che valgono anche qui) stanno nella stessa riga: una
+    // lettura sola. Non devono rompere la home: se non si leggono, niente è rimandato.
+    leggiPromemoriaUtenteCompleto(supabase).catch(() => ({
+      notificheAttive: null,
+      nessunaSpesaFinoAl: null,
+      rimandati: {} as Record<string, string>,
+    })),
     // L'ultima riga scritta da te in qualunque spazio (anche Casa): conta per "in pari".
     ultimaCreazioneUtente(supabase, userId),
     pivaOpzionale(supabase, pivaSettings, today, () => {
       pivaNonLetta = true;
     }),
-    // I "Più tardi" della Casa valgono anche qui; se non si leggono, niente è rimandato.
-    leggiRimandati(supabase).catch(() => ({} as Record<string, string>)),
     // Il percorso non deve rompere la home: se non si legge, i primi passi partono da zero.
     leggiPercorso(supabase).catch(() => ({ utente: null, lezioni: {} as StatiLezioni })),
     // Anche la lista d'attesa non deve rompere la home.
     leggiListaAttesa(supabase).catch(() => [] as VoceAttesa[]),
     pivaSettings,
   ]);
+  const { rimandati, ...scelte } = scelteLette;
   const piva = pivaLetta?.piva ?? null;
   // Con la P.IVA guidata il conto tasse non conta mai nel disponibile, qualunque sia il suo interruttore:
   // sono soldi delle tasse, e contarli due volte (nel saldo e nelle quote) gonfierebbe il numero.
@@ -429,11 +436,13 @@ export async function loadHomeBase(
     scelte.nessunaSpesaFinoAl,
     oggi
   );
-  const prossimo = prossimaCosa({
+  // I dati di prossimaCosa vanno anche al browser: il server toglie i rimandati del database, il browser quelli
+  // che il telefono ha solo in localStorage (se il salvataggio nel database non era riuscito), e ricalcola.
+  const datiProssimo: InputProssimaCosa = {
     inPari,
     promemoriaCasa: promemoriaDaCasa(casa, oggi)
       .filter((p) => !((rimandati[p.id] ?? '') > oggi))
-      .map((p) => ({ testo: p.testo, href: p.azione?.href })),
+      .map((p) => ({ id: p.id, testo: p.testo, href: p.azione?.href })),
     promemoriaPiva: piva
       ? promemoriaPiva(
           { scadenze: piva.scadenze, fatture: piva.fatture, inSospeso: totaleInSospeso(piva.inSospeso), revisioneStipendio: revisione },
@@ -442,7 +451,8 @@ export async function loadHomeBase(
       : [],
     attesa: voceDaRivedere(listaAttesa, oggi),
     versamento: promemoriaVersamento(goalsConSpeso, today),
-  });
+  };
+  const prossimo = prossimaCosa(datiProssimo);
 
   const primiPassi = statoPrimiPassi({
     conti: accounts,
@@ -486,6 +496,7 @@ export async function loadHomeBase(
     andamento,
     consiglio,
     prossimo,
+    prossimoDati: datiProssimo,
     inPari,
     notificheAttive: scelte.notificheAttive,
     primiPassi,

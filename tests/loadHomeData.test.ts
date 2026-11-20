@@ -277,6 +277,17 @@ describe('loadHomeData: P.IVA', () => {
       expect(d.prossimo?.testo).toContain('rimborso');
     });
 
+    it('legge promemoria_utente una volta sola e passa al browser i promemoria della casa con il loro id', async () => {
+      const db = monta({});
+      const spia = vi.spyOn(db.client, 'from');
+      const d = await loadHomeData(db.client, TODAY, 'A');
+      expect(spia.mock.calls.filter(([t]) => t === 'promemoria_utente')).toHaveLength(1);
+      expect(d.prossimoDati.promemoriaCasa.map((p) => p.id)).toEqual(['credito:A']);
+      // i rimandati del database sono già tolti dall'elenco
+      const r = await loadHomeData(monta({ 'credito:A': '2026-11-16' }).client, TODAY, 'A');
+      expect(r.prossimoDati.promemoriaCasa).toEqual([]);
+    });
+
     it('rimandato fino a domani: il prossimo passo non è più quello, e torna il giorno dopo', async () => {
       const d = await loadHomeData(monta({ 'credito:A': '2026-11-16' }).client, TODAY, 'A');
       expect(d.prossimo?.testo ?? '').not.toContain('rimborso');

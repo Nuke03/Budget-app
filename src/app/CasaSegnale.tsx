@@ -29,6 +29,16 @@ export function useSegnalaCasa(attivo: boolean): void {
   }, [imposta, attivo]);
 }
 
+// Per la Home: accende il puntino solo se sa che c'è un promemoria della casa, e non lo spegne mai. La Home non
+// conosce tutti i promemoria della Casa ("Rivedi la quota" si calcola solo lì): tacere non vuol dire che non ce ne
+// sono, quindi un puntino acceso dalla Casa non va spento da qui.
+export function useSegnalaCasaSeCe(esiste: boolean): void {
+  const imposta = useContext(Imposta);
+  useEffect(() => {
+    if (esiste) imposta?.(true);
+  }, [imposta, esiste]);
+}
+
 // Per chi non ha un posto dove chiamare l'hook (ramo senza promemoria).
 export function SegnalaCasa({ attivo }: { attivo: boolean }) {
   useSegnalaCasa(attivo);

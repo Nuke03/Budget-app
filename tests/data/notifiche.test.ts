@@ -6,6 +6,7 @@ import {
   segnaNessunaSpesa,
   unisciRimandati,
   leggiRimandati,
+  leggiPromemoriaUtenteCompleto,
   salvaRimandato,
 } from '@/lib/data/notifiche';
 
@@ -106,6 +107,23 @@ describe('rimandati (Più tardi e Va bene così, per tutti i telefoni)', () => {
     expect(await leggiRimandati(client)).toEqual({ a: '2026-11-20' });
     maybeSingle.mockResolvedValue({ data: null, error: null });
     expect(await leggiRimandati(client)).toEqual({});
+  });
+
+  it('leggiPromemoriaUtenteCompleto legge la riga una volta e torna scelte e rimandati puliti', async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { notifiche_attive: true, nessuna_spesa_fino_al: '2026-11-20', rimandati: { a: '2026-11-20', b: 5 } },
+      error: null,
+    });
+    const select = vi.fn(() => ({ maybeSingle }));
+    const client: any = { from: vi.fn(() => ({ select })) };
+    expect(await leggiPromemoriaUtenteCompleto(client)).toEqual({
+      notificheAttive: true,
+      nessunaSpesaFinoAl: '2026-11-20',
+      rimandati: { a: '2026-11-20' },
+    });
+    expect(client.from).toHaveBeenCalledTimes(1);
+    maybeSingle.mockResolvedValue({ data: null, error: null });
+    expect(await leggiPromemoriaUtenteCompleto(client)).toEqual({ notificheAttive: null, nessunaSpesaFinoAl: null, rimandati: {} });
   });
 
   it("leggiRimandati rilancia l'errore (il chiamante ripiega su localStorage)", async () => {

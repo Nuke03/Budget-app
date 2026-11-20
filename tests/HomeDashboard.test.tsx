@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render as renderRTL, screen, fireEvent, waitFor, within, cleanup, act } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { HomeDashboard as HomeBase } from '@/app/HomeDashboard';
-import { CasaSegnaleProvider, useCasaDaFare } from '@/app/CasaSegnale';
+import { CasaSegnaleProvider, useCasaDaFare, useSegnalaCasa } from '@/app/CasaSegnale';
 
 const replace = vi.hoisted(() => vi.fn());
 vi.mock('@/app/impara/primi-passi/actions', () => ({
@@ -18,6 +18,7 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ rpc }),
 }));
 
+import type { InputProssimaCosa } from '@/lib/calculations/supporto/home';
 import type { PrimiPassi } from '@/lib/calculations/percorso/passi';
 import type { CasaPerHome } from '@/lib/loadHomeData';
 import type { CasaStato } from '@/lib/loadCasaStato';
@@ -765,5 +766,62 @@ describe('HomeDashboard e il puntino della Casa', () => {
       </CasaSegnaleProvider>
     );
     expect(screen.getByTestId('sonda')).toHaveTextContent('false');
+  });
+
+  describe('con i dati del prossimo passo (rimandati letti dal browser)', () => {
+    const casa = (id: string, testo: string) => ({ id, testo, href: '/casa' });
+    const dati = (promemoriaCasa: { id: string; testo: string; href?: string }[]): InputProssimaCosa => ({
+      inPari: null,
+      promemoriaCasa,
+      promemoriaPiva: [],
+      attesa: { testo: 'Ci ripensi?', href: '/impara/attesa' },
+      versamento: null,
+    });
+    const Sonda = sonda;
+    const monta = (prossimoDati: InputProssimaCosa, ingresso = false) =>
+      render(
+        <CasaSegnaleProvider>
+          {ingresso ? <Preimposta /> : null}
+          <HomeDashboard {...base} prossimo={null} prossimoDati={prossimoDati} />
+          <Sonda />
+        </CasaSegnaleProvider>
+      );
+    // Simula Casa che ha già acceso il puntino (es. per "Rivedi la quota", che Home non conosce).
+    function Preimposta() {
+      useSegnalaCasa(true);
+      return null;
+    }
+
+    beforeEach(() => window.localStorage.clear());
+
+    it('un promemoria rimandato nel browser (localStorage) non è più il prossimo: passa il successivo', () => {
+      window.localStorage.setItem('promemoria:credito:u1:2026-11-11', '1');
+      monta(dati([casa('credito:u1', 'In attesa del rimborso: 45 €.')]));
+      expect(screen.queryByText(/In attesa del rimborso/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Ci ripensi\?/)).toBeInTheDocument();
+    });
+
+    it('rimandato con "Va bene così" fino a una data futura vale lo stesso', () => {
+      window.localStorage.setItem('promemoria-fino:quota:spese', '2027-05-11');
+      monta(dati([casa('quota:spese', 'Le spese sono sopra il previsto.')]));
+      expect(screen.queryByText(/sopra il previsto/)).not.toBeInTheDocument();
+    });
+
+    it('non rimandato: resta il promemoria della casa e il puntino si accende', () => {
+      monta(dati([casa('credito:u1', 'In attesa del rimborso: 45 €.')]));
+      expect(screen.getByText(/In attesa del rimborso/)).toBeInTheDocument();
+      expect(screen.getByTestId('sonda')).toHaveTextContent('true');
+    });
+
+    it('c è un promemoria della casa anche se non è il primo della Home: il puntino si accende', () => {
+      monta({ ...dati([casa('credito:u1', 'In attesa del rimborso: 45 €.')]), inPari: { dal: '2026-11-08', al: '2026-11-10' } });
+      expect(screen.getByText(/Rimettiti in pari/)).toBeInTheDocument();
+      expect(screen.getByTestId('sonda')).toHaveTextContent('true');
+    });
+
+    it('se Home non conosce niente della casa non spegne il puntino che Casa ha acceso', () => {
+      monta(dati([]), true);
+      expect(screen.getByTestId('sonda')).toHaveTextContent('true');
+    });
   });
 });
