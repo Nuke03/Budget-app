@@ -51,15 +51,22 @@ describe('migrazione 0013 (statica)', () => {
     for (const t of ['rientri', 'spostamenti'])
       expect(codice).toContain(`alter table public.${t} enable row level security`);
     expect(codice).toMatch(/create policy rientri_personali on public\.rientri for all to authenticated/);
-    expect(codice).toMatch(/create policy rientri_casa on public\.rientri for all to authenticated/);
+    for (const op of ['select', 'insert', 'update', 'delete'])
+      expect(codice).toMatch(new RegExp(`create policy rientri_casa_${op} on public\.rientri for ${op} to authenticated`));
+    const ins = codice.slice(codice.indexOf('create policy rientri_casa_insert'), codice.indexOf('drop policy if exists rientri_casa_update'));
+    expect(ins).toContain('user_id = (select auth.uid())');
+    expect(ins).toContain('public.is_household_writer(household_id)');
+    expect(ins).not.toContain('is_household_member');
+    const sel = codice.slice(codice.indexOf('create policy rientri_casa_select'), codice.indexOf('drop policy if exists rientri_casa_insert'));
+    expect(sel).toContain('public.is_household_member(household_id)');
+    expect(codice).toMatch(/create trigger rientri_forbid_household_change before update on public\.rientri\s+for each row execute function public\.forbid_household_change\(\)/);
     expect(codice).toMatch(
       /create policy spostamenti_proprie on public\.spostamenti for all to authenticated\s+using \(user_id = \(select auth\.uid\(\)\)\)\s+with check \(user_id = \(select auth\.uid\(\)\)\)/,
     );
-    expect(codice).toContain('is_household_member(household_id)');
     expect(codice).toContain('a.conta_in_disponibile = false');
     expect(codice).toContain('not a.archiviato');
     expect(codice).toContain('g.household_id = rientri.household_id');
-    for (const p of ['rientri_personali', 'rientri_casa', 'spostamenti_proprie'])
+    for (const p of ['rientri_personali', 'rientri_casa_insert', 'spostamenti_proprie'])
       expect(codice.indexOf(`drop policy if exists ${p}`)).toBeLessThan(codice.indexOf(`create policy ${p}`));
   });
 

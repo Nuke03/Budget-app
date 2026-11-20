@@ -81,19 +81,47 @@ create policy rientri_personali on public.rientri for all to authenticated
     )
   );
 
--- rientri di casa: li vedono e li scrivono i membri; l'obiettivo deve appartenere a quella casa
-drop policy if exists rientri_casa on public.rientri;
-create policy rientri_casa on public.rientri for all to authenticated
-  using (household_id is not null and public.is_household_member(household_id))
+-- rientri di casa (stesso schema della 0004): li vedono i membri, li scrive chi può scrivere (casa non archiviata).
+-- L'obiettivo deve appartenere a quella casa; chi inserisce è l'autore. Modifica e cancellazione: ogni socio
+-- che può scrivere (user_id e household_id non cambiano mai: li garantisce il trigger qui sotto).
+drop policy if exists rientri_casa_select on public.rientri;
+create policy rientri_casa_select on public.rientri for select to authenticated
+  using (household_id is not null and public.is_household_member(household_id));
+
+drop policy if exists rientri_casa_insert on public.rientri;
+create policy rientri_casa_insert on public.rientri for insert to authenticated
   with check (
     household_id is not null
-    and public.is_household_member(household_id)
+    and user_id = (select auth.uid())
+    and public.is_household_writer(household_id)
     and goal_id is not null
     and exists (
       select 1 from public.budget_goals g
       where g.id = rientri.goal_id and g.household_id = rientri.household_id
     )
   );
+
+drop policy if exists rientri_casa_update on public.rientri;
+create policy rientri_casa_update on public.rientri for update to authenticated
+  using (household_id is not null and public.is_household_writer(household_id))
+  with check (
+    household_id is not null
+    and public.is_household_writer(household_id)
+    and goal_id is not null
+    and exists (
+      select 1 from public.budget_goals g
+      where g.id = rientri.goal_id and g.household_id = rientri.household_id
+    )
+  );
+
+drop policy if exists rientri_casa_delete on public.rientri;
+create policy rientri_casa_delete on public.rientri for delete to authenticated
+  using (household_id is not null and public.is_household_writer(household_id));
+
+-- user_id e household_id di un rientro non cambiano (stessa funzione della 0004)
+drop trigger if exists rientri_forbid_household_change on public.rientri;
+create trigger rientri_forbid_household_change before update on public.rientri
+  for each row execute function public.forbid_household_change();
 
 -- spostamenti: solo i propri (sposta_soldi controlla da sola che i conti siano personali)
 drop policy if exists spostamenti_proprie on public.spostamenti;
@@ -266,6 +294,7 @@ commit;
 -- ricomincia_da_zero si riporta alla versione precedente rieseguendo la sua definizione dalla 0012.
 -- piva_quote_scartate_proprie si riporta alla versione della 0012; adjust_account_balance si riabilita con
 -- grant execute on function public.adjust_account_balance(uuid, numeric) to authenticated;
+-- drop trigger if exists rientri_forbid_household_change on public.rientri;
 -- drop function if exists public.annulla_spostamento(uuid);
 -- drop function if exists public.sposta_soldi(uuid, uuid, numeric, date);
 -- drop table if exists public.spostamenti;
