@@ -55,7 +55,7 @@ Modello: sonnet.
     creatoIl: string; // 'yyyy-MM-dd' Roma
     stato: StatoRientro; fermatoIl: string | null; // 'yyyy-MM-dd'
   }
-  export interface Spostamento { id: string; daAccountId: string; aAccountId: string; importo: number; data: string; createdAt: string }
+  export interface Spostamento { id: string; daAccountId: string | null; aAccountId: string | null; importo: number; data: string; createdAt: string } // null: conto eliminato dopo
   export function rataRientro(r: Pick<Rientro, 'importo' | 'mesi'>): number
   export function maturatoRientro(r: Rientro, oggi: string): number
   export function ultimoMeseRientro(r: Pick<Rientro, 'creatoIl' | 'mesi'>): string // 'yyyy-MM'
@@ -69,7 +69,7 @@ Regole (dalla spec):
 - `rataRientro = arrotonda2(importo / mesi)`.
 - Mese k = mesi di calendario fra il mese di `creatoIl` e il mese di riferimento, più 1. Riferimento: `oggi`, oppure `fermatoIl` se lo stato non è `aperto`. `maturatoRientro = k <= 0 ? 0 : k >= mesi ? importo : min(importo, arrotonda2(rata * k))`.
 - `maturatoPerCassetto`: somma di `maturatoRientro` dei rientri con quel `goalId`, stato `aperto` o `fermato` (non `chiuso`).
-- `situazioneRientriConti`: solo rientri con `accountId`. Spostamenti validi per un conto C: `aAccountId === C`, `contiChePesano.has(daAccountId)`. Ordine: spostamenti per `data` poi `createdAt`; ciascuno va al rientro più vecchio (per `creatoIl`, poi `id`) non `chiuso`, verso C, con `creatoIl <= data` e capacità residua `importo − spostato > 0`; il resto, se avanza, al successivo; quello che avanza ancora non va a nessuno. `daSpostare = stato === 'chiuso' ? 0 : max(0, arrotonda2(maturato − spostato))`. `finito = spostato >= importo`.
+- `situazioneRientriConti`: solo rientri con `accountId`. Spostamenti validi per un conto C: `aAccountId === C`, `daAccountId !== null && contiChePesano.has(daAccountId)`. Ordine: spostamenti per `data` poi `createdAt`; ciascuno va al rientro più vecchio (per `creatoIl`, poi `id`) non `chiuso`, verso C, con `creatoIl <= data` e capacità residua `importo − spostato > 0`; il resto, se avanza, al successivo; quello che avanza ancora non va a nessuno. `daSpostare = stato === 'chiuso' ? 0 : max(0, arrotonda2(maturato − spostato))`. `finito = spostato >= importo`.
 
 - [ ] **Step 1: Test che falliscono** (valori esatti):
   - `rataRientro({ importo: 300, mesi: 3 })` → 100; `rataRientro({ importo: 100, mesi: 3 })` → 33.33.
@@ -142,14 +142,14 @@ Modello: sonnet.
 
 Contenuto (nomi decisi qui):
 - `public.rientri`: `id uuid pk default gen_random_uuid()`, `user_id uuid not null default auth.uid() references auth.users`, `household_id uuid null references households`, `goal_id uuid null references budget_goals on delete cascade`, `account_id uuid null references accounts on delete cascade`, `importo numeric(12,2) not null check (importo > 0 and importo < 1000000000)`, `mesi int not null check (mesi in (2,3,4,6,12))`, `creato_il date not null`, `stato text not null default 'aperto' check (stato in ('aperto','fermato','chiuso'))`, `fermato_il date null`, `created_at timestamptz default now()`; `check ((goal_id is null) <> (account_id is null))`; `check (household_id is null or account_id is null)`; `check ((stato = 'aperto') = (fermato_il is null))`.
-- `public.spostamenti`: `id`, `user_id` (default `auth.uid()`), `da_account_id uuid not null references accounts`, `a_account_id uuid not null references accounts`, `importo numeric(12,2)` con lo stesso check, `data date not null`, `created_at`; `check (da_account_id <> a_account_id)`.
+- `public.spostamenti`: `id`, `user_id` (default `auth.uid()`), `da_account_id uuid null references accounts on delete set null`, `a_account_id uuid null references accounts on delete set null` (come `piva_accantonamenti`: eliminare un conto non è bloccato dagli spostamenti), `importo numeric(12,2)` con lo stesso check, `data date not null`, `created_at`; `check (da_account_id <> a_account_id)`.
 - RLS su `rientri`:
   - personali (`household_id is null`): `using/with check (user_id = auth.uid())`; nel `with check` il cassetto deve essere personale di chi scrive, oppure il conto deve essere di chi scrive, personale, non archiviato, `conta_in_disponibile = false`;
   - di casa: `using/with check (is_household_member(household_id))`; nel `with check` il cassetto deve appartenere a quella casa.
 - RLS su `spostamenti`: `user_id = auth.uid()` in `using` e `with check`.
 - Indici: `rientri(user_id)`, `rientri(household_id)`, `spostamenti(user_id, data)`.
 - `public.sposta_soldi(p_da uuid, p_a uuid, p_importo numeric, p_data date) returns uuid`, `security invoker`, come `accantona_tasse`: valida importo e data (`p_data <= _casa_oggi()`), blocca i due conti in ordine di id `for update`, richiede due conti personali (`household_id is null`) visibili a chi scrive, aggiorna i due saldi, inserisce la riga, ritorna l'id.
-- `public.annulla_spostamento(p_id uuid) returns int`: come `annulla_accantonamento` (cancella e rimette i saldi; 0 se non c'era).
+- `public.annulla_spostamento(p_id uuid) returns int`: come `annulla_accantonamento` (cancella e rimette i saldi dei conti che ci sono ancora; 0 se non c'era).
 - `revoke`/`grant execute` delle due funzioni nuove: solo `authenticated`.
 - `ricomincia_da_zero()`: `create or replace` con il corpo della 0011 più la cancellazione di `rientri` personali e `spostamenti` di chi lo chiama, prima dei conti (per le chiavi esterne).
 - Le tre difese della ROADMAP:
@@ -259,9 +259,11 @@ Foglio, un passo alla volta: "Dove li rimetti?" (pillole o righe: conti risparmi
 
 Menu: voce "Rimetti a rate", riga "Riporta un po' al mese soldi presi dai risparmi", sempre presente, apre `/?rimetti=1`.
 
+"Versa nel cassetto" su un cassetto con conferme e rientri aperti: la cifra proposta da `HoMessoDaParte` è la quota del cassetto più `rataRientro` di ogni rientro aperto verso quel cassetto il cui mese corrente è fra il primo e l'ultimo (prop `quota` già sommata da chi la passa, in `GoalsList`).
+
 Card: sotto il riservato del cassetto (Cassetti e Da parte della Casa) e sotto il saldo del conto, una `RigaRientro` per ogni rientro aperto o fermato non finito: `fraseRientro`, per i conti anche "Da spostare: … €"; "Ferma" (azione di testo, 44px) per gli aperti; "Lascia stare" per i rientri verso conti con `daSpostare > 0`. Un cassetto con speso collegato > 0 e nessun rientro aperto mostra il link "Rimetti a rate" (`/?rimetti=<goalId>`).
 
-- [ ] **Step 1: Test che falliscono:** `fraseRata(300, 3, '2026-11-20')` → `"100 € al mese, da novembre 2026 a gennaio 2027."`; `fraseRata(100, 2, '2027-03-01')` (anno corrente 2027 nei test con orologio finto) → `"50 € al mese, da marzo ad aprile."` (attenzione a "a/ad" davanti a vocale); il foglio crea il rientro con i valori scelti; doppio tocco → una sola creazione; senza destinazioni mostra il link; le card mostrano la riga e chiamano `fermaRientro`/`chiudiRientro`; tutto passa `assertNessunaParolaVietata` e non contiene "autorata", "debito", "rimborso".
+- [ ] **Step 1: Test che falliscono:** `fraseRata(300, 3, '2026-11-20')` → `"100 € al mese, da novembre 2026 a gennaio 2027."`; `fraseRata(100, 2, '2027-03-01')` (anno corrente 2027 nei test con orologio finto) → `"50 € al mese, da marzo ad aprile."` (attenzione a "a/ad" davanti a vocale); il foglio crea il rientro con i valori scelti; doppio tocco → una sola creazione; senza destinazioni mostra il link; le card mostrano la riga e chiamano `fermaRientro`/`chiudiRientro`; un cassetto con conferme e un rientro 300/3 aperto propone in "Ho messo da parte" la sua quota + 100; tutto passa `assertNessunaParolaVietata` e non contiene "autorata", "debito", "rimborso".
 - [ ] **Step 2:** `npx vitest run tests/RimettiARateFoglio.test.tsx tests/RigaRientro.test.tsx tests/calculations/rientriTesti.test.ts` → FAIL.
 - [ ] **Step 3:** Implementa.
 - [ ] **Step 4:** stessi test più `tests/GoalsList.test.tsx tests/DaParte.test.tsx tests/AccountRow.test.tsx` → PASS.
