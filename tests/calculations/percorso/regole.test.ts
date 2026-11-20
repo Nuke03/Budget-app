@@ -196,6 +196,20 @@ describe('lezioneDelGiorno', () => {
     const simili = [entrate[0], tr({ id: 'c', tipo: 'income', importo: 800, data: '2026-09-05' })];
     expect(lezioneDelGiorno({ ...irr, transazioni: simili })).not.toBe('reddito-irregolare');
   });
+  it('3: la soglia è 0,3 e vale da 0,3 in su: 0,29 regolare, 0,3 irregolare', () => {
+    const fondo = [goal({ ruolo: 'imprevisti', accantonato: 0 })];
+    const con = (scorso: number) =>
+      dati({
+        goals: fondo,
+        percorso: percorso({ entrateTipo: 'irregolari' }),
+        transazioni: [
+          tr({ id: 'a', tipo: 'income', importo: 1000, data: '2026-10-05' }),
+          tr({ id: 'b', tipo: 'income', importo: scorso, data: '2026-09-05' }),
+        ],
+      });
+    expect(lezioneDelGiorno(con(710))).not.toBe('reddito-irregolare'); // 290/1000 = 0,29
+    expect(lezioneDelGiorno(con(700))).toBe('reddito-irregolare'); // 300/1000 = 0,3
+  });
   it('4: risparmio-investimento a fondo pieno', () => {
     const pieno = [goal({ ruolo: 'imprevisti', importoTarget: 200, accantonato: 200 })];
     expect(lezioneDelGiorno(dati({ goals: pieno }))).toBe('risparmio-investimento');

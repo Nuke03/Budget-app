@@ -78,6 +78,7 @@ async function passa(ms: number) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   vi.mocked(getTransactions).mockResolvedValue([riga('income')]);
   vi.mocked(getPivaSettings).mockResolvedValue({ attivo: true } as never);
   vi.mocked(getAccantonamenti).mockResolvedValue([accantonamento('t1')]);
@@ -161,6 +162,59 @@ describe('P3: incasso eliminato con la quota già nel conto tasse', () => {
     await apriEElimina();
     await passa(5000);
     expect(getAccantonamenti).not.toHaveBeenCalled();
+    expect(screen.queryByText(/La quota di/)).not.toBeInTheDocument();
+  });
+
+  it('se si lascia lo Storico prima dei 5 secondi la domanda compare alla prossima apertura', async () => {
+    const r = render(
+      <AnnullaProvider>
+        <HistoryPage />
+      </AnnullaProvider>
+    );
+    await waitFor(() => expect(screen.getByText('Seduta')).toBeInTheDocument());
+    await waitFor(() => expect(getPivaSettings).toHaveBeenCalled());
+    for (let i = 0; i < 3; i++) await new Promise<void>((r) => setTimeout(r, 0));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    fireEvent.click(screen.getByLabelText('Elimina transazione'));
+    // si lascia la pagina: l'avviso globale resta e l'eliminazione parte lo stesso
+    r.rerender(<AnnullaProvider>{null}</AnnullaProvider>);
+    await passa(5000);
+    expect(eliminaMovimento).toHaveBeenCalledWith(expect.anything(), 't1');
+    r.rerender(
+      <AnnullaProvider>
+        <HistoryPage />
+      </AnnullaProvider>
+    );
+    await passa(0);
+    expect(screen.getByText('La quota di 82 € è nel conto tasse. La riporto indietro?')).toBeInTheDocument();
+  });
+
+  it('due eliminazioni vicine fanno due domande in fila', async () => {
+    const due = [
+      { ...riga('income'), id: 't1', descrizione: 'Seduta uno' },
+      { ...riga('income'), id: 't2', descrizione: 'Seduta due' },
+    ];
+    vi.mocked(getTransactions).mockResolvedValue(due);
+    vi.mocked(getAccantonamenti).mockResolvedValue([
+      { ...accantonamento('t1'), id: 'pa1', importo: 82 },
+      { ...accantonamento('t2'), id: 'pa2', importo: 41 },
+    ]);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Seduta due')).toBeInTheDocument());
+    await waitFor(() => expect(getPivaSettings).toHaveBeenCalled());
+    for (let i = 0; i < 3; i++) await new Promise<void>((r) => setTimeout(r, 0));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const elimina = screen.getAllByLabelText('Elimina transazione');
+    fireEvent.click(elimina[0]);
+    fireEvent.click(screen.getAllByLabelText('Elimina transazione')[0]);
+    await passa(6000);
+    expect(eliminaMovimento).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/La quota di 82 €/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'No' }));
+    await passa(0);
+    expect(screen.getByText(/La quota di 41 €/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'No' }));
+    await passa(0);
     expect(screen.queryByText(/La quota di/)).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { MESSAGGIO_RISPOSTA_PERSA, rispostaPersa } from '@/lib/registraSpesa';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -156,6 +157,12 @@ export function AddTransactionForm({
   const [nuovoGoalNome, setNuovoGoalNome] = useState('');
   const [nuovoGoalImporto, setNuovoGoalImporto] = useState('');
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  // Se la risposta del server si è persa, il messaggio dice di controllare lo Storico prima di riprovare.
+  const [rispostaPersaMsg, setRispostaPersaMsg] = useState(false);
+  const fallito = (e: unknown) => {
+    setRispostaPersaMsg(rispostaPersa(e));
+    setStatus('error');
+  };
 
   // I conti "solo spesa" (es. un conto di casa che non riceve entrate) non compaiono per le entrate.
   const contiVisibili = accounts.filter((a) => tipo === 'expense' || !idContiSoloSpesa.includes(a.id));
@@ -271,7 +278,7 @@ export function AddTransactionForm({
       setStatus('idle');
       setInCorso(true);
       onSubmit(payload)
-        .catch(() => setStatus('error'))
+        .catch(fallito)
         .finally(() => setInCorso(false));
       return;
     }
@@ -280,7 +287,7 @@ export function AddTransactionForm({
     setImporto('');
     setDescrizione('');
 
-    onSubmit(payload).catch(() => setStatus('error'));
+    onSubmit(payload).catch(fallito);
   }
 
   function cambiaImporto(valore: string) {
@@ -580,7 +587,7 @@ export function AddTransactionForm({
         {(status === 'error' || (bloccato && !!erroreMessaggio)) && (
           <p role="alert" className="flex items-center justify-center gap-2 text-sm font-medium text-danger">
             <AlertCircle size={18} />
-            {erroreMessaggio ?? 'Salvataggio fallito, controlla la connessione e riprova.'}
+            {erroreMessaggio ?? (rispostaPersaMsg ? MESSAGGIO_RISPOSTA_PERSA : 'Salvataggio fallito, controlla la connessione e riprova.')}
           </p>
         )}
       </form>
@@ -797,7 +804,7 @@ export function AddTransactionForm({
       {status === 'error' && (
         <p className="flex items-center justify-center gap-2 text-sm font-medium text-danger">
           <AlertCircle size={18} />
-          Salvataggio fallito, controlla la connessione e riprova.
+          {rispostaPersaMsg ? MESSAGGIO_RISPOSTA_PERSA : 'Salvataggio fallito, controlla la connessione e riprova.'}
         </p>
       )}
     </form>

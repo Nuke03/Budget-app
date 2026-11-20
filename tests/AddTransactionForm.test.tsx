@@ -25,6 +25,23 @@ const goals = [
 ];
 
 describe('AddTransactionForm', () => {
+  it('con la risposta del server persa dice di controllare lo Storico; con un altro errore il messaggio di sempre', async () => {
+    const { RispostaPersaError } = await import('@/lib/registraSpesa');
+    const onSubmit = vi.fn().mockRejectedValue(new RispostaPersaError());
+    const { unmount } = render(<AddTransactionForm categories={categories} accounts={accounts} onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '26' } });
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Spesa' } });
+    fireEvent.click(screen.getByText('Salva'));
+    expect(await screen.findByText('Non so se è stato salvato. Controlla nello Storico prima di riprovare.')).toBeInTheDocument();
+    unmount();
+    const altro = vi.fn().mockRejectedValue(new Error('boom'));
+    render(<AddTransactionForm categories={categories} accounts={accounts} onSubmit={altro} />);
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '26' } });
+    fireEvent.change(screen.getByLabelText('Descrizione'), { target: { value: 'Spesa' } });
+    fireEvent.click(screen.getByText('Salva'));
+    expect(await screen.findByText('Salvataggio fallito, controlla la connessione e riprova.')).toBeInTheDocument();
+  });
+
   it('chiama onSubmit con i valori del form e mostra subito la transazione come aggiunta (optimistic UI)', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
 

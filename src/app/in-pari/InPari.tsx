@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { segnaNessunaSpesa } from '@/lib/data/notifiche';
-import { registraMovimento, type SpazioSpesa } from '@/lib/registraSpesa';
+import { MESSAGGIO_RISPOSTA_PERSA, registraMovimento, rispostaPersa, type SpazioSpesa } from '@/lib/registraSpesa';
 import { righeDaRiepilogo, scegliConti, type RigaStima } from '@/lib/calculations/supporto/inPari';
 import type { Andamento } from '@/lib/calculations/supporto/andamento';
 import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
@@ -150,11 +150,11 @@ export function InPari({
       setInSospeso(false);
       setFatto(true);
       router.refresh();
-    } catch {
+    } catch (e) {
       // Se non è stato scritto niente, le modifiche successive valgono di nuovo.
       const qualcosaCreato = createRef.current.some(Boolean);
       if (!qualcosaCreato) righeRef.current = null;
-      setErrore(qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
+      setErrore(rispostaPersa(e) ? MESSAGGIO_RISPOSTA_PERSA : qualcosaCreato ? MESSAGGIO_PARZIALE : MESSAGGIO_ERRORE);
     } finally {
       setOccupato(false);
     }

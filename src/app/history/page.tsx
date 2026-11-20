@@ -1,5 +1,6 @@
 'use client';
 
+import { aggiungiQuotaDaRiportare, ascoltaQuoteDaRiportare, quoteDaRiportare, togliQuotaDaRiportare, type QuotaDaRiportare } from '@/lib/quoteDaRiportare';
 import { useEffect, useRef, useState } from 'react';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
@@ -42,7 +43,12 @@ export default function HistoryPage() {
   // Gli spostamenti sul conto tasse letti con lo storico: servono a sapere, prima di eliminare un incasso, se la sua quota è già nel conto.
   const accantonamenti = useRef<PivaAccantonamento[]>([]);
   // Dopo aver eliminato un incasso la cui quota era già nel conto tasse: la domanda con un tocco.
-  const [quotaDaRiportare, setQuotaDaRiportare] = useState<{ id: string; importo: number } | null>(null);
+  // Sta nella memoria di sessione: se si lascia lo Storico prima dell'eliminazione, la domanda aspetta la prossima apertura.
+  const [codaQuote, setCodaQuote] = useState<QuotaDaRiportare[]>([]);
+  const quotaDaRiportare = codaQuote[0] ?? null;
+  const setQuotaDaRiportare = (q: null) => {
+    if (q === null && quotaDaRiportare) togliQuotaDaRiportare(quotaDaRiportare.id);
+  };
   const [riportoInCorso, setRiportoInCorso] = useState(false);
   const [riportoFallito, setRiportoFallito] = useState(false);
   const [periodo, setPeriodo] = useState<Periodo>('mese');
@@ -154,6 +160,11 @@ export default function HistoryPage() {
     refresh().catch(fail);
   }, [fail]);
 
+  useEffect(() => {
+    setCodaQuote(quoteDaRiportare());
+    return ascoltaQuoteDaRiportare(() => setCodaQuote(quoteDaRiportare()));
+  }, []);
+
   function handleDelete(t: Transaction) {
     // Si guarda ora, prima che l'eliminazione diventi effettiva: dopo, il database stacca l'incasso dal suo spostamento.
     const spostamento =
@@ -177,7 +188,7 @@ export default function HistoryPage() {
         // L'incasso è andato (anche dopo l'attesa dell'Annulla): ora si chiede della quota rimasta nel conto tasse.
         if (spostamento) {
           setRiportoFallito(false);
-          setQuotaDaRiportare({ id: spostamento.id, importo: spostamento.importo });
+          aggiungiQuotaDaRiportare({ id: spostamento.id, importo: spostamento.importo });
         }
         await refresh(letteDalRef.current).catch(() => {});
       },

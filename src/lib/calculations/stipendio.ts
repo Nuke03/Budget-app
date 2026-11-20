@@ -98,6 +98,9 @@ export function fraseEccedenza(rimasto: number): string | null {
   return eccedenza > 0 ? `Hai già speso ${euroInFrase(eccedenza)} più dello stipendio di questo mese.` : null;
 }
 
+// Il disponibile vero è sotto zero: si mostra 0 e questa frase, con lo stesso tono della Home senza stipendio.
+export const FRASE_DISPONIBILE_NEGATIVO = 'Fino al prossimo stipendio conviene spendere solo per il necessario.';
+
 export function homeConStipendio(i: {
   disponibileLibero: number;
   stipendio: number;
@@ -124,7 +127,7 @@ export function homeConStipendio(i: {
   const cuscinetto = Math.max(0, i.disponibileLibero - rimastoMostrato);
   const mesiCoperti =
     i.stipendio > 0 ? Math.round((cuscinetto / i.stipendio) * 10) / 10 : 0;
-  return { mostrato, rimasto, rimastoMostrato, eccedenza, frase: fraseEccedenza(rimasto), cuscinetto, mesiCoperti };
+  return { mostrato, rimasto, rimastoMostrato, eccedenza, frase: fraseEccedenza(rimasto) ?? (i.disponibileLibero < 0 ? FRASE_DISPONIBILE_NEGATIVO : null), cuscinetto, mesiCoperti };
 }
 
 export function revisioneStipendio(

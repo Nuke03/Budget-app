@@ -51,7 +51,8 @@ import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
 import type { ArgomentoId, PercorsoUtente, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
-import { getAccantonamenti, getFatture, getQuoteScartate, getScadenze } from '@/lib/data/piva';
+import { assicuraScadenze, getAccantonamenti, getFatture, getQuoteScartate, getScadenze } from '@/lib/data/piva';
+import { scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
 import {
   computeAliquotaSostitutiva,
   computePercentualeIncasso,
@@ -245,6 +246,11 @@ async function pivaOpzionale(
     if (!s || !s.attivo || !s.guidataDal || !s.contoTasseId || !s.categoriaFatturatoId) return null;
     const daIncassi =
       s.stipendioMensile !== null ? inizioLetturaIncassi(s.guidataDal, oggiRomaISO(today)) : s.guidataDal;
+    // Le scadenze dell'anno (e, dopo il 15 dicembre, dell'anno dopo) si creano anche da qui, senza aspettare la pagina
+    // P.IVA. Il database ignora i doppioni; un errore non rompe la Home.
+    for (const anno of anniScadenzeHome(oggiRomaISO(today))) {
+      await assicuraScadenze(supabase, scadenzeDaCreare(anno, s.guidataDal)).catch(() => {});
+    }
     const [incassi, accantonamenti, scadenze, fatture, scartate] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da: s.guidataDal }),
@@ -336,11 +342,10 @@ export async function loadHomeBase(
   const obiettivi = getOpenGoals(supabase);
   const oggi = oggiRomaISO(today);
   // Le impostazioni P.IVA partono insieme al resto; chi non ha la P.IVA guidata non legge altro.
+  // Se le impostazioni non si leggono non si sa se la P.IVA è in uso: la riga "non riesco a leggere la P.IVA"
+  // è solo per chi la usa, quindi non compare (compare se si legge che è guidata ma il resto no).
   let pivaNonLetta = false;
-  const pivaSettings = getPivaSettings(supabase).catch(() => {
-    pivaNonLetta = true;
-    return null;
-  });
+  const pivaSettings = getPivaSettings(supabase).catch(() => null);
   // I rientri non devono rompere la home: se non si leggono, i numeri sono quelli senza rientri.
   // Se solo gli spostamenti non si leggono, i rientri verso i conti si ignorano (quelli verso i cassetti restano).
   const rientriLetti = leggiRientriESpostamenti(supabase);

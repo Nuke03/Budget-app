@@ -169,6 +169,15 @@ describe('InPari', () => {
     expect(par(0)).toMatchObject({ p_importo: 40, p_account: 'c', p_pagata_da: 'u1' });
   });
 
+  it('se la rete cade dopo l invio, dice di controllare lo Storico prima di riprovare', async () => {
+    rpc.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    mostra();
+    fireEvent.change(screen.getByLabelText('Con la carta'), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Fatto' }));
+    const avviso = await screen.findByRole('alert');
+    expect(avviso.textContent).toBe('Non so se è stato salvato. Controlla nello Storico prima di riprovare.');
+  });
+
   it('se la prima creazione fallisce, le modifiche successive valgono', async () => {
     rpc.mockResolvedValueOnce({ data: null, error: new Error('rete') });
     mostra();

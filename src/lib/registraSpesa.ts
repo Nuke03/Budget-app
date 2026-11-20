@@ -18,6 +18,28 @@ export type SpazioSpesa =
   | { tipo: 'personale' }
   | { tipo: 'casa'; householdId: string; meUserId: string; contiPersonaliIds: string[] };
 
+// La chiamata è partita ma la risposta non è tornata (rete caduta): il movimento può essere stato scritto.
+export const MESSAGGIO_RISPOSTA_PERSA = 'Non so se è stato salvato. Controlla nello Storico prima di riprovare.';
+
+export class RispostaPersaError extends Error {
+  constructor() {
+    super(MESSAGGIO_RISPOSTA_PERSA);
+    this.name = 'RispostaPersaError';
+  }
+}
+
+export function rispostaPersa(e: unknown): boolean {
+  return e instanceof RispostaPersaError;
+}
+
+// Un errore di rete non ha codice Postgres (nemmeno quando la libreria lo restituisce invece di lanciarlo).
+function erroreDiRete(e: unknown): boolean {
+  if (e instanceof TypeError) return true;
+  if (!e || typeof e !== 'object') return false;
+  const { code, message } = e as { code?: unknown; message?: unknown };
+  return !code && typeof message === 'string' && /fetch|network|failed to/i.test(message);
+}
+
 // Movimento e saldo del conto in una sola operazione (rpc crea_movimento): o riesce tutto o niente.
 export async function registraMovimento(
   supabase: SupabaseClient,
@@ -34,19 +56,25 @@ export async function registraMovimento(
     const contanti = payload.tipo === 'expense' && !payload.accountId;
     if (conPersonale || contanti) pagataDa = spazio.meUserId;
   }
-  const { data: id, error } = await supabase.rpc('crea_movimento', {
-    p_tipo: payload.tipo,
-    p_importo: payload.importo,
-    p_data: data,
-    p_categoria: payload.categoriaId,
-    p_account: payload.accountId,
-    p_goal: payload.goalId,
-    p_descrizione: payload.descrizione,
-    p_nota: null,
-    p_household: spazio.tipo === 'casa' ? spazio.householdId : null,
-    p_pagata_da: pagataDa,
-    p_stima: payload.stima ?? false,
-  });
-  if (error) throw error;
+  let risposta;
+  try {
+    risposta = await supabase.rpc('crea_movimento', {
+      p_tipo: payload.tipo,
+      p_importo: payload.importo,
+      p_data: data,
+      p_categoria: payload.categoriaId,
+      p_account: payload.accountId,
+      p_goal: payload.goalId,
+      p_descrizione: payload.descrizione,
+      p_nota: null,
+      p_household: spazio.tipo === 'casa' ? spazio.householdId : null,
+      p_pagata_da: pagataDa,
+      p_stima: payload.stima ?? false,
+    });
+  } catch (e) {
+    throw erroreDiRete(e) ? new RispostaPersaError() : e;
+  }
+  const { data: id, error } = risposta;
+  if (error) throw erroreDiRete(error) ? new RispostaPersaError() : error;
   return id as string;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { registraMovimento, type SpesaPayload } from '@/lib/registraSpesa';
+import { registraMovimento, rispostaPersa, MESSAGGIO_RISPOSTA_PERSA, type SpesaPayload } from '@/lib/registraSpesa';
 
 const payload: SpesaPayload = {
   tipo: 'expense',
@@ -71,5 +71,33 @@ describe('registraMovimento', () => {
   it('lancia se la rpc fallisce', async () => {
     const { client } = fakeRpc({ data: null, error: new Error('boom') });
     await expect(registraMovimento(client, payload, { tipo: 'personale' })).rejects.toThrow('boom');
+  });
+});
+
+describe('risposta del server persa', () => {
+  const spazio = { tipo: 'personale' } as const;
+
+  it('rete caduta dopo l invio (TypeError lanciato): errore riconoscibile come risposta persa', async () => {
+    const rpc = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    const e = await registraMovimento({ rpc } as never, payload, spazio).catch((x) => x);
+    expect(rispostaPersa(e)).toBe(true);
+  });
+
+  it('errore di rete restituito senza codice Postgres: risposta persa', async () => {
+    const { client } = fakeRpc({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } });
+    const e = await registraMovimento(client, payload, spazio).catch((x) => x);
+    expect(rispostaPersa(e)).toBe(true);
+  });
+
+  it('errore con codice Postgres: resta l errore di oggi, non una risposta persa', async () => {
+    const errore = { message: 'violazione', code: '23514' };
+    const { client } = fakeRpc({ data: null, error: errore });
+    const e = await registraMovimento(client, payload, spazio).catch((x) => x);
+    expect(e).toBe(errore);
+    expect(rispostaPersa(e)).toBe(false);
+  });
+
+  it('il messaggio non dà colpa e manda allo Storico', () => {
+    expect(MESSAGGIO_RISPOSTA_PERSA).toBe('Non so se è stato salvato. Controlla nello Storico prima di riprovare.');
   });
 });

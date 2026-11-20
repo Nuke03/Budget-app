@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as transactions from '@/lib/data/transactions';
+import * as pivaData from '@/lib/data/piva';
+import { scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
 import * as households from '@/lib/data/households';
 import * as casaStato from '@/lib/loadCasaStato';
 import { loadHomeData, loadHomeBase } from '@/lib/loadHomeData';
@@ -522,16 +524,45 @@ describe('loadHomeData: P.IVA, difetti piccoli', () => {
     expect(rotta.piva).toBeNull();
     expect(rotta.pivaNonLetta).toBe(true);
 
+    // Le impostazioni che non si leggono: non si sa se la P.IVA è in uso, la riga non compare.
     const impostazioniRotte = seed();
     const from2 = impostazioniRotte.client.from.bind(impostazioniRotte.client);
     vi.spyOn(impostazioniRotte.client, 'from').mockImplementation(((t: string) => {
       if (t === 'piva_settings') throw new Error('rete');
       return from2(t);
     }) as typeof impostazioniRotte.client.from);
-    expect((await loadHomeData(impostazioniRotte.client, TODAY, 'A')).pivaNonLetta).toBe(true);
+    expect((await loadHomeData(impostazioniRotte.client, TODAY, 'A')).pivaNonLetta).toBe(false);
 
     expect((await loadHomeData(seed({}, { attivo: false }).client, TODAY, 'A')).pivaNonLetta).toBe(false);
     expect((await loadHomeData(seed().client, TODAY, 'A')).pivaNonLetta).toBe(false);
+  });
+
+  it('P2: aprendo la Home si creano le scadenze dell anno, senza aspettare la pagina P.IVA', async () => {
+    const spia = vi.spyOn(pivaData, 'assicuraScadenze').mockResolvedValue(undefined);
+    const db = seed();
+    await loadHomeData(db.client, TODAY, 'A');
+    expect(spia).toHaveBeenCalledTimes(1);
+    expect(spia).toHaveBeenCalledWith(db.client, scadenzeDaCreare(2026, '2026-08-01'));
+  });
+
+  it('P2: dopo il 15 dicembre si creano anche quelle dell anno dopo', async () => {
+    const spia = vi.spyOn(pivaData, 'assicuraScadenze').mockResolvedValue(undefined);
+    await loadHomeData(seed().client, new Date('2026-12-20T12:00:00Z'), 'A');
+    expect(spia.mock.calls.map((c) => c[1][0]?.anno)).toEqual([2026, 2027]);
+  });
+
+  it('P2: un errore nella creazione delle scadenze non rompe la Home', async () => {
+    vi.spyOn(pivaData, 'assicuraScadenze').mockRejectedValue(new Error('rete'));
+    const d = await loadHomeData(seed().client, TODAY, 'A');
+    expect(d.piva?.contoTasseId).toBe('tasse');
+    expect(d.pivaNonLetta).toBe(false);
+  });
+
+  it('P2: chi non ha la P.IVA guidata non crea scadenze', async () => {
+    const spia = vi.spyOn(pivaData, 'assicuraScadenze').mockResolvedValue(undefined);
+    await loadHomeData(seed({}, { attivo: false }).client, TODAY, 'A');
+    await loadHomeData(seed({}, { guidata_dal: null }).client, TODAY, 'A');
+    expect(spia).not.toHaveBeenCalled();
   });
 
   it('P7: una quota scartata che non si legge non nasconde la P.IVA ne la riserva: la Home si apre lo stesso', async () => {
