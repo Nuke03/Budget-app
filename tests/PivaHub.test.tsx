@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/transactions', () => ({ getTransactions: vi.fn() }));
 vi.mock('@/lib/data/accounts', () => ({ getAccounts: vi.fn() }));
+vi.mock('@/lib/data/rientriLetti', () => ({ leggiRientriESpostamenti: vi.fn() }));
 vi.mock('@/lib/data/piva', () => ({
   getAccantonamenti: vi.fn(),
   getQuoteScartate: vi.fn(),
@@ -33,6 +34,8 @@ vi.mock('@/lib/pivaHome', async (importOriginal) => ({
 
 import { getTransactions } from '@/lib/data/transactions';
 import { getAccounts } from '@/lib/data/accounts';
+import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
+import type { Rientro } from '@/lib/calculations/rientri';
 import { leggiCasaPerStipendio, leggiGoalsConSpeso } from '@/lib/pivaHome';
 import {
   getAccantonamenti, accantonaTasse, assicuraScadenze, getScadenze, getFatture, creaFattura, incassaFattura,
@@ -121,6 +124,7 @@ beforeEach(() => {
   vi.mocked(scartaQuota).mockReset().mockResolvedValue(undefined);
   vi.mocked(leggiCasaPerStipendio).mockReset().mockResolvedValue(null);
   vi.mocked(leggiGoalsConSpeso).mockReset().mockResolvedValue([]);
+  vi.mocked(leggiRientriESpostamenti).mockReset().mockResolvedValue({ rientri: [], spostamenti: [] });
 });
 
 afterEach(() => vi.useRealTimers());
@@ -462,6 +466,29 @@ describe('PivaHub', () => {
       expect(within(stip).getByText('Te ne restano 600 €')).toBeInTheDocument();
       expect(within(stip).getByText('300 €')).toBeInTheDocument();
       expect(within(stip).getByText('Copre 0,4 mesi')).toBeInTheDocument();
+    });
+
+    const rientroConto: Rientro = {
+      id: 'r1', userId: 'u', householdId: null, goalId: null, accountId: 'risp', importo: 300, mesi: 3,
+      creatoIl: '2026-11-01', stato: 'aperto', fermatoIl: null,
+    };
+
+    it('un rientro verso un conto risparmio da spostare toglie la rata, come nella Home', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
+      vi.mocked(leggiRientriESpostamenti).mockResolvedValue({ rientri: [rientroConto], spostamenti: [] });
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      // disponibile 900 - 100 di rata = 800; rimasto 600; cuscinetto 200
+      const stip = await screen.findByRole('region', { name: 'Stipendio' });
+      expect(await within(stip).findByText('Te ne restano 600 €')).toBeInTheDocument();
+      expect(within(stip).getByText('200 €')).toBeInTheDocument();
+    });
+
+    it('se gli spostamenti non si leggono i rientri verso i conti si ignorano', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
+      vi.mocked(leggiRientriESpostamenti).mockResolvedValue({ rientri: [rientroConto], spostamenti: null });
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      const stip = await screen.findByRole('region', { name: 'Stipendio' });
+      expect(await within(stip).findByText('300 €')).toBeInTheDocument();
     });
 
     it('il conto tasse con l interruttore acceso non gonfia il cuscinetto', async () => {

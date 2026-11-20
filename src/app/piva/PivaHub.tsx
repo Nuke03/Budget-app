@@ -15,6 +15,8 @@ import {
   getScadenze,
   scartaQuota,
 } from '@/lib/data/piva';
+import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
+import { maturatoPerCassetto, rientriEffettivi, type Rientro, type Spostamento } from '@/lib/calculations/rientri';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { homeConStipendio, propostaStipendio, speseDelMese } from '@/lib/calculations/stipendio';
 import {
@@ -79,6 +81,10 @@ export interface DatiStipendio {
   spese: Transaction[];
   casa: CasaStato | null;
   goals: (BudgetGoal & { specoCollegato: number; versatoNellaFinestra?: number | null })[];
+  // I rientri personali e gli spostamenti (null: non si leggono, i rientri verso i conti si ignorano): per il
+  // disponibile, che deve essere quello della Home.
+  rientri: Rientro[];
+  spostamenti: Spostamento[] | null;
 }
 
 // Tutto quello che la pagina legge. Si passa già pronto solo per l'anteprima, senza rete.
@@ -181,12 +187,13 @@ export function PivaHub({
     // Le letture dello stipendio non fermano il resto: se falliscono lo stipendio non si calcola.
     const leggiStipendio = async (): Promise<DatiStipendio | null> => {
       try {
-        const [spese, casa, goals] = await Promise.all([
+        const [spese, casa, goals, { rientri, spostamenti }] = await Promise.all([
           getTransactions(supabase, undefined, { da: inizioMesiFa(oggiISO, 3), tipo: 'expense' }),
           leggiCasaPerStipendio(supabase, adesso),
           leggiGoalsConSpeso(supabase, adesso),
+          leggiRientriESpostamenti(supabase),
         ]);
-        return { spese, casa, goals };
+        return { spese, casa, goals, rientri, spostamenti };
       } catch {
         return null;
       }
@@ -283,14 +290,20 @@ export function PivaHub({
     });
     if (settings.stipendioMensile !== null) {
       const riservaVersamento = datiStipendio.casa?.riservaVersamento ?? 0;
+      const effettivi = rientriEffettivi(datiStipendio.rientri, datiStipendio.spostamenti, contiDisponibile, oggiISO);
+      const goalsConRientri = datiStipendio.goals.map((g) => ({
+        ...g,
+        rientroMaturato: maturatoPerCassetto(effettivi.rientri, g.id, oggiISO),
+      }));
       const disponibile = computeDisponibileLibero(
         // Il conto tasse non conta mai nel disponibile, anche se il suo interruttore fosse acceso.
         conti.map((c) => (c.id === contoTasseId ? { ...c, contaInDisponibile: false } : c)),
-        datiStipendio.goals,
+        goalsConRientri,
         oggi,
         riservaVersamento,
         datiStipendio.casa?.debitoDaRestituire ?? 0,
-        totaleInSospeso(inSospeso)
+        totaleInSospeso(inSospeso),
+        effettivi.riservaRientri
       );
       const { rimastoMostrato, cuscinetto, mesiCoperti, frase: fraseStipendio } = homeConStipendio({
         disponibileLibero: disponibile,

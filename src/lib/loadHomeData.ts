@@ -6,15 +6,12 @@ import { getOpenGoals } from '@/lib/data/goals';
 import { getLastIncomeDate, getTransactions, haMovimentiPersonali } from '@/lib/data/transactions';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { getConfermePerObiettivi, type ConfermeObiettivo } from '@/lib/data/goalVersamenti';
-import { getRientri } from '@/lib/data/rientri';
-import { getSpostamenti } from '@/lib/data/spostamenti';
+import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
 import {
   maturatoPerCassetto,
-  situazioneRientriConti,
-  totaleDaSpostare,
+  rientriEffettivi,
   type Rientro,
   type SituazioneRientroConto,
-  type Spostamento,
 } from '@/lib/calculations/rientri';
 import { PERSONALE } from '@/lib/data/scope';
 import { computeDisponibileLibero, riservatoObiettivi } from '@/lib/calculations/disponibile';
@@ -318,17 +315,10 @@ export async function loadHomeBase(
     pivaNonLetta = true;
     return null;
   });
-  // I rientri non devono rompere la home: se non si leggono, i numeri sono quelli senza rientri. Gli spostamenti
-  // si leggono dal rientro verso un conto più vecchio in poi (nessuno, se non ce ne sono).
-  const rientriP = getRientri(supabase).catch(() => [] as Rientro[]);
-  const spostamentiP = rientriP
-    .then((r) => {
-      const inizi = r.filter((x) => x.accountId !== null).map((x) => x.creatoIl);
-      if (inizi.length === 0) return [] as Spostamento[];
-      return getSpostamenti(supabase, inizi.reduce((min, d) => (d < min ? d : min)));
-    })
-    .catch(() => [] as Spostamento[]);
-  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni, rientri, spostamenti] = await Promise.all([
+  // I rientri non devono rompere la home: se non si leggono, i numeri sono quelli senza rientri.
+  // Se solo gli spostamenti non si leggono, i rientri verso i conti si ignorano (quelli verso i cassetti restano).
+  const rientriLetti = leggiRientriESpostamenti(supabase);
+  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni, rientriGrezzi] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -362,8 +352,7 @@ export async function loadHomeBase(
     // Anche la lista d'attesa non deve rompere la home.
     leggiListaAttesa(supabase).catch(() => [] as VoceAttesa[]),
     pivaSettings,
-    rientriP,
-    spostamentiP,
+    rientriLetti,
   ]);
   const { rimandati, ...scelte } = scelteLette;
   const piva = pivaLetta?.piva ?? null;
@@ -384,6 +373,15 @@ export async function loadHomeBase(
       { categoriaDal: pivaLetta.settings.categoriaDal, contiChePesano, scartate: pivaLetta.scartate }
     );
   }
+  // I conti che pesano sono quelli del disponibile (il conto tasse è già fuori): solo gli spostamenti da lì
+  // portano soldi davvero fuori dal disponibile.
+  const contiChePesanoPerRientri = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
+  const { rientri, rientriConti, riservaRientri } = rientriEffettivi(
+    rientriGrezzi.rientri,
+    rientriGrezzi.spostamenti,
+    contiChePesanoPerRientri,
+    oggi
+  );
   const goalsConSpeso = goals.map((g) => ({
     ...g,
     specoCollegato: speso[g.id] ?? 0,
@@ -391,11 +389,6 @@ export async function loadHomeBase(
     confermatoMese: conferme[g.id]?.mese ?? 0,
     rientroMaturato: maturatoPerCassetto(rientri, g.id, oggi),
   }));
-  // I conti che pesano sono quelli del disponibile (il conto tasse è già fuori): solo gli spostamenti da lì
-  // portano soldi davvero fuori dal disponibile.
-  const contiChePesanoPerRientri = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
-  const rientriConti = situazioneRientriConti(rientri, spostamenti, contiChePesanoPerRientri, oggi);
-  const riservaRientri = totaleDaSpostare(rientriConti);
 
   const riservati = {
     obiettivi: riservatoObiettivi(goalsConSpeso, today),

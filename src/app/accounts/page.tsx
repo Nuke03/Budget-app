@@ -5,9 +5,8 @@ import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount } from '@/lib/data/accounts';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
-import { getRientri } from '@/lib/data/rientri';
-import { getSpostamenti } from '@/lib/data/spostamenti';
-import { situazioneRientriConti, type SituazioneRientroConto, type Rientro, type Spostamento } from '@/lib/calculations/rientri';
+import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
+import { rientriEffettivi, type SituazioneRientroConto } from '@/lib/calculations/rientri';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { ContiVista } from './ContiVista';
 import type { Account } from '@/lib/types';
@@ -30,15 +29,11 @@ export default function AccountsPage() {
     const tasse = piva?.attivo ? piva.contoTasseId : null;
     setContoTasseId(tasse);
     // I rientri non devono rompere la pagina: se non si leggono, nessuna riga.
-    const rientri = await getRientri(supabase).catch(() => [] as Rientro[]);
-    const inizi = rientri.filter((r) => r.accountId !== null).map((r) => r.creatoIl);
-    const spostamenti =
-      inizi.length === 0
-        ? ([] as Spostamento[])
-        : await getSpostamenti(supabase, inizi.reduce((min, d) => (d < min ? d : min))).catch(() => [] as Spostamento[]);
+    // Se gli spostamenti non si leggono, nessuna riga (come nella Home).
+    const { rientri, spostamenti } = await leggiRientriESpostamenti(supabase);
     // Come nella Home: pesano i conti del disponibile, senza il conto tasse.
     const chePesano = new Set(conti.filter((a) => a.contaInDisponibile && a.id !== tasse).map((a) => a.id));
-    setRientriConti(situazioneRientriConti(rientri, spostamenti, chePesano, oggiRomaISO()));
+    setRientriConti(rientriEffettivi(rientri, spostamenti, chePesano, oggiRomaISO()).rientriConti);
   }
 
   useEffect(() => {

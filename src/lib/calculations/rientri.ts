@@ -120,3 +120,19 @@ export function situazioneRientriConti(
 export function totaleDaSpostare(s: SituazioneRientroConto[]): number {
   return s.reduce((tot, x) => arrotonda2(tot + x.daSpostare), 0);
 }
+
+// I rientri che contano davvero, dato che gli spostamenti si siano letti o no. Se gli spostamenti non si
+// leggono (`null`) non si può dire quanto sia già stato spostato: i rientri verso i conti si ignorano
+// (come se non ci fossero), quelli verso i cassetti restano (non hanno bisogno degli spostamenti).
+export function rientriEffettivi(
+  rientri: Rientro[],
+  spostamenti: Spostamento[] | null,
+  contiChePesano: Set<string>,
+  oggi: string
+): { rientri: Rientro[]; rientriConti: SituazioneRientroConto[]; riservaRientri: number } {
+  if (spostamenti === null) {
+    return { rientri: rientri.filter((r) => r.accountId === null), rientriConti: [], riservaRientri: 0 };
+  }
+  const rientriConti = situazioneRientriConti(rientri, spostamenti, contiChePesano, oggi);
+  return { rientri, rientriConti, riservaRientri: totaleDaSpostare(rientriConti) };
+}

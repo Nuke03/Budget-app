@@ -109,6 +109,6 @@ export function datiPivaProva(oggi: string): DatiPivaHub {
     accant: accantonamenti,
     scad: scadenzePivaProva(oggi),
     fatt: fatturePivaProva(oggi),
-    stip: { spese, casa: null, goals: [] },
+    stip: { spese, casa: null, goals: [], rientri: [], spostamenti: [] },
   };
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as rientriData from '@/lib/data/rientri';
+import * as spostamentiData from '@/lib/data/spostamenti';
 import { loadHomeData } from '@/lib/loadHomeData';
 import { createFakeDb } from './helpers/fakeDb';
 
@@ -42,8 +43,16 @@ describe('loadHomeData: rientri', () => {
 
   it('con uno spostamento già fatto il disponibile è quello di prima e nessun Sposta', async () => {
     const sp = { id: 's1', da_account_id: 'cor', a_account_id: 'ris', importo: 100, data: '2026-11-10', created_at: '2026-11-10T10:00:00Z' };
-    const senza = await loadHomeData(db([]).client, TODAY, null);
-    const d = await loadHomeData(db([rientro({ account_id: 'ris' })], [sp]).client, TODAY, null);
+    // Il saldo corrente è già sceso di 100 per lo spostamento.
+    const conSpostamento = (rientri: Record<string, unknown>[]) =>
+      createFakeDb(
+        { accounts: [{ ...corrente, saldo_attuale: 900 }, { ...risparmio, saldo_attuale: 600 }], budget_goals: [], transactions: [spesa], categories: [], rientri, spostamenti: [sp] },
+        { userId: 'A', membri: {} }
+      );
+    const senza = await loadHomeData(conSpostamento([]).client, TODAY, null);
+    const d = await loadHomeData(conSpostamento([rientro({ account_id: 'ris' })]).client, TODAY, null);
+    expect(d.accounts.find((a) => a.id === 'cor')?.saldoAttuale).toBe(900);
+    expect(d.accounts.find((a) => a.id === 'cor')!.saldoAttuale).toBeLessThan(corrente.saldo_attuale);
     expect(d.disponibileReale).toBe(senza.disponibileReale);
     expect(d.riservaRientri).toBe(0);
     expect(d.prossimo).toBeNull();
@@ -72,5 +81,23 @@ describe('loadHomeData: rientri', () => {
     expect(d.riservaRientri).toBe(0);
     expect(d.rientriConti).toEqual([]);
     expect(d.prossimo).toBeNull();
+  });
+
+  it('se solo gli spostamenti non si leggono i rientri verso i conti si ignorano, quelli verso i cassetti restano', async () => {
+    const speso = { ...spesa, id: 't2', goal_id: 'g1', importo: 200, data: '2026-11-10' };
+    const mk = (rientri: Record<string, unknown>[]) =>
+      createFakeDb(
+        { accounts: [corrente, risparmio], budget_goals: [bloccato], transactions: [spesa, speso], categories: [], rientri, spostamenti: [] },
+        { userId: 'A', membri: {} }
+      );
+    const senza = await loadHomeData(mk([]).client, TODAY, null);
+    vi.spyOn(spostamentiData, 'getSpostamenti').mockRejectedValue(new Error('giù'));
+    const d = await loadHomeData(mk([rientro({ id: 'rc', account_id: 'ris' }), rientro({ id: 'rg', goal_id: 'g1' })]).client, TODAY, null);
+    expect(d.riservaRientri).toBe(0);
+    expect(d.rientriConti).toEqual([]);
+    expect(d.prossimo).toBeNull();
+    // il cassetto resta alzato dal suo rientro (100), il conto non toglie nulla
+    expect(d.riservati.obiettivi).toBe(senza.riservati.obiettivi + 100);
+    expect(d.disponibileReale).toBe(senza.disponibileReale - 100);
   });
 });
