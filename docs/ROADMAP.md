@@ -334,6 +334,8 @@ Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del deb
 - La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
 - I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
+- Futura migrazione 0013 (difese in più, nessun difetto visibile): la WITH CHECK di `piva_quote_scartate` deve verificare che la transazione sia di chi scrive; togliere `adjust_account_balance` ad `authenticated` (non ha più chiamanti dal client); limitare per data la lettura di `goal_versamenti`.
+- Prova dal vivo con Miriam: "La riporto indietro?" compare solo se si resta nello Storico per 5 secondi dopo l'eliminazione; controllare anche che si capisca cosa fare se non compare.
 
 ### Aperto dopo la pulizia (20 novembre 2026)
 
