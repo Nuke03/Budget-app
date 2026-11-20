@@ -30,6 +30,21 @@ legge questo file più i documenti citati.
 - **Conferma versamento:** su un obiettivo dilazionato con almeno una conferma, il riservato è il minore fra la quota a tempo e quanto confermato, meno lo speso collegato. Compare "Ho messo da parte" nella card e nel "Da fare" della Home.
 - **Design:** il logo del login è l'icona dell'app. Il timbro è più leggibile. La figura della P.IVA segue i token del design.
 
+**Rientri e spostamenti (20 novembre 2026).** Spec: `docs/superpowers/specs/2026-11-20-autorata-sposta-design.md`. Piano: `docs/superpowers/plans/2026-11-20-autorata-sposta.md`. Cosa è cambiato: "Rimetti a rate" (rate al mese verso un conto risparmio, un cassetto personale o un cassetto di Casa), "Sposta tra i tuoi conti" (riga "Spostato da … a …" nello Storico), la domanda dopo una spesa dal risparmio, la riga "Rientro" sulle card, la riga "Sposta … sul …" nella Home.
+
+Da fare, nell'ordine, prima del test:
+1. Nel SQL editor di Supabase lancia a mano `supabase/migrations/0013_rientri_spostamenti.sql` (è racchiusa fra `begin;` e `commit;`, come le altre). Nessun test la esegue in CI.
+2. Lancia `supabase/tests/rientri_spostamenti.sql` e controlla che tutti i controlli passino.
+
+Checklist del test (con i saldi sotto gli occhi dopo ogni passo):
+- Concerto dal risparmio: registra una spesa dal conto risparmio. Compare "Vuoi rimetterli un po' al mese?". Scegli 3 mesi e tocca "Sì, rimettili": il disponibile scende della prima rata e la card del conto mostra "Da spostare".
+- Dalla Home, la riga "Prossimo" "Sposta … sul Risparmio." apre "Sposta tra i tuoi conti" già compilato. Tocca "Sposta": i due saldi cambiano insieme, il disponibile resta com'era e nello Storico c'è "Spostato da … a …".
+- Rientro su un cassetto: da una card con speso collegato tocca "Rimetti a rate", scegli il cassetto, la cifra proposta e i mesi. Il cassetto risale della rata del mese; "Ferma" la ferma.
+- Rientro su un cassetto di Casa, visto da Miriam: il cassetto e la sua riga "Rientro" compaiono anche a lei, con "Lo vedrà anche Miriam." nel foglio. Un rientro personale di Fabio non compare mai a lei.
+- Elimina uno spostamento nello Storico ("Elimina spostamento"): "Annulla" entro 5 secondi, oppure dopo, i due saldi tornano com'erano e il "Da spostare" riappare se il rientro era finito.
+
+Da decidere: la riga "Prossimo" della Home apre direttamente lo spostamento; nel codice non c'è un bottone "Fatto, li ho spostati" sulla Home (quella scritta c'è solo nel foglio P.IVA). La checklist segue il codice. Decidere se aggiungerlo.
+
 ## Checklist del test da zero
 
 Per Fabio, nell'ordine. Ogni passo dice cosa guardare.
@@ -339,7 +354,6 @@ Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del deb
 - La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
 - I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
-- Futura migrazione 0013 (difese in più, nessun difetto visibile): la WITH CHECK di `piva_quote_scartate` deve verificare che la transazione sia di chi scrive; togliere `adjust_account_balance` ad `authenticated` (non ha più chiamanti dal client); limitare per data la lettura di `goal_versamenti`.
 - Prova dal vivo con Miriam: "La riporto indietro?" compare solo se si resta nello Storico per 5 secondi dopo l'eliminazione; controllare anche che si capisca cosa fare se non compare.
 
 ### Aperto dopo la pulizia (20 novembre 2026)
