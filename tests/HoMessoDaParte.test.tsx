@@ -109,7 +109,7 @@ describe('GoalsList: Ho messo da parte', () => {
     render(<GoalsList goals={[dilazionato]} categories={[]} onHoMessoDaParte={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Ho messo da parte' }));
     expect(screen.getByLabelText('Importo')).toHaveValue(150);
-    expect(screen.getByText(/Finora dovrebbero esserci 150,00 € per questo obiettivo\./)).toBeInTheDocument();
+    expect(screen.getByText(/Finora dovrebbero esserci 150,00 € per questo cassetto\./)).toBeInTheDocument();
   });
 
   it('le conferme successive restano sulla quota del mese', () => {

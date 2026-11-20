@@ -72,7 +72,7 @@ export function AddTransactionForm({
   onSubmit,
   contoEtichetta = 'Conto',
   nascondiGestisciCategorie = false,
-  obiettivoEtichetta = 'Obiettivo (opzionale)',
+  obiettivoEtichetta = 'Cassetto (opzionale)',
   nota,
   idContiSoloSpesa = NESSUN_ID,
   contoDaScegliere = false,
@@ -728,7 +728,7 @@ export function AddTransactionForm({
                 onClick={() => setIsCreatingGoal((v) => !v)}
                 className="shrink-0 rounded-full border-2 border-dashed border-black/20 bg-surface px-4 py-2 text-sm font-semibold text-muted"
               >
-                + Nuovo obiettivo
+                + Nuovo cassetto
               </button>
             )}
           </div>
@@ -738,7 +738,7 @@ export function AddTransactionForm({
               <label className="flex flex-col gap-1 text-xs font-medium text-muted">
                 Nome
                 <input
-                  aria-label="Nome nuovo obiettivo"
+                  aria-label="Nome nuovo cassetto"
                   value={nuovoGoalNome}
                   onChange={(e) => setNuovoGoalNome(e.target.value)}
                   placeholder="Es. Assicurazione auto"
@@ -748,7 +748,7 @@ export function AddTransactionForm({
               <label className="flex flex-col gap-1 text-xs font-medium text-muted">
                 Importo target
                 <input
-                  aria-label="Importo nuovo obiettivo"
+                  aria-label="Importo nuovo cassetto"
                   type="number"
                   inputMode="decimal"
                   value={nuovoGoalImporto}

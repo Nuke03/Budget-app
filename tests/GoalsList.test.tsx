@@ -94,7 +94,7 @@ describe('GoalsList', () => {
     const onEdit = vi.fn();
 
     render(<GoalsList goals={[goal]} categories={[]} onEdit={onEdit} />);
-    fireEvent.click(screen.getByLabelText('Modifica obiettivo'));
+    fireEvent.click(screen.getByLabelText('Modifica cassetto'));
 
     expect(onEdit).toHaveBeenCalledWith(goal);
   });
@@ -176,7 +176,7 @@ describe('GoalsList', () => {
     const onClose = vi.fn();
 
     render(<GoalsList goals={[goal]} categories={[]} onClose={onClose} />);
-    fireEvent.click(screen.getByLabelText('Chiudi obiettivo'));
+    fireEvent.click(screen.getByLabelText('Chiudi cassetto'));
 
     expect(onClose).toHaveBeenCalledWith(goal);
   });
@@ -198,7 +198,7 @@ describe('GoalsList', () => {
     };
 
     render(<GoalsList goals={[goal]} categories={[]} />);
-    expect(screen.queryByLabelText('Chiudi obiettivo')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Chiudi cassetto')).not.toBeInTheDocument();
   });
 });
 
@@ -228,6 +228,6 @@ describe('GoalsList variante casa', () => {
     render(<GoalsList goals={[fondo]} categories={[]} />);
     expect(screen.getByText('messo da parte finora')).toBeInTheDocument();
     render(<GoalsList goals={[]} categories={[]} />);
-    expect(screen.getByText('Nessun obiettivo aperto.')).toBeInTheDocument();
+    expect(screen.getByText('Nessun cassetto aperto.')).toBeInTheDocument();
   });
 });

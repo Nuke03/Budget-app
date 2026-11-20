@@ -55,7 +55,7 @@ export function GoalsList({
       <p
         className="rounded-[var(--radius-md)] border border-rule bg-surface p-4 text-center text-[15px] text-ink-2"
       >
-        {casa ? 'Ancora niente messo da parte.' : 'Nessun obiettivo aperto.'}
+        {casa ? 'Ancora niente messo da parte.' : 'Nessun cassetto aperto.'}
       </p>
     );
   }
@@ -82,7 +82,7 @@ export function GoalsList({
                   <button
                     type="button"
                     onClick={() => onEdit(g)}
-                    aria-label="Modifica obiettivo"
+                    aria-label="Modifica cassetto"
                     className="flex h-11 w-11 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint"
                   >
                     <Pencil size={18} aria-hidden="true" />
@@ -92,7 +92,7 @@ export function GoalsList({
                   <button
                     type="button"
                     onClick={() => onClose(g)}
-                    aria-label="Chiudi obiettivo"
+                    aria-label="Chiudi cassetto"
                     className="flex h-11 w-11 items-center justify-center rounded-full text-ink-2 hover:bg-brand-tint hover:text-danger"
                   >
                     <Archive size={18} aria-hidden="true" />

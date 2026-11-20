@@ -25,7 +25,7 @@ export function ObiettiviVista({
 }) {
   return (
     <>
-      <CoverHeader titolo="Obiettivi" />
+      <CoverHeader titolo="Cassetti" />
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-28 pt-3.5">
         <button
           type="button"
@@ -33,7 +33,7 @@ export function ObiettiviVista({
           data-fumetto={goals.length === 0 ? 'cassetti' : undefined}
           className="min-h-12 rounded-[var(--radius-md)] bg-brand px-4 py-3 text-base font-semibold text-brand-foreground"
         >
-          Nuovo obiettivo
+          Nuovo cassetto
         </button>
         <GoalsList
           goals={goals}

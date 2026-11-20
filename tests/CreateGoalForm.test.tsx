@@ -19,11 +19,11 @@ describe('CreateGoalForm', () => {
     fireEvent.change(screen.getByLabelText('Importo target'), { target: { value: '100' } });
     fireEvent.change(screen.getByLabelText('Modalità'), { target: { value: 'dilazionato' } });
 
-    expect(screen.getByText('Crea obiettivo')).toBeDisabled();
+    expect(screen.getByText('Crea cassetto')).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('Scadenza'), { target: { value: '2026-11-27' } });
 
-    expect(screen.getByText('Crea obiettivo')).toBeEnabled();
+    expect(screen.getByText('Crea cassetto')).toBeEnabled();
   });
 
   it('non richiede scadenza quando la modalità è bloccato', () => {
@@ -33,7 +33,7 @@ describe('CreateGoalForm', () => {
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Telepass' } });
     fireEvent.change(screen.getByLabelText('Importo target'), { target: { value: '130' } });
 
-    expect(screen.getByText('Crea obiettivo')).toBeEnabled();
+    expect(screen.getByText('Crea cassetto')).toBeEnabled();
   });
 
   it('invia frequenzaMesi corretta in base al preset selezionato', () => {
@@ -46,7 +46,7 @@ describe('CreateGoalForm', () => {
     fireEvent.change(screen.getByLabelText('Scadenza'), { target: { value: '2026-01-01' } });
     fireEvent.change(screen.getByLabelText('Frequenza'), { target: { value: '3' } });
 
-    fireEvent.click(screen.getByText('Crea obiettivo'));
+    fireEvent.click(screen.getByText('Crea cassetto'));
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ ricorrente: true, frequenzaMesi: 3 })
@@ -61,11 +61,11 @@ describe('CreateGoalForm', () => {
     fireEvent.change(screen.getByLabelText('Importo target'), { target: { value: '10' } });
     fireEvent.click(screen.getByLabelText('Ricorrente'));
 
-    expect(screen.getByText('Crea obiettivo')).toBeDisabled();
+    expect(screen.getByText('Crea cassetto')).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('Scadenza'), { target: { value: '2026-01-01' } });
 
-    expect(screen.getByText('Crea obiettivo')).toBeEnabled();
+    expect(screen.getByText('Crea cassetto')).toBeEnabled();
   });
 
   it('mostra il pannello di suggerimento quando si seleziona una categoria', async () => {

@@ -135,7 +135,7 @@ export default function GoalsPage() {
       });
     eliminaConAnnulla({
       id: goal.id,
-      testo: 'Obiettivo chiuso.',
+      testo: 'Cassetto chiuso.',
       nascondi: () => cambia(true),
       ripristina: () => cambia(false),
       esegui: async () => {
@@ -173,7 +173,7 @@ export default function GoalsPage() {
 
       {creando && (
         <FoglioInferiore
-          titolo="Nuovo obiettivo"
+          titolo="Nuovo cassetto"
           onClose={() => {
             setCreando(false);
             setPrecompilato(null);
@@ -184,7 +184,7 @@ export default function GoalsPage() {
       )}
 
       {editingGoal && (
-        <FoglioInferiore titolo="Modifica obiettivo" onClose={() => setEditingGoal(null)}>
+        <FoglioInferiore titolo="Modifica cassetto" onClose={() => setEditingGoal(null)}>
           <CreateGoalForm
             categories={categories}
             initial={{

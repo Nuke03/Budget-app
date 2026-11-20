@@ -22,7 +22,7 @@ export function CasaSenzaCasa() {
 
         <p className="text-[15px] text-ink-2">
           <span className="font-semibold text-foreground">Cosa vedono le altre persone di casa?</span> Solo conti, spese e
-          obiettivi della casa. Le tue cose personali no, mai.
+          cassetti della casa. Le tue cose personali no, mai.
         </p>
       </main>
     </>

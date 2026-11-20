@@ -62,15 +62,15 @@ afterEach(() => vi.useRealTimers());
 describe('Obiettivi: chiudere con Annulla', () => {
   it('il clic nasconde l obiettivo e non scrive ancora', async () => {
     await apri();
-    fireEvent.click(screen.getByLabelText('Chiudi obiettivo'));
+    fireEvent.click(screen.getByLabelText('Chiudi cassetto'));
     expect(screen.queryByText('Telepass')).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Obiettivo chiuso.');
+    expect(screen.getByRole('status')).toHaveTextContent('Cassetto chiuso.');
     expect(closeGoal).not.toHaveBeenCalled();
   });
 
   it('dopo 5 secondi chiude una volta', async () => {
     await apri();
-    fireEvent.click(screen.getByLabelText('Chiudi obiettivo'));
+    fireEvent.click(screen.getByLabelText('Chiudi cassetto'));
     await passa(5000);
     expect(closeGoal).toHaveBeenCalledTimes(1);
     expect(closeGoal).toHaveBeenCalledWith(expect.anything(), 'g1');
@@ -78,7 +78,7 @@ describe('Obiettivi: chiudere con Annulla', () => {
 
   it('Annulla non scrive mai e l obiettivo torna', async () => {
     await apri();
-    fireEvent.click(screen.getByLabelText('Chiudi obiettivo'));
+    fireEvent.click(screen.getByLabelText('Chiudi cassetto'));
     fireEvent.click(screen.getByRole('button', { name: 'Annulla' }));
     expect(screen.getByText('Telepass')).toBeInTheDocument();
     await passa(10000);
@@ -92,15 +92,15 @@ describe('Obiettivi: nuovo obiettivo', () => {
     await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('tutto messo da parte')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Nuovo obiettivo' }));
-    const foglio = screen.getByRole('dialog', { name: 'Nuovo obiettivo' });
+    fireEvent.click(screen.getByRole('button', { name: 'Nuovo cassetto' }));
+    const foglio = screen.getByRole('dialog', { name: 'Nuovo cassetto' });
     expect(foglio).toContainElement(screen.getByLabelText('Nome'));
   });
 
   it('con ?nuovo=1&nome=&importo= il modulo si apre già compilato, e l indirizzo si pulisce', async () => {
     nav.qs = 'nuovo=1&nome=Cuffie&importo=89.9';
     render(<Pagina />);
-    const foglio = await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo cassetto' });
     expect(foglio).toContainElement(screen.getByLabelText('Nome'));
     expect(screen.getByLabelText('Nome')).toHaveValue('Cuffie');
     expect(screen.getByLabelText(/Importo/)).toHaveValue(89.9);
@@ -110,7 +110,7 @@ describe('Obiettivi: nuovo obiettivo', () => {
   it('con valori non validi il modulo si apre vuoto', async () => {
     nav.qs = 'nuovo=1&nome=&importo=-5';
     render(<Pagina />);
-    await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+    await screen.findByRole('dialog', { name: 'Nuovo cassetto' });
     expect(screen.getByLabelText('Nome')).toHaveValue('');
     expect(screen.getByLabelText(/Importo/)).toHaveValue(null);
   });
@@ -121,7 +121,7 @@ describe('Obiettivi: nuovo obiettivo', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     nav.qs = 'nuovo=1&nome=Cuffie&importo=89.9';
     rerender(<Pagina />);
-    const foglio = await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo cassetto' });
     expect(screen.getByLabelText('Nome')).toHaveValue('Cuffie');
     expect(foglio).toContainElement(screen.getByLabelText('Nome'));
   });

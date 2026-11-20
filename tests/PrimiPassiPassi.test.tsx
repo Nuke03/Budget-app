@@ -175,7 +175,7 @@ describe('passo imprevisti', () => {
 describe('passo obiettivo', () => {
   it('Più avanti salva obiettivoPiuAvanti', async () => {
     render(<PassoObiettivo />);
-    expect(screen.getByRole('link', { name: /obiettivo/i }).getAttribute('href')).toBe('/goals?nuovo=1');
+    expect(screen.getByRole('link', { name: /cassetto/i }).getAttribute('href')).toBe('/goals?nuovo=1');
     fireEvent.click(screen.getByRole('button', { name: 'Più avanti' }));
     await waitFor(() => expect(azioni.obiettivoPiuAvanti).toHaveBeenCalled());
   });

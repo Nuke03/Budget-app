@@ -90,7 +90,7 @@ export function HoMessoDaParte({
         <p className="num text-[13px] text-ink-2">
           {primoMese
             ? "Conta dal mese prossimo: per ora non c'è niente da mettere da parte."
-            : `Finora dovrebbero esserci ${formatEuro(finora)} per questo obiettivo.`}
+            : `Finora dovrebbero esserci ${formatEuro(finora)} per questo cassetto.`}
         </p>
       ) : null}
       <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">

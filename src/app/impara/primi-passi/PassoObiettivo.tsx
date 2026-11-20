@@ -26,7 +26,7 @@ export function PassoObiettivo() {
   return (
     <div className="mt-5 flex flex-col gap-2">
       <Link href="/goals?nuovo=1" className={PRIMARIO}>
-        Crea un obiettivo
+        Crea un cassetto
       </Link>
       <button type="button" disabled={inCorso} onClick={piuAvanti} className={SECONDARIO}>
         Più avanti

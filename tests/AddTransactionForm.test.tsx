@@ -190,11 +190,11 @@ describe('AddTransactionForm', () => {
     });
   });
 
-  it('non mostra "+ Nuovo obiettivo" se onCreateGoal non è passato', () => {
+  it('non mostra "+ Nuovo cassetto" se onCreateGoal non è passato', () => {
     render(
       <AddTransactionForm categories={categories} accounts={accounts} goals={goals} onSubmit={vi.fn()} />
     );
-    expect(screen.queryByText('+ Nuovo obiettivo')).not.toBeInTheDocument();
+    expect(screen.queryByText('+ Nuovo cassetto')).not.toBeInTheDocument();
   });
 
   it('crea un nuovo obiettivo al volo e lo collega automaticamente', async () => {
@@ -223,11 +223,11 @@ describe('AddTransactionForm', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('+ Nuovo obiettivo'));
-    fireEvent.change(screen.getByLabelText('Nome nuovo obiettivo'), {
+    fireEvent.click(screen.getByText('+ Nuovo cassetto'));
+    fireEvent.change(screen.getByLabelText('Nome nuovo cassetto'), {
       target: { value: 'Assicurazione auto' },
     });
-    fireEvent.change(screen.getByLabelText('Importo nuovo obiettivo'), {
+    fireEvent.change(screen.getByLabelText('Importo nuovo cassetto'), {
       target: { value: '250' },
     });
     fireEvent.click(screen.getByText('Crea e collega'));
@@ -268,7 +268,7 @@ describe('AddTransactionForm', () => {
     expect(screen.getByText('Da parte (opzionale)')).toBeInTheDocument();
     expect(screen.queryByText('Gestisci categorie')).not.toBeInTheDocument();
     expect(screen.getByText('Lo vedrà anche Anna')).toBeInTheDocument();
-    expect(screen.queryByText('Obiettivo (opzionale)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cassetto (opzionale)')).not.toBeInTheDocument();
   });
 
   it('idContiSoloSpesa nasconde quei conti per le entrate', () => {

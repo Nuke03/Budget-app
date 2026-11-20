@@ -41,7 +41,7 @@ export function PassoImprevisti({ giaCreato }: { giaCreato: boolean }) {
   }
 
   if (giaCreato) {
-    return <p className="mt-5 text-[15px]">Il cuscinetto per gli imprevisti c’è già: lo trovi fra i tuoi obiettivi.</p>;
+    return <p className="mt-5 text-[15px]">Il cuscinetto per gli imprevisti c’è già: lo trovi fra i tuoi cassetti.</p>;
   }
 
   return (

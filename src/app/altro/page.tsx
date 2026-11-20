@@ -11,11 +11,11 @@ import { Notifiche } from './Notifiche';
 import { RiattivaAvvisi } from './RiattivaAvvisi';
 import { RivediGiro } from './RivediGiro';
 import { RicominciaDaZero } from './RicominciaDaZero';
-import { GraduationCap, Target, Wallet, Tags, Receipt, Bell, Hourglass, ChevronRight } from 'lucide-react';
+import { GraduationCap, Archive, Wallet, Tags, Receipt, Bell, Hourglass, ChevronRight } from 'lucide-react';
 
 const voci = [
   { href: '/impara', label: 'Impara', icon: GraduationCap },
-  { href: '/goals', label: 'Obiettivi', icon: Target },
+  { href: '/goals', label: 'Cassetti', icon: Archive },
   { href: '/impara/attesa', label: "Lista d'attesa", icon: Hourglass },
   { href: '/accounts', label: 'Conti', icon: Wallet },
   { href: '/categories', label: 'Categorie', icon: Tags },

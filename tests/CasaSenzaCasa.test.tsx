@@ -15,7 +15,7 @@ describe('CasaSenzaCasa', () => {
     expect(screen.getByText(/Cosa vedono le altre persone di casa\?/)).toBeInTheDocument();
     expect(container.textContent).not.toContain("l'altro");
     expect(
-      screen.getByText(/Solo conti, spese e obiettivi della casa\. Le tue cose personali no, mai\./)
+      screen.getByText(/Solo conti, spese e cassetti della casa\. Le tue cose personali no, mai\./)
     ).toBeInTheDocument();
   });
 

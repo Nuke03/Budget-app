@@ -29,7 +29,7 @@ const fieldClass =
 export function CreateGoalForm({
   categories,
   initial,
-  submitLabel = 'Crea obiettivo',
+  submitLabel = 'Crea cassetto',
   onCancel,
   onSubmit,
 }: {

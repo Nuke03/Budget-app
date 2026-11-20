@@ -36,18 +36,18 @@ describe('pagina Altro', () => {
     expect(links).toHaveLength(7);
     expect(screen.getByRole('link', { name: /Impara/ })).toHaveAttribute('href', '/impara');
     expect(screen.getByRole('link', { name: /Lista d'attesa/ })).toHaveAttribute('href', '/impara/attesa');
-    expect(screen.getByRole('link', { name: /Obiettivi/ })).toHaveAttribute('href', '/goals');
+    expect(screen.getByRole('link', { name: /Cassetti/ })).toHaveAttribute('href', '/goals');
     expect(screen.getByRole('link', { name: /Conti/ })).toHaveAttribute('href', '/accounts');
     expect(screen.getByRole('link', { name: /Categorie/ })).toHaveAttribute('href', '/categories');
     expect(screen.getByRole('link', { name: /P\.IVA/ })).toHaveAttribute('href', '/piva');
     expect(screen.getByRole('link', { name: /Notifiche/ })).toHaveAttribute('href', '/altro#notifiche');
   });
 
-  it('ha la voce Impara prima di Obiettivi', async () => {
+  it('ha la voce Impara prima di Cassetti', async () => {
     render(await AltroPage());
     const nomi = screen.getAllByRole('link').map((l) => l.textContent);
     expect(nomi[0]).toBe('Impara');
-    expect(nomi[1]).toBe('Obiettivi');
+    expect(nomi[1]).toBe('Cassetti');
   });
 
   it('Riattiva gli avvisi rimette le conferme', async () => {
