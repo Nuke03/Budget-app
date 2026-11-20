@@ -32,9 +32,7 @@ legge questo file più i documenti citati.
 
 **Rientri e spostamenti (20 novembre 2026).** Spec: `docs/superpowers/specs/2026-11-20-autorata-sposta-design.md`. Piano: `docs/superpowers/plans/2026-11-20-autorata-sposta.md`. Cosa è cambiato: "Rimetti a rate" (rate al mese verso un conto risparmio, un cassetto personale o un cassetto di Casa), "Sposta tra i tuoi conti" (riga "Spostato da … a …" nello Storico), la domanda dopo una spesa dal risparmio, la riga "Rientro" sulle card, la riga "Sposta … sul …" nella Home.
 
-Da fare, nell'ordine, prima del test:
-1. Nel SQL editor di Supabase lancia a mano `supabase/migrations/0013_rientri_spostamenti.sql` (è racchiusa fra `begin;` e `commit;`, come le altre). Nessun test la esegue in CI.
-2. Lancia `supabase/tests/rientri_spostamenti.sql` e controlla che tutti i controlli passino.
+Migrazione: la 0013 (`supabase/migrations/0013_rientri_spostamenti.sql`) è stata lanciata su Supabase il 20 novembre 2026, e il test SQL `supabase/tests/rientri_spostamenti.sql` è passato.
 
 Checklist del test (con i saldi sotto gli occhi dopo ogni passo):
 - Concerto dal risparmio: registra una spesa dal conto risparmio. Compare "Vuoi rimetterli un po' al mese?". Scegli 3 mesi e tocca "Sì, rimettili": il disponibile scende della prima rata e la card del conto mostra "Da spostare".
