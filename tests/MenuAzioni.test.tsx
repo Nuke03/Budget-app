@@ -130,6 +130,15 @@ describe('MenuAzioni', () => {
     expect(screen.getByRole('button', { name: 'Registra una spesa' })).toBeInTheDocument();
   });
 
+  it('il fuoco segue il cambio di passo', async () => {
+    leggi.mockResolvedValue(voci({ cassettiARate: [g('g1', 'Vacanza', 100), g('g2', 'Auto', 50)] }));
+    apri();
+    fireEvent.click(await screen.findByRole('button', { name: /Versa nel cassetto/ }));
+    expect(screen.getByRole('button', { name: /Vacanza/ })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Indietro' }));
+    expect(screen.getByRole('button', { name: 'Registra una spesa' })).toHaveFocus();
+  });
+
   it('rate tutte fatte: la riga sotto cambia', async () => {
     leggi.mockResolvedValue(voci({ cassettiARate: [g('g1', 'Vacanza', 100, 100)] }));
     apri();

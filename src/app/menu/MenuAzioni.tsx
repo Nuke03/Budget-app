@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowDownLeft, PiggyBank, Hourglass, CircleCheck, Building2, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -31,6 +31,17 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
   const router = useRouter();
   const [voci, setVoci] = useState<VociMenu | null>(null);
   const [scegliCassetto, setScegliCassetto] = useState(false);
+  const corpo = useRef<HTMLDivElement>(null);
+  const passoVisto = useRef(false);
+
+  // Cambiando passo il bottone premuto sparisce: il fuoco va al primo controllo del nuovo passo.
+  useEffect(() => {
+    if (!passoVisto.current) {
+      passoVisto.current = true;
+      return;
+    }
+    corpo.current?.querySelector<HTMLElement>('button')?.focus();
+  }, [scegliCassetto]);
 
   useEffect(() => {
     if (!aperto) {
@@ -78,7 +89,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
   if (scegliCassetto) {
     return (
       <FoglioInferiore titolo="In quale cassetto?" onClose={onClose}>
-        <div className="pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div ref={corpo} className="pb-[max(1rem,env(safe-area-inset-bottom))]">
           {cassetti.map((c) => (
             <button
               key={c.id}
@@ -105,7 +116,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
 
   return (
     <FoglioInferiore titolo="Cosa vuoi fare?" onClose={onClose}>
-      <div className="pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div ref={corpo} className="pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="px-5 pb-3">
           <button
             type="button"
