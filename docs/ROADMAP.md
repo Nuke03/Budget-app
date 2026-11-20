@@ -22,6 +22,28 @@ legge questo file più i documenti citati.
 - Ultimi rilasci: modifica di tutte le entità, obiettivi con "speso
   collegato", collegamento transazione → obiettivo, chiusura obiettivi.
 
+**Pulizia prima del test, fatta (20 novembre 2026).** Piano: `docs/superpowers/plans/2026-11-19-pulizia-prima-del-test.md`. Mappa delle voci: `docs/superpowers/plans/2026-11-19-pulizia-mappa.md`. Migrazione 0012 lanciata da Fabio, con i 3 test SQL passati (`movimenti_atomici.sql`, `ricomincia_da_zero.sql`, `rls_casa.sql`: 206 OK). Cosa è cambiato:
+- **Movimenti atomici:** modifica ed eliminazione di un movimento scrivono riga e saldo insieme, con una sola funzione SQL. Se l'app si chiude a metà, un'eliminazione in sospeso si ripete alla riapertura, senza cancellare due volte.
+- **Casa:** una spesa di casa pagata con la carta personale si può modificare. Il calendario usa l'id dell'obiettivo. Due soci che toccano "Metti da parte" insieme creano un solo fondo. "Più tardi" si salva nel database. Il puntino sulla barra segnala un promemoria. C'è il promemoria "Rivedi la quota" e il pulsante "Nuova cosa da mettere da parte". Una sola regola per le spese collegate a un fondo. Il mese del passaggio da Tricount ha due voci. La quota parte dal giorno d'ingresso.
+- **P.IVA:** "Scarta" sulle quote, domanda sulla quota dopo un incasso eliminato, cambio categoria che riparte da oggi. Lo stipendio superato mostra 0 € con una frase calma. Una notifica per tutte le scadenze della settimana. La Home dice se la P.IVA non si legge. Una sola fattura per ogni incasso, e la data d'incasso non può essere prima dell'emissione.
+- **Percorso:** le categorie di partenza si creano con un blocco, e solo se non ci sono movimenti personali. La lezione dell'avviso conta come lezione del giorno. "Lo voglio ancora" apre il nuovo obiettivo con nome e cifra già scritti. Altro dice se la Casa non si legge. Meno letture dopo ogni salvataggio.
+- **Conferma versamento:** su un obiettivo dilazionato con almeno una conferma, il riservato è il minore fra la quota a tempo e quanto confermato, meno lo speso collegato. Compare "Ho messo da parte" nella card e nel "Da fare" della Home.
+- **Design:** il logo del login è l'icona dell'app. Il timbro è più leggibile. La figura della P.IVA segue i token del design.
+
+## Checklist del test da zero
+
+Per Fabio, nell'ordine. Ogni passo dice cosa guardare.
+
+1. Prima del reset, annota i crediti della Casa e il saldo del conto comune.
+2. In Altro, tocca "Ricomincia da zero".
+3. Fai i Primi passi.
+4. Fai una spesa che porta il disponibile sotto zero. Deve comparire l'avviso sul fondo imprevisti.
+5. Fai una spesa da 160 €. Deve comparire la lezione sul fondo imprevisti.
+6. Modifica un movimento, poi eliminane un altro. Controlla che il saldo torni giusto dopo ogni passo.
+7. Su un obiettivo con scadenza, tocca "Ho messo da parte". Controlla il disponibile e il riservato.
+8. Con Miriam: la prova dal vivo della P.IVA (vedi "Da controllare per Fabio" più sotto).
+9. Dopo il reset, controlla che i numeri della Casa siano gli stessi di prima.
+
 ## Obiettivo trasversale: insegnare l'economia domestica
 
 Richiesta di Fabio, valida per ogni blocco: oltre a tenere i conti, l'app deve
@@ -49,17 +71,8 @@ nessun senso di colpa e nessuna gamification. Base dei contenuti:
 - stima contro reale, con card nel check-in e nella pagina della quota;
 - stati vuoti e di errore della parte Casa, e un test che vieta le parole non volute nei testi.
 
-Rimandati dalle revisioni, ancora aperti, da fare in un compito dedicato:
-- **Fatto (18 novembre 2026):** una sola funzione SQL (`crea_movimento`) scrive insieme la riga e il saldo, così una spesa non resta mai a metà se cade la connessione;
-- modificare una spesa di casa pagata con la carta personale (oggi si cancella e si reinserisce);
-- `id` dell'obiettivo nel feed del calendario, per eventi stabili quando si rinomina un obiettivo;
-- avviso nel percorso guidato su iOS 18 se il menu per il calendario in abbonamento ha parole diverse;
-- puntino sulla barra di navigazione quando c'è un promemoria;
-- promemoria "Rivedi la quota";
-- pulsante "Nuova cosa da mettere da parte" nel foglio di aggiunta;
-- una sola regola condivisa fra disponibile casa e check-in per le spese collegate a un fondo (oggi divergono solo se una voce mensile è legata a un obiettivo chiuso);
-- due soci che toccano "Metti da parte" nello stesso istante possono creare un fondo doppio (serve un indice unico o una funzione SQL);
-- etichetta "Già speso su questa bolletta" anche per i fondi una tantum.
+Rimandati dalle revisioni: tutti chiusi il 20 novembre 2026 (vedi il blocco «Pulizia prima del test» più sopra). Resta il fatto del 18 novembre:
+- **Fatto (18 novembre 2026):** una sola funzione SQL (`crea_movimento`) scrive insieme la riga e il saldo, così una spesa non resta mai a metà se cade la connessione.
 
 **Tipo:** architetturale. Cambia la premessa del prodotto: `PRODUCT.md` oggi
 dice "dati completamente isolati tra i due utenti".
@@ -277,22 +290,9 @@ Debito chiuso: l'aggiunta di un movimento è atomica. La funzione `crea_moviment
 - "Perché?" nel check-in della casa, verso la lezione sulla coppia;
 - viste di prova: `/anteprima?vista=impara`, `lezione`, `primi-passi`, `passo-imprevisti`, `avviso-fondi`, `attesa`, `ricomincia`.
 
-**Prossimi passi:** la prova dal vivo (vedi "Da controllare per Fabio").
+**Prossimi passi:** la prova dal vivo, vedi la checklist del test da zero.
 
-Resti segnati nel piano B3:
-- logo del login e un suggerimento sotto i campi con l'ombra;
-- numero grande della P.IVA fuori scala;
-- se iOS chiude l'app nell'istante di un'eliminazione, la riga può ricomparire: nessun dato si perde.
-
-Resti segnati nel piano B2:
-- calendario a 3 tocchi;
-- "Più tardi" vale solo su quel telefono;
-- "La tua quota parte da…" non copre chi entra in casa a metà mese.
-
-Resti segnati nel piano B1:
-- **Fatto (18 novembre 2026):** il saldo del conto si aggiornava in due passi separati. Ora riga e saldo li scrive insieme la funzione `crea_movimento` nel database;
-- un aggiornamento del saldo rimasto in sospeso si perde se si cambia pagina;
-- il testo del timbro è piccolo (9px).
+I resti dei piani B1, B2 e B3 sono chiusi il 20 novembre 2026 (vedi il blocco «Pulizia prima del test»).
 
 **Critica impeccable (11 novembre 2026):** 23 su 40. Il rapporto è in
 `.impeccable/critique/2026-11-11T16-57-29Z__src-app.md`. Problemi, in
@@ -315,53 +315,42 @@ impeccable (agente asset-producer). Va rifatta in tutti i formati:
 (apple-touch-icon, 180×180, senza trasparenza), il favicon e il colore di
 `manifest.json`. È la stessa icona che compare nelle notifiche.
 
-Da fare nel piano B:
-- Nel mese del passaggio da Tricount, una riga che mescola saldo di partenza e
-  versamento per conto dell'altro dice ancora "ha versato… quota". L'importo è
-  giusto, ma il saldo va mostrato in una riga sua.
-- Manca un test SQL in `supabase/tests/rls_casa.sql`: un debito da Tricount
-  deve bloccare uscita e chiusura della casa.
-- `CheckinMensile.tsx` dice ancora "Non è colpa di nessuno": va riformulato in
-  modo neutro.
+Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del debito Tricount, frase neutra in `CheckinMensile`).
 
 ### 3. Backlog già discusso
 
-- **Conferma versamento** verso obiettivi dilazionati: il riservato diventa
-  il minimo tra la quota teorica a tempo e i versamenti confermati.
-  - Correzione proposta: il vincolo si attiva **solo** sugli obiettivi per
-    cui si è confermato almeno un versamento, così gli obiettivi esistenti non
-    crollano a zero.
-  - In attesa del sì di Fabio sulla correzione. Serve una nuova tabella
-    `goal_versamenti`, con migrazione manuale.
-- **Totale app diverso dalla banca:** la matematica è verificata e testata.
+- **Conferma versamento:** fatta il 20 novembre 2026 (vedi il blocco «Pulizia prima del test»).
+- **Caso limite** (K3) e **Prestazioni:** chiusi.
+- **Totale app diverso dalla banca (K2):** la matematica è verificata e testata.
   Servono i numeri concreti (quale conto, importo nell'app, importo in banca,
-  obiettivi collegati) per trovare il dato sbagliato.
-- **Caso limite:** una transazione datata esattamente sul confine di ciclo di
-  un obiettivo ricorrente può finire nella finestra adiacente.
-- **Prestazioni:** Storico e P.IVA caricano tutte le transazioni senza limite.
+  obiettivi collegati) per trovare il dato sbagliato. Probabile causa: le due
+  richieste separate di modifica ed eliminazione, ora corrette con una sola funzione SQL.
 
 ### Da controllare per Fabio
 
 - Link delle 15 lezioni del percorso (`src/lib/percorso/lezioni.ts`): aprirli a mano prima della pubblicazione, perché i siti cambiano indirizzi. Elenco: https://economiapertutti.bancaditalia.it/ ; https://www.bancaditalia.it/pubblicazioni/guide-bi/index.html ; https://www.bancaditalia.it/focus/cybersicurezza/truffe-cyber ; https://www.arbitrobancariofinanziario.it ; https://www.consob.it/web/investor-education/ ; https://www.ivass.it/consumatori/index.html ; https://www.inps.it (home, non la pagina del servizio pensione, che la ricerca ha letto solo in parte).
-- Migrazione 0011 (percorso): applicata su Supabase il 19 novembre 2026, e il test SQL (`supabase/tests/ricomincia_da_zero.sql`) è passato. Prova dal vivo ancora da fare: "Ricomincia da zero" sul tuo account e poi i Primi passi; una spesa che porta il disponibile sotto zero; una spesa da 160 € (lezione sul fondo imprevisti). Prima del reset guarda nella Casa crediti e saldo del conto comune, e ricontrollali dopo.
+- Prova dal vivo della 0011 (percorso): vedi la checklist del test da zero più sopra. La migrazione è applicata dal 19 novembre 2026 e il test SQL (`supabase/tests/ricomincia_da_zero.sql`) è passato.
 - Le soglie del percorso (`src/lib/calculations/percorso/soglie.ts`) sono stime: da ritoccare dopo un po' di uso vero.
-- Rimandato: "Lo voglio ancora" nella lista d'attesa apre gli obiettivi senza la cifra già scritta.
-- Rimandato: il titolo dell'avviso sui fondi nomina solo il primo tipo di soldi toccato, anche se ne tocca più di uno.
 - La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
 - I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
-- Idea rimandata: un'impostazione "metti da parte di più" (punti percentuali extra) quando il vaso non basta per una scadenza. Oggi l'app dice di spostare la differenza prima della scadenza.
-- Piccole cose rimaste:
-  - il "Pagata" di una scadenza usa la data di oggi come proposta;
-  - la Home legge solo le scadenze dell'anno in corso;
-  - se si elimina un incasso, la quota già spostata resta nel vaso: reinserendo l'incasso, l'app chiede di nuovo di spostarla;
-  - una quota "da spostare" non si può scartare, e un incasso arrivato su un conto fuori dal disponibile viene comunque riservato;
-  - cambiare la categoria del fatturato in "Modifica i parametri" mette "da spostare" gli incassi di quella categoria dalla data di attivazione;
-  - se due scadenze cadono nella stessa settimana arriva una sola notifica;
-  - se la lettura dei dati P.IVA fallisce, la Home mostra il disponibile senza la riserva per le tasse;
-  - un incasso diretto nello Storico si chiama "Fattura Incasso in studio";
-  - quando lo stipendio supera quello che hai, il hub mostra 0 € rimasti e la Home una cifra negativa.
-- Per una futura migrazione 0012: indice unico su `piva_fatture.transaction_id` (oggi due schede aperte potrebbero collegare lo stesso incasso a due fatture); controllo che la data d'incasso non sia prima dell'emissione; descrizione dell'incasso diretto senza "Fattura"; tabelle P.IVA in sola lettura dal client, scritture solo dalle funzioni.
+
+### Aperto dopo la pulizia (20 novembre 2026)
+
+- **P12** (tabelle P.IVA in sola lettura dal client): rimandata. Toglie le policy di scrittura, quindi servono due migrazioni e un rilascio coordinato. È una difesa in più, non un difetto visibile.
+- **K2** (totale diverso dalla banca): serve il caso reale, vedi sopra. Probabile causa già corretta.
+- **P13** (idea "metti da parte di più"): quando il vaso non basta per una scadenza, si mette da parte una percentuale in più. Oggi l'app dice di spostare la differenza prima della scadenza. È un'idea, non un difetto.
+- Rinviati piccoli, dalla pulizia:
+  - le righe della riconciliazione si possono ancora modificare, come prima;
+  - la soglia del reddito irregolare (0,3) non ha un test che la blocca;
+  - se la risposta del server si perde, il messaggio di errore è generico;
+  - P2: le scadenze dell'anno dopo compaiono solo dopo aver aperto la P.IVA;
+  - P3: il prompt "La riporto indietro?" si perde se si lascia lo Storico in meno di 5 secondi (si può annullare comunque);
+  - due eliminazioni di incassi molto vicine: il secondo prompt sostituisce il primo;
+  - riga "P.IVA non letta": per chi non ha la P.IVA, un errore di lettura passeggero non è ancora gestito;
+  - un disponibile negativo viene mostrato a 0 senza frase, nella funzione `mostrato`;
+  - data futura e importi enormi del versamento sono controllati solo nell'app, non nel database;
+  - Home e P.IVA leggono i dati in due modi separati: se una lettura fallisce, le due schermate possono non dire lo stesso.
 
 ## Come lavorare per risparmiare token
 

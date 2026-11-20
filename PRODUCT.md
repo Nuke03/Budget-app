@@ -20,7 +20,7 @@ Since November 2026 the product also has to *support* rather than demand work (F
 
 ## Positioning
 
-Unlike a raw bank balance or a generic budgeting app's category totals, this app's headline number ("disponibile libero") already nets out money that is spoken for but not yet spent — money reserved instantly for a goal (bloccato) and money accruing gradually toward a future deadline (dilazionato, e.g. a car tax due in November). A neighboring app that only sums categories or shows the bank balance cannot make the same "safe to spend now" claim truthfully.
+Unlike a raw bank balance or a generic budgeting app's category totals, this app's headline number ("disponibile libero") already nets out money that is spoken for but not yet spent — money reserved instantly for a goal (bloccato) and money accruing gradually toward a future deadline (dilazionato, e.g. a car tax due in November). A neighboring app that only sums categories or shows the bank balance cannot make the same "safe to spend now" claim truthfully. For a dilazionato goal where the user has confirmed at least one deposit ("Ho messo da parte"), only the confirmed amount is reserved, capped at the time-based quota.
 
 ## Operating Context
 
