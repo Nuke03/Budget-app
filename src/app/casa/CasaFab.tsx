@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
+import { EVENTO_AGGIUNGI, segnaGestito, type DettaglioAggiungi } from '@/lib/eventoAggiungi';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Account } from '@/lib/types';
 import { AddTransactionSheet } from '../add/AddTransactionSheet';
@@ -14,6 +14,8 @@ export function CasaFab({ aggiunta, contiPersonali }: { aggiunta: CasaAggiunta; 
   // Il + della barra apre il foglio in modo casa.
   useEffect(() => {
     const apri = (e: Event) => {
+      // Un'entrata non è una spesa di casa: lascia che la gestisca la Home.
+      if ((e as CustomEvent<DettaglioAggiungi>).detail?.tipo === 'income') return;
       segnaGestito(e);
       setAperto(true);
     };

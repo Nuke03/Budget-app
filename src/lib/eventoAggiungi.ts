@@ -5,6 +5,8 @@ export interface DettaglioAggiungi {
   gestito: boolean;
   // La vista semplice della casa chiede il foglio già in modo casa.
   casa?: boolean;
+  // L'entrata chiede il foglio in modo entrata: chi non lo sa fare non lo segna gestito.
+  tipo?: 'income';
 }
 
 export function segnaGestito(e: Event): void {

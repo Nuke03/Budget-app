@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Fragment } from 'react';
+import { usePathname } from 'next/navigation';
+import { Fragment, useState } from 'react';
 import { Home, BarChart3, Building2, MoreHorizontal, Plus } from 'lucide-react';
-import { EVENTO_AGGIUNGI, type DettaglioAggiungi } from '@/lib/eventoAggiungi';
+import { MenuAzioni } from './menu/MenuAzioni';
 import { useCasaDaFare } from './CasaSegnale';
 
 // "Altro" resta attiva anche sulle pagine raggiungibili dalla sua lista.
@@ -25,15 +25,8 @@ const schede = [
 
 export function NavBar() {
   const pathname = usePathname();
-  const router = useRouter();
   const casaDaFare = useCasaDaFare();
-
-  // Se la pagina ha un foglio di aggiunta lo apre, altrimenti porta alla Home che lo apre.
-  function aggiungi() {
-    const dettaglio: DettaglioAggiungi = { gestito: false };
-    window.dispatchEvent(new CustomEvent(EVENTO_AGGIUNGI, { detail: dettaglio }));
-    if (!dettaglio.gestito) router.push('/?aggiungi=1');
-  }
+  const [menuAperto, setMenuAperto] = useState(false);
 
   if (pathname === '/login' || pathname === '/reset-password' || pathname === '/forgot-password') {
     return null;
@@ -55,8 +48,8 @@ export function NavBar() {
                 <div className="flex flex-1 items-start justify-center">
                   <button
                     type="button"
-                    onClick={aggiungi}
-                    aria-label="Aggiungi transazione"
+                    onClick={() => setMenuAperto(true)}
+                    aria-label="Cosa vuoi fare?"
                     data-fumetto="nav-piu"
                     className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full border-4 border-surface bg-brand text-brand-foreground"
                   >
@@ -89,6 +82,7 @@ export function NavBar() {
           );
         })}
       </div>
+      <MenuAzioni aperto={menuAperto} onClose={() => setMenuAperto(false)} inCasa={pathname.startsWith('/casa')} />
     </nav>
   );
 }
