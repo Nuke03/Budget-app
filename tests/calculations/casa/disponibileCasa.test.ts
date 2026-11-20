@@ -23,6 +23,13 @@ function obiettivo(importo: number): GoalForCalc {
 }
 
 describe('computeDisponibileCasa', () => {
+  it('un rientro sul cassetto di casa aumenta il riservato, fino al tetto', () => {
+    const g = { ...obiettivo(1000), specoCollegato: 300 };
+    expect(computeDisponibileCasa({ conti: [conto(2000)], obiettivi: [g], today: TODAY }).b).toBe(700);
+    expect(computeDisponibileCasa({ conti: [conto(2000)], obiettivi: [{ ...g, rientroMaturato: 100 }], today: TODAY }).b).toBe(800);
+    expect(computeDisponibileCasa({ conti: [conto(2000)], obiettivi: [{ ...g, rientroMaturato: 900 }], today: TODAY }).b).toBe(1000);
+  });
+
   it('A meno B: 1000 di saldo e 130 messi da parte danno 870', () => {
     const r = computeDisponibileCasa({ conti: [conto(1000)], obiettivi: [obiettivo(130)], today: TODAY });
     expect(r.valore).toBe(870);

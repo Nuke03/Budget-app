@@ -46,7 +46,8 @@ describe('computeAccantonatoConVersamenti', () => {
 
   it('con lo speso collegato: il minore fra i due, meno lo speso, mai sotto zero', () => {
     expect(computeAccantonatoConVersamenti(base, oggi, 100, 400)).toBe(300);
-    expect(computeAccantonatoConVersamenti(base, oggi, 100, 900)).toBe(500);
+    // regola nuova: il versato vero meno lo speso, poi il tetto a tempo (prima: 500)
+    expect(computeAccantonatoConVersamenti(base, oggi, 100, 900)).toBe(600);
     expect(computeAccantonatoConVersamenti(base, oggi, 450, 400)).toBe(0);
   });
 
@@ -205,5 +206,35 @@ describe('numeriLezione: prima-da-parte', () => {
   it('niente conferme questo mese, niente frase', () => {
     expect(numeriLezione('prima-da-parte', dati([goal({ confermatoMese: 0 })]))).toBeNull();
     expect(numeriLezione('prima-da-parte', dati([goal({})]))).toBeNull();
+  });
+});
+
+describe('i rientri nel riservato', () => {
+  const bloccato: GoalForCalc = { ...base, modalita: 'bloccato', scadenza: null, importoTarget: 1000 };
+  const aTempo: GoalForCalc = { ...base, importoTarget: 600 }; // teorico 300 a metà settembre
+
+  it('bloccato 1000, speso 300: 700, con rientro 100 800, con rientro 500 il tetto 1000', () => {
+    expect(computeAccantonatoConVersamenti(bloccato, oggi, 300, null, 0)).toBe(700);
+    expect(computeAccantonatoConVersamenti(bloccato, oggi, 300, null, 100)).toBe(800);
+    expect(computeAccantonatoConVersamenti(bloccato, oggi, 300, null, 500)).toBe(1000);
+  });
+
+  it('dilazionato a tempo: teorico 300, speso 300, rientro 100 dà 100', () => {
+    expect(computeAccantonatoConVersamenti(aTempo, oggi, 300, null, 100)).toBe(100);
+  });
+
+  it('con conferme conta il versato vero meno lo speso', () => {
+    const g: GoalForCalc = { ...base, importoTarget: 300 }; // teorico 150
+    expect(computeAccantonatoConVersamenti(g, oggi, 50, 200)).toBe(150);
+    expect(computeAccantonatoConVersamenti(g, oggi, 0, 100)).toBe(100);
+    expect(computeAccantonatoConVersamenti(g, oggi, 150, 100)).toBe(0);
+  });
+
+  it('con conferme il rientro non cambia il numero', () => {
+    expect(computeAccantonatoConVersamenti(base, oggi, 100, 400, 250)).toBe(300);
+  });
+
+  it('accantonatoObiettivo legge rientroMaturato dal goal', () => {
+    expect(accantonatoObiettivo({ ...bloccato, specoCollegato: 300, rientroMaturato: 100 }, oggi)).toBe(800);
   });
 });

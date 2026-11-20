@@ -132,27 +132,28 @@ export function computeAccantonatoFinora(
   return Math.max(0, teorico - specoCollegato);
 }
 
-// Il riservato di un obiettivo personale dilazionato di cui l'utente ha confermato almeno un versamento
-// nella finestra corrente (`versatoNellaFinestra`, vedi goalVersamenti.ts): il minore fra la quota a
-// tempo e quanto è stato confermato, meno lo speso collegato (mai sotto zero). `null` = nessuna conferma:
-// resta il vecchio calcolo (computeAccantonatoFinora), cifra per cifra. I bloccati non cambiano mai.
+// Il riservato di un obiettivo. Senza conferme (`versatoNellaFinestra` null) o se non è dilazionato vale la
+// quota a tempo (o l'intero, per i bloccati) meno lo speso collegato, più i rientri già maturati, col tetto
+// alla quota a tempo. Con almeno un versamento confermato nella finestra corrente (vedi goalVersamenti.ts)
+// contano i soldi veri: quanto confermato meno lo speso, col tetto alla quota a tempo; il rientro non entra.
 export function computeAccantonatoConVersamenti(
   goal: GoalForCalc,
   today: Date,
   specoCollegato: number,
-  versatoNellaFinestra: number | null
+  versatoNellaFinestra: number | null,
+  rientroMaturato: number = 0
 ): number {
-  if (versatoNellaFinestra === null || goal.modalita !== 'dilazionato') {
-    return computeAccantonatoFinora(goal, today, specoCollegato);
-  }
   const teorico = computeAccantonatoTeorico(goal, today);
-  return Math.max(0, Math.min(teorico, versatoNellaFinestra) - specoCollegato);
+  if (versatoNellaFinestra === null || goal.modalita !== 'dilazionato') {
+    return Math.max(0, Math.min(teorico, teorico - specoCollegato + rientroMaturato));
+  }
+  return Math.max(0, Math.min(teorico, versatoNellaFinestra - specoCollegato));
 }
 
 // Il riservato di un obiettivo, letto dai suoi campi (speso collegato e versato nella finestra): è il
 // numero che Home, card degli obiettivi, "Come si calcola?" e percorso devono mostrare.
 export function accantonatoObiettivo(goal: GoalForCalc, today: Date): number {
-  return computeAccantonatoConVersamenti(goal, today, goal.specoCollegato ?? 0, goal.versatoNellaFinestra ?? null);
+  return computeAccantonatoConVersamenti(goal, today, goal.specoCollegato ?? 0, goal.versatoNellaFinestra ?? null, goal.rientroMaturato ?? 0);
 }
 
 // Quanto spostare in un mese/ricorrenza "tipica" verso un fondo separato

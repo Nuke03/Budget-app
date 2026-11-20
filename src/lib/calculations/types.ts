@@ -22,4 +22,6 @@ export interface GoalForCalc {
   // Totale dei versamenti confermati ("Ho messo da parte") nella finestra attuale, solo per gli
   // obiettivi personali dilazionati. Assente/null = nessuna conferma: vale il calcolo a tempo di sempre.
   versatoNellaFinestra?: number | null;
+  // Quanto è già maturato dei rientri (soldi da rimettere nel cassetto, vedi rientri.ts). Assente/0 = nessun rientro.
+  rientroMaturato?: number;
 }

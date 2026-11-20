@@ -145,6 +145,14 @@ describe('spiegaRiserva', () => {
 });
 
 describe('spiegaDaParte', () => {
+  it('con un rientro compare la riga Rientro in positivo e il valore sale', () => {
+    const g = { importoTarget: 300, modalita: 'dilazionato' as const, stato: 'aperto' as const, scadenza: '2027-11-09',
+      createdAt: '2026-11-09T10:00:00Z', ricorrente: true, frequenzaMesi: 12, accantonaDa: '2026-11-09', rientroMaturato: 10 };
+    const s = spiegaDaParte({ goal: g, today: new Date(2027, 0, 15), spesoCollegato: 20 });
+    expect(s.valore).toBe(40);
+    expect(s.ingredienti.map((i) => i.etichetta)).toEqual(['Messo da parte finora', 'Rientro', 'Già speso su questa bolletta']);
+    expect(s.ingredienti[1].valore).toBe(10);
+  });
   const tari = {
     importoTarget: 300, modalita: 'dilazionato' as const, stato: 'aperto' as const, scadenza: '2027-11-09',
     createdAt: '2026-11-09T10:00:00Z', ricorrente: true, frequenzaMesi: 12, accantonaDa: '2026-11-09',

@@ -1,5 +1,5 @@
 import { addMonths, differenceInCalendarMonths, format, lastDayOfMonth, parseISO } from 'date-fns';
-import { computeAccantonatoFinora, computeQuotaMensile } from '@/lib/calculations/accantonato';
+import { accantonatoObiettivo, computeAccantonatoFinora, computeQuotaMensile } from '@/lib/calculations/accantonato';
 import type { GoalForCalc } from '@/lib/calculations/types';
 import { spiegaDaParte, type Spiegazione } from './spiegazioni';
 import type { BudgetGoal, PlanItem } from '@/lib/types';
@@ -105,7 +105,7 @@ export function obiettiviCasaConSpiegazione(
     return {
       ...g,
       quotaMensile: computeQuotaMensile(g, today),
-      accantonato: computeAccantonatoFinora(g, today, spesoCollegato),
+      accantonato: accantonatoObiettivo({ ...g, specoCollegato: spesoCollegato }, today),
       spiegazione: spiegaDaParte({ goal: g, today, spesoCollegato }),
     };
   });

@@ -1,6 +1,6 @@
 import { differenceInCalendarMonths, parseISO } from 'date-fns';
 import { formatNumero, nomeMese } from '@/lib/format';
-import { computeAccantonatoFinora, computeFinestraGoal } from '@/lib/calculations/accantonato';
+import { accantonatoObiettivo, computeAccantonatoFinora, computeFinestraGoal } from '@/lib/calculations/accantonato';
 import type { GoalForCalc } from '@/lib/calculations/types';
 import type { RigaMese } from './versamenti';
 import type { RegolaQuota } from '@/lib/types';
@@ -177,7 +177,8 @@ export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoColl
   const { goal, today } = input;
   const messo = arrotonda2(computeAccantonatoFinora(goal, today, 0));
   const spesoReale = Math.max(input.spesoCollegato, 0);
-  const valore = arrotonda2(computeAccantonatoFinora(goal, today, input.spesoCollegato));
+  const rientro = arrotonda2(Math.max(goal.rientroMaturato ?? 0, 0));
+  const valore = arrotonda2(accantonatoObiettivo({ ...goal, specoCollegato: input.spesoCollegato }, today));
 
   let formula: string;
   if (goal.modalita === 'bloccato') {
@@ -194,9 +195,10 @@ export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoColl
   }
 
   const ingredienti = [{ etichetta: 'Messo da parte finora', valore: messo }];
+  if (rientro > 0) ingredienti.push({ etichetta: 'Rientro', valore: rientro });
   if (spesoReale > 0) ingredienti.push({ etichetta: goal.ricorrente ? 'Già speso su questa bolletta' : 'Già speso su questa spesa', valore: -spesoReale });
-  if (spesoReale > messo) {
-    ingredienti.push({ etichetta: 'Speso oltre quanto messo da parte', valore: arrotonda2(spesoReale - messo) });
+  if (spesoReale > messo + rientro) {
+    ingredienti.push({ etichetta: 'Speso oltre quanto messo da parte', valore: arrotonda2(spesoReale - messo - rientro) });
     formula += ' Avete speso più di quanto era messo da parte, quindi qui non resta niente.';
   }
   return { valore, formula, ingredienti };

@@ -1,4 +1,4 @@
-import { computeAccantonatoFinora } from '../accantonato';
+import { accantonatoObiettivo } from '../accantonato';
 import type { AccountBalance, GoalForCalc } from '../types';
 import type { PlanItem, Transaction } from '@/lib/types';
 import { formatNumero } from '@/lib/format';
@@ -74,7 +74,7 @@ export function computeDisponibileCasa(input: {
   const b = arrotonda2(
     obiettivi
       .filter((g) => g.stato === 'aperto')
-      .reduce((s, g) => s + computeAccantonatoFinora(g, today, g.specoCollegato ?? 0), 0)
+      .reduce((s, g) => s + accantonatoObiettivo(g, today), 0)
   );
   const e = arrotonda2(a - b - c - d);
   const cuscinetto = Math.min(Math.max(e, 0), input.cuscinettoObiettivo ?? 0);
