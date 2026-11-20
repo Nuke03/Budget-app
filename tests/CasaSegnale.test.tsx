@@ -11,6 +11,7 @@ import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 vi.mock('next/navigation', () => ({
   usePathname: () => '/storico',
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 

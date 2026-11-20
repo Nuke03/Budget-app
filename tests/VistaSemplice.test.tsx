@@ -8,7 +8,12 @@ import type { CasaAggiunta } from '@/lib/loadCasaData';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const replace = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace }) }));
+const router = { refresh: vi.fn(), push: vi.fn(), replace };
+const qs = vi.hoisted(() => ({ current: '' }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(qs.current),
+}));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 
 const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: '2026-01-01', slot: 1, attivo: true };
@@ -38,13 +43,28 @@ function vista(s: Partial<Semplice>, debiti = [] as { debitoreId: string; credit
 
 describe('VistaSemplice', () => {
   it('/casa?azione=versamento apre il foglio del versamento e pulisce l indirizzo', () => {
-    window.history.pushState({}, '', '/casa?azione=versamento');
+    qs.current = 'azione=versamento';
     try {
       vista({});
       expect(screen.getByRole('dialog', { name: 'Registra un versamento' })).toBeInTheDocument();
       expect(replace).toHaveBeenCalledWith('/casa');
     } finally {
-      window.history.pushState({}, '', '/');
+      qs.current = '';
+    }
+  });
+
+  it('a pagina già aperta un nuovo ?azione=versamento apre il foglio', () => {
+    const { rerender } = vista({});
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    qs.current = 'azione=versamento';
+    try {
+      rerender(
+        <VistaSemplice casa={casa} vista={base} aggiunta={aggiunta} debiti={[] as never} oggi="2026-11-12" />
+      );
+      expect(screen.getByRole('dialog', { name: 'Registra un versamento' })).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith('/casa');
+    } finally {
+      qs.current = '';
     }
   });
 

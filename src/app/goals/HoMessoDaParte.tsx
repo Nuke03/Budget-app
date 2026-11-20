@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatEuro } from '@/lib/format';
 
 const fieldClass =
@@ -40,6 +40,11 @@ export function HoMessoDaParte({
   const [data, setData] = useState(oggi);
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+
+  // Quando l'ingresso arriva con la pagina già aperta (apertoIniziale diventa vero dopo il montaggio) la conferma si apre.
+  useEffect(() => {
+    if (apertoIniziale) apri();
+  }, [apertoIniziale]);
 
   const valore = Number(importo);
   const importoOk = importo.trim() !== '' && Number.isFinite(valore) && valore > 0 && valore < 1e9;

@@ -26,6 +26,14 @@ describe('HoMessoDaParte', () => {
     expect(screen.getByLabelText('Data')).toHaveValue('2026-11-19');
   });
 
+  it('apertoIniziale che diventa vero a pagina già aperta apre la conferma', () => {
+    const { rerender } = render(<HoMessoDaParte quota={200} oggi="2026-11-19" onConferma={vi.fn()} />);
+    expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
+    rerender(<HoMessoDaParte quota={200} oggi="2026-11-19" apertoIniziale onConferma={vi.fn()} />);
+    expect(screen.getByLabelText('Importo')).toHaveValue(200);
+    expect(screen.getByLabelText('Data')).toHaveValue('2026-11-19');
+  });
+
   it('apertoIniziale con finora parte da quella cifra', () => {
     render(<HoMessoDaParte quota={200} finora={600} oggi="2026-11-19" apertoIniziale onConferma={vi.fn()} />);
     expect(screen.getByLabelText('Importo')).toHaveValue(600);

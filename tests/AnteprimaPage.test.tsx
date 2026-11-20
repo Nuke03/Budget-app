@@ -6,7 +6,7 @@ const { notFound } = vi.hoisted(() => ({
     throw new Error('NEXT_NOT_FOUND');
   }),
 }));
-vi.mock('next/navigation', () => ({ notFound, useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/anteprima' }));
+vi.mock('next/navigation', () => ({ notFound, useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/anteprima', useSearchParams: () => new URLSearchParams() }));
 
 import AnteprimaPage from '@/app/anteprima/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';

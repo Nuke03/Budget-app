@@ -10,8 +10,12 @@ import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const refresh = vi.fn();
 const replace = vi.fn();
+const qs = vi.hoisted(() => ({ current: '' }));
+// Un router stabile, come quello vero: le dipendenze degli effetti non cambiano a ogni render.
+const router = { refresh, push: vi.fn(), replace };
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh, push: vi.fn(), replace }),
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(qs.current),
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/fondiCasa', () => ({ creaFondoBolletta: vi.fn().mockResolvedValue(undefined) }));
@@ -113,13 +117,28 @@ describe('CasaHome del libretto', () => {
   });
 
   it('/casa?azione=versamento apre il foglio del versamento e pulisce l indirizzo', () => {
-    window.history.pushState({}, '', '/casa?azione=versamento');
+    qs.current = 'azione=versamento';
     try {
       monta(base);
       expect(screen.getByRole('dialog', { name: 'Registra un versamento' })).toBeInTheDocument();
       expect(replace).toHaveBeenCalledWith('/casa');
     } finally {
-      window.history.pushState({}, '', '/');
+      qs.current = '';
+    }
+  });
+
+  it('a pagina già aperta un nuovo ?azione=versamento apre il foglio', () => {
+    const { rerender } = monta(base);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    qs.current = 'azione=versamento';
+    try {
+      rerender(
+        <CasaHome casa={casa} libretto={base} spiegazione={spiegazione} aggiunta={aggiunta} oggi="2026-11-12" />
+      );
+      expect(screen.getByRole('dialog', { name: 'Registra un versamento' })).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith('/casa');
+    } finally {
+      qs.current = '';
     }
   });
 

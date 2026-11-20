@@ -4,7 +4,13 @@ import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const refresh = vi.fn();
 const push = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }));
+const replace = vi.fn();
+const router = { refresh, push, replace };
+const qs = vi.hoisted(() => ({ current: '' }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(qs.current),
+}));
 const azioni = vi.hoisted(() => ({
   aggiungiVoce: vi.fn(async () => {}),
   decidiVoce: vi.fn(async () => {}),
@@ -23,6 +29,8 @@ beforeEach(() => {
   for (const f of Object.values(azioni)) f.mockClear();
   refresh.mockClear();
   push.mockClear();
+  replace.mockClear();
+  qs.current = '';
 });
 
 describe('lista d attesa', () => {
@@ -47,19 +55,26 @@ describe('lista d attesa', () => {
     assertNessunaParolaVietata(container);
   });
 
-  it('con ?nuovo=1 il focus va su Cosa', () => {
-    window.history.pushState({}, '', '/impara/attesa?nuovo=1');
-    try {
-      render(<ListaAttesa voci={[]} oggi={OGGI} />);
-      expect(screen.getByLabelText('Cosa')).toHaveFocus();
-    } finally {
-      window.history.pushState({}, '', '/');
-    }
+  it('con ?nuovo=1 il focus va su Cosa e l indirizzo si pulisce', () => {
+    qs.current = 'nuovo=1';
+    render(<ListaAttesa voci={[]} oggi={OGGI} />);
+    expect(screen.getByLabelText('Cosa')).toHaveFocus();
+    expect(replace).toHaveBeenCalledWith('/impara/attesa');
   });
 
   it('senza ?nuovo=1 il focus non va su Cosa', () => {
     render(<ListaAttesa voci={[]} oggi={OGGI} />);
     expect(screen.getByLabelText('Cosa')).not.toHaveFocus();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('se la pagina è già aperta, un nuovo ?nuovo=1 mette il focus su Cosa', () => {
+    const { rerender } = render(<ListaAttesa voci={[]} oggi={OGGI} />);
+    expect(screen.getByLabelText('Cosa')).not.toHaveFocus();
+    qs.current = 'nuovo=1';
+    rerender(<ListaAttesa voci={[]} oggi={OGGI} />);
+    expect(screen.getByLabelText('Cosa')).toHaveFocus();
+    expect(replace).toHaveBeenCalledWith('/impara/attesa');
   });
 
   it('una voce non ancora scaduta non ha scelte', () => {

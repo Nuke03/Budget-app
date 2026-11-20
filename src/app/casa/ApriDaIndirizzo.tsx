@@ -1,22 +1,21 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCasaAzioni } from './CasaAzioni';
 
-// Da /casa?azione=versamento (menu "Cosa vuoi fare?"): apre il versamento una volta sola e pulisce l'indirizzo.
+// Da /casa?azione=versamento (menu "Cosa vuoi fare?"): apre il versamento anche se la pagina è già aperta,
+// poi pulisce l'indirizzo, così lo stesso ingresso si può usare di nuovo.
 export function ApriDaIndirizzo(): null {
   const { apri } = useCasaAzioni();
   const router = useRouter();
-  const fatto = useRef(false);
+  const azione = useSearchParams().get('azione');
 
   useEffect(() => {
-    if (fatto.current) return;
-    if (new URLSearchParams(window.location.search).get('azione') !== 'versamento') return;
-    fatto.current = true;
+    if (azione !== 'versamento') return;
     apri({ tipo: 'versamento' });
     router.replace('/casa');
-  }, [apri, router]);
+  }, [azione, apri, router]);
 
   return null;
 }

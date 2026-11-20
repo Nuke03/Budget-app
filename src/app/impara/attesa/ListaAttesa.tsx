@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatEuro, nomeMese } from '@/lib/format';
 import { piuGiorni } from '@/lib/data/percorso';
 import { GIORNI_ATTESA } from '@/lib/calculations/percorso/soglie';
@@ -22,12 +22,14 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
   const valido = nome.trim().length > 0 && Number.isFinite(importo) && importo > 0;
   const inAttesa = voci.filter((v) => v.stato === 'in_attesa');
 
-  // Da /impara/attesa?nuovo=1 (menu "Cosa vuoi fare?"): il cursore parte già sul campo "Cosa".
+  // Da /impara/attesa?nuovo=1 (menu "Cosa vuoi fare?"): il cursore va sul campo "Cosa", anche se la pagina è già aperta.
+  // L'ingresso si consuma pulendo l'indirizzo.
+  const nuovo = useSearchParams().has('nuovo');
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('nuovo')) {
-      document.getElementById('attesa-nome')?.focus();
-    }
-  }, []);
+    if (!nuovo) return;
+    document.getElementById('attesa-nome')?.focus();
+    router.replace('/impara/attesa');
+  }, [nuovo, router]);
 
   async function esegui(lavoro: () => Promise<void>): Promise<boolean> {
     setOccupato(true);

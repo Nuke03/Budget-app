@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useThrowToBoundary } from '@/lib/useThrowToBoundary';
 import { createClient } from '@/lib/supabase/client';
 import { getOpenGoals, createGoal, updateGoal, closeGoal } from '@/lib/data/goals';
@@ -20,7 +21,11 @@ type GoalConSpeso = BudgetGoal & { specoCollegato: number; versatoNellaFinestra:
 
 export default function GoalsPage() {
   const fail = useThrowToBoundary();
+  const router = useRouter();
+  const params = useSearchParams();
   const eliminaConAnnulla = useEliminaConAnnulla();
+  const ricerca = params.toString();
+  const versa = params.get('versa');
   // Obiettivi tolti alla vista in attesa della scrittura vera: Annulla li rimette al loro posto.
   const [nascosti, setNascosti] = useState<Set<string>>(new Set());
   const [goals, setGoals] = useState<GoalConSpeso[]>([]);
@@ -70,10 +75,16 @@ export default function GoalsPage() {
   }, [caricato]);
 
   // /goals?versa=<id>: un id fuori formato non fa niente; un id che non è fra i cassetti aperti non apre nulla.
+  // L'ingresso si consuma pulendo l'indirizzo; il cassetto resta aperto. versaId si azzera a lista caricata
+  // senza ingresso, così lo stesso link funziona di nuovo.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('versa');
-    if (id && /^[0-9a-fA-F-]{8,64}$/.test(id)) setVersaId(id);
-  }, []);
+    if (versa !== null) {
+      setVersaId(/^[0-9a-fA-F-]{8,64}$/.test(versa) ? versa : null);
+      router.replace('/goals');
+    } else if (caricato) {
+      setVersaId(null);
+    }
+  }, [versa, caricato, router]);
 
   useEffect(() => {
     if (!caricato || !versaId) return;
@@ -82,12 +93,14 @@ export default function GoalsPage() {
 
   // /goals?nuovo=1 (dai primi passi) apre subito il modulo del nuovo obiettivo; con nome e importo
   // validi (dalla lista d'attesa) il modulo parte già compilato.
+  // Anche se la pagina è già aperta: l'ingresso si consuma pulendo l'indirizzo.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('nuovo')) {
-      setPrecompilato(leggiPrecompilato(window.location.search));
-      setCreando(true);
-    }
-  }, []);
+    if (!params.has('nuovo')) return;
+    setPrecompilato(leggiPrecompilato(ricerca));
+    setCreando(true);
+    router.replace('/goals');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reagisce solo al cambio di indirizzo
+  }, [ricerca, router]);
 
   async function handleCreate(payload: GoalPayload) {
     const supabase = createClient();

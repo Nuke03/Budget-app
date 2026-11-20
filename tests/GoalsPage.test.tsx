@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
+const nav = vi.hoisted(() => ({ qs: '', replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => nav,
+  usePathname: () => '/x',
+  useSearchParams: () => new URLSearchParams(nav.qs),
+}));
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
@@ -48,7 +53,10 @@ async function apri() {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  nav.qs = '';
+});
 afterEach(() => vi.useRealTimers());
 
 describe('Obiettivi: chiudere con Annulla', () => {
@@ -89,29 +97,33 @@ describe('Obiettivi: nuovo obiettivo', () => {
     expect(foglio).toContainElement(screen.getByLabelText('Nome'));
   });
 
-  it('con ?nuovo=1&nome=&importo= il modulo si apre già compilato', async () => {
-    window.history.pushState({}, '', '/goals?nuovo=1&nome=Cuffie&importo=89.9');
-    try {
-      render(<Pagina />);
-      const foglio = await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
-      expect(foglio).toContainElement(screen.getByLabelText('Nome'));
-      expect(screen.getByLabelText('Nome')).toHaveValue('Cuffie');
-      expect(screen.getByLabelText(/Importo/)).toHaveValue(89.9);
-    } finally {
-      window.history.pushState({}, '', '/');
-    }
+  it('con ?nuovo=1&nome=&importo= il modulo si apre già compilato, e l indirizzo si pulisce', async () => {
+    nav.qs = 'nuovo=1&nome=Cuffie&importo=89.9';
+    render(<Pagina />);
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+    expect(foglio).toContainElement(screen.getByLabelText('Nome'));
+    expect(screen.getByLabelText('Nome')).toHaveValue('Cuffie');
+    expect(screen.getByLabelText(/Importo/)).toHaveValue(89.9);
+    expect(nav.replace).toHaveBeenCalledWith('/goals');
   });
 
   it('con valori non validi il modulo si apre vuoto', async () => {
-    window.history.pushState({}, '', '/goals?nuovo=1&nome=&importo=-5');
-    try {
-      render(<Pagina />);
-      await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
-      expect(screen.getByLabelText('Nome')).toHaveValue('');
-      expect(screen.getByLabelText(/Importo/)).toHaveValue(null);
-    } finally {
-      window.history.pushState({}, '', '/');
-    }
+    nav.qs = 'nuovo=1&nome=&importo=-5';
+    render(<Pagina />);
+    await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+    expect(screen.getByLabelText('Nome')).toHaveValue('');
+    expect(screen.getByLabelText(/Importo/)).toHaveValue(null);
+  });
+
+  it('a pagina già aperta un nuovo ?nuovo=1 apre il modulo', async () => {
+    const { rerender } = render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    nav.qs = 'nuovo=1&nome=Cuffie&importo=89.9';
+    rerender(<Pagina />);
+    const foglio = await screen.findByRole('dialog', { name: 'Nuovo obiettivo' });
+    expect(screen.getByLabelText('Nome')).toHaveValue('Cuffie');
+    expect(foglio).toContainElement(screen.getByLabelText('Nome'));
   });
 });
 
@@ -128,11 +140,11 @@ describe('Obiettivi: versare dal menu (?versa=<id>)', () => {
   });
   afterEach(() => {
     extra.obiettivi = [];
-    window.history.pushState({}, '', '/');
+    nav.qs = '';
   });
 
-  it('apre la conferma solo sul cassetto indicato', async () => {
-    window.history.pushState({}, '', `/goals?versa=${CASSETTO_ID}`);
+  it('apre la conferma solo sul cassetto indicato, e pulisce l indirizzo', async () => {
+    nav.qs = `versa=${CASSETTO_ID}`;
     render(<Pagina />);
     await waitFor(() => expect(screen.getByLabelText('Importo')).toBeInTheDocument());
     expect(screen.getAllByLabelText('Importo')).toHaveLength(1);
@@ -140,17 +152,29 @@ describe('Obiettivi: versare dal menu (?versa=<id>)', () => {
     expect(document.getElementById('goal-a1b2c3d4-0000-4000-8000-000000000003')).not.toContainElement(
       screen.getByLabelText('Importo')
     );
+    expect(nav.replace).toHaveBeenCalledWith('/goals');
+  });
+
+  it('a pagina già aperta un nuovo ?versa= apre la conferma del cassetto', async () => {
+    const { rerender } = render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
+    nav.qs = `versa=${CASSETTO_ID}`;
+    rerender(<Pagina />);
+    await waitFor(() => expect(screen.getByLabelText('Importo')).toBeInTheDocument());
+    expect(document.getElementById(`goal-${CASSETTO_ID}`)).toContainElement(screen.getByLabelText('Importo'));
+    expect(nav.replace).toHaveBeenCalledWith('/goals');
   });
 
   it('un id non valido non apre niente', async () => {
-    window.history.pushState({}, '', '/goals?versa=non-valido!');
+    nav.qs = 'versa=non-valido!';
     render(<Pagina />);
     await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
     expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
   });
 
   it('un id sconosciuto non apre niente', async () => {
-    window.history.pushState({}, '', '/goals?versa=00000000-0000-0000-0000-000000000000');
+    nav.qs = 'versa=00000000-0000-0000-0000-000000000000';
     render(<Pagina />);
     await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
     expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
