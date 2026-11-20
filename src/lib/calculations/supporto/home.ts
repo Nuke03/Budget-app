@@ -113,7 +113,7 @@ export function promemoriaPiva(
 }
 
 // Un obiettivo dilazionato di cui hai già confermato almeno un versamento: se questo mese non hai ancora
-// confermato la quota, la Home lo chiede (una voce sola, la prima). Chi non ha mai confermato non riceve
+// confermato niente, la Home lo chiede (una voce sola, la prima). Chi non ha mai confermato non riceve
 // niente: la conferma è una scelta, non un compito.
 export function promemoriaVersamento(
   goals: (BudgetGoal & { versatoNellaFinestra?: number | null; confermatoMese?: number })[],
@@ -129,7 +129,8 @@ export function promemoriaVersamento(
       continue;
     }
     if (quota === null || quota <= 0) continue;
-    if ((g.confermatoMese ?? 0) >= quota - 0.005) continue;
+    // Una conferma qualsiasi nel mese chiude la domanda: chi ha messo da parte meno della quota lo ha deciso.
+    if ((g.confermatoMese ?? 0) > 0) continue;
     return {
       testo: `Hai messo da parte i ${euroInFrase(arrotonda(quota))} per ${g.nome} questo mese?`,
       href: `/goals#goal-${g.id}`,

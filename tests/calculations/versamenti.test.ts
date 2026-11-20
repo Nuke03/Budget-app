@@ -148,8 +148,9 @@ describe('promemoriaVersamento (Da fare)', () => {
     expect(promemoriaVersamento([goal({ versatoNellaFinestra: 300, confermatoMese: 250 })], oggi)).toBeNull();
   });
 
-  it('chiede se il confermato del mese è meno della quota', () => {
-    expect(promemoriaVersamento([goal({ versatoNellaFinestra: 300, confermatoMese: 100 })], oggi)).not.toBeNull();
+  it('tace appena c è una conferma nel mese, anche piccola: la domanda non si ripete', () => {
+    expect(promemoriaVersamento([goal({ versatoNellaFinestra: 300, confermatoMese: 100 })], oggi)).toBeNull();
+    expect(promemoriaVersamento([goal({ versatoNellaFinestra: 300, confermatoMese: 0.01 })], oggi)).toBeNull();
   });
 
   it('ignora i bloccati e i non aperti', () => {
