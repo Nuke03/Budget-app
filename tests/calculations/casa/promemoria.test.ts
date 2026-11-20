@@ -269,6 +269,22 @@ describe('rivedi la quota', () => {
     expect(motivoRivediQuota(input({ piani: [piano('2026-01-01'), piano('2026-09-01')], spese: [] }))).toBeNull();
   });
 
+  const versione = (validoDal: string, createdAt: string) =>
+    ({ plan: { validoDal, createdAt, giornoVersamento: 5 }, items: [{ frequenzaMesi: 1, importoMensile: 1000, goalId: null }], shares: [] }) as never;
+
+  it('dopo una revisione salvata oggi non chiede più, anche con settembre e ottobre sopra il previsto', () => {
+    const piani = [versione('2026-06-01', '2026-06-02T10:00:00Z'), versione('2026-11-01', '2026-11-19T09:00:00Z')];
+    expect(motivoRivediQuota(input({ piani }))).toBeNull();
+    // senza la revisione chiederebbe
+    expect(motivoRivediQuota(input({ piani: [versione('2026-06-01', '2026-06-02T10:00:00Z')] }))).toBe('spese');
+  });
+
+  it('una versione che parte dal mese prossimo: nessun promemoria, né per le spese né per il tempo', () => {
+    const futura = versione('2026-12-01', '2026-08-01T10:00:00Z');
+    expect(motivoRivediQuota(input({ piani: [versione('2026-06-01', '2026-06-02T10:00:00Z'), futura] }))).toBeNull();
+    expect(motivoRivediQuota(input({ piani: [versione('2026-01-01', '2026-01-02T10:00:00Z'), futura], spese: [] }))).toBeNull();
+  });
+
   it('chi non gestisce non lo vede mai', () => {
     expect(motivoRivediQuota(input({ gestisce: false }))).toBeNull();
     expect(motivoRivediQuota(input({ gestisce: false, piani: [piano('2026-01-01')] }))).toBeNull();

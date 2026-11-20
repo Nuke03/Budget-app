@@ -86,10 +86,20 @@ export function motivoRivediQuota(input: {
   if (!input.gestisce) return null;
   const corrente = `${meseRomaISO(new Date(`${input.oggi}T12:00:00Z`)).slice(0, 7)}-01`;
 
-  let sopra = 0;
-  let mese = corrente;
+  // Una revisione già fatta chiude la domanda: il piano non si salva con data passata, quindi le spese dei mesi
+  // prima della revisione (o i mesi dall'ultima quota) la farebbero ricomparire per niente. Vale per entrambi i motivi.
+  const mesi: string[] = [];
+  let m = corrente;
   for (let i = 0; i < MESI_SOPRA_PREVISTO; i++) {
-    mese = mesePrecedente(mese);
+    m = mesePrecedente(m);
+    mesi.push(m);
+  }
+  const inizioFinestra = mesi[mesi.length - 1];
+  if (input.piani.some((p) => p.plan.validoDal > corrente)) return null;
+  if (input.piani.some((p) => p.plan.createdAt && p.plan.createdAt.slice(0, 10) > inizioFinestra)) return null;
+
+  let sopra = 0;
+  for (const mese of mesi) {
     const { previstoMensili, spesoMensili } = speseMensiliDelMese(pianoInVigore(input.piani, mese), input.spese, mese);
     if (previstoMensili > 0 && spesoMensili > previstoMensili * (1 + SOGLIA_SOPRA_PREVISTO) + 1e-9) sopra++;
   }
