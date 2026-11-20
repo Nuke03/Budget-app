@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatEuro, nomeMese } from '@/lib/format';
 import { piuGiorni } from '@/lib/data/percorso';
@@ -21,6 +21,13 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
   const importo = Number(cifra.replace(',', '.'));
   const valido = nome.trim().length > 0 && Number.isFinite(importo) && importo > 0;
   const inAttesa = voci.filter((v) => v.stato === 'in_attesa');
+
+  // Da /impara/attesa?nuovo=1 (menu "Cosa vuoi fare?"): il cursore parte già sul campo "Cosa".
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('nuovo')) {
+      document.getElementById('attesa-nome')?.focus();
+    }
+  }, []);
 
   async function esegui(lavoro: () => Promise<void>): Promise<boolean> {
     setOccupato(true);

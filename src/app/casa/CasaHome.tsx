@@ -14,6 +14,7 @@ import { PallinoCategoria } from '../home/PallinoCategoria';
 import { CasaFab } from './CasaFab';
 import { ComeSiCalcola } from './ComeSiCalcola';
 import type { DebitoMembro } from '@/lib/calculations/casa/debitiMembri';
+import { ApriDaIndirizzo } from './ApriDaIndirizzo';
 import { CasaAzioni } from './CasaAzioni';
 import { DaFareCard } from './DaFareCard';
 import { RimandatiProvider } from './rimandaPromemoria';
@@ -88,6 +89,7 @@ export function CasaHome({
       meseDefault={`${oggi.slice(0, 7)}-01`}
       mesiArretrati={mesiArretrati}
     >
+      <ApriDaIndirizzo />
       <CoverHeader titolo="La casa" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
 
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">

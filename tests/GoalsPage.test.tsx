@@ -10,12 +10,14 @@ vi.mock('@/lib/useThrowToBoundary', () => ({
 }));
 vi.mock('@/lib/data/categories', () => ({ getCategories: async () => [] }));
 vi.mock('@/lib/data/goalSpending', () => ({ getSpecoCollegato: async () => 0 }));
+const extra = vi.hoisted(() => ({ obiettivi: [] as unknown[] }));
 vi.mock('@/lib/data/goals', () => ({
   getOpenGoals: async () => [
     {
       id: 'g1', nome: 'Telepass', importoTarget: 130, modalita: 'bloccato', scadenza: null,
       categoriaId: null, ricorrente: false, frequenzaMesi: null, stato: 'aperto', createdAt: '2026-01-01T00:00:00Z',
     },
+    ...extra.obiettivi,
   ],
   createGoal: vi.fn(),
   updateGoal: vi.fn(),
@@ -110,6 +112,48 @@ describe('Obiettivi: nuovo obiettivo', () => {
     } finally {
       window.history.pushState({}, '', '/');
     }
+  });
+});
+
+describe('Obiettivi: versare dal menu (?versa=<id>)', () => {
+  // Un id nel formato degli id veri (UUID): quello corto non passa il controllo di ?versa=.
+  const CASSETTO_ID = 'a1b2c3d4-0000-4000-8000-000000000002';
+  const cassetto = {
+    id: CASSETTO_ID, nome: 'Vacanza', importoTarget: 600, modalita: 'dilazionato', scadenza: '2099-12-31',
+    categoriaId: null, ricorrente: false, frequenzaMesi: null, stato: 'aperto', createdAt: '2026-01-01T00:00:00Z',
+  };
+  const altro = { ...cassetto, id: 'a1b2c3d4-0000-4000-8000-000000000003', nome: 'Auto' };
+  beforeEach(() => {
+    extra.obiettivi = [cassetto, altro];
+  });
+  afterEach(() => {
+    extra.obiettivi = [];
+    window.history.pushState({}, '', '/');
+  });
+
+  it('apre la conferma solo sul cassetto indicato', async () => {
+    window.history.pushState({}, '', `/goals?versa=${CASSETTO_ID}`);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByLabelText('Importo')).toBeInTheDocument());
+    expect(screen.getAllByLabelText('Importo')).toHaveLength(1);
+    expect(document.getElementById(`goal-${CASSETTO_ID}`)).toContainElement(screen.getByLabelText('Importo'));
+    expect(document.getElementById('goal-a1b2c3d4-0000-4000-8000-000000000003')).not.toContainElement(
+      screen.getByLabelText('Importo')
+    );
+  });
+
+  it('un id non valido non apre niente', async () => {
+    window.history.pushState({}, '', '/goals?versa=non-valido!');
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
+  });
+
+  it('un id sconosciuto non apre niente', async () => {
+    window.history.pushState({}, '', '/goals?versa=00000000-0000-0000-0000-000000000000');
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
   });
 });
 

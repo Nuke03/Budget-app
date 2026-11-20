@@ -32,6 +32,7 @@ export function GoalsList({
   onEdit,
   onClose,
   onHoMessoDaParte,
+  versaId = null,
   variante,
 }: {
   goals: GoalWithQuotaMensile[];
@@ -40,6 +41,8 @@ export function GoalsList({
   onClose?: (goal: GoalWithQuotaMensile) => void;
   // Solo gli obiettivi personali a rate: la pagina passa la scrittura del versamento.
   onHoMessoDaParte?: (goal: GoalWithQuotaMensile, importo: number, data: string) => Promise<void>;
+  // Il cassetto con questo id (dall'indirizzo ?versa=) si apre già sulla conferma.
+  versaId?: string | null;
   variante?: 'casa';
 }) {
   const casa = variante === 'casa';
@@ -154,6 +157,7 @@ export function GoalsList({
                   finora={g.versatoNellaFinestra == null ? g.accantonato : null}
                   primoMese={g.versatoNellaFinestra == null && computeAccantonatoFinora(g, new Date()) === 0}
                   oggi={oggi}
+                  apertoIniziale={versaId === g.id}
                   onConferma={(importo, data) => onHoMessoDaParte(g, importo, data)}
                 />
               </>

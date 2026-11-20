@@ -7,7 +7,8 @@ import type { CasaCorrente } from '@/lib/data/households';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+const replace = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace }) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 
 const fabio = { householdId: 'h1', userId: 'u1', displayName: 'Fabio', joinedAt: '2026-01-01', slot: 1, attivo: true };
@@ -36,6 +37,17 @@ function vista(s: Partial<Semplice>, debiti = [] as { debitoreId: string; credit
 }
 
 describe('VistaSemplice', () => {
+  it('/casa?azione=versamento apre il foglio del versamento e pulisce l indirizzo', () => {
+    window.history.pushState({}, '', '/casa?azione=versamento');
+    try {
+      vista({});
+      expect(screen.getByRole('dialog', { name: 'Registra un versamento' })).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith('/casa');
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
+
   it('mostra la quota del mese e il giorno', () => {
     vista({});
     expect(screen.getByText(/La tua quota di novembre/)).toBeInTheDocument();

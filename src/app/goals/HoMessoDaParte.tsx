@@ -17,6 +17,7 @@ export function HoMessoDaParte({
   finora,
   primoMese = false,
   oggi,
+  apertoIniziale = false,
   onConferma,
 }: {
   quota: number;
@@ -25,23 +26,28 @@ export function HoMessoDaParte({
   primoMese?: boolean;
   // 'yyyy-MM-dd'
   oggi: string;
+  // Apre la conferma al montaggio, con la stessa cifra iniziale di "Ho messo da parte" (dall'indirizzo ?versa=).
+  apertoIniziale?: boolean;
   onConferma: (importo: number, data: string) => Promise<void>;
 }) {
-  const [aperto, setAperto] = useState(false);
-  const [importo, setImporto] = useState('');
+  const primaConferma = finora !== null && finora !== undefined;
+  const importoIniziale = (): string => {
+    const iniziale = primaConferma && finora > 0 ? finora : quota;
+    return String(Math.round(iniziale * 100) / 100);
+  };
+  const [aperto, setAperto] = useState(apertoIniziale);
+  const [importo, setImporto] = useState(() => (apertoIniziale ? importoIniziale() : ''));
   const [data, setData] = useState(oggi);
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
 
-  const primaConferma = finora !== null && finora !== undefined;
   const valore = Number(importo);
   const importoOk = importo.trim() !== '' && Number.isFinite(valore) && valore > 0 && valore < 1e9;
   const dataOk = /^\d{4}-\d{2}-\d{2}$/.test(data) && data <= oggi;
   const valido = importoOk && dataOk;
 
   function apri() {
-    const iniziale = primaConferma && finora > 0 ? finora : quota;
-    setImporto(String(Math.round(iniziale * 100) / 100));
+    setImporto(importoIniziale());
     setData(oggi);
     setErrore(null);
     setAperto(true);

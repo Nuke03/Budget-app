@@ -30,6 +30,8 @@ export default function GoalsPage() {
   // Nome e cifra che arrivano dall'indirizzo (la lista d'attesa): riempiono il modulo una volta sola.
   const [caricato, setCaricato] = useState(false);
   const [precompilato, setPrecompilato] = useState<GoalPayload | null>(null);
+  // Da /goals?versa=<id> (menu "Cosa vuoi fare?"): il cassetto di quell'obiettivo si apre sulla conferma.
+  const [versaId, setVersaId] = useState<string | null>(null);
 
   async function refresh() {
     const supabase = createClient();
@@ -66,6 +68,17 @@ export default function GoalsPage() {
     if (!hash.startsWith('#goal-')) return;
     document.getElementById(hash.slice(1))?.scrollIntoView?.({ block: 'start' });
   }, [caricato]);
+
+  // /goals?versa=<id>: un id fuori formato non fa niente; un id che non è fra i cassetti aperti non apre nulla.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('versa');
+    if (id && /^[0-9a-fA-F-]{8,64}$/.test(id)) setVersaId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!caricato || !versaId) return;
+    document.getElementById(`goal-${versaId}`)?.scrollIntoView?.({ block: 'start' });
+  }, [caricato, versaId]);
 
   // /goals?nuovo=1 (dai primi passi) apre subito il modulo del nuovo obiettivo; con nome e importo
   // validi (dalla lista d'attesa) il modulo parte già compilato.
@@ -142,6 +155,7 @@ export default function GoalsPage() {
         onEdit={setEditingGoal}
         onClose={handleClose}
         onHoMessoDaParte={handleHoMessoDaParte}
+        versaId={versaId}
       />
 
       {creando && (

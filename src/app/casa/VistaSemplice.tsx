@@ -11,6 +11,7 @@ import type { Account } from '@/lib/types';
 import { EVENTO_AGGIUNGI, type DettaglioAggiungi } from '@/lib/eventoAggiungi';
 import { CoverHeader } from '../CoverHeader';
 import { dividiCifra } from '../home/formati';
+import { ApriDaIndirizzo } from './ApriDaIndirizzo';
 import { CasaAzioni, useCasaAzioni } from './CasaAzioni';
 import { CasaFab } from './CasaFab';
 import { DaFareCard } from './DaFareCard';
@@ -108,6 +109,7 @@ export function VistaSemplice({
       meseDefault={`${oggi.slice(0, 7)}-01`}
       mesiArretrati={mesiArretrati}
     >
+      <ApriDaIndirizzo />
       <CoverHeader titolo="La casa" lato={`${mese} ${oggi.slice(0, 4)}`} />
       <main className="mx-auto flex max-w-md flex-col gap-5 px-5 pb-6 pt-5">
         <section>

@@ -9,8 +9,9 @@ import type { PlanItem } from '@/lib/types';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 const refresh = vi.fn();
+const replace = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh, push: vi.fn() }),
+  useRouter: () => ({ refresh, push: vi.fn(), replace }),
 }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/data/fondiCasa', () => ({ creaFondoBolletta: vi.fn().mockResolvedValue(undefined) }));
@@ -109,6 +110,17 @@ describe('CasaHome del libretto', () => {
     fireEvent.click(pulsante);
     expect(pulsante).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Saldo del conto comune')).toBeInTheDocument();
+  });
+
+  it('/casa?azione=versamento apre il foglio del versamento e pulisce l indirizzo', () => {
+    window.history.pushState({}, '', '/casa?azione=versamento');
+    try {
+      monta(base);
+      expect(screen.getByRole('dialog', { name: 'Registra un versamento' })).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith('/casa');
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
   });
 
   it('senza niente da fare non c\'è la card', () => {

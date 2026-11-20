@@ -47,6 +47,21 @@ describe('lista d attesa', () => {
     assertNessunaParolaVietata(container);
   });
 
+  it('con ?nuovo=1 il focus va su Cosa', () => {
+    window.history.pushState({}, '', '/impara/attesa?nuovo=1');
+    try {
+      render(<ListaAttesa voci={[]} oggi={OGGI} />);
+      expect(screen.getByLabelText('Cosa')).toHaveFocus();
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
+
+  it('senza ?nuovo=1 il focus non va su Cosa', () => {
+    render(<ListaAttesa voci={[]} oggi={OGGI} />);
+    expect(screen.getByLabelText('Cosa')).not.toHaveFocus();
+  });
+
   it('una voce non ancora scaduta non ha scelte', () => {
     render(<ListaAttesa voci={[voce({ rivediIl: '2026-11-25' })]} oggi={OGGI} />);
     expect(screen.getByText(/ci ripensi il 25 novembre/i)).toBeInTheDocument();

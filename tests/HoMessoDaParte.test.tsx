@@ -20,6 +20,17 @@ describe('HoMessoDaParte', () => {
     expect(screen.getByLabelText('Data')).toHaveValue('2026-11-19');
   });
 
+  it('apertoIniziale mostra subito Importo e Data, con la quota del mese', () => {
+    render(<HoMessoDaParte quota={200} oggi="2026-11-19" apertoIniziale onConferma={vi.fn()} />);
+    expect(screen.getByLabelText('Importo')).toHaveValue(200);
+    expect(screen.getByLabelText('Data')).toHaveValue('2026-11-19');
+  });
+
+  it('apertoIniziale con finora parte da quella cifra', () => {
+    render(<HoMessoDaParte quota={200} finora={600} oggi="2026-11-19" apertoIniziale onConferma={vi.fn()} />);
+    expect(screen.getByLabelText('Importo')).toHaveValue(600);
+  });
+
   it('conferma con importo e data, anche modificati, poi si richiude', async () => {
     const onConferma = vi.fn().mockResolvedValue(undefined);
     render(<HoMessoDaParte quota={200} oggi="2026-11-19" onConferma={onConferma} />);
