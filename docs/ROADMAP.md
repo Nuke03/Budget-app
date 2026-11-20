@@ -4,6 +4,12 @@ Punto di partenza per le prossime chat. Ogni blocco è pensato per una chat
 nuova con contesto pulito: si apre la chat, si indica il blocco, e la chat
 legge questo file più i documenti citati.
 
+## Da fare (Fabio)
+
+- Lanciare `supabase/migrations/0014_difese.sql` nel SQL editor di Supabase. Porta le difese in più: date e importi dei versamenti, rientri che non cambiano conto o importo, righe della riconciliazione che non si modificano.
+- Eseguire a mano il test `supabase/tests/difese_0014.sql`. Il test finisce con rollback.
+- Il push su master aspetta la 0014.
+
 ## Stato attuale (8 novembre 2026; per il blocco 1 vedi sotto)
 
 - App in produzione su Vercel, database Supabase (piano gratuito).
@@ -326,12 +332,7 @@ Decisioni di Fabio:
 - Tono "calmo e affidabile": blu sobrio, molto spazio, numeri grandi.
 - Nel piano B entrano tutti e 5 i problemi.
 
-**Icona dell'app** (Fabio, 11 novembre: quella di oggi è brutta). Va rifatta
-insieme all'identità visiva in `DESIGN.md` e al cambio di palette, con
-impeccable (agente asset-producer). Va rifatta in tutti i formati:
-`public/icons/icon-192.png` e `icon-512.png`, la versione per iPhone
-(apple-touch-icon, 180×180, senza trasparenza), il favicon e il colore di
-`manifest.json`. È la stessa icona che compare nelle notifiche.
+**Icona dell'app: fatta (20 novembre 2026).** Commit `64d95d4` e `0e06f43`. È la stessa icona che compare nelle notifiche.
 
 Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del debito Tricount, frase neutra in `CheckinMensile`).
 
@@ -339,14 +340,14 @@ Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del deb
 
 - **Conferma versamento:** fatta il 20 novembre 2026 (vedi il blocco «Pulizia prima del test»).
 - **Caso limite** (K3) e **Prestazioni:** chiusi.
-- **Totale app diverso dalla banca (K2):** la matematica è verificata e testata.
+- **Totale app diverso dalla banca (K2):** aperto, vedi in fondo. La matematica è verificata e testata.
   Servono i numeri concreti (quale conto, importo nell'app, importo in banca,
   obiettivi collegati) per trovare il dato sbagliato. Probabile causa: le due
   richieste separate di modifica ed eliminazione, ora corrette con una sola funzione SQL.
 
 ### Da controllare per Fabio
 
-- Link delle 15 lezioni del percorso (`src/lib/percorso/lezioni.ts`): aprirli a mano prima della pubblicazione, perché i siti cambiano indirizzi. Elenco: https://economiapertutti.bancaditalia.it/ ; https://www.bancaditalia.it/pubblicazioni/guide-bi/index.html ; https://www.bancaditalia.it/focus/cybersicurezza/truffe-cyber ; https://www.arbitrobancariofinanziario.it ; https://www.consob.it/web/investor-education/ ; https://www.ivass.it/consumatori/index.html ; https://www.inps.it (home, non la pagina del servizio pensione, che la ricerca ha letto solo in parte).
+- **Fatto (20 novembre 2026):** link delle lezioni del percorso (`src/lib/percorso/lezioni.ts`) controllati. I 7 siti rispondono (HTTP 200).
 - Prova dal vivo della 0011 (percorso): vedi la checklist del test da zero più sopra. La migrazione è applicata dal 19 novembre 2026 e il test SQL (`supabase/tests/ricomincia_da_zero.sql`) è passato.
 - Le soglie del percorso (`src/lib/calculations/percorso/soglie.ts`) sono stime: da ritoccare dopo un po' di uso vero.
 - La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
@@ -354,22 +355,15 @@ Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del deb
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
 - Prova dal vivo con Miriam: "La riporto indietro?" compare solo se si resta nello Storico per 5 secondi dopo l'eliminazione; controllare anche che si capisca cosa fare se non compare.
 
-### Aperto dopo la pulizia (20 novembre 2026)
+### Chiuso il 20 novembre 2026
 
-- **P12** (tabelle P.IVA in sola lettura dal client): rimandata. Toglie le policy di scrittura, quindi servono due migrazioni e un rilascio coordinato. È una difesa in più, non un difetto visibile.
-- **K2** (totale diverso dalla banca): serve il caso reale, vedi sopra. Probabile causa già corretta.
-- **P13** (idea "metti da parte di più"): quando il vaso non basta per una scadenza, si mette da parte una percentuale in più. Oggi l'app dice di spostare la differenza prima della scadenza. È un'idea, non un difetto.
-- Rinviati piccoli, dalla pulizia:
-  - le righe della riconciliazione si possono ancora modificare, come prima;
-  - la soglia del reddito irregolare (0,3) non ha un test che la blocca;
-  - se la risposta del server si perde, il messaggio di errore è generico;
-  - P2: le scadenze dell'anno dopo compaiono solo dopo aver aperto la P.IVA;
-  - P3: il prompt "La riporto indietro?" si perde se si lascia lo Storico in meno di 5 secondi (si può annullare comunque);
-  - due eliminazioni di incassi molto vicine: il secondo prompt sostituisce il primo;
-  - riga "P.IVA non letta": per chi non ha la P.IVA, un errore di lettura passeggero non è ancora gestito;
-  - un disponibile negativo viene mostrato a 0 senza frase, nella funzione `mostrato`;
-  - data futura e importi enormi del versamento sono controllati solo nell'app, non nel database;
-  - Home e P.IVA leggono i dati in due modi separati: se una lettura fallisce, le due schermate possono non dire lo stesso.
+Le note rimandate della pulizia e le rifiniture di fumetti e rientri sono fatte.
+
+- **Fumetti e menu** (commit `4444ef6`): Tab resta dentro il giro, Esc lo chiude, il margine destro tiene conto della zona sicura, l'annuncio del fumetto arriva a chi usa lo screen reader, "Rivedi il giro" è disattivato finché l'utente non è noto, "Registra una spesa di casa" si trova.
+- **Rientri** (commit `105ce9a`): i rientri fermati compaiono sulle card, la rata entra nella cifra proposta solo nei mesi giusti, i cassetti di casa partono da quanto speso, lo Storico mostra il nome dei conti archiviati, un rientro di casa con un conto viene rifiutato prima di inviarlo.
+- **Home e P.IVA** (commit `68bdb24` e `a2c2f25`): le scadenze si creano anche dalla Home, la riga "P.IVA non letta" compare solo a chi usa la P.IVA guidata, la domanda "La riporto indietro?" resta in coda anche se si lascia lo Storico subito, due domande vicine restano due, una risposta persa mostra "Non so se è stato salvato. Controlla nello Storico prima di riprovare.", la soglia del reddito irregolare ha il suo test.
+- **Disponibile negativo**: chiuso senza frase nuova. La Home dice già "Fino al <data> conviene spendere solo per il necessario."
+- **Riconciliazione e versamenti** (commit `6ef0953`): il codice è pronto. Il controllo nel database serve la 0014, vedi "Da fare".
 
 ## Come lavorare per risparmiare token
 
@@ -382,3 +376,13 @@ Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del deb
   così Fabio la vede subito su Vercel.
 - Leggere `AGENTS.md`: Next 16 ha API diverse. Per esempio `proxy.ts` al
   posto di `middleware.ts`, e `retry` al posto di `reset` in `error.tsx`.
+
+## Cosa resta (e perché)
+
+- **P12**, tabelle P.IVA in sola lettura dal client: serve un rilascio in due tempi con il database vivo. Prima le scritture passano da funzioni `security definer`, poi si tolgono le policy. È una difesa in più, non un difetto visibile. Da fare con Fabio presente.
+- **P13**, mettere da parte una percentuale in più quando il vaso non basta: è un'idea di prodotto. Da decidere con Fabio.
+- **K2**, totale diverso dalla banca: servono i numeri veri di un caso (quale conto, importo nell'app, importo in banca, obiettivi collegati). La causa probabile è già corretta.
+- **Home e P.IVA leggono in due modi**: con i rientri le due letture usano già lo stesso aiuto (`rientriEffettivi`). Se una lettura fallisce, le due schermate possono non dire lo stesso. Unire tutto è un rifacimento, non una chiusura.
+- **Prove dal vivo**: la checklist del test da zero, la prova della 0010 con l'account di Miriam, e "La riporto indietro?" con Miriam. Sono di Fabio.
+- **Valori ENPAP**: il preset (78%, 10%, 2%, minimale 856 €) viene da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP. Le regole cambiano dal prossimo anno.
+- **Soglie del percorso** (`src/lib/calculations/percorso/soglie.ts`): sono stime. Si ritoccano dopo un po' di uso vero.
