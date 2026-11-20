@@ -12,11 +12,12 @@ const PERCORSI_ALTRO = ['/altro', '/goals', '/accounts', '/categories', '/piva']
 
 const schede = [
   { href: '/', label: 'Home', icon: Home, attiva: (p: string) => p === '/' },
-  { href: '/history', label: 'Storico', icon: BarChart3, attiva: (p: string) => p === '/history' },
-  { href: '/casa', label: 'Casa', icon: Building2, attiva: (p: string) => p.startsWith('/casa') },
+  { href: '/history', label: 'Storico', fumetto: 'nav-storico', icon: BarChart3, attiva: (p: string) => p === '/history' },
+  { href: '/casa', label: 'Casa', fumetto: 'nav-casa', icon: Building2, attiva: (p: string) => p.startsWith('/casa') },
   {
     href: '/altro',
     label: 'Altro',
+    fumetto: 'nav-altro',
     icon: MoreHorizontal,
     attiva: (p: string) => PERCORSI_ALTRO.some((r) => p === r || p.startsWith(`${r}/`)),
   },
@@ -56,6 +57,7 @@ export function NavBar() {
                     type="button"
                     onClick={aggiungi}
                     aria-label="Aggiungi transazione"
+                    data-fumetto="nav-piu"
                     className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full border-4 border-surface bg-brand text-brand-foreground"
                   >
                     <Plus size={26} strokeWidth={2.5} />
@@ -64,6 +66,7 @@ export function NavBar() {
               ) : null}
             <Link
               href={s.href}
+              data-fumetto={s.fumetto}
               aria-current={isActive ? 'page' : undefined}
               aria-label={puntino ? `${s.label}, c'è una cosa da fare` : undefined}
               className={`flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs transition-colors duration-150 ${

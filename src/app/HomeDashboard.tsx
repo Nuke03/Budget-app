@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatEuro, nomeMese } from '@/lib/format';
 import { CoverHeader } from './CoverHeader';
+import { GiroBarra } from './fumetti/GiroBarra';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
 import { AndamentoCard } from './home/AndamentoCard';
 import { ConsiglioCard } from './home/ConsiglioCard';
@@ -155,12 +156,13 @@ export function HomeDashboard({
 
   return (
     <>
+      <GiroBarra haCasa={!!casa} />
       <CoverHeader titolo="Il mio libretto" lato={`${nomeMese(oggi)} ${oggi.slice(0, 4)}`} />
 
       <main className="mx-auto flex max-w-md flex-col gap-3.5 px-3 pb-6">
         <section className="rounded-b-[var(--radius-md)] border border-t-0 border-rule bg-page px-[18px] pb-4 pt-5">
           <p className="text-[13px] text-ink-2">{piva?.stipendio ? 'Ti restano per questo mese' : 'Disponibile libero'}</p>
-          <p data-testid="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
+          <p data-testid="disponibile" data-fumetto="disponibile" className="num mt-1.5 font-serif text-[56px] font-bold leading-none">
             {intero}
             {resto ? <span className="text-[28px]">{resto}</span> : null}
           </p>

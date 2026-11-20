@@ -18,6 +18,15 @@ describe('NavBar', () => {
     expect(screen.getByRole('link', { name: 'Altro' })).toHaveAttribute('href', '/altro');
   });
 
+  it('le schede e il + portano gli attributi data-fumetto', () => {
+    pathname = '/';
+    render(<NavBar />);
+    expect(screen.getByRole('link', { name: 'Storico' })).toHaveAttribute('data-fumetto', 'nav-storico');
+    expect(screen.getByRole('link', { name: 'Casa' })).toHaveAttribute('data-fumetto', 'nav-casa');
+    expect(screen.getByRole('link', { name: 'Altro' })).toHaveAttribute('data-fumetto', 'nav-altro');
+    expect(screen.getByRole('button', { name: 'Aggiungi transazione' })).toHaveAttribute('data-fumetto', 'nav-piu');
+  });
+
   it('il + al centro apre il foglio se la pagina lo gestisce', () => {
     pathname = '/';
     push.mockClear();
