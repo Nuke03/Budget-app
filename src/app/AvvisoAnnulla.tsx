@@ -61,6 +61,7 @@ export function AvvisoAnnulla({
     >
       {testo ? (
         <div
+          data-avviso-annulla
           onMouseEnter={() => imposta('mouse', true)}
           onMouseLeave={() => imposta('mouse', false)}
           onFocus={() => {
