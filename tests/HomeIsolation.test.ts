@@ -115,10 +115,12 @@ describe('isolamento della home', () => {
   it('con userId e una casa, disponibile, dettaglio, margine e data target restano quelli personali e casa contiene solo righe di casa', async () => {
     const baseline = await home('A', righePersonali('A'));
     const conCasa = await home('A', { ...unisci(righePersonali('A'), righeDiCasa()), ...STRUTTURA_CASA }, true);
-    const { casa, ...personali } = conCasa;
-    const { casa: nessuna, ...baselinePersonali } = baseline;
+    const { casa, prossimoDati: datiCasa, ...personali } = conCasa;
+    const { casa: nessuna, prossimoDati: datiBase, ...baselinePersonali } = baseline;
     expect(nessuna).toBeNull();
     expect(personali).toEqual(baselinePersonali);
+    // I promemoria della casa che la Home porta al browser dipendono dalla casa per costruzione: il resto è uguale.
+    expect({ ...datiCasa, promemoriaCasa: [] }).toEqual({ ...datiBase, promemoriaCasa: [] });
     expect(personali.disponibileLibero).toBe(870);
     expect(casa?.aggiunta?.householdId).toBe('H1');
     expect(casa?.aggiunta?.conti.map((c) => c.id)).toEqual(['acc-B-H1']);
