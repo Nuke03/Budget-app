@@ -231,6 +231,84 @@ describe('HomeDashboard', () => {
     window.history.pushState({}, '', '/');
   });
 
+  it('l evento con tipo entrata apre il foglio con il riepilogo su Entrata', () => {
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+      />
+    );
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false, tipo: 'income' } }));
+    });
+    expect(screen.getByRole('button', { name: 'Entrata' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Spesa' })).not.toBeInTheDocument();
+  });
+
+  it('con ?aggiungi=entrata apre il foglio su Entrata e ripulisce l indirizzo', () => {
+    window.history.pushState({}, '', '/?aggiungi=entrata');
+    try {
+      render(
+        <HomeDashboard
+          disponibileLibero={870}
+          margineGiornaliero={29}
+          dataTarget="2026-07-01T00:00:00Z"
+          accounts={accounts}
+          categories={[]}
+          goals={goals}
+        />
+      );
+      expect(screen.getByRole('button', { name: 'Entrata' })).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith('/');
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
+  });
+
+  it('un evento senza tipo apre il foglio su Spesa', () => {
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+      />
+    );
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+    });
+    expect(screen.getByRole('button', { name: 'Spesa' })).toBeInTheDocument();
+  });
+
+  it('dopo un entrata, chiudere e riaprire con un evento senza tipo torna su Spesa', () => {
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={accounts}
+        categories={[]}
+        goals={goals}
+      />
+    );
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false, tipo: 'income' } }));
+    });
+    expect(screen.getByRole('button', { name: 'Entrata' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chiudi' })[0]);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
+    });
+    expect(screen.getByRole('button', { name: 'Spesa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Entrata' })).not.toBeInTheDocument();
+  });
+
   it('dopo un salvataggio in Casa dice "Registrato in Casa" per un momento', async () => {
     rpc.mockResolvedValueOnce({ data: 'c1', error: null });
     window.localStorage.setItem('aggiungiModo', 'casa');

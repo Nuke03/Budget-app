@@ -15,7 +15,7 @@ import { DettaglioDisponibile } from './home/DettaglioDisponibile';
 import { Registro } from './home/Registro';
 import { SchedaNotifiche } from './home/SchedaNotifiche';
 import { dividiCifra, giornoEMese } from './home/formati';
-import { EVENTO_AGGIUNGI, segnaGestito } from '@/lib/eventoAggiungi';
+import { EVENTO_AGGIUNGI, segnaGestito, type DettaglioAggiungi } from '@/lib/eventoAggiungi';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { useSegnalaCasaSeCe } from './CasaSegnale';
 import { usePromemoriaRimandati } from './casa/rimandaPromemoria';
@@ -107,6 +107,8 @@ export function HomeDashboard({
   useSegnalaCasaSeCe(prossimoDati ? casaVisibile.length > 0 : prossimoServer?.tipo === 'casa');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  // "Entrata" dal menu: il foglio si apre già su Entrata. Torna null alla chiusura.
+  const [aggiuntaIniziale, setAggiuntaIniziale] = useState<{ tipo: 'income'; categoriaId: null } | null>(null);
   const [registratoId, setRegistratoId] = useState<string | null>(null);
   // Le spese di Casa non stanno nel libretto personale: niente timbro, quindi una riga di conferma.
   const [registratoInCasa, setRegistratoInCasa] = useState(false);
@@ -120,10 +122,14 @@ export function HomeDashboard({
   useEffect(() => {
     const apri = (e: Event) => {
       segnaGestito(e);
+      const tipo = (e as CustomEvent<DettaglioAggiungi>).detail?.tipo;
+      setAggiuntaIniziale(tipo === 'income' ? { tipo: 'income', categoriaId: null } : null);
       setIsAddOpen(true);
     };
     window.addEventListener(EVENTO_AGGIUNGI, apri);
-    if (new URLSearchParams(window.location.search).has('aggiungi')) {
+    const parametri = new URLSearchParams(window.location.search);
+    if (parametri.has('aggiungi')) {
+      if (parametri.get('aggiungi') === 'entrata') setAggiuntaIniziale({ tipo: 'income', categoriaId: null });
       setIsAddOpen(true);
       router.replace('/');
     }
@@ -239,8 +245,14 @@ export function HomeDashboard({
       </main>
 
       <AddTransactionSheet
+        key={aggiuntaIniziale ? 'entrata' : 'aggiunta'}
         aperto={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
+        onClose={() => {
+          setIsAddOpen(false);
+          setAggiuntaIniziale(null);
+        }}
+        modoIniziale={aggiuntaIniziale ? 'personale' : undefined}
+        iniziale={aggiuntaIniziale ?? undefined}
         personale={{ categories, accounts, goals }}
         casa={casa?.aggiunta ?? null}
         contiPersonali={accounts}
