@@ -37,7 +37,7 @@ begin
   insert into public.accounts (user_id, nome, saldo_attuale, conta_in_disponibile) values (a, 'Conto 1', 500, true) returning id into v_c1;
   insert into public.accounts (user_id, nome, saldo_attuale, conta_in_disponibile) values (a, 'Conto 2', 200, true) returning id into v_c2;
   insert into public.accounts (user_id, nome, saldo_attuale, conta_in_disponibile) values (a, 'Vaso', 0, false) returning id into v_vaso;
-  insert into public.accounts (user_id, nome, saldo_attuale, conta_in_disponibile, archiviato) values (a, 'Vecchio', 0, false, true) returning id into v_arch;
+  insert into public.accounts (user_id, nome, saldo_attuale, conta_in_disponibile) values (a, 'Da eliminare', 0, false) returning id into v_arch;
   insert into public.accounts (user_id, nome, saldo_attuale) values (b, 'Conto B', 300) returning id into v_cb;
   insert into public.households (nome, created_by) values ('Casa rs', a) returning id into v_h;
   insert into public.household_members (household_id, user_id, display_name, slot) values (v_h, a, 'A', 1), (v_h, b, 'B', 2);
@@ -202,6 +202,58 @@ begin
     assert sqlerrm like '%row-level security%' or sqlerrm like '%foreign key%', 'conto archiviato: errore inatteso: ' || sqlerrm;
   end;
   assert not v_ok, 'rientro verso un conto archiviato accettato';
+
+  -- 7b. sposta_soldi rifiuta un conto archiviato (da o a)
+  v_ok := false;
+  begin
+    perform public.zz_as(a);
+    perform public.sposta_soldi(v_c1, v_arch2, 10, oggi);
+    perform public.zz_reset();
+    v_ok := true;
+  exception when others then
+    perform public.zz_reset();
+    assert sqlerrm = 'conto non valido', 'conto archiviato (a): errore diverso: ' || sqlerrm;
+  end;
+  assert not v_ok, 'spostamento verso un conto archiviato accettato';
+  v_ok := false;
+  begin
+    perform public.zz_as(a);
+    perform public.sposta_soldi(v_arch2, v_c1, 10, oggi);
+    perform public.zz_reset();
+    v_ok := true;
+  exception when others then
+    perform public.zz_reset();
+    assert sqlerrm = 'conto non valido', 'conto archiviato (da): errore diverso: ' || sqlerrm;
+  end;
+  assert not v_ok, 'spostamento da un conto archiviato accettato';
+
+  -- 7c. gli spostamenti non si modificano direttamente (nessun update)
+  v_ok := false;
+  begin
+    perform public.zz_as(a);
+    v_sp2 := public.sposta_soldi(v_c1, v_vaso, 5, oggi);
+    update public.spostamenti set importo = 1 where id = v_sp2;
+    perform public.zz_reset();
+    v_ok := true;
+  exception when insufficient_privilege then
+    perform public.zz_reset();
+  end;
+  assert not v_ok, 'update diretto su spostamenti accettato';
+  -- (la transazione interna è tornata indietro: lo spostamento di prova non c'è più)
+  assert (select count(*) from public.spostamenti where importo = 5) = 0, 'lo spostamento di prova è rimasto';
+
+  -- 7d. il conto del rientro entra nel disponibile: "Ferma" e "Lascia stare" funzionano lo stesso
+  update public.accounts set conta_in_disponibile = true where id = v_vaso;
+  perform public.zz_as(a);
+  update public.rientri set stato = 'fermato', fermato_il = oggi where id = v_r;
+  perform public.zz_reset();
+  assert (select stato from public.rientri where id = v_r) = 'fermato', 'ferma dopo il cambio del conto: non riuscito';
+  update public.accounts set archiviato = true where id = v_vaso;
+  perform public.zz_as(a);
+  update public.rientri set stato = 'chiuso' where id = v_r;
+  perform public.zz_reset();
+  assert (select stato from public.rientri where id = v_r) = 'chiuso', 'lascia stare con conto archiviato: non riuscito';
+  update public.accounts set archiviato = false, conta_in_disponibile = false where id = v_vaso;
   v_ok := false;
   begin
     perform public.zz_as(a);

@@ -476,11 +476,28 @@ describe('PivaHub', () => {
     it('un rientro verso un conto risparmio da spostare toglie la rata, come nella Home', async () => {
       vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
       vi.mocked(leggiRientriESpostamenti).mockResolvedValue({ rientri: [rientroConto], spostamenti: [] });
+      vi.mocked(getAccounts).mockResolvedValue([
+        ...conti,
+        { id: 'risp', nome: 'Risparmi', saldoAttuale: 100, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+      ]);
       apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
       // disponibile 900 - 100 di rata = 800; rimasto 600; cuscinetto 200
       const stip = await screen.findByRole('region', { name: 'Stipendio' });
       expect(await within(stip).findByText('Te ne restano 600 €')).toBeInTheDocument();
       expect(within(stip).getByText('200 €')).toBeInTheDocument();
+    });
+
+    it('un rientro verso un conto che ora conta nel disponibile non toglie niente', async () => {
+      vi.mocked(getTransactions).mockResolvedValue([...STORICO, spesa('sm', '2026-11-05', 200)]);
+      vi.mocked(leggiRientriESpostamenti).mockResolvedValue({ rientri: [rientroConto], spostamenti: [] });
+      vi.mocked(getAccounts).mockResolvedValue([
+        ...conti,
+        { id: 'risp', nome: 'Risparmi', saldoAttuale: 0, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+      ]);
+      apri({}, { stipendioMensile: 800, stipendioRivistoIl: '2026-11-01' });
+      const stip = await screen.findByRole('region', { name: 'Stipendio' });
+      expect(await within(stip).findByText('Te ne restano 600 €')).toBeInTheDocument();
+      expect(within(stip).getByText('300 €')).toBeInTheDocument();
     });
 
     it('se gli spostamenti non si leggono i rientri verso i conti si ignorano', async () => {

@@ -31,12 +31,18 @@ describe('leggiRientriESpostamenti', () => {
 
 describe('rientriEffettivi', () => {
   it('con spostamenti non letti ignora i rientri verso i conti e tiene quelli verso i cassetti', () => {
-    const r = rientriEffettivi([conto, cassetto], null, new Set(['cor']), '2026-11-15');
+    const r = rientriEffettivi([conto, cassetto], null, new Set(['cor']), new Set(['ris']), '2026-11-15');
     expect(r).toEqual({ rientri: [cassetto], rientriConti: [], riservaRientri: 0 });
   });
   it('con spostamenti letti calcola la riserva', () => {
-    const r = rientriEffettivi([conto, cassetto], [], new Set(['cor']), '2026-11-15');
+    const r = rientriEffettivi([conto, cassetto], [], new Set(['cor']), new Set(['ris']), '2026-11-15');
     expect(r.riservaRientri).toBe(100);
     expect(r.rientriConti).toHaveLength(1);
+  });
+  it('ignora i rientri verso un conto che non è più una destinazione valida (niente da spostare)', () => {
+    const r = rientriEffettivi([conto, cassetto], [], new Set(['cor']), new Set(['altro']), '2026-11-15');
+    expect(r.rientri).toEqual([cassetto]);
+    expect(r.rientriConti).toEqual([]);
+    expect(r.riservaRientri).toBe(0);
   });
 });

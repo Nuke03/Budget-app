@@ -7,7 +7,7 @@ import { getAccounts, updateAccountBalance, updateAccountDetails, createAccount 
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { chiudiRientro, fermaRientro } from '@/lib/data/rientri';
 import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
-import { rientriEffettivi, type SituazioneRientroConto } from '@/lib/calculations/rientri';
+import { contiDestinazioneRientri, rientriEffettivi, type SituazioneRientroConto } from '@/lib/calculations/rientri';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { ContiVista } from './ContiVista';
 import type { Account } from '@/lib/types';
@@ -34,7 +34,7 @@ export default function AccountsPage() {
     const { rientri, spostamenti } = await leggiRientriESpostamenti(supabase);
     // Come nella Home: pesano i conti del disponibile, senza il conto tasse.
     const chePesano = new Set(conti.filter((a) => a.contaInDisponibile && a.id !== tasse).map((a) => a.id));
-    setRientriConti(rientriEffettivi(rientri, spostamenti, chePesano, oggiRomaISO()).rientriConti);
+    setRientriConti(rientriEffettivi(rientri, spostamenti, chePesano, contiDestinazioneRientri(conti, tasse), oggiRomaISO()).rientriConti);
   }
 
   useEffect(() => {

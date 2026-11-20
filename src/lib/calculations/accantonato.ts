@@ -144,6 +144,7 @@ export function computeAccantonatoConVersamenti(
   rientroMaturato: number = 0
 ): number {
   const teorico = computeAccantonatoTeorico(goal, today);
+  rientroMaturato = Math.max(rientroMaturato, 0);
   if (versatoNellaFinestra === null || goal.modalita !== 'dilazionato') {
     return Math.max(0, Math.min(teorico, teorico - specoCollegato + rientroMaturato));
   }

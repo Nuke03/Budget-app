@@ -59,11 +59,18 @@ create index if not exists spostamenti_user_data_idx on public.spostamenti (user
 alter table public.rientri enable row level security;
 alter table public.spostamenti enable row level security;
 
--- rientri personali: solo di chi li scrive. Nel with check: l'obiettivo è personale di chi scrive,
--- oppure il conto è di chi scrive, personale, non archiviato e fuori dal disponibile.
+-- rientri personali: solo di chi li scrive. Quattro policy separate: chi crea un rientro verso un conto lo crea
+-- con la destinazione giusta (obiettivo personale di chi scrive, oppure conto di chi scrive, personale,
+-- non archiviato e fuori dal disponibile). Dopo, la destinazione può cambiare (il conto ora conta nel disponibile,
+-- è archiviato, o è diventato il conto tasse): "Ferma" e "Lascia stare" devono funzionare lo stesso, quindi
+-- modifica e cancellazione chiedono solo che il rientro sia personale e di chi scrive.
 drop policy if exists rientri_personali on public.rientri;
-create policy rientri_personali on public.rientri for all to authenticated
-  using (household_id is null and user_id = (select auth.uid()))
+drop policy if exists rientri_personali_select on public.rientri;
+create policy rientri_personali_select on public.rientri for select to authenticated
+  using (household_id is null and user_id = (select auth.uid()));
+
+drop policy if exists rientri_personali_insert on public.rientri;
+create policy rientri_personali_insert on public.rientri for insert to authenticated
   with check (
     household_id is null
     and user_id = (select auth.uid())
@@ -80,6 +87,15 @@ create policy rientri_personali on public.rientri for all to authenticated
       ))
     )
   );
+
+drop policy if exists rientri_personali_update on public.rientri;
+create policy rientri_personali_update on public.rientri for update to authenticated
+  using (household_id is null and user_id = (select auth.uid()))
+  with check (household_id is null and user_id = (select auth.uid()));
+
+drop policy if exists rientri_personali_delete on public.rientri;
+create policy rientri_personali_delete on public.rientri for delete to authenticated
+  using (household_id is null and user_id = (select auth.uid()));
 
 -- rientri di casa (stesso schema della 0004): li vedono i membri, li scrive chi può scrivere (casa non archiviata).
 -- L'obiettivo deve appartenere a quella casa; chi inserisce è l'autore. Modifica e cancellazione: ogni socio
@@ -123,16 +139,28 @@ drop trigger if exists rientri_forbid_household_change on public.rientri;
 create trigger rientri_forbid_household_change before update on public.rientri
   for each row execute function public.forbid_household_change();
 
--- spostamenti: solo i propri (sposta_soldi controlla da sola che i conti siano personali)
+-- spostamenti: solo i propri. Si scrivono con sposta_soldi (insert) e si tolgono con annulla_spostamento (delete),
+-- entrambe security invoker: servono select, insert e delete. Nessuna policy di update (una riga non si
+-- modifica, e un update diretto non toccherebbe i saldi): il privilegio si toglie anche dal grant.
 drop policy if exists spostamenti_proprie on public.spostamenti;
-create policy spostamenti_proprie on public.spostamenti for all to authenticated
-  using (user_id = (select auth.uid()))
+drop policy if exists spostamenti_select on public.spostamenti;
+create policy spostamenti_select on public.spostamenti for select to authenticated
+  using (user_id = (select auth.uid()));
+
+drop policy if exists spostamenti_insert on public.spostamenti;
+create policy spostamenti_insert on public.spostamenti for insert to authenticated
   with check (user_id = (select auth.uid()));
+
+drop policy if exists spostamenti_delete on public.spostamenti;
+create policy spostamenti_delete on public.spostamenti for delete to authenticated
+  using (user_id = (select auth.uid()));
+
+revoke update on public.spostamenti from authenticated;
 
 -- =====================================================================
 -- 3. sposta_soldi: sposta l'importo da un conto personale a un altro e lo registra
 -- Blocco in ordine di id: due spostamenti opposti in contemporanea non si incrociano.
--- Entrambi i conti devono essere personali di chi chiama (user_id e household_id si controllano qui,
+-- Entrambi i conti devono essere personali di chi chiama e non archiviati (user_id e household_id si controllano qui,
 -- non ci si affida alla sola visibilità: un conto di casa è visibile ai membri).
 -- =====================================================================
 
@@ -149,7 +177,7 @@ begin
   if p_da is null or p_a is null or p_da = p_a then raise exception 'conto non valido'; end if;
   select count(*) into n from (
     select id from public.accounts
-    where id in (p_da, p_a) and user_id = (select auth.uid()) and household_id is null
+    where id in (p_da, p_a) and user_id = (select auth.uid()) and household_id is null and not archiviato
     order by id for update
   ) s;
   if n <> 2 then raise exception 'conto non valido'; end if;
@@ -294,6 +322,7 @@ commit;
 -- ricomincia_da_zero si riporta alla versione precedente rieseguendo la sua definizione dalla 0012.
 -- piva_quote_scartate_proprie si riporta alla versione della 0012; adjust_account_balance si riabilita con
 -- grant execute on function public.adjust_account_balance(uuid, numeric) to authenticated;
+-- grant update on public.spostamenti to authenticated;
 -- drop trigger if exists rientri_forbid_household_change on public.rientri;
 -- drop function if exists public.annulla_spostamento(uuid);
 -- drop function if exists public.sposta_soldi(uuid, uuid, numeric, date);

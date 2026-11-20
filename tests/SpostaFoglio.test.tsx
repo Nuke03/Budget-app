@@ -49,6 +49,18 @@ describe('SpostaFoglio', () => {
     expect(spostaMock).toHaveBeenCalledWith({}, { daAccountId: 'c1', aAccountId: 'c2', importo: 45.5, data: '2026-11-20' });
   });
 
+  it('aperto da un rientro il bottone dice "Fatto, li ho spostati"', () => {
+    apri({ daRientro: true, iniziale: { daAccountId: 'c1', aAccountId: 'c2', importo: 10 } });
+    expect(screen.getByRole('button', { name: 'Fatto, li ho spostati' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Sposta' })).not.toBeInTheDocument();
+  });
+
+  it('altrimenti il bottone dice "Sposta"', () => {
+    apri();
+    expect(screen.getByRole('button', { name: 'Sposta' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Fatto, li ho spostati' })).not.toBeInTheDocument();
+  });
+
   it('doppio tocco: una sola chiamata', async () => {
     let finisci!: () => void;
     spostaMock.mockReturnValue(new Promise<string>((r) => (finisci = () => r('x'))));

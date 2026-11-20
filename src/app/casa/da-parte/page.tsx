@@ -5,7 +5,7 @@ import { getPlanVersions } from '@/lib/data/householdPlans';
 import { getOpenGoals } from '@/lib/data/goals';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { getRientri } from '@/lib/data/rientri';
-import type { Rientro } from '@/lib/calculations/rientri';
+import { maturatoPerCassetto, type Rientro } from '@/lib/calculations/rientri';
 import { casa as scopeCasa } from '@/lib/data/scope';
 import { meseRomaISO, oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { pianoInVigore } from '@/lib/calculations/casa/versamenti';
@@ -32,7 +32,10 @@ export default async function DaPartePage() {
     // I rientri dei cassetti di casa: se non si leggono, si vede la pagina senza le righe.
     getRientri(supabase, scope).catch(() => [] as Rientro[]),
   ]);
-  const conSpiegazione = obiettiviCasaConSpiegazione(obiettivi, speso, today);
+  // Come nella Casa disponibile: il rientro maturato di ogni cassetto entra nel riservato.
+  const oggiISO = oggiRomaISO(adesso);
+  const conRientri = obiettivi.map((g) => ({ ...g, rientroMaturato: maturatoPerCassetto(rientri, g.id, oggiISO) }));
+  const conSpiegazione = obiettiviCasaConSpiegazione(conRientri, speso, today);
 
   return (
     <DaParte

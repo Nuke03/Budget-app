@@ -105,11 +105,13 @@ export function StoricoVista({
             <div key={g.data} data-giorno={g.data}>
               <div className="flex items-baseline justify-between gap-3 border-b border-rule px-4 py-2.5">
                 <h3 className="text-[13px] font-semibold text-ink-2">{titoloGiorno(g.data)}</h3>
-                <p className="num text-[13px] font-semibold">
-                  <span className="sr-only">Totale del giorno </span>
-                  {g.totale === 0 ? '' : g.totale < 0 ? '−' : '+'}
-                  {formatEuro(Math.abs(g.totale))}
-                </p>
+                {g.righe.length > 0 ? (
+                  <p className="num text-[13px] font-semibold">
+                    <span className="sr-only">Totale del giorno </span>
+                    {g.totale === 0 ? '' : g.totale < 0 ? '−' : '+'}
+                    {formatEuro(Math.abs(g.totale))}
+                  </p>
+                ) : null}
               </div>
               <ul>
                 {g.righe.map((t) => (

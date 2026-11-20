@@ -50,7 +50,22 @@ describe('migrazione 0013 (statica)', () => {
   it('RLS abilitata e policy sulle righe giuste', () => {
     for (const t of ['rientri', 'spostamenti'])
       expect(codice).toContain(`alter table public.${t} enable row level security`);
-    expect(codice).toMatch(/create policy rientri_personali on public\.rientri for all to authenticated/);
+    for (const op of ['select', 'insert', 'update', 'delete'])
+      expect(codice).toMatch(new RegExp(`create policy rientri_personali_${op} on public\.rientri for ${op} to authenticated`));
+    expect(codice).not.toMatch(/create policy rientri_personali on/);
+    // insert: destinazione completa; update/delete: solo il proprietario (Ferma e Lascia stare non si bloccano)
+    const pers = (op: string, fine: string) =>
+      codice.slice(codice.indexOf(`create policy rientri_personali_${op}`), codice.indexOf(fine));
+    const insP = pers('insert', 'drop policy if exists rientri_personali_update');
+    expect(insP).toContain('a.conta_in_disponibile = false');
+    expect(insP).toContain('not a.archiviato');
+    const updP = pers('update', 'drop policy if exists rientri_personali_delete');
+    const delP = pers('delete', 'drop policy if exists rientri_casa_select');
+    for (const p of [updP, delP]) {
+      expect(p).toContain('household_id is null and user_id = (select auth.uid())');
+      expect(p).not.toContain('conta_in_disponibile');
+      expect(p).not.toContain('archiviato');
+    }
     for (const op of ['select', 'insert', 'update', 'delete'])
       expect(codice).toMatch(new RegExp(`create policy rientri_casa_${op} on public\.rientri for ${op} to authenticated`));
     const ins = codice.slice(codice.indexOf('create policy rientri_casa_insert'), codice.indexOf('drop policy if exists rientri_casa_update'));
@@ -60,13 +75,14 @@ describe('migrazione 0013 (statica)', () => {
     const sel = codice.slice(codice.indexOf('create policy rientri_casa_select'), codice.indexOf('drop policy if exists rientri_casa_insert'));
     expect(sel).toContain('public.is_household_member(household_id)');
     expect(codice).toMatch(/create trigger rientri_forbid_household_change before update on public\.rientri\s+for each row execute function public\.forbid_household_change\(\)/);
-    expect(codice).toMatch(
-      /create policy spostamenti_proprie on public\.spostamenti for all to authenticated\s+using \(user_id = \(select auth\.uid\(\)\)\)\s+with check \(user_id = \(select auth\.uid\(\)\)\)/,
-    );
-    expect(codice).toContain('a.conta_in_disponibile = false');
-    expect(codice).toContain('not a.archiviato');
+    // spostamenti: select/insert/delete, nessuna policy di update e privilegio revocato
+    expect(codice).toMatch(/create policy spostamenti_select on public\.spostamenti for select to authenticated\s+using \(user_id = \(select auth\.uid\(\)\)\)/);
+    expect(codice).toMatch(/create policy spostamenti_insert on public\.spostamenti for insert to authenticated\s+with check \(user_id = \(select auth\.uid\(\)\)\)/);
+    expect(codice).toMatch(/create policy spostamenti_delete on public\.spostamenti for delete to authenticated\s+using \(user_id = \(select auth\.uid\(\)\)\)/);
+    expect(codice).not.toMatch(/create policy spostamenti_\w+ on public\.spostamenti for (all|update)/);
+    expect(codice).toMatch(/revoke update on public\.spostamenti from authenticated;/);
     expect(codice).toContain('g.household_id = rientri.household_id');
-    for (const p of ['rientri_personali', 'rientri_casa_insert', 'spostamenti_proprie'])
+    for (const p of ['rientri_personali_select', 'rientri_personali_insert', 'rientri_personali_update', 'rientri_personali_delete', 'rientri_casa_insert', 'spostamenti_select', 'spostamenti_insert', 'spostamenti_delete'])
       expect(codice.indexOf(`drop policy if exists ${p}`)).toBeLessThan(codice.indexOf(`create policy ${p}`));
   });
 
@@ -89,6 +105,7 @@ describe('migrazione 0013 (statica)', () => {
     expect(c).toMatch(/order by id for update/);
     expect(c).toContain('household_id is null');
     expect(c).toContain('user_id = (select auth.uid())');
+    expect(c).toContain('household_id is null and not archiviato');
     expect(c).toContain('p_data > public._casa_oggi()');
     expect(c).toContain('p_importo >= 1000000000');
     expect(c).toContain('update public.accounts');

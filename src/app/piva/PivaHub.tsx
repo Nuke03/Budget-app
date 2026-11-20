@@ -16,7 +16,7 @@ import {
   scartaQuota,
 } from '@/lib/data/piva';
 import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
-import { maturatoPerCassetto, rientriEffettivi, type Rientro, type Spostamento } from '@/lib/calculations/rientri';
+import { contiDestinazioneRientri, maturatoPerCassetto, rientriEffettivi, type Rientro, type Spostamento } from '@/lib/calculations/rientri';
 import { computeDisponibileLibero } from '@/lib/calculations/disponibile';
 import { homeConStipendio, propostaStipendio, speseDelMese } from '@/lib/calculations/stipendio';
 import {
@@ -290,7 +290,13 @@ export function PivaHub({
     });
     if (settings.stipendioMensile !== null) {
       const riservaVersamento = datiStipendio.casa?.riservaVersamento ?? 0;
-      const effettivi = rientriEffettivi(datiStipendio.rientri, datiStipendio.spostamenti, contiDisponibile, oggiISO);
+      const effettivi = rientriEffettivi(
+        datiStipendio.rientri,
+        datiStipendio.spostamenti,
+        contiDisponibile,
+        contiDestinazioneRientri(conti, contoTasseId),
+        oggiISO
+      );
       const goalsConRientri = datiStipendio.goals.map((g) => ({
         ...g,
         rientroMaturato: maturatoPerCassetto(effettivi.rientri, g.id, oggiISO),

@@ -77,7 +77,7 @@ import HistoryPage from '@/app/history/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
 import { eliminaMovimento, modificaMovimento, getTransactions } from '@/lib/data/transactions';
 import { updateAccountBalance } from '@/lib/data/accounts';
-import { annullaSpostamento } from '@/lib/data/spostamenti';
+import { annullaSpostamento, getSpostamenti } from '@/lib/data/spostamenti';
 import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 function Pagina() {
@@ -187,6 +187,16 @@ describe('Storico: la casa non rompe quello personale', () => {
 });
 
 describe('Storico: spostamenti fra i propri conti', () => {
+  it('un giorno con soli spostamenti non mostra il totale del giorno', async () => {
+    vi.mocked(getSpostamenti).mockResolvedValueOnce([
+      { id: 's9', daAccountId: 'a', aAccountId: 'b', importo: 30, data: '2026-11-07', createdAt: '' },
+    ]);
+    const { baseElement } = render(<Pagina />);
+    await screen.findByText('Spostato da A a B');
+    const giorno = baseElement.querySelector('[data-giorno="2026-11-07"]')!;
+    expect(giorno).toBeTruthy();
+    expect(giorno).not.toHaveTextContent('Totale del giorno');
+  });
   it('la riga del giorno dice da dove a dove, senza segno, e non entra nel totale', async () => {
     const { baseElement } = render(<Pagina />);
     const riga = (await screen.findByText('Spostato da A a B')).closest('li')!;

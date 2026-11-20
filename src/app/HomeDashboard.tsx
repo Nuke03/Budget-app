@@ -159,7 +159,7 @@ export function HomeDashboard({
 
   // "Sposta tra i tuoi conti": dal menu (?sposta=1) vuoto, da "Prossimo" (?sposta=<rientro>) già compilato.
   // Si legge dall'indirizzo a ogni cambio, poi lo si ripulisce: lo stesso ingresso si può usare di nuovo.
-  const [spostaAperto, setSpostaAperto] = useState<{ chiave: number; iniziale?: { daAccountId?: string; aAccountId?: string; importo?: number } } | null>(null);
+  const [spostaAperto, setSpostaAperto] = useState<{ chiave: number; daRientro?: boolean; iniziale?: { daAccountId?: string; aAccountId?: string; importo?: number } } | null>(null);
   useEffect(() => {
     if (!spostaParam) return;
     const situazione = rientriConti.find((s) => s.rientro.id === spostaParam && s.rientro.accountId);
@@ -172,7 +172,7 @@ export function HomeDashboard({
         }
       : undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- l'ingresso arriva dall'indirizzo
-    setSpostaAperto({ chiave: Date.now(), iniziale });
+    setSpostaAperto({ chiave: Date.now(), iniziale, daRientro: !!situazione });
     router.replace('/');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spostaParam]);
@@ -324,6 +324,7 @@ export function HomeDashboard({
           key={spostaAperto.chiave}
           conti={accounts}
           iniziale={spostaAperto.iniziale}
+          daRientro={spostaAperto.daRientro}
           onClose={() => setSpostaAperto(null)}
           onFatto={() => {
             setSpostaAperto(null);

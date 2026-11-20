@@ -201,5 +201,10 @@ export function spiegaDaParte(input: { goal: GoalForCalc; today: Date; spesoColl
     ingredienti.push({ etichetta: 'Speso oltre quanto messo da parte', valore: arrotonda2(spesoReale - messo - rientro) });
     formula += ' Avete speso più di quanto era messo da parte, quindi qui non resta niente.';
   }
+  // Il riservato non supera mai quanto previsto per il cassetto: quello che avanza non conta.
+  const somma = arrotonda2(ingredienti.reduce((s, i) => s + i.valore, 0));
+  if (somma > valore) {
+    ingredienti.push({ etichetta: 'Oltre il dovuto, non conta', valore: arrotonda2(valore - somma) });
+  }
   return { valore, formula, ingredienti };
 }

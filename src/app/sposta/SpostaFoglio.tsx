@@ -17,11 +17,14 @@ const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 export function SpostaFoglio({
   conti,
   iniziale,
+  daRientro = false,
   onFatto,
   onClose,
 }: {
   conti: Account[];
   iniziale?: { daAccountId?: string; aAccountId?: string; importo?: number };
+  // Aperto da un rientro ("Prossimo"): i soldi li hai già spostati in banca, qui si registra.
+  daRientro?: boolean;
   onFatto: () => void;
   onClose: () => void;
 }) {
@@ -92,7 +95,7 @@ export function SpostaFoglio({
           </p>
         ) : null}
         <button type="button" onClick={() => void invia()} disabled={!pronto || inCorso} className={CLASSE_PRIMARIO}>
-          Sposta
+          {daRientro ? 'Fatto, li ho spostati' : 'Sposta'}
         </button>
       </div>
     </FoglioInferiore>

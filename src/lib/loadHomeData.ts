@@ -10,6 +10,7 @@ import { leggiRientriESpostamenti } from '@/lib/data/rientriLetti';
 import {
   maturatoPerCassetto,
   rientriEffettivi,
+  contiDestinazioneRientri,
   type Rientro,
   type SituazioneRientroConto,
 } from '@/lib/calculations/rientri';
@@ -380,6 +381,7 @@ export async function loadHomeBase(
     rientriGrezzi.rientri,
     rientriGrezzi.spostamenti,
     contiChePesanoPerRientri,
+    contiDestinazioneRientri(accounts, piva?.contoTasseId ?? null),
     oggi
   );
   const goalsConSpeso = goals.map((g) => ({

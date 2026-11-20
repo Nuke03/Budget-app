@@ -235,8 +235,9 @@ export function AddTransactionSheet({
         });
       }
     }
-    // Una spesa da un conto risparmio (non conta nel disponibile, non è il conto tasse): si propone il rientro.
-    if (personale && modo === 'personale' && payload.tipo === 'expense' && payload.accountId) {
+    // Una spesa da un conto risparmio (non conta nel disponibile, non è il conto tasse) e non collegata a un cassetto:
+    // si propone il rientro. Dopo una spesa da un cassetto l'app non chiede niente.
+    if (personale && modo === 'personale' && payload.tipo === 'expense' && payload.accountId && !payload.goalId) {
       const contoSpesa = personale.accounts.find((a) => a.id === payload.accountId);
       if (contoSpesa && !contoSpesa.contaInDisponibile && contoSpesa.id !== piva?.contoTasseId) {
         setDomandaRientro({ importo: payload.importo, conto: { id: contoSpesa.id, nome: contoSpesa.nome } });

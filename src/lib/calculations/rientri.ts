@@ -121,18 +121,33 @@ export function totaleDaSpostare(s: SituazioneRientroConto[]): number {
   return s.reduce((tot, x) => arrotonda2(tot + x.daSpostare), 0);
 }
 
+// Conti che possono ricevere un rientro: personali, non archiviati, fuori dal disponibile e diversi dal
+// conto tasse della P.IVA guidata. `conti` sono quelli personali già letti (chi chiama).
+export function contiDestinazioneRientri(
+  conti: { id: string; contaInDisponibile: boolean; archiviato?: boolean }[],
+  contoTasseId: string | null
+): Set<string> {
+  return new Set(
+    conti.filter((a) => !a.archiviato && !a.contaInDisponibile && a.id !== contoTasseId).map((a) => a.id)
+  );
+}
+
 // I rientri che contano davvero, dato che gli spostamenti si siano letti o no. Se gli spostamenti non si
 // leggono (`null`) non si può dire quanto sia già stato spostato: i rientri verso i conti si ignorano
 // (come se non ci fossero), quelli verso i cassetti restano (non hanno bisogno degli spostamenti).
+// Anche i rientri verso un conto che non è più una destinazione valida (ora conta nel disponibile,
+// archiviato, eliminato, o diventato il conto tasse) si ignorano: niente da spostare, niente promemoria.
 export function rientriEffettivi(
   rientri: Rientro[],
   spostamenti: Spostamento[] | null,
   contiChePesano: Set<string>,
+  contiDestinazione: Set<string>,
   oggi: string
 ): { rientri: Rientro[]; rientriConti: SituazioneRientroConto[]; riservaRientri: number } {
+  const validi = rientri.filter((r) => r.accountId === null || contiDestinazione.has(r.accountId));
   if (spostamenti === null) {
-    return { rientri: rientri.filter((r) => r.accountId === null), rientriConti: [], riservaRientri: 0 };
+    return { rientri: validi.filter((r) => r.accountId === null), rientriConti: [], riservaRientri: 0 };
   }
-  const rientriConti = situazioneRientriConti(rientri, spostamenti, contiChePesano, oggi);
-  return { rientri, rientriConti, riservaRientri: totaleDaSpostare(rientriConti) };
+  const rientriConti = situazioneRientriConti(validi, spostamenti, contiChePesano, oggi);
+  return { rientri: validi, rientriConti, riservaRientri: totaleDaSpostare(rientriConti) };
 }

@@ -153,6 +153,20 @@ describe('spiegaDaParte', () => {
     expect(s.ingredienti.map((i) => i.etichetta)).toEqual(['Messo da parte finora', 'Rientro', 'Già speso su questa bolletta']);
     expect(s.ingredienti[1].valore).toBe(10);
   });
+  it('con il tetto del cassetto una riga porta la somma al valore', () => {
+    const g = { importoTarget: 1000, modalita: 'bloccato' as const, stato: 'aperto' as const, scadenza: null,
+      createdAt: '2026-11-09T10:00:00Z', ricorrente: false, frequenzaMesi: null, accantonaDa: null, rientroMaturato: 500 };
+    const s = spiegaDaParte({ goal: g as never, today: new Date(2026, 11, 15), spesoCollegato: 300 });
+    expect(s.valore).toBe(1000);
+    expect(s.ingredienti.map((i) => i.etichetta)).toContain('Oltre il dovuto, non conta');
+    expect(s.ingredienti[s.ingredienti.length - 1].valore).toBe(-200);
+    expect(somma(s.ingredienti)).toBeCloseTo(s.valore, 8);
+  });
+  it('un rientro negativo non abbassa il riservato', () => {
+    const g = { importoTarget: 1000, modalita: 'bloccato' as const, stato: 'aperto' as const, scadenza: null,
+      createdAt: '2026-11-09T10:00:00Z', ricorrente: false, frequenzaMesi: null, accantonaDa: null, rientroMaturato: -50 };
+    expect(spiegaDaParte({ goal: g as never, today: new Date(2026, 11, 15), spesoCollegato: 0 }).valore).toBe(1000);
+  });
   const tari = {
     importoTarget: 300, modalita: 'dilazionato' as const, stato: 'aperto' as const, scadenza: '2027-11-09',
     createdAt: '2026-11-09T10:00:00Z', ricorrente: true, frequenzaMesi: 12, accantonaDa: '2026-11-09',

@@ -715,6 +715,33 @@ describe('AddTransactionSheet: la domanda sul rientro', () => {
     expect(screen.queryByText(TITOLO)).not.toBeInTheDocument();
   });
 
+  it('una spesa dal risparmio collegata a un cassetto non fa domande', async () => {
+    const onSaved = vi.fn();
+    window.localStorage.setItem('aggiungi:conto:personale', 'risp');
+    apri({
+      casa: null,
+      piva,
+      modoIniziale: 'personale',
+      onSaved,
+      personale: {
+        ...pers,
+        goals: [
+          {
+            id: 'g-cass', nome: 'Vacanza', importoTarget: 500, modalita: 'bloccato' as const, scadenza: null,
+            categoriaId: 'cp', ricorrente: false, frequenzaMesi: null, stato: 'aperto' as const,
+            createdAt: '2026-01-01T00:00:00Z', accantonato: 0,
+          },
+        ],
+      },
+    });
+    fireEvent.click(screen.getByText('Aggiungi una nota'));
+    fireEvent.click(screen.getByRole('button', { name: 'Vacanza' }));
+    compila('300');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(parametri()).toMatchObject({ p_goal: 'g-cass' });
+    expect(screen.queryByText(TITOLO)).not.toBeInTheDocument();
+  });
+
   it('il conto tasse non fa domande', async () => {
     const onSaved = vi.fn();
     spendiDa('tasse', '30', { onSaved });
