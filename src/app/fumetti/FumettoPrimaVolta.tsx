@@ -19,13 +19,25 @@ export function FumettoPrimaVolta({
   const aperto = useQualcosaAperto();
   const [chiuso, setChiuso] = useState(false);
 
-  if (!utente || chiuso || aperto) return null;
-  if (eVisto(utente, id) || giroInQuestaApertura()) return null;
+  const mostra = !!utente && !chiuso && !aperto && !eVisto(utente, id) && !giroInQuestaApertura();
+
+  // La regione resta sempre nella pagina: un nodo inserito già con aria-live può non essere letto.
+  const regione = (
+    <p aria-live="polite" className="sr-only">
+      {mostra ? testo : ''}
+    </p>
+  );
+  if (!mostra || !utente) return regione;
 
   const chiudi = () => {
     segnaVisto(utente, id);
     setChiuso(true);
   };
 
-  return <Fumetto ancora={ancora} testo={testo} modale={false} onChiudi={chiudi} />;
+  return (
+    <>
+      {regione}
+      <Fumetto ancora={ancora} testo={testo} modale={false} onChiudi={chiudi} />
+    </>
+  );
 }

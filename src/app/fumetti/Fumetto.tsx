@@ -91,6 +91,7 @@ export function Fumetto({
     function tasto(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         alSalta.current?.();
         return;
       }
@@ -154,7 +155,7 @@ export function Fumetto({
   const riservaBasso = modale ? `env(safe-area-inset-bottom) + ${MARGINE}px` : `${RISERVA_BARRA}px + env(safe-area-inset-bottom)`;
   const posizione: React.CSSProperties = {
     position: 'fixed',
-    left: `max(${sinistra}px, calc(env(safe-area-inset-left) + ${MARGINE}px))`,
+    left: `max(calc(env(safe-area-inset-left) + ${MARGINE}px), min(${sinistra}px, calc(100vw - env(safe-area-inset-right) - ${MARGINE}px - ${larghezza}px)))`,
     width: larghezza,
     top: `max(calc(env(safe-area-inset-top) + ${MARGINE}px), min(${top}px, calc(100dvh - ${altezza}px - ${riservaBasso})))`,
   };
@@ -162,7 +163,7 @@ export function Fumetto({
   const buco = { x: rett.left - RESPIRO, y: rett.top - RESPIRO, w: rett.width + RESPIRO * 2, h: rett.height + RESPIRO * 2 };
   const attributiDialog = modale
     ? { 'aria-modal': 'true' as const, 'data-fumetto-giro': '' }
-    : { 'aria-live': 'polite' as const };
+    : {};
 
   return (
     <>
@@ -185,6 +186,7 @@ export function Fumetto({
         {...attributiDialog}
         style={posizione}
         data-fumetto-top={Math.round(top)}
+        data-fumetto-left={Math.round(sinistra)}
         className="z-[61] rounded-[var(--radius-md)] border border-rule bg-surface p-4 text-foreground"
       >
         {punta && (

@@ -87,10 +87,63 @@ describe('Fumetto non modale', () => {
     render(<Fumetto ancora="prova" testo="Ciao" modale={false} onChiudi={onChiudi} />);
     const d = await screen.findByRole('dialog');
     expect(d.hasAttribute('aria-modal')).toBe(false);
-    expect(d.getAttribute('aria-live')).toBe('polite');
+    expect(d.hasAttribute('aria-live')).toBe(false);
     expect(d.contains(document.activeElement)).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Ho capito' }));
     fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }));
     expect(onChiudi).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Fumetto: tastiera e bordi', () => {
+  it('Tab resta dentro il giro e il fuoco torna dov era alla chiusura', async () => {
+    ancora();
+    const fuori = document.createElement('button');
+    document.body.appendChild(fuori);
+    fuori.focus();
+    const { unmount } = render(<Fumetto ancora="prova" testo="x" modale passo={{ n: 1, di: 2 }} onSalta={() => {}} onAvanti={() => {}} />);
+    const avanti = await screen.findByRole('button', { name: 'Avanti' });
+    const salta = screen.getByRole('button', { name: 'Salta' });
+    expect(document.activeElement).toBe(avanti);
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(salta);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(avanti);
+    fuori.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+    unmount();
+    expect(document.activeElement).toBe(fuori);
+  });
+
+  it('Esc nel giro non arriva agli altri ascoltatori', async () => {
+    ancora();
+    const onSalta = vi.fn();
+    const altro = vi.fn();
+    window.addEventListener('keydown', altro);
+    try {
+      render(<Fumetto ancora="prova" testo="x" modale onSalta={onSalta} />);
+      await screen.findByRole('dialog');
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onSalta).toHaveBeenCalled();
+      expect(altro).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('keydown', altro);
+    }
+  });
+
+  it('a 375px con l ancora vicino al bordo destro la bolla resta dentro e rispetta la zona sicura destra', async () => {
+    window.innerWidth = 375;
+    window.innerHeight = 700;
+    const el = document.createElement('button');
+    el.setAttribute('data-fumetto', 'prova');
+    el.getBoundingClientRect = () => ({ x: 330, y: 100, left: 330, top: 100, right: 370, bottom: 140, width: 40, height: 40, toJSON() {} }) as DOMRect;
+    document.body.appendChild(el);
+    render(<Fumetto ancora="prova" testo="Qui vedi tutto." modale={false} onChiudi={() => {}} />);
+    const d = await screen.findByRole('dialog');
+    const sinistra = Number(d.getAttribute('data-fumetto-left'));
+    expect(sinistra).toBeGreaterThanOrEqual(12);
+    expect(sinistra + 300).toBeLessThanOrEqual(375 - 12);
+    expect(d.style.left).toContain('env(safe-area-inset-right)');
   });
 });

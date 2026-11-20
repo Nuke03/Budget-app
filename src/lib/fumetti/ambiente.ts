@@ -48,7 +48,11 @@ export function useQualcosaAperto(): boolean {
     const aggiorna = () => setAperto(qualcosaAperto());
     aggiorna();
     const osservatore = new MutationObserver(aggiorna);
-    osservatore.observe(document.body, { childList: true, subtree: true, attributes: true });
+    osservatore.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributeFilter: ['aria-modal', 'data-avviso-annulla', 'data-dopo-in-attesa'],
+    });
     return () => osservatore.disconnect();
   }, []);
 

@@ -34,8 +34,9 @@ afterEach(() => {
 describe('FumettoPrimaVolta', () => {
   it('mai visto: si vede; Ho capito lo chiude e lo segna', async () => {
     render(<FumettoPrimaVolta id="storico" ancora="storico" testo={TESTO} />);
-    const t = await screen.findByText(TESTO);
-    assertNessunaParolaVietata(t.parentElement as HTMLElement);
+    const t = await screen.findByRole('dialog');
+    expect(t.textContent).toContain(TESTO);
+    assertNessunaParolaVietata(t);
     fireEvent.click(screen.getByRole('button', { name: 'Ho capito' }));
     expect(screen.queryByText(TESTO)).toBeNull();
     expect(eVisto('u1', 'storico')).toBe(true);
@@ -71,7 +72,22 @@ describe('FumettoPrimaVolta', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(screen.queryByText(TESTO)).toBeNull();
     foglio.remove();
-    expect(await screen.findByText(TESTO)).toBeTruthy();
+    expect(await screen.findByRole('dialog')).toBeTruthy();
     await waitFor(() => expect(eVisto('u1', 'storico')).toBe(false));
+  });
+
+  it('la regione aria-live c è sempre, vuota finché il fumetto non compare, poi con il testo', async () => {
+    segnaVisto('u1', 'storico');
+    const { container, rerender } = render(<FumettoPrimaVolta id="storico" ancora="storico" testo={TESTO} />);
+    const regione = container.querySelector('[aria-live="polite"]');
+    expect(regione).not.toBeNull();
+    expect(regione?.textContent).toBe('');
+    cleanup();
+    window.localStorage.clear();
+    _azzeraMemoriaPerTest();
+    const r = render(<FumettoPrimaVolta id="storico" ancora="storico" testo={TESTO} />);
+    await screen.findByRole('dialog');
+    await waitFor(() => expect(r.container.querySelector('[aria-live="polite"]')?.textContent).toBe(TESTO));
+    void rerender;
   });
 });

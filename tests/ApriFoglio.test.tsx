@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import { useState } from 'react';
 import { ApriFoglio } from '@/app/anteprima/ApriFoglio';
 
-function Finto() {
+function Finto({ etichetta = 'Registra una spesa' }: { etichetta?: string }) {
   const [menu, setMenu] = useState(false);
   const [spesa, setSpesa] = useState(false);
   return (
@@ -11,7 +11,7 @@ function Finto() {
       <button aria-label="Cosa vuoi fare?" onClick={() => setMenu(true)} />
       {menu ? (
         <div role="dialog">
-          <button onClick={() => setSpesa(true)}>Registra una spesa</button>
+          <button onClick={() => setSpesa(true)}>{etichetta}</button>
         </div>
       ) : null}
       {spesa ? <p>foglio spesa</p> : null}
@@ -25,6 +25,21 @@ describe('ApriFoglio', () => {
     render(
       <>
         <Finto />
+        <ApriFoglio />
+      </>,
+    );
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    vi.useRealTimers();
+    expect(screen.getByText('foglio spesa')).toBeInTheDocument();
+  });
+
+  it('trova anche "Registra una spesa di casa"', async () => {
+    vi.useFakeTimers();
+    render(
+      <>
+        <Finto etichetta="Registra una spesa di casa" />
         <ApriFoglio />
       </>,
     );

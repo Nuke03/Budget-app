@@ -15,12 +15,13 @@ export function RivediGiro() {
       <p className="text-[15px] text-ink-2">Rivedi i fumetti che spiegano dove sono le cose.</p>
       <button
         type="button"
+        disabled={!utente}
         onClick={() => {
           if (!utente) return;
           azzeraFumetti(utente);
           router.push('/');
         }}
-        className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-brand-dark"
+        className="inline-flex min-h-11 items-center self-start text-[15px] font-semibold text-brand-dark disabled:opacity-50"
       >
         Rivedi il giro
       </button>

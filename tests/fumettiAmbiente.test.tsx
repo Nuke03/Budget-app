@@ -110,3 +110,22 @@ describe('AvvisoAnnulla', () => {
     expect(container.querySelector('[data-avviso-annulla]')).toBeNull();
   });
 });
+
+describe('useQualcosaAperto: osservatore', () => {
+  it('guarda solo gli attributi che contano', () => {
+    const orig = MutationObserver.prototype.observe;
+    const opzioni: MutationObserverInit[] = [];
+    MutationObserver.prototype.observe = function (t: Node, o?: MutationObserverInit) {
+      opzioni.push(o ?? {});
+      return orig.call(this, t, o);
+    };
+    try {
+      renderHook(() => useQualcosaAperto());
+    } finally {
+      MutationObserver.prototype.observe = orig;
+    }
+    expect(opzioni[0].attributeFilter).toEqual(['aria-modal', 'data-avviso-annulla', 'data-dopo-in-attesa']);
+    expect(opzioni[0].childList).toBe(true);
+    expect(opzioni[0].subtree).toBe(true);
+  });
+});

@@ -8,7 +8,7 @@ export function ApriFoglio() {
     document.querySelector<HTMLButtonElement>('button[aria-label="Cosa vuoi fare?"]')?.click();
     const t = setTimeout(() => {
       const voce = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')).find(
-        (b) => b.textContent?.trim() === 'Registra una spesa',
+        (b) => /^Registra una spesa/.test(b.textContent?.trim() ?? ''),
       );
       voce?.click();
     }, 0);
