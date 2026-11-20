@@ -15,7 +15,7 @@ vi.mock('@/app/add/AddTransactionSheet', () => ({
 }));
 
 const g = (id: string, nome: string, quota: number, confermatoMese = 0) => ({ id, nome, quota, confermatoMese });
-const voci = (v: Partial<VociMenu>): VociMenu => ({ cassettiARate: [], haCasa: false, ...v });
+const voci = (v: Partial<VociMenu>): VociMenu => ({ cassettiARate: [], haCasa: false, contiPersonali: 1, ...v });
 
 function apri(inCasa = false) {
   const onClose = vi.fn();
@@ -206,8 +206,37 @@ describe('MenuAzioni', () => {
     expect(screen.queryByRole('button', { name: 'Registra una spesa di casa' })).not.toBeInTheDocument();
   });
 
+  it('"Sposta tra i tuoi conti" solo con almeno due conti personali', async () => {
+    leggi.mockResolvedValue(voci({ contiPersonali: 1 }));
+    const { unmount } = apri();
+    await waitFor(() => expect(leggi).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(screen.queryByText('Sposta tra i tuoi conti')).not.toBeInTheDocument();
+    unmount();
+    leggi.mockResolvedValue(voci({ contiPersonali: 2 }));
+    apri();
+    expect(await screen.findByText('Sposta tra i tuoi conti')).toBeInTheDocument();
+    expect(screen.getByText("Da un conto all'altro, i saldi si aggiornano")).toBeInTheDocument();
+  });
+
+  it('"Sposta tra i tuoi conti" porta a /?sposta=1 e chiude il menu', async () => {
+    leggi.mockResolvedValue(voci({ contiPersonali: 2 }));
+    const { onClose } = apri();
+    fireEvent.click(await screen.findByRole('button', { name: /Sposta tra i tuoi conti/ }));
+    expect(push).toHaveBeenCalledWith('/?sposta=1');
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('la voce sta prima di quelle che dipendono dai dati', async () => {
+    leggi.mockResolvedValue(voci({ contiPersonali: 2, cassettiARate: [g('g1', 'Vacanza', 100)] }));
+    apri();
+    const sposta = await screen.findByRole('button', { name: /Sposta tra i tuoi conti/ });
+    const versa = screen.getByRole('button', { name: /Versa nel cassetto/ });
+    expect(sposta.compareDocumentPosition(versa) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('nessuna parola vietata', async () => {
-    leggi.mockResolvedValue(voci({ haCasa: true, cassettiARate: [g('g1', 'Vacanza', 100), g('g2', 'Auto', 50)] }));
+    leggi.mockResolvedValue(voci({ haCasa: true, contiPersonali: 2, cassettiARate: [g('g1', 'Vacanza', 100), g('g2', 'Auto', 50)] }));
     const { baseElement } = apri();
     await screen.findByText('Versa la quota della casa');
     assertNessunaParolaVietata(baseElement);

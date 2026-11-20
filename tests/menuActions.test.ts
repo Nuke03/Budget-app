@@ -4,6 +4,7 @@ const getOpenGoals = vi.fn();
 const getConfermePerObiettivi = vi.fn();
 const computeQuotaMensile = vi.fn();
 const getMyHousehold = vi.fn();
+const getAccounts = vi.fn();
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }));
 vi.mock('@/lib/utenteOLogin', () => ({ utenteOLogin: async () => ({ id: 'u1' }) }));
 vi.mock('@/lib/data/goals', () => ({ getOpenGoals: (...a: unknown[]) => getOpenGoals(...a) }));
@@ -13,6 +14,7 @@ vi.mock('@/lib/data/goalVersamenti', () => ({
 vi.mock('@/lib/calculations/accantonato', () => ({
   computeQuotaMensile: (...a: unknown[]) => computeQuotaMensile(...a),
 }));
+vi.mock('@/lib/data/accounts', () => ({ getAccounts: (...a: unknown[]) => getAccounts(...a) }));
 vi.mock('@/lib/data/households', () => ({ getMyHousehold: (...a: unknown[]) => getMyHousehold(...a) }));
 
 import { leggiVociMenu } from '@/app/menu/actions';
@@ -26,6 +28,7 @@ beforeEach(() => {
   getConfermePerObiettivi.mockResolvedValue({});
   computeQuotaMensile.mockReturnValue(50);
   getMyHousehold.mockResolvedValue(null);
+  getAccounts.mockResolvedValue([]);
 });
 
 describe('leggiVociMenu', () => {
@@ -71,6 +74,16 @@ describe('leggiVociMenu', () => {
   });
 
   it('nessun obiettivo: cassettiARate vuoto', async () => {
-    expect(await leggiVociMenu()).toEqual({ cassettiARate: [], haCasa: false });
+    expect(await leggiVociMenu()).toEqual({ cassettiARate: [], haCasa: false, contiPersonali: 0 });
+  });
+
+  it('contiPersonali: quanti conti personali non archiviati', async () => {
+    getAccounts.mockResolvedValue([{ id: 'a' }, { id: 'b' }]);
+    expect((await leggiVociMenu()).contiPersonali).toBe(2);
+  });
+
+  it('conti che non si leggono: contiPersonali 0', async () => {
+    getAccounts.mockRejectedValue(new Error('boom'));
+    expect((await leggiVociMenu()).contiPersonali).toBe(0);
   });
 });

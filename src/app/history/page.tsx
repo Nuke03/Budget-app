@@ -14,14 +14,16 @@ import { righeNeutreAccantonamenti, righeNeutreStorico, type RigaNeutra } from '
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { annullaAccantonamento, getAccantonamenti } from '@/lib/data/piva';
 import { getAccounts } from '@/lib/data/accounts';
+import { annullaSpostamento, getSpostamenti } from '@/lib/data/spostamenti';
 import { getOpenGoals, createGoal } from '@/lib/data/goals';
 import { filterTransactionsByPeriodo, type Periodo } from '@/lib/calculations/filterTransactionsByPeriodo';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
-import { StoricoVista } from './StoricoVista';
+import { StoricoVista, type RigaSpostamento } from './StoricoVista';
 import { AddTransactionForm } from '../add/AddTransactionForm';
 import { euroInFrase } from '@/lib/format';
 import { CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
+import type { Spostamento } from '@/lib/calculations/rientri';
 import type { Transaction, Category, Account, BudgetGoal, TransactionTipo, PivaAccantonamento } from '@/lib/types';
 
 export default function HistoryPage() {
@@ -35,6 +37,7 @@ export default function HistoryPage() {
   const [goals, setGoals] = useState<BudgetGoal[]>([]);
   const [righeNeutre, setRigheNeutre] = useState<RigaNeutra[]>([]);
   const [righeTasse, setRigheTasse] = useState<RigaNeutra[]>([]);
+  const [spostamenti, setSpostamenti] = useState<Spostamento[]>([]);
   // Gli spostamenti sul conto tasse letti con lo storico: servono a sapere, prima di eliminare un incasso, se la sua quota è già nel conto.
   const accantonamenti = useRef<PivaAccantonamento[]>([]);
   // Dopo aver eliminato un incasso la cui quota era già nel conto tasse: la domanda con un tocco.
@@ -61,6 +64,8 @@ export default function HistoryPage() {
     // Parte insieme a quella personale, senza aspettarla.
     const casaInCorso = caricaRigheCasa(supabase, da).catch(() => [] as RigaNeutra[]);
     const tasseInCorso = caricaRigheTasse(supabase, da).catch(() => [] as RigaNeutra[]);
+    // Gli spostamenti sono un di più, come la casa: se non si leggono lo storico resta intero.
+    const spostamentiInCorso = getSpostamenti(supabase, da || undefined).catch(() => [] as Spostamento[]);
     const [tx, cats, accs, openGoals] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da }),
       getCategories(supabase),
@@ -74,6 +79,8 @@ export default function HistoryPage() {
     setGoals(openGoals);
     setLetteDal(da);
     setCaricato(true);
+    const spostamentiLetti = await spostamentiInCorso;
+    if (lettura === ultimaLettura.current) setSpostamenti(spostamentiLetti);
     const righeCasa = await casaInCorso;
     if (lettura === ultimaLettura.current) setRigheNeutre(righeCasa);
     const righeDelleTasse = await tasseInCorso;
@@ -210,6 +217,27 @@ export default function HistoryPage() {
     });
   }
 
+  // Eliminare uno spostamento rimette i soldi sul conto di partenza (lo fa l'rpc).
+  function handleEliminaSpostamento(r: RigaSpostamento) {
+    const cambia = (nascondi: boolean) =>
+      setNascoste((prima) => {
+        const dopo = new Set(prima);
+        if (nascondi) dopo.add(r.id);
+        else dopo.delete(r.id);
+        return dopo;
+      });
+    eliminaConAnnulla({
+      id: r.id,
+      testo: 'Spostamento eliminato.',
+      nascondi: () => cambia(true),
+      ripristina: () => cambia(false),
+      esegui: async () => {
+        await annullaSpostamento(createClient(), r.id.replace(/^sp-/, ''));
+        await refresh(letteDalRef.current).catch(() => {});
+      },
+    });
+  }
+
   async function handleUpdate(payload: {
     tipo: TransactionTipo;
     importo: number;
@@ -247,6 +275,20 @@ export default function HistoryPage() {
     new Date(),
     rangePersonalizzato
   );
+  const nomeConto = (id: string | null) => accounts.find((a) => a.id === id)?.nome ?? 'un conto';
+  const righeSpostamenti: RigaSpostamento[] = filterTransactionsByPeriodo(
+    spostamenti
+      .filter((s) => !nascoste.has(`sp-${s.id}`))
+      .map((s) => ({
+        id: `sp-${s.id}`,
+        data: s.data,
+        importo: s.importo,
+        etichetta: `Spostato da ${nomeConto(s.daAccountId)} a ${nomeConto(s.aAccountId)}`,
+      })),
+    periodo,
+    new Date(),
+    rangePersonalizzato
+  );
   return (
     <>
       <StoricoVista
@@ -254,6 +296,8 @@ export default function HistoryPage() {
         transactionsTotali={transactions.length}
         righeNeutreFiltrate={righeNeutreFiltrate}
         righeTasse={righeTasseFiltrate}
+        spostamenti={righeSpostamenti}
+        onEliminaSpostamento={handleEliminaSpostamento}
         onEliminaTasse={handleEliminaTasse}
         categories={categories}
         caricato={caricato}

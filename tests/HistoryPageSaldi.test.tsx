@@ -66,11 +66,19 @@ vi.mock('@/lib/data/households', () => ({
   },
 }));
 vi.mock('@/lib/data/transfers', () => ({ getTransfers: async () => [] }));
+vi.mock('@/lib/data/spostamenti', () => ({
+  getSpostamenti: vi.fn(async () => [
+    { id: 's1', daAccountId: 'a', aAccountId: 'b', importo: 30, data: '2026-11-04', createdAt: '' },
+  ]),
+  annullaSpostamento: vi.fn().mockResolvedValue(0),
+}));
 
 import HistoryPage from '@/app/history/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
 import { eliminaMovimento, modificaMovimento, getTransactions } from '@/lib/data/transactions';
 import { updateAccountBalance } from '@/lib/data/accounts';
+import { annullaSpostamento } from '@/lib/data/spostamenti';
+import { assertNessunaParolaVietata } from './helpers/paroleVietate';
 
 function Pagina() {
   return (
@@ -175,5 +183,35 @@ describe('Storico: la casa non rompe quello personale', () => {
     render(<Pagina />);
     await waitFor(() => expect(screen.getByText('Pane')).toBeInTheDocument());
     expect(screen.queryByText('Movimenti con la casa')).not.toBeInTheDocument();
+  });
+});
+
+describe('Storico: spostamenti fra i propri conti', () => {
+  it('la riga del giorno dice da dove a dove, senza segno, e non entra nel totale', async () => {
+    const { baseElement } = render(<Pagina />);
+    const riga = (await screen.findByText('Spostato da A a B')).closest('li')!;
+    expect(riga).toHaveTextContent('30,00');
+    expect(riga.textContent).not.toMatch(/[−+]/);
+    const giorno = baseElement.querySelector('[data-giorno="2026-11-04"]')!;
+    // solo la spesa di 10 euro nel totale del giorno
+    expect(giorno.querySelector('h3 + p')).toHaveTextContent('−10,00');
+    assertNessunaParolaVietata(baseElement);
+  });
+
+  it('eliminare chiama annullaSpostamento dopo i 5 secondi di Annulla', async () => {
+    render(<Pagina />);
+    await screen.findByText('Spostato da A a B');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      fireEvent.click(screen.getByLabelText('Elimina spostamento'));
+      expect(screen.queryByText('Spostato da A a B')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Spostamento eliminato.');
+      expect(annullaSpostamento).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(5000);
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+      expect(annullaSpostamento).toHaveBeenCalledWith(expect.anything(), 's1');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

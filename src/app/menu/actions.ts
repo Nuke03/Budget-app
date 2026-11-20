@@ -6,6 +6,7 @@ import { getOpenGoals } from '@/lib/data/goals';
 import { getConfermePerObiettivi } from '@/lib/data/goalVersamenti';
 import { computeQuotaMensile } from '@/lib/calculations/accantonato';
 import { getMyHousehold } from '@/lib/data/households';
+import { getAccounts } from '@/lib/data/accounts';
 
 export interface CassettoARate {
   id: string;
@@ -17,6 +18,8 @@ export interface CassettoARate {
 export interface VociMenu {
   cassettiARate: CassettoARate[];
   haCasa: boolean;
+  // I conti personali non archiviati: con meno di due non c'è dove spostare.
+  contiPersonali: number;
 }
 
 // Le voci del menu "Cosa vuoi fare?" che dipendono dai dati. Solo lettura.
@@ -55,5 +58,12 @@ export async function leggiVociMenu(): Promise<VociMenu> {
     haCasa = false;
   }
 
-  return { cassettiARate, haCasa };
+  let contiPersonali = 0;
+  try {
+    contiPersonali = (await getAccounts(supabase)).length;
+  } catch {
+    contiPersonali = 0;
+  }
+
+  return { cassettiARate, haCasa, contiPersonali };
 }

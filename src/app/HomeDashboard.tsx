@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatEuro, nomeMese } from '@/lib/format';
 import { CoverHeader } from './CoverHeader';
 import { GiroBarra } from './fumetti/GiroBarra';
 import { AddTransactionSheet } from './add/AddTransactionSheet';
+import { SpostaFoglio } from './sposta/SpostaFoglio';
+import { contoDaCuiSpostare } from './piva/PromptQuota';
 import { AndamentoCard } from './home/AndamentoCard';
 import { ConsiglioCard } from './home/ConsiglioCard';
 import { DaSapere } from './home/DaSapere';
@@ -27,6 +29,7 @@ import type { Consiglio } from '@/lib/calculations/supporto/consiglio';
 import type { Prossimo, RigaLibretto } from '@/lib/calculations/supporto/home';
 import type { CasaPerHome, PivaHome } from '@/lib/loadHomeData';
 import { totaleInSospeso } from '@/lib/calculations/piva';
+import type { SituazioneRientroConto } from '@/lib/calculations/rientri';
 import type { Account, BudgetGoal, Category, Transaction } from '@/lib/types';
 
 // `accantonato` è l'importo effettivamente riservato per l'obiettivo alla data odierna
@@ -63,6 +66,7 @@ export function HomeDashboard({
   prossimo: prossimoServer,
   prossimoDati = null,
   riservaRientri = 0,
+  rientriConti = [],
   notificheAttive = null,
   chiavePubblica = null,
   primiPassi = null,
@@ -89,12 +93,15 @@ export function HomeDashboard({
   prossimoDati?: InputProssimaCosa | null;
   // Le somme dei rientri verso i conti risparmio non ancora spostate (già tolte dal disponibile).
   riservaRientri?: number;
+  // I rientri verso i conti risparmio: da qui il foglio "Sposta" si apre già compilato.
+  rientriConti?: SituazioneRientroConto[];
   notificheAttive?: boolean | null;
   chiavePubblica?: string | null;
   primiPassi?: PrimiPassi | null;
   lezioneDelGiorno?: ArgomentoId | null;
 }) {
   const router = useRouter();
+  const spostaParam = useSearchParams().get('sposta');
   // Il server toglie i "Più tardi" del database; il browser toglie anche quelli che il telefono ha solo in
   // localStorage (stessa memoria della Casa) e ricalcola il prossimo passo.
   const promemoriaCasa = prossimoDati?.promemoriaCasa ?? [];
@@ -141,6 +148,26 @@ export function HomeDashboard({
     return () => window.removeEventListener(EVENTO_AGGIUNGI, apri);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // "Sposta tra i tuoi conti": dal menu (?sposta=1) vuoto, da "Prossimo" (?sposta=<rientro>) già compilato.
+  // Si legge dall'indirizzo a ogni cambio, poi lo si ripulisce: lo stesso ingresso si può usare di nuovo.
+  const [spostaAperto, setSpostaAperto] = useState<{ chiave: number; iniziale?: { daAccountId?: string; aAccountId?: string; importo?: number } } | null>(null);
+  useEffect(() => {
+    if (!spostaParam) return;
+    const situazione = rientriConti.find((s) => s.rientro.id === spostaParam && s.rientro.accountId);
+    const da = situazione ? contoDaCuiSpostare(null, accounts, piva?.contoTasseId ?? '') : null;
+    const iniziale = situazione
+      ? {
+          ...(da ? { daAccountId: da } : {}),
+          aAccountId: situazione.rientro.accountId!,
+          ...(situazione.daSpostare > 0 ? { importo: situazione.daSpostare } : {}),
+        }
+      : undefined;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- l'ingresso arriva dall'indirizzo
+    setSpostaAperto({ chiave: Date.now(), iniziale });
+    router.replace('/');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spostaParam]);
 
   // Il timbro: se il foglio ha appena registrato una riga che è fra quelle mostrate.
   useEffect(() => {
@@ -248,6 +275,19 @@ export function HomeDashboard({
 
         <SchedaNotifiche chiavePubblica={chiavePubblica} notificheAttive={notificheAttive} />
       </main>
+
+      {spostaAperto ? (
+        <SpostaFoglio
+          key={spostaAperto.chiave}
+          conti={accounts}
+          iniziale={spostaAperto.iniziale}
+          onClose={() => setSpostaAperto(null)}
+          onFatto={() => {
+            setSpostaAperto(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       <AddTransactionSheet
         key={aggiuntaIniziale ? 'entrata' : 'aggiunta'}

@@ -11,6 +11,7 @@ vi.mock('@/app/impara/primi-passi/actions', () => ({
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
 const rpc = vi.hoisted(() => vi.fn().mockResolvedValue({ data: "t", error: null }));

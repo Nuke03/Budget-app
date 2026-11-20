@@ -64,7 +64,7 @@ describe('NavBar', () => {
 
   it('su /casa con una casa il menu offre la spesa di casa', async () => {
     pathname = '/casa';
-    leggi.mockResolvedValueOnce({ cassettiARate: [], haCasa: true });
+    leggi.mockResolvedValueOnce({ cassettiARate: [], haCasa: true, contiPersonali: 1 });
     render(<NavBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Cosa vuoi fare?' }));
     expect(await screen.findByRole('button', { name: 'Registra una spesa di casa' })).toBeInTheDocument();

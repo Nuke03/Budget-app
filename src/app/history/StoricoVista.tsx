@@ -16,12 +16,21 @@ import { PeriodoFilter } from './PeriodoFilter';
 import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import type { Transaction, Category } from '@/lib/types';
 
+// Uno spostamento fra due conti tuoi: una riga del giorno, senza segno, fuori da totale e categorie.
+export interface RigaSpostamento {
+  id: string;
+  data: string;
+  etichetta: string;
+  importo: number;
+}
+
 // Il corpo dello Storico, senza letture né scritture: la pagina gli passa dati e azioni.
 export function StoricoVista({
   transactionsFiltrate,
   transactionsTotali,
   righeNeutreFiltrate,
   righeTasse = [],
+  spostamenti = [],
   categories,
   caricato,
   periodo,
@@ -31,12 +40,15 @@ export function StoricoVista({
   onEdit,
   onDelete,
   onEliminaTasse,
+  onEliminaSpostamento,
 }: {
   transactionsFiltrate: Transaction[];
   transactionsTotali: number;
   righeNeutreFiltrate: RigaNeutra[];
   // Gli spostamenti sul conto tasse (solo per chi ha la P.IVA): fuori da totali e grafici.
   righeTasse?: RigaNeutra[];
+  // Gli spostamenti fra i propri conti: righe del giorno, ma non sono spese né entrate.
+  spostamenti?: RigaSpostamento[];
   categories: Category[];
   caricato: boolean;
   periodo: Periodo;
@@ -46,6 +58,7 @@ export function StoricoVista({
   onEdit: (t: Transaction) => void;
   onDelete: (t: Transaction) => void;
   onEliminaTasse?: (r: RigaNeutra) => void;
+  onEliminaSpostamento?: (r: RigaSpostamento) => void;
 }) {
   const chartData = aggregateByCategory(transactionsFiltrate, categories);
   const colorByCategoryName = new Map(
@@ -53,6 +66,12 @@ export function StoricoVista({
   );
   const colorByCategoryId = new Map(categories.map((c) => [c.id, c.colore ?? CATEGORY_COLOR_FALLBACK]));
   const giorni = raggruppaPerGiorno(transactionsFiltrate);
+  const spostamentiDelGiorno = new Map<string, RigaSpostamento[]>();
+  for (const sp of spostamenti) spostamentiDelGiorno.set(sp.data, [...(spostamentiDelGiorno.get(sp.data) ?? []), sp]);
+  for (const data of spostamentiDelGiorno.keys()) {
+    if (!giorni.some((g) => g.data === data)) giorni.push({ data, righe: [], totale: 0 });
+  }
+  giorni.sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0));
   const annoCorrente = new Date().getFullYear();
   const titoloGiorno = (data: string) =>
     Number(data.slice(0, 4)) === annoCorrente ? giornoEMese(data) : `${giornoEMese(data)} ${data.slice(0, 4)}`;
@@ -123,10 +142,30 @@ export function StoricoVista({
                     </button>
                   </li>
                 ))}
+                {(spostamentiDelGiorno.get(g.data) ?? []).map((r) => (
+                  <li
+                    key={r.id}
+                    data-riga
+                    className="flex min-h-12 items-center gap-2 border-b border-rule py-1 pl-4 pr-1 text-[15px]"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{r.etichetta}</span>
+                    <span className="num shrink-0 text-ink-2">{formatEuro(r.importo)}</span>
+                    {onEliminaSpostamento ? (
+                      <button
+                        type="button"
+                        onClick={() => onEliminaSpostamento(r)}
+                        aria-label="Elimina spostamento"
+                        className={BOTTONE_ICONA}
+                      >
+                        <Trash2 size={18} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
               </ul>
             </div>
           ))}
-          {caricato && transactionsFiltrate.length === 0 && (
+          {caricato && giorni.length === 0 && (
             <p className="px-4 py-5 text-[15px] text-ink-2">
               {transactionsTotali === 0
                 ? 'Il libretto è vuoto: la prima spesa che segni compare qui.'
