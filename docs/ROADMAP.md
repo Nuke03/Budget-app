@@ -43,6 +43,11 @@ Per Fabio, nell'ordine. Ogni passo dice cosa guardare.
 7. Su un obiettivo con scadenza, tocca "Ho messo da parte". Controlla il disponibile e il riservato.
 8. Con Miriam: la prova dal vivo della P.IVA (vedi "Da controllare per Fabio" più sotto).
 9. Dopo il reset, controlla che i numeri della Casa siano gli stessi di prima.
+10. Tocca il + della barra. Deve aprirsi "Cosa vuoi fare?" con "Registra una spesa" in cima e una riga che dice a cosa serve ogni altra voce.
+11. Registra una spesa in 3 tocchi: + → "Registra una spesa" → importo → Salva. Il tempo deve restare sotto i 10 secondi.
+12. Alla prima apertura, il giro di 5 fumetti sulla barra (disponibile, Storico, +, Casa, Altro). Deve chiudersi con "Fatto" o "Salta", e non tornare alla prossima apertura.
+13. Apri Storico la prima volta: un fumetto indica la fila dei periodi. Si chiude con "Ho capito" e non torna.
+14. In Altro tocca "Rivedi il giro": il giro e i fumetti della prima volta ripartono.
 
 ## Obiettivo trasversale: insegnare l'economia domestica
 

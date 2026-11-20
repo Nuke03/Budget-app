@@ -79,6 +79,7 @@ export default function GoalsPage() {
   // senza ingresso, così lo stesso link funziona di nuovo.
   useEffect(() => {
     if (versa !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- l'ingresso arriva dall'indirizzo, dopo il primo render
       setVersaId(/^[0-9a-fA-F-]{8,64}$/.test(versa) ? versa : null);
       router.replace('/goals');
     } else if (caricato) {
@@ -96,6 +97,7 @@ export default function GoalsPage() {
   // Anche se la pagina è già aperta: l'ingresso si consuma pulendo l'indirizzo.
   useEffect(() => {
     if (!params.has('nuovo')) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- l'ingresso arriva dall'indirizzo, dopo il primo render
     setPrecompilato(leggiPrecompilato(ricerca));
     setCreando(true);
     router.replace('/goals');

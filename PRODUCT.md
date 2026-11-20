@@ -24,7 +24,7 @@ Unlike a raw bank balance or a generic budgeting app's category totals, this app
 
 ## Operating Context
 
-- Daily quick-entry of expenses/income from a phone, ideally under 10 seconds per transaction.
+- Daily quick-entry of expenses/income from a phone, ideally under 10 seconds per transaction. The + button opens the "Cosa vuoi fare?" menu, which lists every action with a one-line explanation; a spesa is one tap from it (3 taps in total: +, "Registra una spesa", amount).
 - Periodic manual updates of bank account balances (no bank integration — the user types in the number themselves).
 - Occasional creation of budget goals ahead of a known future expense (a trip, a gift, a recurring annual bill) or an immediate one (an upcoming purchase they want to "set aside" money for).
 - Reviewing spending history/breakdown by category, less frequently than daily entry.

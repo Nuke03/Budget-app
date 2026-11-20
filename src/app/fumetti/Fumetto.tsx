@@ -48,7 +48,9 @@ export function Fumetto({
   const [finestra, setFinestra] = useState({ w: 0, h: 0 });
   const scheda = useRef<HTMLDivElement>(null);
   const alSalta = useRef(onSalta);
-  alSalta.current = onSalta;
+  useEffect(() => {
+    alSalta.current = onSalta;
+  }, [onSalta]);
 
   useEffect(() => {
     const ricalcola = () => {

@@ -153,7 +153,7 @@ The money is a savings passbook. A narrow blue cover band sits on top, white pag
 
 Density is low and glanceable, built for one thumb on an iPhone installed as a PWA: one column, about 28rem wide, cards on a quiet ground, hairlines instead of fills. Colour is flat. The system gets its identity from three things only: the passbook-blue cover, the serif figures against a plain grotesk, and a single red stamp.
 
-This document describes the whole app as built: Home, the quick-add sheet, "In pari", the "Altro" notification block, the Casa section (home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia), Storico, Obiettivi, Conti, Categorie, P.IVA, the undo notice, the confirm sheet and the app icon. The older tabbed add form still carries older styling; see Known drift.
+This document describes the whole app as built: Home, the quick-add sheet, "In pari", the "Altro" notification block, the "Cosa vuoi fare?" menu behind the + button, the Casa section (home, simple view, Dettagli, monthly check-in, quota wizard, Da parte, Movimenti, Impostazioni, Inizia), Storico, Cassetti, Conti, Categorie, P.IVA, the undo notice, the confirm sheet, the first-run tour and first-time bubbles (Fumetti) and the app icon. The older tabbed add form still carries older styling; see Known drift.
 
 **Key Characteristics:**
 - Blue cover band, white pages, hairline rules (1px hairline), a 2px blue rule under the ledger header.
@@ -285,8 +285,8 @@ A visible text action ("Come si calcola?", semibold 14px Passbook Blue Deep, 44p
 ### Storico: day-grouped ledger
 Movements are grouped by day inside one white card. Each day opens with a head row: 13px semibold soft ink date (the year is added only when it is not the current one), the day total right in tabular semibold, hairline below. Rows are 48px: category dot, truncating description, signed amount (income semibold Passbook Blue Deep), then 44px round ghost icon buttons for edit and delete (lucide Pencil and Trash2, 18px). Above the card sit the scrolling period pills and the "Per categoria" card: serif section heading, then one row per category with name left, amount and percent right, and an 8px full-round bar in the category hue on a Cover Tint track, scaled to the largest category. The bars are CSS and aria-hidden; the figures carry the data.
 
-### Goals and accounts
-Obiettivi and Conti are stacks of white hairline cards (1rem radius, 16px padding). An account card has the name left and the balance in serif 20px semibold right with a 44px ghost pencil; an optional 8px Passbook Blue progress bar on a Cover Tint track with a tabular "saldo / obiettivo" line below. The balance is never an open field: a quiet Cover Tint button "Aggiorna il saldo" (44px, semibold Passbook Blue Deep) reveals the input and a small "Salva" primary on tap. Goal deadlines are read in long dates.
+### Cassetti and accounts
+Cassetti and Conti are stacks of white hairline cards (1rem radius, 16px padding). An account card has the name left and the balance in serif 20px semibold right with a 44px ghost pencil; an optional 8px Passbook Blue progress bar on a Cover Tint track with a tabular "saldo / obiettivo" line below. The balance is never an open field: a quiet Cover Tint button "Aggiorna il saldo" (44px, semibold Passbook Blue Deep) reveals the input and a small "Salva" primary on tap. Goal deadlines are read in long dates.
 
 ### Percorso: Primi passi and lesson card
 `PrimiPassiCard` takes the tip's place in the Home while the starting steps are open: surface card, hairline border, serif "Primi passi" heading with "2 di 6" right in soft ink, one 32px row per step (lucide Check in Passbook Blue Deep when done, an empty hairline circle when not, done titles in soft ink), then one 48px primary link to the next step and a quiet "Li vedo più tardi" text button (44px target). `SchedaLezione` is a reading page, not a card: serif title, "In breve" paragraph, a hairline "Con i tuoi numeri" (or "Per esempio") panel on Cover Tint, a primary action and an outlined "Più tardi", sources as underlined 44px links at the bottom. `DaSapere` is one 44px row under the tip in the Home: muted surface, hairline border, 1rem radius, a semibold Passbook Blue Deep "Da sapere:" followed by the lesson title and a trailing chevron; it links to the lesson.
@@ -304,10 +304,32 @@ For heavy or irreversible actions only. A bottom sheet with a serif title, one s
 A Passbook Blue square carrying a white portrait booklet (3:4, about 58% of the side, corner radius 10% of its width) with a Passbook Blue spine band at 22% opacity down the left edge, two short ruled lines at 40% opacity, and a stamp-red ring tilted -10 degrees at the lower right. The 192 and 512 sizes keep a 10% margin; the maskable 512 keeps 20% so system masks do not cut the mark. The manifest theme colour is Passbook Blue and its background is Ground.
 
 ### Navigation
-A bottom bar, white, 1px hairline on top, safe-area padded. Four tabs (Home, Storico, Casa, Altro) with 20px icons and 12px labels; active is Passbook Blue, bold, heavier stroke, with `aria-current`. The + button sits as a central slot between Storico and Casa, raised 20px.
+A bottom bar, white, 1px hairline on top, safe-area padded. Four tabs (Home, Storico, Casa, Altro) with 20px icons and 12px labels; active is Passbook Blue, bold, heavier stroke, with `aria-current`. The + button sits as a central slot between Storico and Casa, raised 20px. Its accessible name is "Cosa vuoi fare?". It opens the action menu, not the expense sheet: see Bottom sheet.
 
 ### Bottom sheet
 Sheets rise from the bottom (0.32s ease-out), 1.5rem top radius, white, 1px hairline on top, a 40px grabber at 10% black, a serif 1.125rem semibold heading with a round X, 75vh scrolling body, a flat 40% black scrim that closes on tap. The sheet is a modal dialog: focus moves to its first control, Tab is trapped inside, Escape closes, focus returns to the opener. The quick-add sheet leads with the amount in large serif and asks for nothing else first.
+
+The + opens the "Cosa vuoi fare?" menu, a bottom sheet in the same frame. Its body is the primary action first, then rows in the register style:
+- **Registra una spesa** (in Casa: "Registra una spesa di casa"): a full-width Passbook Blue primary, 56px tall, 1rem radius, semibold 16px. Always first.
+- Rows, each at least 56px, separated by hairlines, with a 20px lucide icon, a semibold 16px name, a 13px soft-ink line beneath, and an 18px trailing chevron. Hover uses Cover Tint. In order: **Entrata** (opens the expense sheet already on income), **Metti da parte** (opens the new-cassetto form), **Ci penso su** (opens the wait list with "Cosa" focused), **Versa nel cassetto** (only when a personal cassetto pays in by instalments), **Versa la quota della casa** (only inside a Casa).
+- The two rows that depend on data are last, so they do not move the rows above them when they appear. The menu opens without waiting for data.
+- "Versa nel cassetto" with more than one cassetto first shows a second sheet, "In quale cassetto?", with one row per cassetto (its monthly instalment in tabular figures on the right) and a 48px "Indietro" text button. With one cassetto it goes straight to that cassetto's confirmation. The row stays after a confirmation, when the month is done ("Le rate di questo mese sono fatte").
+- "Indietro" returns to the first step. Closing the sheet always reopens it at the first step.
+
+### Fumetti
+Speech bubbles that explain the app where it is used, in plain Italian, once per person. Two kinds, never shown together.
+
+- **Il giro** (first run, Home only): the screen dims with a flat 40% black scrim, no blur. The explained piece stays lit inside a 2px Passbook Blue ring (4px air around it, 10px corner radius). The bubble is white, 1px hairline, 1rem radius, 16px padding, max 300px wide and 12px from the screen edges. Its text is 14px; "1 di 5" is 12px soft ink above it. Buttons: "Salta" as a 44px underlined text action, "Avanti" as a 48px Passbook Blue primary (semibold 14px). The last step says "Fatto". A 10px rotated square on the hairline points at the piece. Steps, in the bar's order: the available figure, Storico, the +, Casa (or the offer to create a house when there is none), Altro.
+- **Il fumetto della prima volta** (one per screen): no scrim, no lock, the screen stays usable. Same bubble, with a 44px round close X and one "Ho capito" button (44px primary). It points at the main piece of: Storico (the day ledger), Casa for managers (the "Da fare" card), Casa simple view (the quota figure), Cassetti (the first cassetto, or "Nuovo cassetto"), Conti (the first account), Lista d'attesa (the "Cosa" field), Impara (the first lesson), P.IVA (the tax jar figure). Home and Altro have none: the tour covers them.
+
+Rules:
+- One bubble at a time. Never over an open sheet, a confirmation or the undo notice: it waits for them to close, or for the next visit.
+- A first-time bubble never appears in the same opening as the tour.
+- A bubble never covers the "Primi passi" card. If its piece is not on screen, it waits for the next visit.
+- Seen state lives in the browser, one key per user and per bubble, with a version constant. A release does not reset it. If the browser cannot store it, bubbles show at most once per session.
+- "Rivedi il giro" in Altro restarts the tour and every first-time bubble. "Ricomincia da zero" restarts them too.
+- Dialogs: the tour is modal (focus starts on "Avanti", Tab stays inside, Escape counts as "Salta", focus returns). The first-time bubble is non-modal and is announced once with a polite live region.
+- Reduced motion: the bubbles have no animation of their own, and the global `prefers-reduced-motion` rule in `globals.css` covers the sheets. Targets at least 44px. The bubble never leaves the screen at 375px, and respects the safe areas.
 
 ## Do's and Don'ts
 

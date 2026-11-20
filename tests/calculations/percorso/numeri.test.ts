@@ -10,7 +10,7 @@ const tr = (over: Partial<Transaction> = {}): Transaction => ({
   id: 't', tipo: 'expense', importo: 10, data: '2026-11-05', categoriaId: null, accountId: 'c1',
   goalId: null, descrizione: '', nota: null, createdAt: '2026-01-01T00:00:00.000Z', stima: false, ...over,
 });
-const goal = (over: Partial<BudgetGoal & { accantonato: number }> = {}): BudgetGoal & { accantonato: number } => ({
+const goal = (over: Partial<BudgetGoal & { accantonato: number; confermatoMese: number }> = {}): BudgetGoal & { accantonato: number; confermatoMese?: number } => ({
   id: 'g1', nome: 'Fondo', importoTarget: 120, modalita: 'dilazionato', scadenza: '2027-11-30', categoriaId: null,
   ricorrente: false, frequenzaMesi: null, stato: 'aperto', createdAt: '2026-11-01', accantonato: 0, ...over,
 });

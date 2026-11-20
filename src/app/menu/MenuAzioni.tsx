@@ -31,6 +31,12 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
   const router = useRouter();
   const [voci, setVoci] = useState<VociMenu | null>(null);
   const [scegliCassetto, setScegliCassetto] = useState(false);
+  const [apertoVisto, setApertoVisto] = useState(aperto);
+  // Alla chiusura il passo torna al primo: si aggiorna durante il render, non in un effetto.
+  if (aperto !== apertoVisto) {
+    setApertoVisto(aperto);
+    if (!aperto) setScegliCassetto(false);
+  }
   const corpo = useRef<HTMLDivElement>(null);
   const passoVisto = useRef(false);
 
@@ -44,10 +50,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
   }, [scegliCassetto]);
 
   useEffect(() => {
-    if (!aperto) {
-      setScegliCassetto(false);
-      return;
-    }
+    if (!aperto) return;
     if (voci) return;
     let attivo = true;
     leggiVociMenu().then(

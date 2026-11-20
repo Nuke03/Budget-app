@@ -130,6 +130,7 @@ export function HomeDashboard({
     window.addEventListener(EVENTO_AGGIUNGI, apri);
     const parametri = new URLSearchParams(window.location.search);
     if (parametri.has('aggiungi')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- l'ingresso arriva dall'indirizzo, al caricamento della Home
       if (parametri.get('aggiungi') === 'entrata') setAggiuntaIniziale({ tipo: 'income', categoriaId: null });
       setIsAddOpen(true);
       router.replace('/');

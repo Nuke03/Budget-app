@@ -34,6 +34,7 @@ export function GiroBarra({ haCasa }: { haCasa: boolean }) {
     if (partito || chiuso || !userId || aperto || qualcosaAperto()) return;
     if (eVisto(userId, 'giro')) return;
     segnaGiroInQuestaApertura();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- l'utente arriva dopo il primo render: si parte solo quando è noto
     setPartito(true);
   }, [partito, chiuso, userId, aperto]);
 
