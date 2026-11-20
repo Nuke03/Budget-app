@@ -211,7 +211,7 @@ begin
     format('insert into public.accounts (nome, household_id) values (''x'', %L)', h));
   perform public.zz_err('insert di casa con user_id altrui fallisce', b,
     format('insert into public.accounts (nome, household_id, user_id) values (''x'', %L, %L)', h, a));
-  perform public.zz_ok('B aggiorna il saldo del conto comune creato da A', b,
+  perform public.zz_err('adjust_account_balance non e piu eseguibile dal client (0013)', b,
     format('select public.adjust_account_balance(%L, 50)', conto_casa));
   perform public.zz_err('household_id non si cambia', b,
     format('update public.accounts set household_id = null where id = %L', conto_casa));
