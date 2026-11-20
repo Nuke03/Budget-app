@@ -112,3 +112,29 @@ describe('Obiettivi: nuovo obiettivo', () => {
     }
   });
 });
+
+describe('Obiettivi: arrivo da un link con #goal-<id>', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/');
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it('a lista caricata porta la vista sulla riga indicata', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    window.history.pushState({}, '', '/goals#goal-g1');
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById('goal-g1'));
+  });
+
+  it('senza hash, o con un hash che non è di un obiettivo, non scorre', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    window.history.pushState({}, '', '/goals#goal-inesistente');
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Telepass')).toBeInTheDocument());
+    expect(scroll).not.toHaveBeenCalled();
+  });
+});

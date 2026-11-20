@@ -28,6 +28,7 @@ export default function GoalsPage() {
   const [editingGoal, setEditingGoal] = useState<GoalWithQuotaMensile | null>(null);
   const [creando, setCreando] = useState(false);
   // Nome e cifra che arrivano dall'indirizzo (la lista d'attesa): riempiono il modulo una volta sola.
+  const [caricato, setCaricato] = useState(false);
   const [precompilato, setPrecompilato] = useState<GoalPayload | null>(null);
 
   async function refresh() {
@@ -50,11 +51,21 @@ export default function GoalsPage() {
       }))
     );
     setCategories(cats);
+    setCaricato(true);
   }
 
   useEffect(() => {
     refresh().catch(fail);
   }, [fail]);
+
+  // Un link come /goals#goal-<id> (il promemoria del versamento) porta alla riga: la lista si disegna dopo
+  // il caricamento, quindi il browser da solo non la trova. Una volta sola, alla prima lista.
+  useEffect(() => {
+    if (!caricato) return;
+    const hash = window.location.hash;
+    if (!hash.startsWith('#goal-')) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView?.({ block: 'start' });
+  }, [caricato]);
 
   // /goals?nuovo=1 (dai primi passi) apre subito il modulo del nuovo obiettivo; con nome e importo
   // validi (dalla lista d'attesa) il modulo parte già compilato.
