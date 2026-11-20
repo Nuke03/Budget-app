@@ -301,12 +301,50 @@ describe('HomeDashboard', () => {
       window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false, tipo: 'income' } }));
     });
     expect(screen.getByRole('button', { name: 'Entrata' })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chiudi' })[0]);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Chiudi' }));
     act(() => {
       window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false } }));
     });
     expect(screen.getByRole('button', { name: 'Spesa' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Entrata' })).not.toBeInTheDocument();
+  });
+
+  it('un entrata dal menu nel fatturato propone la quota delle tasse anche dopo la chiusura del foglio', async () => {
+    const contiPiva = [
+      { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+      { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+    ];
+    const categorieFatturato = [
+      { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
+    ];
+    render(
+      <HomeDashboard
+        disponibileLibero={870}
+        margineGiornaliero={29}
+        dataTarget="2026-07-01T00:00:00Z"
+        accounts={contiPiva}
+        categories={categorieFatturato}
+        goals={[]}
+        piva={{
+          contoTasseId: 'tasse',
+          categoriaFatturatoId: 'cat-fatt',
+          percentuale: 13.7,
+          inSospeso: [],
+          scadenze: [],
+          fatture: [],
+          stipendio: null,
+        }}
+      />
+    );
+    act(() => {
+      window.dispatchEvent(new CustomEvent('libretto:aggiungi', { detail: { gestito: false, tipo: 'income' } }));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Senza categoria' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Compensi' }));
+    fireEvent.change(screen.getByLabelText('Importo'), { target: { value: '600' } });
+    fireEvent.click(screen.getByText('Salva'));
+    expect(await screen.findByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Importo')).not.toBeInTheDocument();
   });
 
   it('dopo un salvataggio in Casa dice "Registrato in Casa" per un momento', async () => {

@@ -107,7 +107,8 @@ export function HomeDashboard({
   useSegnalaCasaSeCe(prossimoDati ? casaVisibile.length > 0 : prossimoServer?.tipo === 'casa');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  // "Entrata" dal menu: il foglio si apre già su Entrata. Torna null alla chiusura.
+  // "Entrata" dal menu: il foglio si apre già su Entrata. Si imposta all'apertura, non alla chiusura:
+  // cambiarla alla chiusura ricreerebbe il foglio e perderebbe la quota delle tasse dopo il salvataggio.
   const [aggiuntaIniziale, setAggiuntaIniziale] = useState<{ tipo: 'income'; categoriaId: null } | null>(null);
   const [registratoId, setRegistratoId] = useState<string | null>(null);
   // Le spese di Casa non stanno nel libretto personale: niente timbro, quindi una riga di conferma.
@@ -247,10 +248,7 @@ export function HomeDashboard({
       <AddTransactionSheet
         key={aggiuntaIniziale ? 'entrata' : 'aggiunta'}
         aperto={isAddOpen}
-        onClose={() => {
-          setIsAddOpen(false);
-          setAggiuntaIniziale(null);
-        }}
+        onClose={() => setIsAddOpen(false)}
         modoIniziale={aggiuntaIniziale ? 'personale' : undefined}
         iniziale={aggiuntaIniziale ?? undefined}
         personale={{ categories, accounts, goals }}
