@@ -16,6 +16,7 @@ import { PromptQuota, contoDaCuiSpostare } from '../piva/PromptQuota';
 import { AddTransactionForm } from './AddTransactionForm';
 import { AvvisoFondiFoglio } from './AvvisoFondiFoglio';
 import { LezioneFoglio } from './LezioneFoglio';
+import { DomandaRientroFoglio } from '../rientri/DomandaRientroFoglio';
 import { valutaDopoSalvataggio, type DopoSalvataggio } from '../impara/dopoSalvataggio';
 
 type Modo = 'personale' | 'casa';
@@ -123,6 +124,12 @@ export function AddTransactionSheet({
   // L'avviso o la lezione dopo un salvataggio personale: come la quota, sopravvive alla chiusura del foglio.
   const [dopo, setDopo] = useState<DopoSalvataggio>(null);
 
+  // La spesa appena fatta da un conto risparmio: si chiede se rimetterla a rate. Sopravvive alla chiusura del foglio.
+  const [domandaRientro, setDomandaRientro] = useState<{
+    importo: number;
+    conto: { id: string; nome: string };
+  } | null>(null);
+
   if (quotaDaSpostare) {
     return (
       <PromptQuota
@@ -145,7 +152,18 @@ export function AddTransactionSheet({
     );
   }
 
-  // La quota P.IVA ha la precedenza: l'avviso o la lezione si vedono dopo.
+  // Prima la quota P.IVA, poi la domanda sul rientro, poi l'avviso o la lezione: uno alla volta.
+  if (domandaRientro) {
+    return (
+      <DomandaRientroFoglio
+        importo={domandaRientro.importo}
+        conto={domandaRientro.conto}
+        oggi={oggiRomaISO()}
+        onChiudi={() => setDomandaRientro(null)}
+      />
+    );
+  }
+
   if (dopo) {
     const chiudiDopo = () => setDopo(null);
     return dopo.tipo === 'avviso' ? (
@@ -215,6 +233,13 @@ export function AddTransactionSheet({
           aAccountId: conto.id,
           nomeConto: conto.nome,
         });
+      }
+    }
+    // Una spesa da un conto risparmio (non conta nel disponibile, non è il conto tasse): si propone il rientro.
+    if (personale && modo === 'personale' && payload.tipo === 'expense' && payload.accountId) {
+      const contoSpesa = personale.accounts.find((a) => a.id === payload.accountId);
+      if (contoSpesa && !contoSpesa.contaInDisponibile && contoSpesa.id !== piva?.contoTasseId) {
+        setDomandaRientro({ importo: payload.importo, conto: { id: contoSpesa.id, nome: contoSpesa.nome } });
       }
     }
     // Solo lo spazio personale. Non si aspetta: il foglio si chiude subito e l'esito arriva dopo.

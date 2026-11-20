@@ -21,6 +21,11 @@ vi.mock('@/app/impara/dopoSalvataggio', () => ({
   rispondiAvviso: (...a: unknown[]) => rispondiAvviso(...a),
 }));
 
+const creaRientro = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/data/rientri', () => ({
+  creaRientro: (...a: unknown[]) => creaRientro(...a),
+}));
+
 // Tutti i salvataggi passano da una sola rpc: movimento e saldo insieme.
 const parametri = (n = 0) => rpc.mock.calls[n][1] as Record<string, unknown>;
 
@@ -643,6 +648,107 @@ describe('AddTransactionSheet: dopo il salvataggio', () => {
     await waitFor(() => expect(valutaDopoSalvataggio).toHaveBeenCalled());
     expect(screen.queryByText('In breve')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Più tardi' }));
+    expect(await screen.findByText('In breve')).toBeInTheDocument();
+  });
+});
+
+describe('AddTransactionSheet: la domanda sul rientro', () => {
+  const conti = [
+    { id: 'ap', nome: 'Conto mio', saldoAttuale: 100, contaInDisponibile: true, targetSaldo: null, archiviato: false },
+    { id: 'risp', nome: 'Conto risparmio', saldoAttuale: 900, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+    { id: 'tasse', nome: 'Conto tasse', saldoAttuale: 0, contaInDisponibile: false, targetSaldo: null, archiviato: false },
+  ];
+  const pers = {
+    categories: [
+      { id: 'cp', nome: 'Spesa', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
+      { id: 'cat-fatt', nome: 'Compensi', tipo: 'income' as const, colore: null, archiviata: false, ruolo: null },
+    ],
+    accounts: conti,
+    goals: [],
+  };
+  const piva = { categoriaFatturatoId: 'cat-fatt', percentuale: 13.7, contoTasseId: 'tasse' };
+  const TITOLO = "Vuoi rimetterli un po' al mese?";
+
+  function spendiDa(contoId: string, importo: string, extra: Partial<React.ComponentProps<typeof AddTransactionSheet>> = {}) {
+    window.localStorage.setItem('aggiungi:conto:personale', contoId);
+    creaRientro.mockResolvedValue('r1');
+    apri({ casa: null, personale: pers, piva, modoIniziale: 'personale', ...extra });
+    compila(importo);
+  }
+
+  it('una spesa dal conto risparmio fa comparire la domanda, coi testi giusti', async () => {
+    spendiDa('risp', '300');
+    expect(await screen.findByText(TITOLO)).toBeInTheDocument();
+    expect(screen.getByText("Hai preso 300 € dal Conto risparmio. Puoi riportarli lì un po' alla volta.")).toBeInTheDocument();
+    expect(screen.getByText(/100 € al mese, da /)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sì, rimettili' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No, va bene così' })).toBeInTheDocument();
+    assertNessunaParolaVietata(document.body);
+  });
+
+  it('Sì chiama creaRientro con conto, importo e 3 mesi', async () => {
+    spendiDa('risp', '300');
+    fireEvent.click(await screen.findByRole('button', { name: 'Sì, rimettili' }));
+    await waitFor(() => expect(creaRientro).toHaveBeenCalledTimes(1));
+    expect(creaRientro.mock.calls[0][1]).toEqual({
+      goalId: null,
+      accountId: 'risp',
+      importo: 300,
+      mesi: 3,
+      creatoIl: oggiRomaISO(),
+    });
+    await waitFor(() => expect(screen.queryByText(TITOLO)).not.toBeInTheDocument());
+  });
+
+  it('se creaRientro fallisce mostra l errore e la domanda resta', async () => {
+    spendiDa('risp', '300');
+    creaRientro.mockRejectedValue(new Error('no'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Sì, rimettili' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Non sono riuscito a salvarlo. Riprova tra poco.');
+    expect(screen.getByText(TITOLO)).toBeInTheDocument();
+  });
+
+  it('un conto che conta nel disponibile non fa domande', async () => {
+    const onSaved = vi.fn();
+    spendiDa('ap', '30', { onSaved });
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText(TITOLO)).not.toBeInTheDocument();
+  });
+
+  it('il conto tasse non fa domande', async () => {
+    const onSaved = vi.fn();
+    spendiDa('tasse', '30', { onSaved });
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText(TITOLO)).not.toBeInTheDocument();
+  });
+
+  it('una spesa in Casa non fa domande', async () => {
+    const onSaved = vi.fn();
+    apri({ modoIniziale: 'casa', onSaved, contiPersonali: conti });
+    compila('12');
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText(TITOLO)).not.toBeInTheDocument();
+  });
+
+  it('un incasso P.IVA mostra la quota, non la domanda', async () => {
+    window.localStorage.setItem('aggiungi:conto:personale', 'risp');
+    apri({ casa: null, personale: pers, piva, modoIniziale: 'personale' });
+    scegliEntrata();
+    fireEvent.click(pezzo('Senza categoria'));
+    fireEvent.click(pezzo('Compensi'));
+    compila('600');
+    expect(await screen.findByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+    expect(screen.queryByText(TITOLO)).not.toBeInTheDocument();
+  });
+
+  it('dopo la domanda si vede ancora la lezione', async () => {
+    valutaDopoSalvataggio.mockResolvedValue({ tipo: 'lezione', lezione: 'prima-da-parte' });
+    spendiDa('risp', '300');
+    expect(await screen.findByText(TITOLO)).toBeInTheDocument();
+    await waitFor(() => expect(valutaDopoSalvataggio).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByText('In breve')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'No, va bene così' }));
     expect(await screen.findByText('In breve')).toBeInTheDocument();
   });
 });
