@@ -88,12 +88,15 @@ describe('getVersatoNelleFinestre', () => {
     expect(r.G1).toBe(0);
   });
 
-  it('una sola query per tutti gli obiettivi dilazionati', async () => {
+  it('due letture per tutti i dilazionati: chi ha confermato (solo goal_id) e le righe dal primo inizio finestra', async () => {
     const { client, calls } = createRecordingClient([]);
     await getVersatoNelleFinestre(client, [dilazionato, ricorrente, bloccato], TODAY);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     expect(calls[0].table).toBe('goal_versamenti');
+    expect(callsOf(calls[0], 'select')).toEqual([['goal_id']]);
     expect(callsOf(calls[0], 'in')).toContainEqual(['goal_id', ['G1', 'G2']]);
+    expect(callsOf(calls[1], 'in')).toContainEqual(['goal_id', ['G1', 'G2']]);
+    expect(callsOf(calls[1], 'gte')).toEqual([['data', '2026-03-31']]);
   });
 
   it('nessun dilazionato, nessuna query', async () => {

@@ -21,7 +21,7 @@ export interface RigaLibretto {
 export interface Prossimo {
   testo: string;
   href: string;
-  tipo: 'in_pari' | 'casa' | 'piva' | 'attesa' | 'obiettivo';
+  tipo: 'in_pari' | 'casa' | 'piva' | 'attesa' | 'sposta' | 'obiettivo';
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -148,6 +148,8 @@ export interface InputProssimaCosa {
   promemoriaPiva?: PromemoriaPiva[];
   // La voce della lista d'attesa da rivedere: passa per ultima.
   attesa?: { testo: string; href: string } | null;
+  // Il rientro verso un conto risparmio con qualcosa da spostare (il più vecchio): passa prima del versamento.
+  sposta?: { testo: string; href: string } | null;
   // La conferma del versamento mensile di un obiettivo (promemoriaVersamento): passa dopo tutto il resto.
   versamento?: { testo: string; href: string } | null;
 }
@@ -168,6 +170,7 @@ export function prossimaCosa(input: InputProssimaCosa): Prossimo | null {
   const resto = piva[0];
   if (resto) return { testo: resto.testo, href: resto.href, tipo: 'piva' };
   if (input.attesa) return { ...input.attesa, tipo: 'attesa' };
+  if (input.sposta) return { ...input.sposta, tipo: 'sposta' };
   if (input.versamento) return { ...input.versamento, tipo: 'obiettivo' };
   return null;
 }

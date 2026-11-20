@@ -6,6 +6,16 @@ import { getOpenGoals } from '@/lib/data/goals';
 import { getLastIncomeDate, getTransactions, haMovimentiPersonali } from '@/lib/data/transactions';
 import { getSpecoCollegatoPerObiettivi } from '@/lib/data/goalSpending';
 import { getConfermePerObiettivi, type ConfermeObiettivo } from '@/lib/data/goalVersamenti';
+import { getRientri } from '@/lib/data/rientri';
+import { getSpostamenti } from '@/lib/data/spostamenti';
+import {
+  maturatoPerCassetto,
+  situazioneRientriConti,
+  totaleDaSpostare,
+  type Rientro,
+  type SituazioneRientroConto,
+  type Spostamento,
+} from '@/lib/calculations/rientri';
 import { PERSONALE } from '@/lib/data/scope';
 import { computeDisponibileLibero, riservatoObiettivi } from '@/lib/calculations/disponibile';
 import { computeMargineGiornaliero } from '@/lib/calculations/margine';
@@ -20,7 +30,7 @@ import { anniScadenzeHome, casaDelMese, finestraIncassi, inizioLetturaIncassi, i
 import { stimaDataTarget } from '@/lib/calculations/stimaDataTarget';
 import { accantonatoObiettivo } from '@/lib/calculations/accantonato';
 import { leggiPromemoriaUtenteCompleto } from '@/lib/data/notifiche';
-import { formatEuro } from '@/lib/format';
+import { euroInFrase, formatEuro } from '@/lib/format';
 import { oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { calcolaAndamento, type Andamento } from '@/lib/calculations/supporto/andamento';
 import { scegliConsiglio, obiettiviCorti, type Consiglio } from '@/lib/calculations/supporto/consiglio';
@@ -92,11 +102,29 @@ function voceDaRivedere(voci: VoceAttesa[], oggi: string): { testo: string; href
   return v ? { testo: `Ci ripensi? ${v.nome}, ${formatEuro(v.importo)}`, href: '/impara/attesa' } : null;
 }
 
+// Il rientro verso un conto più vecchio con qualcosa da spostare, già scritto per il "Da fare" della home.
+// Senza il conto (eliminato o archiviato) non si propone nulla.
+function spostaPiuVecchio(
+  situazioni: SituazioneRientroConto[],
+  accounts: Account[]
+): { testo: string; href: string } | null {
+  const s = situazioni.find((x) => x.daSpostare > 0 && accounts.some((a) => a.id === x.rientro.accountId));
+  const conto = s && accounts.find((a) => a.id === s.rientro.accountId);
+  if (!s || !conto) return null;
+  return { testo: `Sposta ${euroInFrase(s.daSpostare)} sul ${conto.nome}.`, href: `/?sposta=${s.rientro.id}` };
+}
+
 export interface HomeData {
   disponibileLibero: number;
   // Il disponibile prima dell'adattamento allo stipendio, e i quattro riservati che lo compongono.
   disponibileReale: number;
   riservati: { obiettivi: number; casa: number; debiti: number; tasse: number };
+  // Le somme dei rientri verso i conti risparmio non ancora spostate: tolte dal disponibile.
+  riservaRientri: number;
+  // I rientri verso i conti con quanto è maturato, spostato e resta da spostare (vuoti se non si leggono).
+  rientriConti: SituazioneRientroConto[];
+  // I rientri personali (tutti), per le righe di Cassetti e Conti; vuoti se non si leggono.
+  rientri: Rientro[];
   margineGiornaliero: number;
   dataTarget: Date;
   accounts: Account[];
@@ -290,7 +318,17 @@ export async function loadHomeBase(
     pivaNonLetta = true;
     return null;
   });
-  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni] = await Promise.all([
+  // I rientri non devono rompere la home: se non si leggono, i numeri sono quelli senza rientri. Gli spostamenti
+  // si leggono dal rientro verso un conto più vecchio in poi (nessuno, se non ce ne sono).
+  const rientriP = getRientri(supabase).catch(() => [] as Rientro[]);
+  const spostamentiP = rientriP
+    .then((r) => {
+      const inizi = r.filter((x) => x.accountId !== null).map((x) => x.creatoIl);
+      if (inizi.length === 0) return [] as Spostamento[];
+      return getSpostamenti(supabase, inizi.reduce((min, d) => (d < min ? d : min)));
+    })
+    .catch(() => [] as Spostamento[]);
+  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni, rientri, spostamenti] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -324,6 +362,8 @@ export async function loadHomeBase(
     // Anche la lista d'attesa non deve rompere la home.
     leggiListaAttesa(supabase).catch(() => [] as VoceAttesa[]),
     pivaSettings,
+    rientriP,
+    spostamentiP,
   ]);
   const { rimandati, ...scelte } = scelteLette;
   const piva = pivaLetta?.piva ?? null;
@@ -349,7 +389,13 @@ export async function loadHomeBase(
     specoCollegato: speso[g.id] ?? 0,
     versatoNellaFinestra: conferme[g.id]?.versato ?? null,
     confermatoMese: conferme[g.id]?.mese ?? 0,
+    rientroMaturato: maturatoPerCassetto(rientri, g.id, oggi),
   }));
+  // I conti che pesano sono quelli del disponibile (il conto tasse è già fuori): solo gli spostamenti da lì
+  // portano soldi davvero fuori dal disponibile.
+  const contiChePesanoPerRientri = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
+  const rientriConti = situazioneRientriConti(rientri, spostamenti, contiChePesanoPerRientri, oggi);
+  const riservaRientri = totaleDaSpostare(rientriConti);
 
   const riservati = {
     obiettivi: riservatoObiettivi(goalsConSpeso, today),
@@ -363,7 +409,8 @@ export async function loadHomeBase(
     today,
     riservati.casa,
     riservati.debiti,
-    riservati.tasse
+    riservati.tasse,
+    riservaRientri
   );
 
   // Con lo stipendio fisso la home mostra il minore fra quello che c'è e quello che resta dello stipendio,
@@ -450,6 +497,7 @@ export async function loadHomeBase(
         )
       : [],
     attesa: voceDaRivedere(listaAttesa, oggi),
+    sposta: spostaPiuVecchio(rientriConti, accounts),
     versamento: promemoriaVersamento(goalsConSpeso, today),
   };
   const prossimo = prossimaCosa(datiProssimo);
@@ -478,6 +526,9 @@ export async function loadHomeBase(
     disponibileLibero,
     disponibileReale,
     riservati,
+    riservaRientri,
+    rientriConti,
+    rientri,
     margineGiornaliero,
     dataTarget,
     accounts,

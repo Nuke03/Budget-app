@@ -9,7 +9,9 @@ import { getTransactions } from '@/lib/data/transactions';
 import { getPlanVersions, type PlanBundle } from '@/lib/data/householdPlans';
 import { getTransfers } from '@/lib/data/transfers';
 import { getControlliRecenti } from '@/lib/data/balanceChecks';
-import { computeAccantonatoFinora } from '@/lib/calculations/accantonato';
+import { accantonatoObiettivo } from '@/lib/calculations/accantonato';
+import { maturatoPerCassetto, type Rientro } from '@/lib/calculations/rientri';
+import { getRientri } from '@/lib/data/rientri';
 import { computeDaPagareMese, computeDisponibileCasa, type DisponibileCasa } from '@/lib/calculations/casa/disponibileCasa';
 import { calcolaRegistriCasa } from '@/lib/calculations/casa/registri';
 import { meseRomaISO, oggiRomaData, oggiRomaISO } from '@/lib/calculations/casa/oggi';
@@ -71,7 +73,7 @@ export async function loadCasaData(
   const today = oggiRomaData(adesso);
   // Lo speso collegato ai fondi segue subito la lettura degli obiettivi, in parallelo con il resto.
   const aggiuntaInCorso = loadCasaAggiunta(supabase, casa);
-  const [aggiunta, speso, transazioni, trasferimenti, piani, controlli] = await Promise.all([
+  const [aggiunta, speso, transazioni, trasferimenti, piani, controlli, rientri] = await Promise.all([
     aggiuntaInCorso,
     aggiuntaInCorso.then((a) =>
       getSpecoCollegatoPerObiettivi(supabase, a.obiettivi, today, scopeCasa(casa.household.id))
@@ -80,6 +82,8 @@ export async function loadCasaData(
     getTransfers(supabase, scopeCasa(casa.household.id)),
     getPlanVersions(supabase, casa.household.id),
     getControlliRecenti(supabase, casa.household.id),
+    // I rientri dei cassetti di casa: se non si leggono, i numeri sono quelli senza rientri.
+    getRientri(supabase, scopeCasa(casa.household.id)).catch(() => [] as Rientro[]),
   ]);
   const { righe, crediti, debiti } = calcolaRegistriCasa({
     piani,
@@ -90,11 +94,16 @@ export async function loadCasaData(
   });
   const totaleCrediti = Object.values(crediti).reduce((s, v) => s + v, 0);
 
-  const obiettiviConSpeso = aggiunta.obiettivi.map((g) => ({ ...g, specoCollegato: speso[g.id] ?? 0 }));
-
-  const obiettiviConAccantonato = obiettiviConSpeso.map(({ specoCollegato, ...g }) => ({
+  const oggiISO = oggiRomaISO(adesso);
+  const obiettiviConSpeso = aggiunta.obiettivi.map((g) => ({
     ...g,
-    accantonato: computeAccantonatoFinora(g, today, specoCollegato),
+    specoCollegato: speso[g.id] ?? 0,
+    rientroMaturato: maturatoPerCassetto(rientri, g.id, oggiISO),
+  }));
+
+  const obiettiviConAccantonato = obiettiviConSpeso.map(({ specoCollegato, rientroMaturato, ...g }) => ({
+    ...g,
+    accantonato: accantonatoObiettivo({ ...g, specoCollegato, rientroMaturato }, today),
   }));
 
   const mese = meseRomaISO(adesso);

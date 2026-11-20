@@ -1,5 +1,6 @@
 'use client';
 
+import type { Rientro } from '@/lib/calculations/rientri';
 import { CoverHeader } from '../CoverHeader';
 import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { GoalsList, type GoalWithQuotaMensile } from './GoalsList';
@@ -16,6 +17,8 @@ export function ObiettiviVista({
   versaId = null,
 }: {
   goals: GoalWithQuotaMensile[];
+  // I rientri personali: le righe dei cassetti le disegna il Task 8.
+  rientri?: Rientro[];
   categories: Category[];
   onNuovo: () => void;
   onEdit: (goal: GoalWithQuotaMensile) => void;

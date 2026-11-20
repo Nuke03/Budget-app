@@ -9,6 +9,9 @@ import { getCategories } from '@/lib/data/categories';
 import { getSpecoCollegato } from '@/lib/data/goalSpending';
 import { confermaVersamento, getConfermePerObiettivi, type ConfermeObiettivo } from '@/lib/data/goalVersamenti';
 import { computeQuotaMensile, accantonatoObiettivo } from '@/lib/calculations/accantonato';
+import { getRientri } from '@/lib/data/rientri';
+import { maturatoPerCassetto, type Rientro } from '@/lib/calculations/rientri';
+import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import { useEliminaConAnnulla } from '../AnnullaProvider';
 import { FoglioInferiore } from '../FoglioInferiore';
 import type { GoalWithQuotaMensile } from './GoalsList';
@@ -17,7 +20,12 @@ import { CreateGoalForm, type GoalPayload } from './CreateGoalForm';
 import { leggiPrecompilato } from '@/lib/goalPrecompilato';
 import type { BudgetGoal, Category } from '@/lib/types';
 
-type GoalConSpeso = BudgetGoal & { specoCollegato: number; versatoNellaFinestra: number | null; confermatoMese: number };
+type GoalConSpeso = BudgetGoal & {
+  specoCollegato: number;
+  versatoNellaFinestra: number | null;
+  confermatoMese: number;
+  rientroMaturato: number;
+};
 
 export default function GoalsPage() {
   const fail = useThrowToBoundary();
@@ -29,6 +37,8 @@ export default function GoalsPage() {
   // Obiettivi tolti alla vista in attesa della scrittura vera: Annulla li rimette al loro posto.
   const [nascosti, setNascosti] = useState<Set<string>>(new Set());
   const [goals, setGoals] = useState<GoalConSpeso[]>([]);
+  // I rientri personali, per le righe dei cassetti (Task 8).
+  const [rientri, setRientri] = useState<Rientro[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editingGoal, setEditingGoal] = useState<GoalWithQuotaMensile | null>(null);
   const [creando, setCreando] = useState(false);
@@ -49,12 +59,17 @@ export default function GoalsPage() {
     const conferme = await getConfermePerObiettivi(supabase, openGoals, today).catch(
       () => ({}) as Record<string, ConfermeObiettivo>
     );
+    // Se i rientri non si leggono la pagina si apre con i numeri senza rientri.
+    const rientriLetti = await getRientri(supabase).catch(() => [] as Rientro[]);
+    const oggiISO = oggiRomaISO(today);
+    setRientri(rientriLetti);
     setGoals(
       openGoals.map((g, i) => ({
         ...g,
         specoCollegato: speseCollegate[i],
         versatoNellaFinestra: conferme[g.id]?.versato ?? null,
         confermatoMese: conferme[g.id]?.mese ?? 0,
+        rientroMaturato: maturatoPerCassetto(rientriLetti, g.id, oggiISO),
       }))
     );
     setCategories(cats);
@@ -162,6 +177,7 @@ export default function GoalsPage() {
     <>
       <ObiettiviVista
         goals={goalsConQuota}
+        rientri={rientri}
         categories={categories}
         onNuovo={() => {
           setPrecompilato(null);

@@ -6,6 +6,7 @@ import { CoverHeader } from '../CoverHeader';
 import { FumettoPrimaVolta } from '@/app/fumetti/FumettoPrimaVolta';
 import { AccountRow } from './AccountRow';
 import type { Account } from '@/lib/types';
+import type { SituazioneRientroConto } from '@/lib/calculations/rientri';
 
 // Il corpo di Conti, senza letture né scritture: la pagina gli passa dati e azioni.
 export function ContiVista({
@@ -20,6 +21,8 @@ export function ContiVista({
   contoTasseId = null,
 }: {
   accounts: Account[];
+  // I rientri verso i conti, con quanto resta da spostare: le righe le disegna il Task 8.
+  rientriConti?: SituazioneRientroConto[];
   // Il conto tasse della P.IVA guidata, se c'è.
   contoTasseId?: string | null;
   nome: string;

@@ -50,7 +50,7 @@ export interface ConfermeObiettivo {
 // la query prende i versamenti dal primo inizio finestra in poi, poi si somma in JS dentro la finestra di
 // ciascun obiettivo, con la stessa regola delle spese collegate (per i ricorrenti l'inizio è escluso).
 // La modalità conferma è per obiettivo, non per finestra: basta una conferma, in qualunque momento, e da lì
-// il riservato conta solo i versamenti del ciclo in corso (0 finché non confermi). Per questo la query
+// il riservato conta solo i versamenti del ciclo in corso (0 finché non confermi). Per questo la prima lettura
 // non filtra per data: la finestra si applica solo alla somma.
 // Solo i dilazionati hanno un versato: per gli altri `versato` è sempre null. Se la lettura fallisce lancia.
 export async function getConfermePerObiettivi(
@@ -71,20 +71,23 @@ export async function getConfermePerObiettivi(
   }
   if (finestre.length === 0) return risultato;
 
-  const { data, error } = await supabase
-    .from('goal_versamenti')
-    .select('goal_id, importo, data')
-    .in(
-      'goal_id',
-      finestre.map((f) => f.id)
-    );
-  if (error) throw error;
+  const ids = finestre.map((f) => f.id);
+  // Due letture sottili invece di tutta la storia: chi ha almeno una conferma (solo goal_id) e le righe dal
+  // primo inizio finestra in poi. La modalità conferma non dipende dalla finestra, la somma sì.
+  const primoInizio = finestre.reduce((min, f) => (f.da < min ? f.da : min), finestre[0].da);
+  const [chi, righeLette] = await Promise.all([
+    supabase.from('goal_versamenti').select('goal_id').in('goal_id', ids),
+    supabase.from('goal_versamenti').select('goal_id, importo, data').in('goal_id', ids).gte('data', primoInizio),
+  ]);
+  if (chi.error) throw chi.error;
+  if (righeLette.error) throw righeLette.error;
 
-  const righe = (data ?? []) as { goal_id: string; importo: number; data: string }[];
+  const conferma = new Set(((chi.data ?? []) as { goal_id: string }[]).map((r) => r.goal_id));
+  const righe = (righeLette.data ?? []) as { goal_id: string; importo: number; data: string }[];
   const mese = oggiRomaISO(today).slice(0, 7);
   for (const f of finestre) {
+    if (!conferma.has(f.id)) continue;
     const sue = righe.filter((r) => r.goal_id === f.id);
-    if (sue.length === 0) continue;
     const dentro = sue.filter((r) => dataNellaFinestraSpese(r.data, f));
     risultato[f.id] = {
       versato: arrotonda2(dentro.reduce((s, r) => s + Number(r.importo), 0)),

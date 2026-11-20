@@ -62,6 +62,7 @@ export function HomeDashboard({
   consiglio,
   prossimo: prossimoServer,
   prossimoDati = null,
+  riservaRientri = 0,
   notificheAttive = null,
   chiavePubblica = null,
   primiPassi = null,
@@ -86,6 +87,8 @@ export function HomeDashboard({
   prossimo: Prossimo | null;
   // I dati da cui il server ha calcolato `prossimo`: col browser si tolgono anche i promemoria rimandati solo qui.
   prossimoDati?: InputProssimaCosa | null;
+  // Le somme dei rientri verso i conti risparmio non ancora spostate (già tolte dal disponibile).
+  riservaRientri?: number;
   notificheAttive?: boolean | null;
   chiavePubblica?: string | null;
   primiPassi?: PrimiPassi | null;
@@ -210,7 +213,7 @@ export function HomeDashboard({
           </button>
           {showBreakdown ? (
             <div className="mt-1">
-              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} riservaPiva={riservaPiva} cuscinetto={cuscinetto} />
+              <DettaglioDisponibile accounts={accounts} goals={goals} casa={casa} riservaPiva={riservaPiva} cuscinetto={cuscinetto} daSpostare={riservaRientri} />
             </div>
           ) : null}
         </section>

@@ -133,3 +133,14 @@ describe('prossimaCosa con la lista d attesa', () => {
     expect(prossimaCosa({ inPari: { dal: '2026-11-15', al: '2026-11-18' }, promemoriaCasa: [], attesa })?.tipo).toBe('in_pari');
   });
 });
+
+describe('prossimaCosa con Sposta', () => {
+  const sposta = { testo: 'Sposta 100 € sul Risparmio.', href: '/?sposta=r1' };
+  const versamento = { testo: 'Hai messo da parte?', href: '/goals' };
+  it('viene subito prima del versamento e dopo la lista d attesa', () => {
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], sposta })).toEqual({ ...sposta, tipo: 'sposta' });
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], sposta, versamento })?.tipo).toBe('sposta');
+    const attesa = { testo: 'Ci ripensi?', href: '/impara/attesa' };
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], sposta, attesa, versamento })?.tipo).toBe('attesa');
+  });
+});

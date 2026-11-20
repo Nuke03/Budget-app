@@ -249,3 +249,22 @@ describe('loadCasaData controlli', () => {
     expect(letture.filter((t) => t === 'household_checkins')).toHaveLength(1);
   });
 });
+
+describe('loadCasaData: rientri', () => {
+  it('un rientro su un cassetto di casa alza il riservato di casa; quelli personali non entrano', async () => {
+    // Fondo bloccato 130, speso 40 collegato: riservato 90; il rientro maturato (50) lo porta a 130.
+    const rientro = (id: string, user: string, household: string | null) => ({
+      id, user_id: user, household_id: household, goal_id: 'g-casa', account_id: null, importo: 150, mesi: 3,
+      creato_il: '2026-11-01', stato: 'aperto', fermato_il: null,
+    });
+    const base = seed();
+    const speso = { id: 't-s', user_id: 'B', household_id: 'H1', tipo: 'expense', importo: 40, data: '2026-11-10', categoria_id: 'ca-casa', account_id: 'ac-casa', goal_id: 'g-casa', descrizione: 'Fondo', nota: null, created_at: '2026-11-10T10:00:00Z' };
+    const mk = (rientri: Record<string, unknown>[]) =>
+      createFakeDb({ ...base, transactions: [...base.transactions, speso], rientri }, { userId: 'A', membri: MEMBRI });
+    const senza = await loadCasaData(mk([]).client, casaA, TODAY);
+    const con = await loadCasaData(mk([rientro('r1', 'B', 'H1'), rientro('r2', 'A', null)]).client, casaA, TODAY);
+    const g = (d: typeof senza) => d.obiettiviConAccantonato.find((o) => o.id === 'g-casa')!.accantonato;
+    expect(g(senza)).toBe(90);
+    expect(g(con)).toBe(130);
+  });
+});

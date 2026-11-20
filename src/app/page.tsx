@@ -28,6 +28,7 @@ export default async function HomePage() {
       consiglio={data.consiglio}
       prossimo={data.prossimo}
       prossimoDati={data.prossimoDati}
+      riservaRientri={data.riservaRientri}
       notificheAttive={data.notificheAttive}
       primiPassi={data.primiPassi}
       lezioneDelGiorno={data.lezioneDelGiorno}
