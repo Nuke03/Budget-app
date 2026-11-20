@@ -27,6 +27,8 @@ function Riga({ icona: Icona, nome, sotto, onClick }: { icona: LucideIcon; nome:
 }
 
 // Il menu del +: cosa si può fare adesso. Le voci che dipendono dai dati compaiono appena arrivano.
+// `inCasa` è vero solo sulla pagina Casa (dove c'è il foglio di casa); "di casa" nel nome della spesa
+// compare solo se si sa che c'è una casa.
 export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClose: () => void; inCasa: boolean }) {
   const router = useRouter();
   const [voci, setVoci] = useState<VociMenu | null>(null);
@@ -51,7 +53,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
 
   useEffect(() => {
     if (!aperto) return;
-    if (voci) return;
+    // A ogni apertura si rilegge; intanto restano le ultime voci, così in fondo non salta niente.
     let attivo = true;
     leggiVociMenu().then(
       (v) => {
@@ -64,7 +66,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
     return () => {
       attivo = false;
     };
-  }, [aperto, voci]);
+  }, [aperto]);
 
   if (!aperto) return null;
 
@@ -126,7 +128,7 @@ export function MenuAzioni({ aperto, onClose, inCasa }: { aperto: boolean; onClo
             onClick={() => aggiungi(undefined, '/?aggiungi=1')}
             className="flex h-14 w-full items-center justify-center rounded-[var(--radius-md)] bg-brand text-base font-semibold text-brand-foreground"
           >
-            {inCasa ? 'Registra una spesa di casa' : 'Registra una spesa'}
+            {inCasa && voci?.haCasa ? 'Registra una spesa di casa' : 'Registra una spesa'}
           </button>
         </div>
         <Riga icona={ArrowDownLeft} nome="Entrata" sotto="Uno stipendio, un rimborso" onClick={() => aggiungi('income', '/?aggiungi=entrata')} />

@@ -96,6 +96,15 @@ describe('GiroBarra', () => {
     expect(eVisto('u1', 'giro')).toBe(false);
   });
 
+  it("con l'attesa del foglio dopo il salvataggio non parte, parte quando finisce", async () => {
+    document.body.setAttribute('data-dopo-in-attesa', '');
+    render(<GiroBarra haCasa />);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByText(T1)).toBeNull();
+    document.body.removeAttribute('data-dopo-in-attesa');
+    expect(await screen.findByText(T1)).toBeTruthy();
+  });
+
   it('senza casa il passo 4 invita a crearla', async () => {
     render(<GiroBarra haCasa={false} />);
     for (let i = 0; i < 3; i++) {

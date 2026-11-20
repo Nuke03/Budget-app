@@ -27,6 +27,13 @@ describe('qualcosaAperto', () => {
     expect(qualcosaAperto()).toBe(false);
   });
 
+  it('è vero con l attesa del foglio dopo il salvataggio (body[data-dopo-in-attesa])', () => {
+    document.body.setAttribute('data-dopo-in-attesa', '');
+    expect(qualcosaAperto()).toBe(true);
+    document.body.removeAttribute('data-dopo-in-attesa');
+    expect(qualcosaAperto()).toBe(false);
+  });
+
   it('è vero con l avviso di annullamento visibile', () => {
     document.body.innerHTML = '<div data-avviso-annulla></div>';
     expect(qualcosaAperto()).toBe(true);

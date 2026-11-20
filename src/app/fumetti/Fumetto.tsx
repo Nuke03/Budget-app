@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 const FOCALIZZABILI = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
@@ -8,6 +8,7 @@ const MARGINE = 12;
 const LARGHEZZA = 300;
 const PUNTA = 10;
 const RESPIRO = 4;
+const RISERVA_BARRA = 80; // 5rem: la barra in basso, che il fumetto non modale non deve coprire
 
 type Rett = { left: number; top: number; width: number; height: number };
 
@@ -72,6 +73,14 @@ export function Fumetto({
   }, [ancora]);
 
   const visibile = rett !== null;
+  // L'altezza della bolla serve a tenerla dentro lo schermo: si misura dopo ogni render.
+
+  const [altezza, setAltezza] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- senza dipendenze: la misura segue ogni render, setAltezza scatta solo se cambia
+  useLayoutEffect(() => {
+    const a = scheda.current?.getBoundingClientRect().height ?? 0;
+    if (a !== altezza) setAltezza(a);
+  });
 
   // Modale: il focus va su "Avanti", Tab resta dentro, Esc salta, alla chiusura il focus torna.
   useEffect(() => {
@@ -115,17 +124,39 @@ export function Fumetto({
   const larghezza = Math.min(LARGHEZZA, Math.max(0, w - MARGINE * 2));
   const centro = rett.left + rett.width / 2;
   const sinistra = Math.min(Math.max(centro - larghezza / 2, MARGINE), Math.max(MARGINE, w - MARGINE - larghezza));
-  const sotto = rett.top + rett.height / 2 < h / 2;
   const puntaX = Math.min(Math.max(centro - sinistra, 20), larghezza - 20);
   const distanza = PUNTA + RESPIRO + 2;
 
+  // Verticale: il lato col centro più vicino al bordo lontano, se ci sta; altrimenti l'altro lato;
+  // se non ci sta nessuno, dentro lo schermo sopra la parte visibile del pezzo (senza punta).
+  // Il non modale sta sopra la barra in basso (5rem + safe area): i px sono il minimo, il CSS aggiunge il safe area.
+  const limiteAlto = MARGINE;
+  const limiteBasso = h - MARGINE - (modale ? 0 : RISERVA_BARRA);
+  const topSotto = rett.top + rett.height + distanza;
+  const topSopra = rett.top - distanza - altezza;
+  const preferisceSotto = rett.top + rett.height / 2 < h / 2;
+  const entra = (t: number) => t >= limiteAlto && t + altezza <= limiteBasso;
+  const [primo, secondo] = preferisceSotto ? [topSotto, topSopra] : [topSopra, topSotto];
+  let sotto = preferisceSotto;
+  let top = primo;
+  let punta = true;
+  if (!entra(primo)) {
+    if (entra(secondo)) {
+      top = secondo;
+      sotto = !preferisceSotto;
+    } else {
+      top = Math.min(Math.max(rett.top + RESPIRO, limiteAlto), Math.max(limiteAlto, limiteBasso - altezza));
+      punta = false;
+    }
+  }
+  top = Math.min(Math.max(top, limiteAlto), Math.max(limiteAlto, limiteBasso - altezza));
+
+  const riservaBasso = modale ? `env(safe-area-inset-bottom) + ${MARGINE}px` : `${RISERVA_BARRA}px + env(safe-area-inset-bottom)`;
   const posizione: React.CSSProperties = {
     position: 'fixed',
     left: `max(${sinistra}px, calc(env(safe-area-inset-left) + ${MARGINE}px))`,
     width: larghezza,
-    ...(sotto
-      ? { top: `max(calc(env(safe-area-inset-top) + ${MARGINE}px), ${rett.top + rett.height + distanza}px)` }
-      : { bottom: `max(calc(env(safe-area-inset-bottom) + ${MARGINE}px), ${h - rett.top + distanza}px)` }),
+    top: `max(calc(env(safe-area-inset-top) + ${MARGINE}px), min(${top}px, calc(100dvh - ${altezza}px - ${riservaBasso})))`,
   };
 
   const buco = { x: rett.left - RESPIRO, y: rett.top - RESPIRO, w: rett.width + RESPIRO * 2, h: rett.height + RESPIRO * 2 };
@@ -153,13 +184,16 @@ export function Fumetto({
         aria-label="Suggerimento"
         {...attributiDialog}
         style={posizione}
-        className="z-[61] rounded-[var(--radius-md)] border border-rule bg-surface p-4 text-ink"
+        data-fumetto-top={Math.round(top)}
+        className="z-[61] rounded-[var(--radius-md)] border border-rule bg-surface p-4 text-foreground"
       >
-        <span
-          aria-hidden="true"
-          className={`absolute h-2.5 w-2.5 rotate-45 border-rule bg-surface ${sotto ? '-top-[5px] border-l border-t' : '-bottom-[5px] border-b border-r'}`}
-          style={{ left: puntaX - 5 }}
-        />
+        {punta && (
+          <span
+            aria-hidden="true"
+            className={`absolute h-2.5 w-2.5 rotate-45 border-rule bg-surface ${sotto ? '-top-[5px] border-l border-t' : '-bottom-[5px] border-b border-r'}`}
+            style={{ left: puntaX - 5 }}
+          />
+        )}
         {!modale && (
           <button
             type="button"

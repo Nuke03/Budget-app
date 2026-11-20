@@ -40,7 +40,7 @@ Per Fabio, nell'ordine. Ogni passo dice cosa guardare.
 4. Fai una spesa che porta il disponibile sotto zero. Deve comparire l'avviso sul fondo imprevisti.
 5. Fai una spesa da 160 €. Deve comparire la lezione sul fondo imprevisti.
 6. Modifica un movimento, poi eliminane un altro. Controlla che il saldo torni giusto dopo ogni passo.
-7. Su un obiettivo con scadenza, tocca "Ho messo da parte". Controlla il disponibile e il riservato.
+7. Su un cassetto con scadenza, tocca "Ho messo da parte". Controlla il disponibile e il riservato.
 8. Con Miriam: la prova dal vivo della P.IVA (vedi "Da controllare per Fabio" più sotto).
 9. Dopo il reset, controlla che i numeri della Casa siano gli stessi di prima.
 10. Tocca il + della barra. Deve aprirsi "Cosa vuoi fare?" con "Registra una spesa" in cima e una riga che dice a cosa serve ogni altra voce.

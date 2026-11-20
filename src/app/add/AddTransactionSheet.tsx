@@ -220,11 +220,14 @@ export function AddTransactionSheet({
     // Solo lo spazio personale. Non si aspetta: il foglio si chiude subito e l'esito arriva dopo.
     // Qualunque errore vale come "niente da dire": il salvataggio è già fatto.
     if (modo === 'personale') {
+      // Finché l'esito non arriva il giro dei fumetti non parte: il foglio dopo il salvataggio non va coperto.
+      document.body.setAttribute('data-dopo-in-attesa', '');
       valutaDopoSalvataggio(id)
         .then((r) => {
           if (r) setDopo(r);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => document.body.removeAttribute('data-dopo-in-attesa'));
     }
     onSaved(id, modo);
     setImportoBozza('');

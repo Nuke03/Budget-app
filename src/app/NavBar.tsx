@@ -33,6 +33,7 @@ export function NavBar() {
   }
 
   return (
+    <>
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-rule bg-surface pb-[env(safe-area-inset-bottom)]"
       aria-label="Navigazione principale"
@@ -82,7 +83,9 @@ export function NavBar() {
           );
         })}
       </div>
-      <MenuAzioni aperto={menuAperto} onClose={() => setMenuAperto(false)} inCasa={pathname.startsWith('/casa')} />
     </nav>
+    {/* Fuori dalla nav: il foglio e l'avviso di annullamento (z-50) si sovrappongono nell'ordine giusto */}
+    <MenuAzioni aperto={menuAperto} onClose={() => setMenuAperto(false)} inCasa={pathname === '/casa'} />
+    </>
   );
 }

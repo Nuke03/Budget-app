@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { Fumetto } from '@/app/fumetti/Fumetto';
 
 function ancora(w = 100, h = 40) {
@@ -14,6 +14,33 @@ function ancora(w = 100, h = 40) {
 afterEach(() => {
   cleanup();
   document.body.innerHTML = '';
+});
+
+describe('Fumetto dentro lo schermo', () => {
+  it('con un ancora più alta della finestra la bolla resta tra i margini', async () => {
+    window.innerHeight = 600;
+    window.innerWidth = 375;
+    const el = document.createElement('div');
+    el.setAttribute('data-fumetto', 'prova');
+    el.getBoundingClientRect = () => ({ x: 20, y: -50, left: 20, top: -50, right: 340, bottom: 700, width: 320, height: 750, toJSON() {} }) as DOMRect;
+    document.body.appendChild(el);
+    const orig = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return this.getAttribute('role') === 'dialog'
+        ? ({ x: 0, y: 0, left: 0, top: 0, right: 300, bottom: 150, width: 300, height: 150, toJSON() {} } as DOMRect)
+        : orig.call(this);
+    };
+    try {
+      render(<Fumetto ancora="prova" testo="Qui vedi tutto." modale={false} onChiudi={() => {}} />);
+      const d = await screen.findByRole('dialog');
+      await waitFor(() => expect(Number(d.getAttribute('data-fumetto-top'))).toBeGreaterThanOrEqual(12));
+      const top = Number(d.getAttribute('data-fumetto-top'));
+      expect(top).toBeGreaterThanOrEqual(12);
+      expect(top + 150).toBeLessThanOrEqual(600 - 80 - 12);
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = orig;
+    }
+  });
 });
 
 describe('Fumetto modale', () => {

@@ -34,7 +34,9 @@ export function qualcosaAperto(doc?: Document): boolean {
   if (!d) return false;
   return (
     d.querySelector('[aria-modal="true"]:not([data-fumetto-giro])') !== null ||
-    d.querySelector('[data-avviso-annulla]') !== null
+    d.querySelector('[data-avviso-annulla]') !== null ||
+    // il foglio dopo il salvataggio (avviso, lezione) non c'è ancora ma sta per arrivare
+    d.body?.hasAttribute('data-dopo-in-attesa') === true
   );
 }
 

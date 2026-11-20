@@ -166,19 +166,44 @@ describe('MenuAzioni', () => {
     expect(screen.queryByText(/giù/)).not.toBeInTheDocument();
   });
 
-  it('il risultato resta in memoria alla riapertura', async () => {
-    leggi.mockResolvedValue(voci({ haCasa: true }));
+  it('a ogni apertura rilegge le voci e intanto tiene le ultime', async () => {
+    leggi.mockResolvedValueOnce(voci({ haCasa: true }));
     const { rerender } = render(<MenuAzioni aperto onClose={() => {}} inCasa={false} />);
     await screen.findByText('Versa la quota della casa');
     rerender(<MenuAzioni aperto={false} onClose={() => {}} inCasa={false} />);
+    let risolvi: (v: VociMenu) => void = () => {};
+    leggi.mockReturnValueOnce(new Promise<VociMenu>((r) => (risolvi = r)));
     rerender(<MenuAzioni aperto onClose={() => {}} inCasa={false} />);
+    expect(leggi).toHaveBeenCalledTimes(2);
     expect(screen.getByText('Versa la quota della casa')).toBeInTheDocument();
-    expect(leggi).toHaveBeenCalledTimes(1);
+    risolvi(voci({ haCasa: false }));
+    await waitFor(() => expect(screen.queryByText('Versa la quota della casa')).not.toBeInTheDocument());
   });
 
-  it('in Casa: "Registra una spesa di casa"', () => {
+  it('se la rilettura fallisce tiene le ultime voci', async () => {
+    leggi.mockResolvedValueOnce(voci({ haCasa: true }));
+    const { rerender } = render(<MenuAzioni aperto onClose={() => {}} inCasa={false} />);
+    await screen.findByText('Versa la quota della casa');
+    rerender(<MenuAzioni aperto={false} onClose={() => {}} inCasa={false} />);
+    leggi.mockRejectedValueOnce(new Error('giù'));
+    rerender(<MenuAzioni aperto onClose={() => {}} inCasa={false} />);
+    await waitFor(() => expect(leggi).toHaveBeenCalledTimes(2));
+    await Promise.resolve();
+    expect(screen.getByText('Versa la quota della casa')).toBeInTheDocument();
+  });
+
+  it('in Casa con una casa: "Registra una spesa di casa"', async () => {
+    leggi.mockResolvedValue(voci({ haCasa: true }));
     apri(true);
-    expect(screen.getByRole('button', { name: 'Registra una spesa di casa' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Registra una spesa di casa' })).toBeInTheDocument();
+  });
+
+  it('in Casa senza casa: "Registra una spesa"', async () => {
+    apri(true);
+    await waitFor(() => expect(leggi).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(screen.getByRole('button', { name: 'Registra una spesa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Registra una spesa di casa' })).not.toBeInTheDocument();
   });
 
   it('nessuna parola vietata', async () => {

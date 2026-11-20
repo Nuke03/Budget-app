@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NavBar } from '@/app/NavBar';
 
 let pathname = '/';
 const push = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ usePathname: () => pathname, useRouter: () => ({ push }) }));
-vi.mock('@/app/menu/actions', () => ({ leggiVociMenu: () => new Promise(() => {}) }));
+const leggi = vi.hoisted(() => vi.fn());
+vi.mock('@/app/menu/actions', () => ({ leggiVociMenu: leggi }));
+leggi.mockImplementation(() => new Promise(() => {}));
 
 describe('NavBar', () => {
   it('ha quattro schede: Home, Storico, Casa, Altro', () => {
@@ -60,11 +62,36 @@ describe('NavBar', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it('su /casa il menu offre la spesa di casa', () => {
+  it('su /casa con una casa il menu offre la spesa di casa', async () => {
     pathname = '/casa';
+    leggi.mockResolvedValueOnce({ cassettiARate: [], haCasa: true });
     render(<NavBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Cosa vuoi fare?' }));
-    expect(screen.getByRole('button', { name: 'Registra una spesa di casa' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Registra una spesa di casa' })).toBeInTheDocument();
+  });
+
+  it('su /casa senza casa e su /casa/movimenti il menu dice solo "Registra una spesa"', async () => {
+    for (const [p, haCasa] of [
+      ['/casa', false],
+      ['/casa/movimenti', true],
+    ] as const) {
+      pathname = p;
+      leggi.mockClear();
+      leggi.mockResolvedValueOnce({ cassettiARate: [], haCasa });
+      const { unmount } = render(<NavBar />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cosa vuoi fare?' }));
+      await waitFor(() => expect(leggi).toHaveBeenCalled());
+      await Promise.resolve();
+      expect(screen.getByRole('button', { name: 'Registra una spesa' })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('il menu non sta dentro la nav', () => {
+    pathname = '/';
+    render(<NavBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cosa vuoi fare?' }));
+    expect(screen.getByRole('navigation').contains(screen.getByRole('dialog'))).toBe(false);
   });
 
   it('Casa è attiva su /casa e su /casa/quota', () => {
