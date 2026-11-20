@@ -88,9 +88,9 @@ export function AccountRow({
         )}
 
         <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink-2">
-          Obiettivo di saldo (opzionale)
+          Saldo da raggiungere (opzionale)
           <input
-            aria-label="Obiettivo di saldo (opzionale)"
+            aria-label="Saldo da raggiungere (opzionale)"
             type="number"
             inputMode="decimal"
             value={editTargetSaldo}

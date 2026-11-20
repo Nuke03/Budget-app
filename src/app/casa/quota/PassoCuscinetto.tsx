@@ -9,7 +9,7 @@ export function PassoCuscinetto({ b }: { b: BozzaQuota }) {
         Il cuscinetto sono soldi della casa per gli imprevisti: una caldaia, una bolletta più alta del solito.
       </p>
       <div className="flex flex-col gap-2 text-[15px]">
-        <span className="font-semibold">Obiettivo</span>
+        <span className="font-semibold">Traguardo</span>
         {([1, 2] as const).map((m) => (
           <label key={m} className="flex min-h-11 items-center gap-2">
             <input

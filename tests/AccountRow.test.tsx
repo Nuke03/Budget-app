@@ -62,7 +62,7 @@ describe('AccountRow', () => {
     expect(screen.getByLabelText('Nome conto')).toHaveValue('Fondo emergenza');
     fireEvent.change(screen.getByLabelText('Nome conto'), { target: { value: 'Fondo sicurezza' } });
     fireEvent.click(screen.getByLabelText('Conta nel disponibile libero'));
-    fireEvent.change(screen.getByLabelText('Obiettivo di saldo (opzionale)'), {
+    fireEvent.change(screen.getByLabelText('Saldo da raggiungere (opzionale)'), {
       target: { value: '5000' },
     });
     fireEvent.click(screen.getByText('Salva modifiche'));
