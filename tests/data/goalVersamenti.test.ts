@@ -54,6 +54,15 @@ describe('getVersatoNelleFinestre', () => {
     expect(r).toEqual({ G1: 250, G2: null, G3: null });
   });
 
+  it('un ricorrente confermato solo nel ciclo prima resta in modalità conferma, con 0 nel ciclo nuovo', async () => {
+    const db = createFakeDb(
+      { goal_versamenti: [riga('v1', 'G2', '2026-03-15', 70)] },
+      { userId: 'A', membri: {} }
+    );
+    const r = await getConfermePerObiettivi(db.client, [ricorrente], TODAY);
+    expect(r.G2).toEqual({ versato: 0, mese: 0 });
+  });
+
   it('un ricorrente non conta il versamento del ciclo prima (inizio escluso)', async () => {
     // Ciclo di novembre 2026: (31 mar 2026, 31 mar 2027]
     const db = createFakeDb(
@@ -70,13 +79,13 @@ describe('getVersatoNelleFinestre', () => {
     expect(r.G2).toBe(20);
   });
 
-  it('un versamento dopo la fine della finestra non conta', async () => {
+  it('un versamento dopo la fine della finestra non conta nella somma, ma tiene la modalità conferma', async () => {
     const db = createFakeDb(
       { goal_versamenti: [riga('v1', 'G1', '2027-06-01', 50)] },
       { userId: 'A', membri: {} }
     );
     const r = await getVersatoNelleFinestre(db.client, [dilazionato], TODAY);
-    expect(r.G1).toBeNull();
+    expect(r.G1).toBe(0);
   });
 
   it('una sola query per tutti gli obiettivi dilazionati', async () => {

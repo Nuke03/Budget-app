@@ -51,10 +51,28 @@ describe('loadHomeData: conferma versamento', () => {
     expect(d.disponibileReale).toBe(2000);
   });
 
-  it('un versamento prima della creazione dell\'obiettivo non conta', async () => {
+  it("un versamento fuori finestra non conta, ma l'obiettivo resta in modalità conferma: riservato 0 e Da fare", async () => {
     const d = await loadHomeData(db([versamento('v1', '2026-05-20', 50)]).client, TODAY, null);
-    expect(d.riservati.obiettivi).toBe(1000);
-    expect(d.goals[0].versatoNellaFinestra).toBeNull();
+    expect(d.goals[0].versatoNellaFinestra).toBe(0);
+    expect(d.riservati.obiettivi).toBe(0);
+    expect(d.prossimo?.tipo).toBe('obiettivo');
+  });
+
+  it('ricorrente confermato nel ciclo prima: nel ciclo nuovo riservato 0 e Da fare; confermato ora: il minore', async () => {
+    const ric = { ...obiettivo, ricorrente: true, frequenza_mesi: 12, scadenza: '2027-03-31', created_at: '2026-01-01T00:00:00Z' };
+    const mk = (v: ReturnType<typeof versamento>[]) =>
+      createFakeDb(
+        { accounts: [conto], budget_goals: [ric], transactions: [spesaRecente], categories: [], goal_versamenti: v },
+        { userId: 'A', membri: {} }
+      );
+    const prima = await loadHomeData(mk([versamento('v1', '2026-03-15', 100)]).client, TODAY, null);
+    expect(prima.goals[0].accantonato).toBe(0);
+    expect(prima.prossimo?.tipo).toBe('obiettivo');
+    const ora = await loadHomeData(mk([versamento('v1', '2026-11-05', 300)]).client, TODAY, null);
+    expect(ora.goals[0].accantonato).toBe(300);
+    const mai = await loadHomeData(mk([]).client, TODAY, null);
+    expect(mai.goals[0].versatoNellaFinestra).toBeNull();
+    expect(mai.goals[0].accantonato).toBeGreaterThan(300);
   });
 
   it('Da fare: chiede la quota del mese a chi ha già confermato, non a chi no', async () => {

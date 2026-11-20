@@ -39,7 +39,8 @@ export async function confermaVersamento(
 }
 
 export interface ConfermeObiettivo {
-  // Totale confermato nella finestra attuale; null se non c'è nessuna conferma (vale il calcolo a tempo).
+  // null: l'obiettivo non ha mai avuto una conferma (vale il calcolo a tempo). Altrimenti è in "modalità
+  // conferma" per sempre, e questo è il totale confermato nella finestra attuale (anche 0, a inizio ciclo).
   versato: number | null;
   // Quanto di quel totale è del mese di calendario in corso (giorno di Roma).
   mese: number;
@@ -48,6 +49,9 @@ export interface ConfermeObiettivo {
 // I versamenti confermati di tutti gli obiettivi con una sola lettura (come getSpecoCollegatoPerObiettivi):
 // la query prende i versamenti dal primo inizio finestra in poi, poi si somma in JS dentro la finestra di
 // ciascun obiettivo, con la stessa regola delle spese collegate (per i ricorrenti l'inizio è escluso).
+// La modalità conferma è per obiettivo, non per finestra: basta una conferma, in qualunque momento, e da lì
+// il riservato conta solo i versamenti del ciclo in corso (0 finché non confermi). Per questo la query
+// non filtra per data: la finestra si applica solo alla somma.
 // Solo i dilazionati hanno un versato: per gli altri `versato` è sempre null. Se la lettura fallisce lancia.
 export async function getConfermePerObiettivi(
   supabase: SupabaseClient,
@@ -67,22 +71,21 @@ export async function getConfermePerObiettivi(
   }
   if (finestre.length === 0) return risultato;
 
-  const minDa = finestre.reduce((m, f) => (f.da < m ? f.da : m), finestre[0].da);
   const { data, error } = await supabase
     .from('goal_versamenti')
     .select('goal_id, importo, data')
     .in(
       'goal_id',
       finestre.map((f) => f.id)
-    )
-    .gte('data', minDa);
+    );
   if (error) throw error;
 
   const righe = (data ?? []) as { goal_id: string; importo: number; data: string }[];
   const mese = oggiRomaISO(today).slice(0, 7);
   for (const f of finestre) {
-    const dentro = righe.filter((r) => r.goal_id === f.id && dataNellaFinestraSpese(r.data, f));
-    if (dentro.length === 0) continue;
+    const sue = righe.filter((r) => r.goal_id === f.id);
+    if (sue.length === 0) continue;
+    const dentro = sue.filter((r) => dataNellaFinestraSpese(r.data, f));
     risultato[f.id] = {
       versato: arrotonda2(dentro.reduce((s, r) => s + Number(r.importo), 0)),
       mese: arrotonda2(dentro.filter((r) => r.data.slice(0, 7) === mese).reduce((s, r) => s + Number(r.importo), 0)),
@@ -91,7 +94,7 @@ export async function getConfermePerObiettivi(
   return risultato;
 }
 
-// Solo il versato di ogni obiettivo: null = nessuna conferma nella finestra (il riservato resta a tempo).
+// Solo il versato di ogni obiettivo: null = mai confermato (il riservato resta a tempo).
 export async function getVersatoNelleFinestre(
   supabase: SupabaseClient,
   goals: BudgetGoal[],
