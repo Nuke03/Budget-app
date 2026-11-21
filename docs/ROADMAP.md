@@ -8,7 +8,7 @@ legge questo file più i documenti citati.
 
 - Lanciare `supabase/migrations/0014_difese.sql` nel SQL editor di Supabase. Porta le difese in più: date e importi dei versamenti, rientri che non cambiano conto o importo, righe della riconciliazione che non si modificano.
 - Eseguire a mano il test `supabase/tests/difese_0014.sql`. Il test finisce con rollback.
-- Il push su master aspetta la 0014.
+- Il push non dipende dalla 0014: si può fare prima. La 0014 aggiunge solo difese nel database; lanciarla quando si può.
 
 ## Stato attuale (8 novembre 2026; per il blocco 1 vedi sotto)
 
@@ -353,7 +353,7 @@ Piano B: chiuso anche il resto (saldo Tricount in una riga sua, test SQL del deb
 - La migrazione 0010 è stata lanciata su Supabase il 18 novembre 2026. Nessun test l'ha eseguita su Postgres: da provare dal vivo con l'account di Miriam, guardando i saldi dopo ogni passo. Prova: guida, una fattura "pagata adesso", "Fatto, li ho spostati", annulla lo spostamento nello Storico, paga una scadenza, elimina nello Storico l'incasso e l'uscita della scadenza (la fattura torna in attesa, la scadenza si riapre).
 - I valori ENPAP del preset (78%, 10%, 2%, minimale 856 €) vengono da guide non ufficiali. Da confermare con il commercialista o nell'area riservata ENPAP.
 - Le regole ENPAP cambiano dal prossimo anno: aggiornare i parametri quando escono.
-- Prova dal vivo con Miriam: "La riporto indietro?" compare solo se si resta nello Storico per 5 secondi dopo l'eliminazione; controllare anche che si capisca cosa fare se non compare.
+- Prova dal vivo con Miriam: "La riporto indietro?" resta in attesa se lascia lo Storico prima dei 5 secondi, e riappare alla prossima apertura dello Storico; controllare che si capisca.
 
 ### Chiuso il 20 novembre 2026
 

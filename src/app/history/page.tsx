@@ -50,6 +50,8 @@ export default function HistoryPage() {
   const utenteRef = useRef('');
   const setQuotaDaRiportare = (q: null) => {
     if (q === null && quotaDaRiportare) togliQuotaDaRiportare(utenteRef.current, quotaDaRiportare.id);
+    // L'errore era della domanda tolta: la prossima parte pulita.
+    setRiportoFallito(false);
   };
   const [riportoInCorso, setRiportoInCorso] = useState(false);
   const [riportoFallito, setRiportoFallito] = useState(false);

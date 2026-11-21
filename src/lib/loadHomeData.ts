@@ -177,13 +177,13 @@ function inizioFinestra(oggi: string): string {
 
 // Per "Rimetti a rate" sui fondi di casa: quanto è stato speso e non ancora rientrato. Se non si legge,
 // la cifra non si propone, ma la casa resta.
-async function conSpesoDaRientrare(supabase: SupabaseClient, aggiunta: CasaAggiunta, now: Date): Promise<CasaAggiunta> {
+export async function conSpesoDaRientrare(supabase: SupabaseClient, aggiunta: CasaAggiunta, now: Date): Promise<CasaAggiunta> {
   try {
     const scope = scopeCasa(aggiunta.householdId);
     const oggi = oggiRomaISO(now);
     const [speso, rientri] = await Promise.all([
       getSpecoCollegatoPerObiettivi(supabase, aggiunta.obiettivi, now, scope),
-      getRientri(supabase, scope).catch(() => [] as Rientro[]),
+      getRientri(supabase, scope),
     ]);
     return {
       ...aggiunta,

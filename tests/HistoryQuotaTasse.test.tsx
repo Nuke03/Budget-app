@@ -217,4 +217,32 @@ describe('P3: incasso eliminato con la quota già nel conto tasse', () => {
     await passa(0);
     expect(screen.queryByText(/La quota di/)).not.toBeInTheDocument();
   });
+
+  it('l errore di una domanda non passa alla successiva', async () => {
+    const due = [
+      { ...riga('income'), id: 't1', descrizione: 'Seduta uno' },
+      { ...riga('income'), id: 't2', descrizione: 'Seduta due' },
+    ];
+    vi.mocked(getTransactions).mockResolvedValue(due);
+    vi.mocked(getAccantonamenti).mockResolvedValue([
+      { ...accantonamento('t1'), id: 'pa1', importo: 82 },
+      { ...accantonamento('t2'), id: 'pa2', importo: 41 },
+    ]);
+    vi.mocked(annullaAccantonamento).mockRejectedValue(new Error('rete'));
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Seduta due')).toBeInTheDocument());
+    await waitFor(() => expect(getPivaSettings).toHaveBeenCalled());
+    for (let i = 0; i < 3; i++) await new Promise<void>((r) => setTimeout(r, 0));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    fireEvent.click(screen.getAllByLabelText('Elimina transazione')[0]);
+    fireEvent.click(screen.getAllByLabelText('Elimina transazione')[0]);
+    await passa(6000);
+    fireEvent.click(screen.getByRole('button', { name: 'Sì' }));
+    await passa(0);
+    expect(screen.getByText('Non è riuscito. Riprova.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'No' }));
+    await passa(0);
+    expect(screen.getByText(/La quota di 41 €/)).toBeInTheDocument();
+    expect(screen.queryByText('Non è riuscito. Riprova.')).not.toBeInTheDocument();
+  });
 });
