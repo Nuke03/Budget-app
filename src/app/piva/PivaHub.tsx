@@ -93,6 +93,8 @@ export interface DatiPivaHub {
   tx: Transaction[];
   accant: PivaAccantonamento[];
   scad: PivaScadenza[] | null;
+  // Le scadenze che legge anche la Home (assente: solo quelle di scad).
+  scadHome?: PivaScadenza[];
   fatt: PivaFattura[] | null;
   stip: DatiStipendio | null;
   // Gli incassi per cui si è scelto di non mettere niente da parte (assente: nessuno).
@@ -119,6 +121,8 @@ export function PivaHub({
   const [incassi, setIncassi] = useState<Transaction[]>([]);
   const [accantonamenti, setAccantonamenti] = useState<PivaAccantonamento[]>([]);
   const [scadenze, setScadenze] = useState<PivaScadenza[]>([]);
+  // Le scadenze che legge anche la Home (dopo il 15 dicembre pure l'anno dopo): per il pezzo in più.
+  const [scadenzeHome, setScadenzeHome] = useState<PivaScadenza[]>([]);
   const [scadenzeNonCaricate, setScadenzeNonCaricate] = useState(false);
   const [fatture, setFatture] = useState<PivaFattura[]>([]);
   const [fattureNonCaricate, setFattureNonCaricate] = useState(false);
@@ -152,18 +156,29 @@ export function PivaHub({
     const daIncassi = da < inizioMesiFa(oggiISO, 6) ? da : inizioMesiFa(oggiISO, 6);
     // Le scadenze mancanti si creano all'apertura; quelle tolte non tornano (il database ignora i doppioni).
     // Un errore sulle scadenze non deve fermare vaso e quote: la lista resta vuota con una riga calma.
-    const leggiScadenze = async (): Promise<PivaScadenza[] | null> => {
+    const leggiScadenze = async (): Promise<{ anno: PivaScadenza[]; home: PivaScadenza[] } | null> => {
       try {
         if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(anno, settings.guidataDal));
         // Dopo il 15 dicembre la Home legge anche l'anno dopo: le righe devono esistere. Se non si creano, l'anno corrente resta.
+        const prossimi: number[] = [];
         for (const prossimo of anniScadenzeHome(oggiISO).filter((a) => a > anno)) {
           try {
             if (settings.guidataDal) await assicuraScadenze(supabase, scadenzeDaCreare(prossimo, settings.guidataDal));
+            prossimi.push(prossimo);
           } catch {
             // niente: le scadenze di quest'anno si vedono lo stesso
           }
         }
-        return await getScadenze(supabase, anno);
+        const corrente = await getScadenze(supabase, anno);
+        const altre: PivaScadenza[] = [];
+        for (const prossimo of prossimi) {
+          try {
+            altre.push(...(await getScadenze(supabase, prossimo)));
+          } catch {
+            // niente: il pezzo in più userà solo quelle di quest'anno
+          }
+        }
+        return { anno: corrente, home: [...corrente, ...altre] };
       } catch {
         return null;
       }
@@ -208,7 +223,7 @@ export function PivaHub({
       leggiStipendio(),
       leggiScartate(),
     ]);
-    return { acc, tx, accant, scad, fatt, stip, scart };
+    return { acc, tx, accant, scad: scad?.anno ?? null, scadHome: scad?.home, fatt, stip, scart };
   }
 
   function applica(d: Awaited<ReturnType<typeof leggi>>) {
@@ -216,6 +231,7 @@ export function PivaHub({
     setIncassi(d.tx);
     setAccantonamenti(d.accant);
     setScadenze(d.scad ?? []);
+    setScadenzeHome(d.scadHome ?? d.scad ?? []);
     setScadenzeNonCaricate(d.scad === null);
     setFatture(d.fatt ?? []);
     setFattureNonCaricate(d.fatt === null);
@@ -271,7 +287,7 @@ export function PivaHub({
   // Il pezzo in più per la scadenza: l'in sospeso senza la quota di questo incasso, che si somma a parte.
   const pezzoQuota = quotaDaSpostare
     ? pezzoInPiuScadenza({
-        scadenze,
+        scadenze: scadenzeHome,
         saldoVaso: contoTasse.saldoAttuale,
         inSospeso: totaleInSospeso(inSospeso) - quotaDaSpostare.quota,
         incassiMensili: categoriaId ? finestraIncassi(incassi, categoriaId, oggiRomaISO()).incassiMensili : [],

@@ -241,6 +241,22 @@ describe('PivaHub', () => {
       expect(await screen.findByText(/82 € di quota e \d+ € per la scadenza/)).toBeInTheDocument();
     });
 
+    it('dopo il 15 dicembre conta anche le scadenze dell anno dopo, come la Home', async () => {
+      vi.setSystemTime(new Date('2026-12-20T12:00:00Z'));
+      vi.mocked(getScadenze).mockImplementation(async (_s, anno) =>
+        anno === 2027
+          ? [{
+              id: 'sc27', anno: 2027, chiave: 'cassa_acconto', tipo: 'cassa', descrizione: 'Acconto',
+              data: '2027-01-16', importo: 900, pagataIl: null, transactionId: null, nascosta: false,
+            }]
+          : []
+      );
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+      expect(await screen.findByText(/di quota e \d+ € per la scadenza del 16 gennaio 2027/)).toBeInTheDocument();
+    });
+
     it('con il vaso che basta la domanda resta quella di oggi', async () => {
       conScadenza(480);
       apri();

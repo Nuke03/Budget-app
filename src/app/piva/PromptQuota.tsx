@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
-import { formatDataLunga, formatEuro } from '@/lib/format';
+import { formatEuro, giornoEMeseScadenza } from '@/lib/format';
 import type { Account } from '@/lib/types';
 import { PercheScadenza } from './PerchePiva';
 
@@ -67,7 +67,7 @@ export function PromptQuota({
             <>
               <p className="mt-1 text-[15px] text-ink-2">
                 {euroInFrase(quota)} di quota e {euroInFrase(inPiu.importo)} per la scadenza del{' '}
-                {formatDataLunga(inPiu.data)}.
+                {giornoEMeseScadenza(inPiu.data, Number(inPiu.data.slice(8, 10)))} {inPiu.data.slice(0, 4)}.
               </p>
               <div className="mt-1">
                 <PercheScadenza />

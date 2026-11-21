@@ -38,6 +38,15 @@ describe('pezzoInPiuScadenza', () => {
     expect(r?.importo).toBe(250);
   });
 
+  it('tetto con incasso dispari: quota più pezzo non superano la metà', () => {
+    const r = pezzoInPiuScadenza({
+      ...base,
+      importo: 1001,
+      scadenze: [riga({ id: 'a', data: '2026-11-30', importo: 3450 })],
+    });
+    expect(r?.importo).toBe(250);
+  });
+
   it('senza media: tutto fino al tetto', () => {
     expect(pezzoInPiuScadenza({ ...base, incassiMensili: [], scadenze: [sc] })?.importo).toBe(250);
     const s100 = riga({ id: 'b', importo: 800 });

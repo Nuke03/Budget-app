@@ -73,6 +73,7 @@ export interface DatiScadenzaVaso {
 export function pezzoInPiuScadenza(
   i: DatiScadenzaVaso & { importo: number; quotaBase: number; oggi: string }
 ): { importo: number; scadenza: PivaScadenza } | null {
+  // Le scadenze già passate e non spuntate restano fuori: di solito sono pagate, e "spostali prima della scadenza" le copre già.
   const da = [...i.scadenze]
     .filter((s) => !s.pagataIl && !s.nascosta && s.importo != null && s.data >= i.oggi)
     .sort((a, b) => a.data.localeCompare(b.data));
@@ -92,7 +93,7 @@ export function pezzoInPiuScadenza(
       ? i.incassiMensili.reduce((t, x) => t + x, 0) / i.incassiMensili.length
       : 0;
     const pezzo = media > 0 ? Math.round((i.importo * mancano) / (media * mesi)) : mancano;
-    const risultato = Math.round(Math.min(pezzo, mancano, Math.round(i.importo / 2) - i.quotaBase));
+    const risultato = Math.round(Math.min(pezzo, mancano, Math.floor(i.importo / 2) - i.quotaBase));
     return risultato > 0 ? { importo: risultato, scadenza: s } : null;
   }
   return null;

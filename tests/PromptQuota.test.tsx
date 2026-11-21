@@ -101,6 +101,13 @@ describe('PromptQuota', () => {
       expect(screen.getByRole('button', { name: 'Perché? la scadenza' })).toBeInTheDocument();
     });
 
+    it('una scadenza del primo del mese si scrive con il 1°', () => {
+      apri({ quota: 300, inPiu: { importo: 150, data: '2027-03-01' } });
+      expect(
+        screen.getByText('300 € di quota e 150 € per la scadenza del 1° marzo 2027.'),
+      ).toBeInTheDocument();
+    });
+
     it('il campo modificabile parte dalla somma', () => {
       apri({ quota: 300, inPiu });
       fireEvent.click(screen.getByRole('button', { name: 'Ho spostato una cifra diversa' }));
