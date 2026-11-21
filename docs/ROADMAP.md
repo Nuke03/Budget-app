@@ -6,9 +6,7 @@ legge questo file più i documenti citati.
 
 ## Da fare (Fabio)
 
-- Lanciare `supabase/migrations/0014_difese.sql` nel SQL editor di Supabase. Porta le difese in più: date e importi dei versamenti, rientri che non cambiano conto o importo, righe della riconciliazione che non si modificano.
-- Eseguire a mano il test `supabase/tests/difese_0014.sql`. Il test finisce con rollback.
-- Il push non dipende dalla 0014: si può fare prima. La 0014 aggiunge solo difese nel database; lanciarla quando si può.
+- La migrazione 0014 (`supabase/migrations/0014_difese.sql`) è stata lanciata su Supabase il 21 novembre 2026. Se non è già stato fatto, eseguire a mano il test `supabase/tests/difese_0014.sql` (finisce con rollback).
 
 ## Stato attuale (8 novembre 2026; per il blocco 1 vedi sotto)
 
@@ -363,7 +361,7 @@ Le note rimandate della pulizia e le rifiniture di fumetti e rientri sono fatte.
 - **Rientri** (commit `105ce9a`): i rientri fermati compaiono sulle card, la rata entra nella cifra proposta solo nei mesi giusti, i cassetti di casa partono da quanto speso, lo Storico mostra il nome dei conti archiviati, un rientro di casa con un conto viene rifiutato prima di inviarlo.
 - **Home e P.IVA** (commit `68bdb24` e `a2c2f25`): le scadenze si creano anche dalla Home, la riga "P.IVA non letta" compare solo a chi usa la P.IVA guidata, la domanda "La riporto indietro?" resta in coda anche se si lascia lo Storico subito, due domande vicine restano due, una risposta persa mostra "Non so se è stato salvato. Controlla nello Storico prima di riprovare.", la soglia del reddito irregolare ha il suo test.
 - **Disponibile negativo**: chiuso senza frase nuova. La Home dice già "Fino al <data> conviene spendere solo per il necessario."
-- **Riconciliazione e versamenti** (commit `6ef0953`): il codice è pronto. Il controllo nel database serve la 0014, vedi "Da fare".
+- **Riconciliazione e versamenti** (commit `6ef0953`): il codice è pronto. Il controllo nel database è attivo con la 0014 (lanciata il 21 novembre 2026).
 
 ## Come lavorare per risparmiare token
 
