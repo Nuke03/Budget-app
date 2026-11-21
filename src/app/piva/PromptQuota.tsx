@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { FoglioInferiore } from '../FoglioInferiore';
 import { Campo, CLASSE_CAMPO, CLASSE_LINK, CLASSE_NEUTRO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
-import { formatEuro } from '@/lib/format';
+import { formatDataLunga, formatEuro } from '@/lib/format';
 import type { Account } from '@/lib/types';
+import { PercheScadenza } from './PerchePiva';
 
 // Nelle frasi gli importi tondi si scrivono senza decimali: "600 €".
 export const euroInFrase = (n: number): string => formatEuro(n).replace(',00', '');
@@ -17,20 +18,24 @@ export function contoDaCuiSpostare(accountId: string | null, conti: Account[], c
 }
 
 // A ogni incasso del lavoro: quanto mettere da parte, con un tocco per dirlo fatto.
+// Con inPiu la proposta include anche il pezzo per una scadenza vicina.
 export function PromptQuota({
   importo,
   quota,
   contoTasse,
+  inPiu,
   onFatto,
   onPiuTardi,
 }: {
   importo: number;
   quota: number;
   contoTasse: string;
+  inPiu?: { importo: number; data: string } | null;
   onFatto: (importoSpostato: number) => Promise<void>;
   onPiuTardi: () => void;
 }) {
-  const [spostato, setSpostato] = useState(String(quota));
+  const totale = inPiu ? Math.round(quota + inPiu.importo) : quota;
+  const [spostato, setSpostato] = useState(String(totale));
   const [inCorso, setInCorso] = useState(false);
   const [errore, setErrore] = useState(false);
   const [diversa, setDiversa] = useState(false);
@@ -54,10 +59,21 @@ export function PromptQuota({
     <FoglioInferiore titolo="Metti da parte le tasse" onClose={onPiuTardi}>
       <div className="flex flex-col gap-4 px-5 pb-5">
         <div>
-          <p className="num font-serif text-[40px] font-bold leading-none">{euroInFrase(quota)}</p>
+          <p className="num font-serif text-[40px] font-bold leading-none">{euroInFrase(totale)}</p>
           <p className="mt-1 text-[15px]">
             da mettere da parte sul conto tasse (su {euroInFrase(importo)} incassati)
           </p>
+          {inPiu ? (
+            <>
+              <p className="mt-1 text-[15px] text-ink-2">
+                {euroInFrase(quota)} di quota e {euroInFrase(inPiu.importo)} per la scadenza del{' '}
+                {formatDataLunga(inPiu.data)}.
+              </p>
+              <div className="mt-1">
+                <PercheScadenza />
+              </div>
+            </>
+          ) : null}
         </div>
         <p className="text-[15px] text-ink-2">Il conto è «{contoTasse}». Sposta i soldi con la tua banca, poi tocca il pulsante.</p>
         {diversa ? (

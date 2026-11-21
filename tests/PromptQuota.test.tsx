@@ -83,6 +83,41 @@ describe('PromptQuota', () => {
     const { container } = apri();
     assertNessunaParolaVietata(container);
   });
+
+  describe('con il pezzo in più per la scadenza', () => {
+    const inPiu = { importo: 150, data: '2027-06-30' };
+
+    it('la cifra grande è quota più il pezzo in più', () => {
+      apri({ quota: 300, inPiu });
+      expect(screen.getByText('450 €')).toHaveClass('num', 'font-serif');
+      expect(screen.queryByText('300 €')).not.toBeInTheDocument();
+    });
+
+    it('spiega da dove viene la somma e per quale scadenza', () => {
+      apri({ quota: 300, inPiu });
+      expect(
+        screen.getByText('300 € di quota e 150 € per la scadenza del 30 giugno 2027.'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Perché? la scadenza' })).toBeInTheDocument();
+    });
+
+    it('il campo modificabile parte dalla somma', () => {
+      apri({ quota: 300, inPiu });
+      fireEvent.click(screen.getByRole('button', { name: 'Ho spostato una cifra diversa' }));
+      expect(screen.getByLabelText('Importo spostato (€)')).toHaveValue(450);
+    });
+
+    it('Fatto passa la somma', async () => {
+      const { props } = apri({ quota: 300, inPiu });
+      fireEvent.click(screen.getByRole('button', { name: 'Fatto, li ho spostati' }));
+      await waitFor(() => expect(props.onFatto).toHaveBeenCalledWith(450));
+    });
+
+    it('nessuna parola vietata', () => {
+      const { container } = apri({ quota: 300, inPiu });
+      assertNessunaParolaVietata(container);
+    });
+  });
 });
 
 describe('contoDaCuiSpostare', () => {
