@@ -60,3 +60,40 @@ export function confrontoCumulativo(
 export function eIlPrimoAnno(guidataDal: string, anno: number): boolean {
   return Number(guidataDal.slice(0, 4)) === anno;
 }
+
+export interface DatiScadenzaVaso {
+  scadenze: PivaScadenza[];
+  saldoVaso: number;
+  // Quote proposte e non ancora spostate, ESCLUSA quella dell'incasso di cui si parla.
+  inSospeso: number;
+  incassiMensili: number[]; // da finestraIncassi
+}
+
+// Il pezzo in più di un incasso per arrivare alla prima scadenza non coperta dal vaso.
+export function pezzoInPiuScadenza(
+  i: DatiScadenzaVaso & { importo: number; quotaBase: number; oggi: string }
+): { importo: number; scadenza: PivaScadenza } | null {
+  const da = [...i.scadenze]
+    .filter((s) => !s.pagataIl && !s.nascosta && s.importo != null && s.data >= i.oggi)
+    .sort((a, b) => a.data.localeCompare(b.data));
+  const disponibile = i.saldoVaso + i.inSospeso + i.quotaBase;
+  let cumulativo = 0;
+  for (const s of da) {
+    cumulativo += s.importo ?? 0;
+    if (cumulativo <= disponibile) continue;
+    const mancano = Math.round((cumulativo - disponibile) * 100) / 100;
+    const mesi = Math.max(
+      1,
+      (Number(s.data.slice(0, 4)) - Number(i.oggi.slice(0, 4))) * 12 +
+        (Number(s.data.slice(5, 7)) - Number(i.oggi.slice(5, 7))) +
+        1
+    );
+    const media = i.incassiMensili.length
+      ? i.incassiMensili.reduce((t, x) => t + x, 0) / i.incassiMensili.length
+      : 0;
+    const pezzo = media > 0 ? Math.round((i.importo * mancano) / (media * mesi)) : mancano;
+    const risultato = Math.min(pezzo, mancano, Math.round(i.importo / 2) - i.quotaBase);
+    return risultato > 0 ? { importo: risultato, scadenza: s } : null;
+  }
+  return null;
+}
