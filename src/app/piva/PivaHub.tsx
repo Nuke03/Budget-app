@@ -30,7 +30,7 @@ import {
 } from '@/lib/pivaHome';
 import type { CasaStato } from '@/lib/loadCasaStato';
 import { contoPerIncasso } from '@/lib/calculations/pivaFatture';
-import { prossimaScadenza, scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
+import { pezzoInPiuScadenza, prossimaScadenza, scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
 import {
   computeAliquotaSostitutiva,
   computeFatturatoAnnuo,
@@ -268,6 +268,18 @@ export function PivaHub({
       })
     : [];
   const quotaDaSpostare = inSospeso.find((x) => x.transactionId === quotaAperta) ?? null;
+  // Il pezzo in più per la scadenza: l'in sospeso senza la quota di questo incasso, che si somma a parte.
+  const pezzoQuota = quotaDaSpostare
+    ? pezzoInPiuScadenza({
+        scadenze,
+        saldoVaso: contoTasse.saldoAttuale,
+        inSospeso: totaleInSospeso(inSospeso) - quotaDaSpostare.quota,
+        incassiMensili: categoriaId ? finestraIncassi(incassi, categoriaId, oggiRomaISO()).incassiMensili : [],
+        importo: quotaDaSpostare.importo,
+        quotaBase: quotaDaSpostare.quota,
+        oggi: oggiRomaISO(),
+      })
+    : null;
   // Sul conto tasse non entrano incassi: gli altri conti sono personali (getAccounts senza scope).
   const contiIncasso = conti.filter((c) => c.id !== contoTasseId);
   const contoIniziale = contoPerIncasso(incassi, conti, categoriaId, contoTasseId);
@@ -605,6 +617,7 @@ export function PivaHub({
                 importo={quotaDaSpostare.importo}
                 quota={quotaDaSpostare.quota}
                 contoTasse={contoTasse.nome}
+                inPiu={pezzoQuota ? { importo: pezzoQuota.importo, data: pezzoQuota.scadenza.data } : null}
                 onFatto={async (spostato) => {
                   if (!(await sposta(quotaDaSpostare.transactionId, spostato))) throw new Error('non spostato');
                   setQuotaAperta(null);

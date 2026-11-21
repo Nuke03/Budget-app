@@ -577,6 +577,30 @@ describe('loadHomeData: P.IVA, difetti piccoli', () => {
     expect(d.pivaNonLetta).toBe(false);
   });
 
+  it('P13: scadenzaVaso porta scadenze, saldo del conto tasse, quote in sospeso e incassi mensili', async () => {
+    const db = seed(
+      {
+        transactions: [entrata('e1', '2026-11-10', 600)],
+        piva_scadenze: [
+          { id: 's1', user_id: 'A', anno: 2026, chiave: 'f24_novembre', tipo: 'f24', descrizione: 'F24', data: '2026-11-30', importo: 500, pagata_il: null, transaction_id: null, nascosta: false },
+        ],
+      },
+      { guidata_dal: '2026-11-01' }
+    );
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.scadenzaVaso).toMatchObject({ saldoVaso: 0, inSospeso: 82 });
+    expect(d.piva?.scadenzaVaso?.scadenze.map((x) => x.id)).toEqual(['s1']);
+    expect(Array.isArray(d.piva?.scadenzaVaso?.incassiMensili)).toBe(true);
+  });
+
+  it('P13: se le scadenze non si leggono scadenzaVaso e null', async () => {
+    const db = seed({ transactions: [entrata('e1', '2026-11-10', 600)] }, { guidata_dal: '2026-11-01' });
+    vi.spyOn(pivaData, 'getScadenze').mockRejectedValue(new Error('rete'));
+    const d = await loadHomeData(db.client, TODAY, 'A');
+    expect(d.piva?.contoTasseId).toBe('tasse');
+    expect(d.piva?.scadenzaVaso).toBeNull();
+  });
+
   it('P2: dopo il 15 dicembre la Home legge anche le scadenze di gennaio', async () => {
     const db = seed(
       {

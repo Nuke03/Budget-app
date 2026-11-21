@@ -34,10 +34,8 @@ describe('pezzoInPiuScadenza', () => {
   });
 
   it('tetto: metà incasso meno quota', () => {
-    const s = riga({ id: 'a', importo: 3450 });
     const r = pezzoInPiuScadenza({ ...base, scadenze: [riga({ id: 'a', data: '2026-11-30', importo: 3450 })] });
     expect(r?.importo).toBe(250);
-    expect(s).toBeTruthy();
   });
 
   it('senza media: tutto fino al tetto', () => {
@@ -69,5 +67,18 @@ describe('pezzoInPiuScadenza', () => {
     const gen = riga({ id: 'g', data: '2027-01-16', importo: 1000 });
     const r = pezzoInPiuScadenza({ ...base, saldoVaso: 1000, inSospeso: 0, quotaBase: 250, scadenze: [gen, dic] });
     expect(r?.scadenza.id).toBe('g');
+    // cumulativo 1500, disponibile 1250: mancano 250 in 3 mesi su 1000 -> 83
+    expect(r?.importo).toBe(83);
+  });
+
+  it('inSospeso conta nel disponibile', () => {
+    // 450 + 100 + 250 = 800: mancano 200 su 1000 in 3 mesi -> 67
+    expect(pezzoInPiuScadenza({ ...base, inSospeso: 100, scadenze: [sc] })?.importo).toBe(67);
+    expect(pezzoInPiuScadenza({ ...base, inSospeso: 300, scadenze: [sc] })).toBeNull();
+  });
+
+  it('senza media arrotonda all euro', () => {
+    const s = riga({ id: 'c', importo: 800.6 });
+    expect(pezzoInPiuScadenza({ ...base, incassiMensili: [], scadenze: [s] })?.importo).toBe(101);
   });
 });

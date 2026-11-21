@@ -92,7 +92,7 @@ export function pezzoInPiuScadenza(
       ? i.incassiMensili.reduce((t, x) => t + x, 0) / i.incassiMensili.length
       : 0;
     const pezzo = media > 0 ? Math.round((i.importo * mancano) / (media * mesi)) : mancano;
-    const risultato = Math.min(pezzo, mancano, Math.round(i.importo / 2) - i.quotaBase);
+    const risultato = Math.round(Math.min(pezzo, mancano, Math.round(i.importo / 2) - i.quotaBase));
     return risultato > 0 ? { importo: risultato, scadenza: s } : null;
   }
   return null;

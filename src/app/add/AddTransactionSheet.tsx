@@ -8,6 +8,7 @@ import { nomiAltri } from '@/lib/calculations/casa/etichette';
 import { registraMovimento, type SpazioSpesa, type SpesaPayload } from '@/lib/registraSpesa';
 import { accantonaTasse } from '@/lib/data/piva';
 import { computeQuotaIncasso } from '@/lib/calculations/piva';
+import { pezzoInPiuScadenza, type DatiScadenzaVaso } from '@/lib/calculations/pivaScadenze';
 import { oggiRomaISO } from '@/lib/calculations/casa/oggi';
 import type { CasaAggiunta } from '@/lib/loadCasaData';
 import type { Account, BudgetGoal, Category, Transaction, TransactionTipo } from '@/lib/types';
@@ -101,7 +102,12 @@ export function AddTransactionSheet({
   // Le spese passate, da cui indovinare la categoria. Dove non c'è, nessun suggerimento.
   storico?: Pick<Transaction, 'descrizione' | 'categoriaId' | 'data' | 'tipo'>[];
   // Solo per chi ha la P.IVA guidata: un'entrata nella categoria del fatturato propone la quota delle tasse.
-  piva?: { categoriaFatturatoId: string; percentuale: number; contoTasseId: string } | null;
+  piva?: {
+    categoriaFatturatoId: string;
+    percentuale: number;
+    contoTasseId: string;
+    scadenzaVaso?: DatiScadenzaVaso | null;
+  } | null;
   // Punto di partenza del modulo personale (es. "+ Incasso" nella pagina P.IVA).
   iniziale?: { tipo: TransactionTipo; categoriaId: string | null };
   // Dopo che la quota è stata spostata sul conto tasse: chi apre il foglio aggiorna i suoi dati.
@@ -119,6 +125,7 @@ export function AddTransactionSheet({
     daAccountId: string;
     aAccountId: string;
     nomeConto: string;
+    inPiu: { importo: number; data: string } | null;
   } | null>(null);
 
   // L'avviso o la lezione dopo un salvataggio personale: come la quota, sopravvive alla chiusura del foglio.
@@ -136,6 +143,7 @@ export function AddTransactionSheet({
         importo={quotaDaSpostare.importo}
         quota={quotaDaSpostare.quota}
         contoTasse={quotaDaSpostare.nomeConto}
+        inPiu={quotaDaSpostare.inPiu}
         onPiuTardi={() => setQuotaDaSpostare(null)}
         onFatto={async (importoSpostato) => {
           await accantonaTasse(createClient(), {
@@ -225,10 +233,15 @@ export function AddTransactionSheet({
       const da = contoDaCuiSpostare(payload.accountId, personale.accounts, piva.contoTasseId);
       const conto = personale.accounts.find((a) => a.id === piva.contoTasseId);
       if (da && conto) {
+        const quota = computeQuotaIncasso(payload.importo, piva.percentuale);
+        const pezzo = piva.scadenzaVaso
+          ? pezzoInPiuScadenza({ ...piva.scadenzaVaso, importo: payload.importo, quotaBase: quota, oggi: oggiRomaISO() })
+          : null;
         setQuotaDaSpostare({
           transactionId: id,
           importo: payload.importo,
-          quota: computeQuotaIncasso(payload.importo, piva.percentuale),
+          quota,
+          inPiu: pezzo ? { importo: pezzo.importo, data: pezzo.scadenza.data } : null,
           daAccountId: da,
           aAccountId: conto.id,
           nomeConto: conto.nome,

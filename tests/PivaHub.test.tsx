@@ -214,6 +214,43 @@ describe('PivaHub', () => {
     await waitFor(() => expect(getAccantonamenti).toHaveBeenCalledTimes(2));
   });
 
+  describe('P13: il pezzo in più per la scadenza', () => {
+    const conScadenza = (importo: number) =>
+      vi.mocked(getScadenze).mockResolvedValue([
+        {
+          id: 'sc9', anno: 2026, chiave: 'f24_novembre', tipo: 'f24', descrizione: 'F24 di novembre',
+          data: '2026-11-30', importo, pagataIl: null, transactionId: null, nascosta: false,
+        },
+      ]);
+
+    it('con un buco nel vaso la quota di un incasso aperto porta il pezzo in più', async () => {
+      // vaso 400 + in sospeso (82, esclusa) + quota 82 = 482: la scadenza da 600 lascia un buco.
+      conScadenza(600);
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+      expect(await screen.findByText(/82 € di quota e \d+ € per la scadenza del 30 novembre 2026/)).toBeInTheDocument();
+    });
+
+    it('la quota di quell incasso non si conta due volte', async () => {
+      // vaso 400 + quota 82 = 482: la scadenza da 560 lascia un buco. Contando la quota due volte (564) sembrerebbe bastare.
+      conScadenza(560);
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+      expect(await screen.findByText(/82 € di quota e \d+ € per la scadenza/)).toBeInTheDocument();
+    });
+
+    it('con il vaso che basta la domanda resta quella di oggi', async () => {
+      conScadenza(480);
+      apri();
+      const lista = await screen.findByRole('region', { name: 'Da spostare' });
+      fireEvent.click(within(lista).getByRole('button', { name: 'Fatto' }));
+      expect(await screen.findByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+      expect(screen.queryByText(/per la scadenza del/)).not.toBeInTheDocument();
+    });
+  });
+
   it('Fatto non si ripete mentre è in corso', async () => {
     let finisci: (v: string) => void = () => {};
     vi.mocked(accantonaTasse).mockReturnValue(new Promise<string>((r) => (finisci = r)));

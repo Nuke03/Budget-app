@@ -52,7 +52,7 @@ import type { ArgomentoId, PercorsoUtente, StatiLezioni, VoceAttesa } from '@/li
 import { getMyHousehold } from '@/lib/data/households';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { assicuraScadenze, getAccantonamenti, getFatture, getQuoteScartate, getScadenze } from '@/lib/data/piva';
-import { scadenzeDaCreare } from '@/lib/calculations/pivaScadenze';
+import { scadenzeDaCreare, type DatiScadenzaVaso } from '@/lib/calculations/pivaScadenze';
 import {
   computeAliquotaSostitutiva,
   computePercentualeIncasso,
@@ -93,6 +93,8 @@ export interface PivaHome {
   scadenze: PivaScadenza[];
   // Le fatture dell'utente; vuote se non si leggono (la home si apre lo stesso).
   fatture: PivaFattura[];
+  // Quello che serve per il pezzo in più di un incasso verso la prossima scadenza; null se una lettura manca.
+  scadenzaVaso?: DatiScadenzaVaso | null;
 }
 
 // La voce in attesa da rivedere più vecchia, già scritta per il "Da fare" della home.
@@ -233,6 +235,8 @@ interface PivaLetta {
   // Gli incassi per cui si è scelto di non mettere niente da parte (vuoto se non si leggono).
   scartate: Set<string>;
   percentuale: number;
+  // Le scadenze non si sono lette: niente pezzo in più per la scadenza.
+  scadenzeNonLette: boolean;
 }
 
 async function pivaOpzionale(
@@ -254,6 +258,7 @@ async function pivaOpzionale(
     const scadenzeCreate = Promise.all(
       anni.map((anno) => assicuraScadenze(supabase, scadenzeDaCreare(anno, guidataDal)).catch(() => {}))
     );
+    let scadenzeNonLette = false;
     const [incassi, accantonamenti, scadenze, fatture, scartate] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da: s.guidataDal }),
@@ -262,7 +267,10 @@ async function pivaOpzionale(
       scadenzeCreate
         .then(() => Promise.all(anni.map((anno) => getScadenze(supabase, anno))))
         .then((perAnno) => perAnno.flat())
-        .catch(() => [] as PivaScadenza[]),
+        .catch(() => {
+          scadenzeNonLette = true;
+          return [] as PivaScadenza[];
+        }),
       // Come le scadenze: una fattura che non si legge non toglie la P.IVA dalla home.
       getFatture(supabase).catch(() => [] as PivaFattura[]),
       // Una scelta "Scarta" che non si legge non toglie la P.IVA dalla home: la quota resta da spostare.
@@ -292,6 +300,7 @@ async function pivaOpzionale(
       accantonamenti,
       scartate,
       percentuale,
+      scadenzeNonLette,
     };
   } catch {
     // Non è "P.IVA spenta": non si riesce a leggere, e il disponibile non conta le tasse.
@@ -407,6 +416,17 @@ export async function loadHomeBase(
       pivaLetta.settings.guidataDal,
       { categoriaDal: pivaLetta.settings.categoriaDal, contiChePesano, scartate: pivaLetta.scartate }
     );
+    // Il pezzo in più per la scadenza: con i dati già letti; se le scadenze o il conto tasse mancano, null.
+    const contoTasse = accounts.find((a) => a.id === piva.contoTasseId);
+    piva.scadenzaVaso =
+      pivaLetta.scadenzeNonLette || !contoTasse
+        ? null
+        : {
+            scadenze: piva.scadenze,
+            saldoVaso: contoTasse.saldoAttuale,
+            inSospeso: totaleInSospeso(piva.inSospeso),
+            incassiMensili: finestraIncassi(pivaLetta.incassi, piva.categoriaFatturatoId, oggiRomaISO(today)).incassiMensili,
+          };
   }
   // I conti che pesano sono quelli del disponibile (il conto tasse è già fuori): solo gli spostamenti da lì
   // portano soldi davvero fuori dal disponibile.

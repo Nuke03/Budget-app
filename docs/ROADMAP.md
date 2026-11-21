@@ -378,7 +378,7 @@ Le note rimandate della pulizia e le rifiniture di fumetti e rientri sono fatte.
 ## Cosa resta (e perché)
 
 - **P12**, tabelle P.IVA in sola lettura dal client: serve un rilascio in due tempi con il database vivo. Prima le scritture passano da funzioni `security definer`, poi si tolgono le policy. È una difesa in più, non un difetto visibile. Da fare con Fabio presente.
-- **P13**, mettere da parte una percentuale in più quando il vaso non basta: è un'idea di prodotto. Da decidere con Fabio.
+- **P13**, un po' di più per la scadenza quando il vaso non basta: fatta il 21 novembre 2026. La quota di un incasso propone anche il pezzo per la prima scadenza non coperta (Home, foglio dell'aggiunta e pagina P.IVA).
 - **K2**, totale diverso dalla banca: servono i numeri veri di un caso (quale conto, importo nell'app, importo in banca, obiettivi collegati). La causa probabile è già corretta.
 - **Home e P.IVA leggono in due modi**: con i rientri le due letture usano già lo stesso aiuto (`rientriEffettivi`). Se una lettura fallisce, le due schermate possono non dire lo stesso. Unire tutto è un rifacimento, non una chiusura.
 - **Prove dal vivo**: la checklist del test da zero, la prova della 0010 con l'account di Miriam, e "La riporto indietro?" con Miriam. Sono di Fabio.

@@ -521,6 +521,29 @@ describe('AddTransactionSheet: quota delle tasse', () => {
     expect(screen.getByText('82 €')).toBeInTheDocument();
   });
 
+  describe('P13: il pezzo in più per la scadenza', () => {
+    const scadenza = {
+      id: 'sc', anno: 2099, chiave: 'f24_novembre' as const, tipo: 'f24' as const, descrizione: 'F24',
+      data: '2099-12-31', importo: 200, pagataIl: null, transactionId: null, nascosta: false,
+    };
+    const scadenzaVaso = { scadenze: [scadenza], saldoVaso: 0, inSospeso: 0, incassiMensili: [] };
+
+    it('con un buco nel vaso la domanda dice quota e pezzo in più', async () => {
+      apri({ casa: null, personale: persPiva, piva: { ...piva, scadenzaVaso }, modoIniziale: 'personale' });
+      incassa('Compensi', '600');
+      expect(await screen.findByText('da mettere da parte sul conto tasse (su 600 € incassati)')).toBeInTheDocument();
+      expect(screen.getByText('200 €')).toBeInTheDocument();
+      expect(screen.getByText(/82 € di quota e 118 € per la scadenza del 31 dicembre 2099/)).toBeInTheDocument();
+    });
+
+    it('con scadenzaVaso null la domanda è quella di oggi', async () => {
+      apri({ casa: null, personale: persPiva, piva: { ...piva, scadenzaVaso: null }, modoIniziale: 'personale' });
+      incassa('Compensi', '600');
+      expect(await screen.findByText('82 €')).toBeInTheDocument();
+      expect(screen.queryByText(/per la scadenza del/)).not.toBeInTheDocument();
+    });
+  });
+
   it('entrata di altra categoria non apre il prompt', async () => {
     const onSaved = vi.fn();
     apri({ casa: null, personale: persPiva, piva, modoIniziale: 'personale', onSaved });

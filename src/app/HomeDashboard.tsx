@@ -359,7 +359,12 @@ export function HomeDashboard({
         storico={storico}
         piva={
           piva
-            ? { categoriaFatturatoId: piva.categoriaFatturatoId, percentuale: piva.percentuale, contoTasseId: piva.contoTasseId }
+            ? {
+                categoriaFatturatoId: piva.categoriaFatturatoId,
+                percentuale: piva.percentuale,
+                contoTasseId: piva.contoTasseId,
+                scadenzaVaso: piva.scadenzaVaso ?? null,
+              }
             : null
         }
         onAccantonato={() => router.refresh()}
