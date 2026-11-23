@@ -40,7 +40,7 @@ Segnalazioni di Fabio: Impara lento; zoom su alcuni telefoni; scritte e bottoni 
 
 - Il controller apre il dev server e le viste `/anteprima` a 320 e 360px, e annota i punti dove testi e bottoni si toccano o escono dallo schermo. Poi un subagente corregge con il ritmo di `DESIGN.md` (gap 8/12/14/16, bersagli 44px, `min-w-0` e `break-words` dove serve).
 
-## Task B5: Categorie: modifica in un foglio, più colori, icone (dopo il sì di Fabio sul design breve)
+## Task B5: Categorie: modifica in un foglio, più colori, icone (design approvato da Fabio il 23 novembre 2026)
 
 Design breve proposto a Fabio:
 - La matita apre "Modifica categoria" in un `FoglioInferiore` (come il resto dell'app); il modulo in fondo resta solo per "Nuova categoria".
