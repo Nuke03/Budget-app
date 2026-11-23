@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/x' }));
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import CategoriesPage from '@/app/categories/page';
 import { AnnullaProvider } from '@/app/AnnullaProvider';
 
@@ -15,7 +15,7 @@ vi.mock('@/lib/data/categories', () => ({
   archiveCategory: vi.fn(),
 }));
 
-import { getCategories, updateCategory, archiveCategory } from '@/lib/data/categories';
+import { getCategories, createCategory, updateCategory, archiveCategory } from '@/lib/data/categories';
 
 const categories = [
   { id: '1', nome: 'Spesa alimentare', tipo: 'expense' as const, colore: null, archiviata: false, ruolo: null },
@@ -109,8 +109,8 @@ describe('CategoriesPage', () => {
 
     const nomeInput = screen.getByDisplayValue('Spesa alimentare');
     fireEvent.change(nomeInput, { target: { value: 'Spesa alimentare modificata' } });
-    fireEvent.click(screen.getByLabelText('Cielo'));
-    fireEvent.click(screen.getByText('Salva modifiche'));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Modifica categoria' })).getByLabelText('Cielo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
 
     await waitFor(() => {
       expect(updateCategory).toHaveBeenCalledWith(expect.anything(), '1', {
@@ -121,19 +121,78 @@ describe('CategoriesPage', () => {
     });
   });
 
-  it('annulla la modifica e torna al form di creazione', async () => {
+  it('la matita apre "Modifica categoria" in un foglio; chiuderlo lascia il modulo "Nuova categoria"', async () => {
     vi.mocked(getCategories).mockResolvedValue(categories);
     render(<Pagina />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Spesa alimentare')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
-    expect(screen.getByText('Modifica categoria')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Annulla'));
+    const foglio = screen.getByRole('dialog', { name: 'Modifica categoria' });
+    expect(within(foglio).getByDisplayValue('Spesa alimentare')).toBeInTheDocument();
     expect(screen.getByText('Nuova categoria')).toBeInTheDocument();
+
+    fireEvent.click(within(foglio).getByRole('button', { name: 'Chiudi' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Nuova categoria')).toBeInTheDocument();
+  });
+
+  it('il foglio ha 16 colori, 24 icone e "Nessuna icona"', async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
+    const foglio = within(screen.getByRole('dialog', { name: 'Modifica categoria' }));
+    expect(within(foglio.getByRole('group', { name: 'Colore' })).getAllByRole('button')).toHaveLength(16);
+    expect(within(foglio.getByRole('group', { name: 'Icona' })).getAllByRole('button')).toHaveLength(25);
+    expect(foglio.getByRole('button', { name: 'Nessuna icona' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it("sceglie l'icona e la salva; toglierla scrive null", async () => {
+    vi.mocked(getCategories).mockResolvedValue([{ ...categories[0], icona: 'casa' }, categories[1]]);
+    vi.mocked(updateCategory).mockClear();
+    vi.mocked(updateCategory).mockResolvedValue(categories[0]);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
+    const foglio = within(screen.getByRole('dialog', { name: 'Modifica categoria' }));
+    expect(foglio.getByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(foglio.getByRole('button', { name: 'Carrello' }));
+    fireEvent.click(foglio.getByRole('button', { name: 'Salva' }));
+    await waitFor(() => expect(updateCategory).toHaveBeenCalled());
+    expect(vi.mocked(updateCategory).mock.calls[0][2]).toMatchObject({ icona: 'carrello' });
+
+    vi.mocked(updateCategory).mockClear();
+    fireEvent.click(await screen.findByLabelText('Modifica Spesa alimentare'));
+    const foglio2 = within(screen.getByRole('dialog', { name: 'Modifica categoria' }));
+    fireEvent.click(foglio2.getByRole('button', { name: 'Nessuna icona' }));
+    fireEvent.click(foglio2.getByRole('button', { name: 'Salva' }));
+    await waitFor(() => expect(updateCategory).toHaveBeenCalled());
+    expect(vi.mocked(updateCategory).mock.calls[0][2]).toMatchObject({ icona: null });
+  });
+
+  it("Archivia dal foglio chiude il foglio e passa dall'Annulla", async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Modifica Spesa alimentare'));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Modifica categoria' })).getByRole('button', { name: 'Archivia' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Categoria archiviata.');
+  });
+
+  it("Nuova categoria ha colori e icone e crea con l'icona scelta", async () => {
+    vi.mocked(getCategories).mockResolvedValue(categories);
+    vi.mocked(createCategory).mockClear();
+    vi.mocked(createCategory).mockResolvedValue(categories[0]);
+    render(<Pagina />);
+    await waitFor(() => expect(screen.getByText('Spesa alimentare')).toBeInTheDocument());
+    expect(screen.getAllByRole('group', { name: 'Colore' })).toHaveLength(1);
+    fireEvent.change(screen.getByLabelText('Nome categoria'), { target: { value: 'Bar' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Caffè' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi categoria' }));
+    await waitFor(() => expect(createCategory).toHaveBeenCalled());
+    expect(vi.mocked(createCategory).mock.calls[0][1]).toMatchObject({ nome: 'Bar', tipo: 'expense', icona: 'caffe' });
   });
 
   it('una categoria di spesa ha la scelta Tipo e salva ruolo', async () => {
@@ -146,7 +205,7 @@ describe('CategoriesPage', () => {
     expect(screen.getByText('Normale')).toBeInTheDocument();
     expect(screen.getByText('Spesa certa')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Svago e acquisti'));
-    fireEvent.click(screen.getByText('Salva modifiche'));
+    fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
     await waitFor(() => {
       expect(updateCategory).toHaveBeenCalledWith(expect.anything(), '1', expect.objectContaining({ ruolo: 'svago' }));
     });
@@ -161,7 +220,7 @@ describe('CategoriesPage', () => {
     fireEvent.click(screen.getAllByText('Entrata')[0]);
     fireEvent.click(screen.getByLabelText('Modifica Stipendio'));
     expect(screen.queryByText('Spesa certa')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('Salva modifiche'));
+    fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
     await waitFor(() => expect(updateCategory).toHaveBeenCalled());
     expect(vi.mocked(updateCategory).mock.calls[0][2]).not.toHaveProperty('ruolo');
   });
