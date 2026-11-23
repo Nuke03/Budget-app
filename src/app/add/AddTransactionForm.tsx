@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Account, BudgetGoal, Category, Transaction, TransactionTipo } from '@/lib/types';
 import { testoSu } from '@/lib/categoryColors';
+import { iconaDi } from '@/lib/categoryIcons';
 import { PallinoCategoria } from '@/app/home/PallinoCategoria';
 import { obiettivoDaCategoria } from '@/lib/calculations/casa/preselezioneObiettivo';
 import { indovinaCategoria } from '@/lib/calculations/supporto/indovinaCategoria';
@@ -302,7 +303,7 @@ export function AddTransactionForm({
   if (veloce) {
     const categoriaScelta = categorieDisponibili.find((c) => c.id === categoriaId) ?? null;
     const contoScelto = contiVisibili.find((a) => a.id === accountId) ?? null;
-    const riepilogo: { id: Pezzo; testo: string; attivo: boolean; colore?: string | null }[] = [
+    const riepilogo: { id: Pezzo; testo: string; attivo: boolean; colore?: string | null; icona?: string | null }[] = [
       { id: 'tipo', testo: tipo === 'expense' ? 'Spesa' : 'Entrata', attivo: true },
       ...(spazio ? [{ id: 'spazio' as const, testo: spazio.etichetta, attivo: !!spazio.opzioni?.length }] : []),
       {
@@ -315,6 +316,7 @@ export function AddTransactionForm({
         testo: categoriaScelta ? categoriaScelta.nome : 'Senza categoria',
         attivo: categorieDisponibili.length > 0,
         colore: categoriaScelta?.colore ?? null,
+        icona: categoriaScelta?.icona ?? null,
       },
     ];
 
@@ -341,7 +343,7 @@ export function AddTransactionForm({
         <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm text-ink-2">
           {riepilogo.map((r) => (
             <span key={r.id} className="flex items-center">
-              {r.colore ? <PallinoCategoria colore={r.colore} /> : null}
+              {r.colore ? <PallinoCategoria colore={r.colore} icona={r.icona} /> : null}
               {r.attivo ? (
                 <button
                   type="button"
@@ -450,6 +452,7 @@ export function AddTransactionForm({
             </button>
             {categorieDisponibili.map((c) => {
               const color = c.colore ?? CATEGORY_FALLBACK_COLOR;
+              const Icona = iconaDi(c.icona);
               const isSelected = categoriaId === c.id;
               return (
                 <button
@@ -468,6 +471,7 @@ export function AddTransactionForm({
                   }
                   className={`${CHIP_BASE} ${isSelected ? '' : 'bg-surface'}`}
                 >
+                  {Icona ? <Icona size={16} aria-hidden="true" className="-mt-0.5 mr-1.5 inline align-middle" /> : null}
                   {c.nome}
                 </button>
               );

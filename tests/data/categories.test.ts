@@ -12,7 +12,7 @@ describe('getCategories', () => {
     const result = await getCategories(supabase);
 
     expect(result).toEqual([
-      { id: '1', nome: 'Groceries', tipo: 'expense', colore: '#22c55e', archiviata: false, ruolo: null },
+      { id: '1', nome: 'Groceries', tipo: 'expense', colore: '#22c55e', archiviata: false, ruolo: null, icona: null },
     ]);
   });
 });
@@ -77,5 +77,39 @@ describe('ruolo categoria', () => {
     const b = createRecordingClient([{ id: '1', nome: 'A', tipo: 'expense', colore: null, archiviata: false }]);
     await updateCategory(b.client, '1', { nome: 'A', colore: null });
     expect(callsOf(b.calls[0], 'update')[0][0]).toEqual({ nome: 'A', colore: null });
+  });
+});
+
+describe('icona categoria', () => {
+  it('getCategories legge icona, null se la colonna manca', async () => {
+    const supabase = fakeSelectClient([
+      { id: '1', nome: 'Spesa', tipo: 'expense', colore: null, archiviata: false, icona: 'carrello' },
+      { id: '2', nome: 'Altro', tipo: 'expense', colore: null, archiviata: false },
+    ]);
+    expect((await getCategories(supabase)).map((c) => c.icona)).toEqual(['carrello', null]);
+  });
+
+  it('createCategory scrive icona solo se scelta', async () => {
+    const riga = { id: '1', nome: 'A', tipo: 'expense', colore: null, archiviata: false };
+    const a = createRecordingClient([{ ...riga, icona: 'casa' }]);
+    const r = await createCategory(a.client, { nome: 'A', tipo: 'expense', colore: null, icona: 'casa' });
+    expect(callsOf(a.calls[0], 'insert')[0][0]).toMatchObject({ icona: 'casa' });
+    expect(r.icona).toBe('casa');
+    const b = createRecordingClient([riga]);
+    await createCategory(b.client, { nome: 'A', tipo: 'expense', colore: null, icona: null });
+    expect(callsOf(b.calls[0], 'insert')[0][0]).not.toHaveProperty('icona');
+  });
+
+  it('updateCategory scrive icona solo se passata (anche null per toglierla)', async () => {
+    const riga = { id: '1', nome: 'A', tipo: 'expense', colore: null, archiviata: false };
+    const a = createRecordingClient([riga]);
+    await updateCategory(a.client, '1', { nome: 'A', colore: null, icona: 'auto' });
+    expect(callsOf(a.calls[0], 'update')[0][0]).toEqual({ nome: 'A', colore: null, icona: 'auto' });
+    const b = createRecordingClient([riga]);
+    await updateCategory(b.client, '1', { nome: 'A', colore: null, icona: null });
+    expect(callsOf(b.calls[0], 'update')[0][0]).toEqual({ nome: 'A', colore: null, icona: null });
+    const c = createRecordingClient([riga]);
+    await updateCategory(c.client, '1', { nome: 'A', colore: null });
+    expect(callsOf(c.calls[0], 'update')[0][0]).not.toHaveProperty('icona');
   });
 });

@@ -26,7 +26,7 @@ export interface CasaHomeDati {
   previstoMese: number | null;
   // I candidati della card Da fare, in ordine: chi guarda sceglie il primo non rimandato.
   daFare: DaFareCasa[];
-  ultime: { id: string; data: string; descrizione: string; importo: number; colore: string | null; chi: string }[];
+  ultime: { id: string; data: string; descrizione: string; importo: number; colore: string | null; icona?: string | null; chi: string }[];
   vistaSemplice: {
     quota: number | null;
     // Il mese (YYYY-MM-01) da cui parte la quota, quando il piano o la tua quota non sono ancora partiti.
@@ -156,6 +156,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
   const previstoMese = pianoOra ? mensili.previstoMensili : null;
 
   const coloreDi = new Map(dati.aggiunta.categorie.map((c) => [c.id, c.colore]));
+  const iconaDi = new Map(dati.aggiunta.categorie.map((c) => [c.id, c.icona ?? null]));
   const ultime = [...spese]
     .sort((a, b) => b.data.localeCompare(a.data) || b.createdAt.localeCompare(a.createdAt))
     .slice(0, 3)
@@ -165,6 +166,7 @@ export function casaHomeDati(dati: CasaData, meUserId: string, oggi: string): Ca
       descrizione: t.descrizione,
       importo: t.importo,
       colore: t.categoriaId ? (coloreDi.get(t.categoriaId) ?? null) : null,
+      icona: t.categoriaId ? (iconaDi.get(t.categoriaId) ?? null) : null,
       // Anticipo in contanti: pagataDaUserId sono io e non c'è conto, quindi "tu".
       chi: t.pagataDaUserId === meUserId ? 'tu' : t.pagataDaUserId ? (nomi[t.pagataDaUserId] ?? 'un altro membro') : 'casa',
     }));

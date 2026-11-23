@@ -75,6 +75,10 @@ describe('testoSu', () => {
     expect(testoSu('#8452F5')).toBe('#ffffff');
     expect(testoSu('non-un-colore')).toBe('#ffffff');
   });
+  it('la palette ha 16 tinte, tutte diverse', () => {
+    expect(CATEGORY_COLORS).toHaveLength(16);
+    expect(new Set(CATEGORY_COLORS.map((c) => c.value.toLowerCase())).size).toBe(16);
+  });
   it('ogni colore della palette ha almeno 4,5:1 col testo scelto', () => {
     for (const c of CATEGORY_COLORS) {
       const t = testoSu(c.value);

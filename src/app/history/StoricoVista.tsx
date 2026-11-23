@@ -65,6 +65,7 @@ export function StoricoVista({
     categories.map((c) => [c.nome, c.colore ?? CATEGORY_COLOR_FALLBACK])
   );
   const colorByCategoryId = new Map(categories.map((c) => [c.id, c.colore ?? CATEGORY_COLOR_FALLBACK]));
+  const iconaByCategoryId = new Map(categories.map((c) => [c.id, c.icona ?? null]));
   const giorni = raggruppaPerGiorno(transactionsFiltrate);
   const spostamentiDelGiorno = new Map<string, RigaSpostamento[]>();
   for (const sp of spostamenti) spostamentiDelGiorno.set(sp.data, [...(spostamentiDelGiorno.get(sp.data) ?? []), sp]);
@@ -120,7 +121,10 @@ export function StoricoVista({
                     data-riga
                     className="flex min-h-12 items-center gap-2 border-b border-rule py-1 pl-4 pr-1 text-[15px]"
                   >
-                    <PallinoCategoria colore={t.categoriaId ? (colorByCategoryId.get(t.categoriaId) ?? null) : null} />
+                    <PallinoCategoria
+                      colore={t.categoriaId ? (colorByCategoryId.get(t.categoriaId) ?? null) : null}
+                      icona={t.categoriaId ? iconaByCategoryId.get(t.categoriaId) : null}
+                    />
                     <span className="min-w-0 flex-1 truncate">{t.descrizione || '(senza descrizione)'}</span>
                     <span className={`num shrink-0 ${t.tipo === 'income' ? 'font-semibold text-brand-dark' : ''}`}>
                       {t.tipo === 'income' ? '+' : '−'}

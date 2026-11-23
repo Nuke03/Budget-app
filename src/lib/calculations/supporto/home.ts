@@ -16,6 +16,8 @@ export interface RigaLibretto {
   nelMese: number;
   // Colore della categoria della riga; null se la riga non ha categoria o la categoria non ha colore.
   colore: string | null;
+  // Icona della categoria della riga (id di categoryIcons.ts); null se non c'è.
+  icona?: string | null;
 }
 
 export interface Prossimo {
@@ -32,10 +34,11 @@ export function righeLibretto(
   transazioni: Transaction[],
   oggi: string,
   quante = 4,
-  categorie: Pick<Category, 'id' | 'colore'>[] = []
+  categorie: Pick<Category, 'id' | 'colore' | 'icona'>[] = []
 ): RigaLibretto[] {
   void oggi;
   const coloreDi = new Map(categorie.map((c) => [c.id, c.colore]));
+  const iconaDi = new Map(categorie.map((c) => [c.id, c.icona ?? null]));
   const cronologico = [...transazioni].sort(
     (a, b) => a.data.localeCompare(b.data) || a.createdAt.localeCompare(b.createdAt)
   );
@@ -59,6 +62,7 @@ export function righeLibretto(
       stima: t.stima,
       nelMese: cumulatoPerId.get(t.id) ?? 0,
       colore: t.categoriaId ? (coloreDi.get(t.categoriaId) ?? null) : null,
+      icona: t.categoriaId ? (iconaDi.get(t.categoriaId) ?? null) : null,
     }));
 }
 

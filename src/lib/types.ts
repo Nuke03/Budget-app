@@ -20,6 +20,8 @@ export interface Category {
   colore: string | null;
   archiviata: boolean;
   ruolo: 'certa' | 'svago' | null;
+  // Id di categoryIcons.ts; null senza icona (o prima della migrazione 0016).
+  icona?: string | null;
 }
 
 export interface BudgetGoal {

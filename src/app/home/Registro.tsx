@@ -39,7 +39,7 @@ export function Registro({ righe, registratoId }: { righe: RigaLibretto[]; regis
               >
                 <span className="num text-[13px] text-ink-2">{giornoMese(r.data)}</span>
                 <span className="flex min-w-0 items-center gap-2">
-                  <PallinoCategoria colore={r.colore} />
+                  <PallinoCategoria colore={r.colore} icona={r.icona} />
                   <span className="min-w-0">
                     <span className={`block truncate ${nuova ? 'pr-[4.5rem]' : ''}`}>{nomeRiga(r)}</span>
                     {r.stima ? <span className="block text-[11px] text-ink-2">stima</span> : null}

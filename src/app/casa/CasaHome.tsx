@@ -149,7 +149,7 @@ export function CasaHome({
                 <li key={r.id} className={`${COLONNE} min-h-12 border-b border-rule py-3 text-[15px]`}>
                   <span className="num text-[13px] text-ink-2">{giornoMese(r.data)}</span>
                   <span className="flex min-w-0 items-center gap-2">
-                    <PallinoCategoria colore={r.colore} />
+                    <PallinoCategoria colore={r.colore} icona={r.icona} />
                     <span className="block truncate">{r.descrizione}</span>
                   </span>
                   <span className="truncate text-[13px] text-ink-2">{r.chi}</span>

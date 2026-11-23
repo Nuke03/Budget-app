@@ -322,7 +322,7 @@ export function MovimentiCasa({
                       <div className="flex justify-between gap-3">
                         <div className="flex min-w-0 flex-col">
                           <span className="flex items-center gap-2 text-[15px]">
-                            <PallinoCategoria colore={cat?.colore ?? null} />
+                            <PallinoCategoria colore={cat?.colore ?? null} icona={cat?.icona} />
                             <span className="min-w-0 break-words">{t.descrizione}</span>
                           </span>
                           <span className="num text-[13px] text-ink-2">

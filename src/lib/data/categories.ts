@@ -9,6 +9,8 @@ interface CategoryRow {
   colore: string | null;
   archiviata: boolean;
   ruolo?: 'certa' | 'svago' | null;
+  // Assente finché non si lancia la migrazione 0016.
+  icona?: string | null;
 }
 
 function mapRow(row: CategoryRow): Category {
@@ -19,12 +21,13 @@ function mapRow(row: CategoryRow): Category {
     colore: row.colore,
     archiviata: row.archiviata,
     ruolo: row.ruolo ?? null,
+    icona: row.icona ?? null,
   };
 }
 
 export async function getCategories(supabase: SupabaseClient, scope: Scope = PERSONALE): Promise<Category[]> {
   const { data, error } = await applyScope(
-    supabase.from('categories').select('id, nome, tipo, colore, archiviata, ruolo'),
+    supabase.from('categories').select('*'),
     scope
   ).order('nome');
 
@@ -34,7 +37,7 @@ export async function getCategories(supabase: SupabaseClient, scope: Scope = PER
 
 export async function createCategory(
   supabase: SupabaseClient,
-  input: { nome: string; tipo: CategoriaTipo; colore: string | null },
+  input: { nome: string; tipo: CategoriaTipo; colore: string | null; icona?: string | null },
   scope: Scope = PERSONALE
 ): Promise<Category> {
   const { data, error } = await supabase
@@ -44,9 +47,10 @@ export async function createCategory(
       tipo: input.tipo,
       colore: input.colore,
       archiviata: false,
+      ...(input.icona ? { icona: input.icona } : {}),
       household_id: scopeHouseholdId(scope),
     })
-    .select('id, nome, tipo, colore, archiviata, ruolo')
+    .select('*')
     .single();
 
   if (error) throw error;
@@ -56,14 +60,19 @@ export async function createCategory(
 export async function updateCategory(
   supabase: SupabaseClient,
   id: string,
-  input: { nome: string; colore: string | null; ruolo?: 'certa' | 'svago' | null }
+  input: { nome: string; colore: string | null; ruolo?: 'certa' | 'svago' | null; icona?: string | null }
 ): Promise<Category> {
   // household: per id
   const { data, error } = await supabase
     .from('categories')
-    .update({ nome: input.nome, colore: input.colore, ...(input.ruolo !== undefined ? { ruolo: input.ruolo } : {}) })
+    .update({
+      nome: input.nome,
+      colore: input.colore,
+      ...(input.ruolo !== undefined ? { ruolo: input.ruolo } : {}),
+      ...(input.icona !== undefined ? { icona: input.icona } : {}),
+    })
     .eq('id', id)
-    .select('id, nome, tipo, colore, archiviata, ruolo')
+    .select('*')
     .single();
 
   if (error) throw error;
