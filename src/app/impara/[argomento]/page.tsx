@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
-import { loadPercorsoData } from '@/lib/loadPercorsoData';
+import { loadPercorsoLeggero } from '@/lib/loadPercorsoData';
 import { LEZIONI, lezione } from '@/lib/percorso/lezioni';
 import { numeriLezione } from '@/lib/calculations/percorso/numeri';
 import type { ArgomentoId } from '@/lib/percorso/tipi';
@@ -15,7 +15,7 @@ export default async function LezionePage({ params }: { params: Promise<{ argome
   const supabase = await createClient();
   // Se i dati non si leggono la lezione si apre lo stesso, senza "Con i tuoi numeri".
   const { dati } = await conUtente(supabase, (id) =>
-    loadPercorsoData(supabase, new Date(), id).catch(() => null)
+    loadPercorsoLeggero(supabase, new Date(), id).catch(() => null)
   );
   return (
     <>

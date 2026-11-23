@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { obiettivoPiuAvanti } from './actions';
 import { ERRORE_TESTO, PRIMARIO, SECONDARIO } from './stili';
+import { Salvato, useSalvato } from './Salvato';
 
 export function PassoObiettivo() {
-  const router = useRouter();
+  const { salvato, mostra } = useSalvato();
   const [inCorso, avvia] = useTransition();
   const [errore, setErrore] = useState(false);
 
@@ -16,7 +16,7 @@ export function PassoObiettivo() {
     avvia(async () => {
       try {
         await obiettivoPiuAvanti();
-        router.refresh();
+        mostra();
       } catch {
         setErrore(true);
       }
@@ -32,6 +32,7 @@ export function PassoObiettivo() {
         Più avanti
       </button>
       {errore ? <p role="alert" className="text-sm text-ink-2">{ERRORE_TESTO}</p> : null}
+      <Salvato visibile={salvato} />
     </div>
   );
 }

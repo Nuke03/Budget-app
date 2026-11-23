@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { MESI_MASSIMI_IMPREVISTI, QUOTA_IMPREVISTI, TRAGUARDO_IMPREVISTI } from '@/lib/calculations/percorso/soglie';
 import { mesiPerTraguardo } from '@/lib/calculations/percorso/primiPassiFondi';
 import { creaFondoImprevisti } from './actions';
 import { CAMPO, ERRORE_TESTO, ETICHETTA, PRIMARIO } from './stili';
+import { Salvato, useSalvato } from './Salvato';
 
 // Il test per decidere se una spesa è un imprevisto vero (lezione sul fondo imprevisti).
 const DOMANDE = [
@@ -17,7 +17,7 @@ const DOMANDE = [
 const comeNumero = (s: string): number => Number(s.replace(',', '.'));
 
 export function PassoImprevisti({ giaCreato }: { giaCreato: boolean }) {
-  const router = useRouter();
+  const { salvato, mostra } = useSalvato();
   const [inCorso, avvia] = useTransition();
   const [errore, setErrore] = useState(false);
   const [traguardo, setTraguardo] = useState(String(TRAGUARDO_IMPREVISTI));
@@ -33,7 +33,7 @@ export function PassoImprevisti({ giaCreato }: { giaCreato: boolean }) {
     avvia(async () => {
       try {
         await creaFondoImprevisti({ traguardo: t, quota: q });
-        router.refresh();
+        mostra();
       } catch {
         setErrore(true);
       }
@@ -73,6 +73,7 @@ export function PassoImprevisti({ giaCreato }: { giaCreato: boolean }) {
         Crea il cuscinetto
       </button>
       {errore ? <p role="alert" className="text-sm text-ink-2">{ERRORE_TESTO}</p> : null}
+      <Salvato visibile={salvato} />
     </div>
   );
 }

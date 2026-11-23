@@ -125,7 +125,8 @@ describe('passo spese certe', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /Bollo/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Crea i fondi' }));
     await waitFor(() => expect(azioni.creaFondiSpeseCerte).toHaveBeenCalled());
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Salvato.'));
+    expect(refresh).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: /assicurazioni/i })).toBeNull();
   });
 

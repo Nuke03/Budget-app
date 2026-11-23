@@ -160,7 +160,7 @@ export interface HomeData {
 // Chi ha già movimenti personali non è nuovo: le categorie le ha tolte lui, non si ricreano
 // (la funzione SQL applica la stessa regola, con un blocco contro le aperture doppie).
 // Se la creazione non riesce la home si apre lo stesso, senza categorie.
-async function categorieConPartenza(supabase: SupabaseClient): Promise<Category[]> {
+export async function categorieConPartenza(supabase: SupabaseClient): Promise<Category[]> {
   const categorie = await getCategories(supabase);
   if (categorie.length > 0) return categorie;
   try {
@@ -201,10 +201,11 @@ export async function conSpesoDaRientrare(supabase: SupabaseClient, aggiunta: Ca
 // La parte di casa non deve mai rompere la home personale. Se non si legge la casa corrente
 // si apre come senza casa; se si legge ma non il suo stato, si tiene il numero personale e
 // si segnala che la quota non è inclusa.
-async function casaOpzionale(
+export async function casaOpzionale(
   supabase: SupabaseClient,
   userId: string | null,
-  now: Date
+  now: Date,
+  soloStato = false
 ): Promise<CasaPerHome | null> {
   if (!userId) return null;
   let corrente;
@@ -215,9 +216,11 @@ async function casaOpzionale(
   }
   if (!corrente) return null;
   const [aggiunta, stato] = await Promise.all([
-    loadCasaAggiunta(supabase, corrente)
-      .then((a) => conSpesoDaRientrare(supabase, a, now))
-      .catch(() => null),
+    soloStato
+      ? Promise.resolve(null)
+      : loadCasaAggiunta(supabase, corrente)
+          .then((a) => conSpesoDaRientrare(supabase, a, now))
+          .catch(() => null),
     loadCasaStato(supabase, corrente, now).catch(() => null),
   ]);
   return { aggiunta, stato };
@@ -227,7 +230,7 @@ async function casaOpzionale(
 // Le entrate e gli accantonamenti si leggono dal giorno della guida, anche oltre la finestra dei 3 mesi,
 // e solo se la guida è completata: per gli altri nessuna lettura in più.
 // Con lo stipendio fisso gli incassi si leggono anche per gli ultimi 6 mesi (stessa lettura, solo più indietro).
-interface PivaLetta {
+export interface PivaLetta {
   piva: PivaHome;
   settings: PivaSettings;
   incassi: Transaction[];
@@ -239,11 +242,13 @@ interface PivaLetta {
   scadenzeNonLette: boolean;
 }
 
-async function pivaOpzionale(
+// Con `leggera` non si creano né si leggono scadenze e fatture: servono ai promemoria della Home, non ai numeri.
+export async function pivaOpzionale(
   supabase: SupabaseClient,
   settings: Promise<PivaSettings | null>,
   today: Date,
-  nonLetta: () => void
+  nonLetta: () => void,
+  leggera = false
 ): Promise<PivaLetta | null> {
   try {
     const s = await settings;
@@ -255,24 +260,27 @@ async function pivaOpzionale(
     // Parte insieme alle altre letture; solo la lettura delle scadenze aspetta che le righe esistano.
     const guidataDal = s.guidataDal;
     const anni = anniScadenzeHome(oggiRomaISO(today));
-    const scadenzeCreate = Promise.all(
-      anni.map((anno) => assicuraScadenze(supabase, scadenzeDaCreare(anno, guidataDal)).catch(() => {}))
-    );
+    const scadenzeCreate = leggera
+      ? Promise.resolve([])
+      : Promise.all(anni.map((anno) => assicuraScadenze(supabase, scadenzeDaCreare(anno, guidataDal)).catch(() => {})));
     let scadenzeNonLette = false;
     const [incassi, accantonamenti, scadenze, fatture, scartate] = await Promise.all([
       getTransactions(supabase, PERSONALE, { da: daIncassi, tipo: 'income' }),
       getAccantonamenti(supabase, { da: s.guidataDal }),
       // Una scadenza che non si legge non toglie la P.IVA dalla home: niente promemoria di scadenza.
       // Dopo il 15 dicembre anche quelle dell'anno dopo.
-      scadenzeCreate
-        .then(() => Promise.all(anni.map((anno) => getScadenze(supabase, anno))))
-        .then((perAnno) => perAnno.flat())
+      (leggera
+        ? Promise.resolve([] as PivaScadenza[])
+        : scadenzeCreate
+            .then(() => Promise.all(anni.map((anno) => getScadenze(supabase, anno))))
+            .then((perAnno) => perAnno.flat())
+      )
         .catch(() => {
           scadenzeNonLette = true;
           return [] as PivaScadenza[];
         }),
       // Come le scadenze: una fattura che non si legge non toglie la P.IVA dalla home.
-      getFatture(supabase).catch(() => [] as PivaFattura[]),
+      leggera ? Promise.resolve([] as PivaFattura[]) : getFatture(supabase).catch(() => [] as PivaFattura[]),
       // Una scelta "Scarta" che non si legge non toglie la P.IVA dalla home: la quota resta da spostare.
       getQuoteScartate(supabase).catch(() => new Set<string>()),
     ]);
@@ -345,6 +353,107 @@ export async function loadHomeData(
   return (await loadHomeBase(supabase, today, userId)).home;
 }
 
+// I numeri del disponibile, in un posto solo: li usano la Home e il percorso, che non devono mai divergere.
+// Cambia `pivaLetta.piva.inSospeso` (rifatto quando i conti sono noti), come ha sempre fatto la Home.
+export function calcolaNumeriDisponibile(i: {
+  contiLetti: Account[];
+  goals: BudgetGoal[];
+  speso: Record<string, number>;
+  conferme: Record<string, ConfermeObiettivo>;
+  rientriGrezzi: Awaited<ReturnType<typeof leggiRientriESpostamenti>>;
+  pivaLetta: PivaLetta | null;
+  stato: CasaStato | null;
+  transazioni: Transaction[];
+  today: Date;
+}) {
+  const { contiLetti, goals, speso, conferme, rientriGrezzi, pivaLetta, stato, transazioni, today } = i;
+  const oggi = oggiRomaISO(today);
+  const piva = pivaLetta?.piva ?? null;
+  // Con la P.IVA guidata il conto tasse non conta mai nel disponibile, qualunque sia il suo interruttore:
+  // sono soldi delle tasse, e contarli due volte (nel saldo e nelle quote) gonfierebbe il numero.
+  const accounts = piva
+    ? contiLetti.map((a) => (a.id === piva.contoTasseId ? { ...a, contaInDisponibile: false } : a))
+    : contiLetti;
+  if (pivaLetta && piva) {
+    // Un incasso su un conto che non conta nel disponibile non chiede la quota: ora che i conti sono noti si rifà il conto.
+    const contiChePesano = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
+    piva.inSospeso = quoteInSospeso(
+      pivaLetta.incassi,
+      pivaLetta.accantonamenti,
+      pivaLetta.percentuale,
+      piva.categoriaFatturatoId,
+      pivaLetta.settings.guidataDal,
+      { categoriaDal: pivaLetta.settings.categoriaDal, contiChePesano, scartate: pivaLetta.scartate }
+    );
+  }
+  // I conti che pesano sono quelli del disponibile (il conto tasse è già fuori): solo gli spostamenti da lì
+  // portano soldi davvero fuori dal disponibile.
+  const contiChePesanoPerRientri = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
+  const { rientri, rientriConti, riservaRientri } = rientriEffettivi(
+    rientriGrezzi.rientri,
+    rientriGrezzi.spostamenti,
+    contiChePesanoPerRientri,
+    contiDestinazioneRientri(accounts, piva?.contoTasseId ?? null),
+    oggi
+  );
+  const goalsConSpeso = goals.map((g) => ({
+    ...g,
+    specoCollegato: speso[g.id] ?? 0,
+    versatoNellaFinestra: conferme[g.id]?.versato ?? null,
+    confermatoMese: conferme[g.id]?.mese ?? 0,
+    rientroMaturato: maturatoPerCassetto(rientri, g.id, oggi),
+  }));
+
+  const riservati = {
+    obiettivi: riservatoObiettivi(goalsConSpeso, today),
+    casa: stato?.riservaVersamento ?? 0,
+    debiti: stato?.debitoDaRestituire ?? 0,
+    tasse: piva ? totaleInSospeso(piva.inSospeso) : 0,
+  };
+  const disponibileReale = computeDisponibileLibero(
+    accounts,
+    goalsConSpeso,
+    today,
+    riservati.casa,
+    riservati.debiti,
+    riservati.tasse,
+    riservaRientri
+  );
+
+  // Con lo stipendio fisso si mostra il minore fra quello che c'è e quello che resta dello stipendio.
+  let disponibileLibero = disponibileReale;
+  let stipendio: ReturnType<typeof homeConStipendio> | null = null;
+  let contiDisponibile: Set<string> | null = null;
+  if (pivaLetta && piva && pivaLetta.settings.stipendioMensile !== null) {
+    // Il conto tasse non entra mai fra i conti delle spese, anche se risultasse nel disponibile.
+    contiDisponibile = new Set(
+      accounts.filter((a) => a.contaInDisponibile && a.id !== piva.contoTasseId).map((a) => a.id)
+    );
+    const { versatoCasaMese } = casaDelMese(stato?.righe ?? null, oggi);
+    stipendio = homeConStipendio({
+      disponibileLibero: disponibileReale,
+      stipendio: pivaLetta.settings.stipendioMensile,
+      speseMese: speseDelMese(transazioni, contiDisponibile, oggi.slice(0, 7)),
+      versatoCasaMese,
+      riservaVersamento: stato?.riservaVersamento ?? 0,
+    });
+    disponibileLibero = stipendio.mostrato;
+  }
+  return {
+    piva,
+    accounts,
+    rientri,
+    rientriConti,
+    riservaRientri,
+    goalsConSpeso,
+    riservati,
+    disponibileReale,
+    disponibileLibero,
+    stipendio,
+    contiDisponibile,
+  };
+}
+
 export async function loadHomeBase(
   supabase: SupabaseClient,
   today: Date = new Date(),
@@ -399,23 +508,20 @@ export async function loadHomeBase(
     rientriLetti,
   ]);
   const { rimandati, ...scelte } = scelteLette;
-  const piva = pivaLetta?.piva ?? null;
-  // Con la P.IVA guidata il conto tasse non conta mai nel disponibile, qualunque sia il suo interruttore:
-  // sono soldi delle tasse, e contarli due volte (nel saldo e nelle quote) gonfierebbe il numero.
-  const accounts = piva
-    ? contiLetti.map((a) => (a.id === piva.contoTasseId ? { ...a, contaInDisponibile: false } : a))
-    : contiLetti;
+  const {
+    piva,
+    accounts,
+    rientri,
+    rientriConti,
+    riservaRientri,
+    goalsConSpeso,
+    riservati,
+    disponibileReale,
+    disponibileLibero: disponibileMostrato,
+    stipendio: homeStipendio,
+    contiDisponibile,
+  } = calcolaNumeriDisponibile({ contiLetti, goals, speso, conferme, rientriGrezzi, pivaLetta, stato: casa?.stato ?? null, transazioni, today });
   if (pivaLetta && piva) {
-    // Un incasso su un conto che non conta nel disponibile non chiede la quota: ora che i conti sono noti si rifà il conto.
-    const contiChePesano = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
-    piva.inSospeso = quoteInSospeso(
-      pivaLetta.incassi,
-      pivaLetta.accantonamenti,
-      pivaLetta.percentuale,
-      piva.categoriaFatturatoId,
-      pivaLetta.settings.guidataDal,
-      { categoriaDal: pivaLetta.settings.categoriaDal, contiChePesano, scartate: pivaLetta.scartate }
-    );
     // Il pezzo in più per la scadenza: con i dati già letti; se le scadenze o il conto tasse mancano, null.
     const contoTasse = accounts.find((a) => a.id === piva.contoTasseId);
     piva.scadenzaVaso =
@@ -425,71 +531,26 @@ export async function loadHomeBase(
             scadenze: piva.scadenze,
             saldoVaso: contoTasse.saldoAttuale,
             inSospeso: totaleInSospeso(piva.inSospeso),
-            incassiMensili: finestraIncassi(pivaLetta.incassi, piva.categoriaFatturatoId, oggiRomaISO(today)).incassiMensili,
+            incassiMensili: finestraIncassi(pivaLetta.incassi, piva.categoriaFatturatoId, oggi).incassiMensili,
           };
   }
-  // I conti che pesano sono quelli del disponibile (il conto tasse è già fuori): solo gli spostamenti da lì
-  // portano soldi davvero fuori dal disponibile.
-  const contiChePesanoPerRientri = new Set(accounts.filter((a) => a.contaInDisponibile).map((a) => a.id));
-  const { rientri, rientriConti, riservaRientri } = rientriEffettivi(
-    rientriGrezzi.rientri,
-    rientriGrezzi.spostamenti,
-    contiChePesanoPerRientri,
-    contiDestinazioneRientri(accounts, piva?.contoTasseId ?? null),
-    oggi
-  );
-  const goalsConSpeso = goals.map((g) => ({
-    ...g,
-    specoCollegato: speso[g.id] ?? 0,
-    versatoNellaFinestra: conferme[g.id]?.versato ?? null,
-    confermatoMese: conferme[g.id]?.mese ?? 0,
-    rientroMaturato: maturatoPerCassetto(rientri, g.id, oggi),
-  }));
-
-  const riservati = {
-    obiettivi: riservatoObiettivi(goalsConSpeso, today),
-    casa: casa?.stato?.riservaVersamento ?? 0,
-    debiti: casa?.stato?.debitoDaRestituire ?? 0,
-    tasse: piva ? totaleInSospeso(piva.inSospeso) : 0,
-  };
-  const disponibileReale = computeDisponibileLibero(
-    accounts,
-    goalsConSpeso,
-    today,
-    riservati.casa,
-    riservati.debiti,
-    riservati.tasse,
-    riservaRientri
-  );
 
   // Con lo stipendio fisso la home mostra il minore fra quello che c'è e quello che resta dello stipendio,
   // e il margine arriva a fine mese. Senza stipendio nulla cambia.
-  let disponibileLibero = disponibileReale;
+  const disponibileLibero = disponibileMostrato;
   let dataTarget = stimaDataTarget(ultimaEntrata, today);
   let revisione: string | null = null;
-  if (pivaLetta && piva && pivaLetta.settings.stipendioMensile !== null) {
+  if (pivaLetta && piva && homeStipendio && contiDisponibile) {
     const { settings } = pivaLetta;
     const stipendio = settings.stipendioMensile as number;
-    // Il conto tasse non entra mai fra i conti delle spese, anche se risultasse nel disponibile.
-    const contiDisponibile = new Set(
-      accounts.filter((a) => a.contaInDisponibile && a.id !== piva.contoTasseId).map((a) => a.id)
-    );
-    const { quotaCasaMensile, versatoCasaMese } = casaDelMese(casa?.stato?.righe ?? null, oggi);
-    const home = homeConStipendio({
-      disponibileLibero: disponibileReale,
-      stipendio,
-      speseMese: speseDelMese(transazioni, contiDisponibile, oggi.slice(0, 7)),
-      versatoCasaMese,
-      riservaVersamento: casa?.stato?.riservaVersamento ?? 0,
-    });
-    disponibileLibero = home.mostrato;
+    const { quotaCasaMensile } = casaDelMese(casa?.stato?.righe ?? null, oggi);
     dataTarget = fineMese(oggi);
     piva.stipendio = {
       stipendio,
-      rimasto: home.rimasto,
-      cuscinetto: home.cuscinetto,
-      mesiCoperti: home.mesiCoperti,
-      frase: home.frase,
+      rimasto: homeStipendio.rimasto,
+      cuscinetto: homeStipendio.cuscinetto,
+      mesiCoperti: homeStipendio.mesiCoperti,
+      frase: homeStipendio.frase,
     };
     const { incassiMensili, mesiConIncassi } = finestraIncassi(pivaLetta.incassi, piva.categoriaFatturatoId, oggi);
     const { proposta } = propostaStipendio({

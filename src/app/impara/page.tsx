@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
-import { loadPercorsoData } from '@/lib/loadPercorsoData';
+import { loadPercorsoLeggero } from '@/lib/loadPercorsoData';
 import { CoverHeader } from '../CoverHeader';
 import { ElencoImpara } from './ElencoImpara';
 
 export default async function ImparaPage() {
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, (id) => loadPercorsoData(supabase, new Date(), id));
+  const { dati } = await conUtente(supabase, (id) => loadPercorsoLeggero(supabase, new Date(), id));
   return (
     <>
       <CoverHeader titolo="Impara" />

@@ -41,7 +41,7 @@ describe('lista d attesa', () => {
     expect(screen.getByText(/ci ripensi il 26 novembre/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
     await waitFor(() => expect(azioni.aggiungiVoce).toHaveBeenCalledWith('Cuffie', 89.9));
-    expect(refresh).toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it('una voce scaduta mostra le due scelte', async () => {

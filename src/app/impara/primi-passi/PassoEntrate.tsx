@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import type { PercorsoUtente } from '@/lib/percorso/tipi';
 import { salvaEntrate } from './actions';
 import { CAMPO, ERRORE_TESTO, ETICHETTA, PRIMARIO } from './stili';
+import { Salvato, useSalvato } from './Salvato';
 
 type Tipo = 'fisse' | 'irregolari' | 'piva';
 const SCELTE: { id: Tipo; testo: string }[] = [
@@ -19,7 +19,7 @@ const comeNumero = (s: string): number | null => {
 };
 
 export function PassoEntrate({ iniziale }: { iniziale: PercorsoUtente | null }) {
-  const router = useRouter();
+  const { salvato, mostra } = useSalvato();
   const [inCorso, avvia] = useTransition();
   const [errore, setErrore] = useState(false);
   const [tipo, setTipo] = useState<Tipo | null>(iniziale?.entrateTipo ?? null);
@@ -39,7 +39,7 @@ export function PassoEntrate({ iniziale }: { iniziale: PercorsoUtente | null }) 
           entrataAttesaIl: nonSo || !data ? null : data,
           redditoBase: tipo === 'fisse' ? null : comeNumero(base),
         });
-        router.refresh();
+        mostra();
       } catch {
         setErrore(true);
       }
@@ -90,6 +90,7 @@ export function PassoEntrate({ iniziale }: { iniziale: PercorsoUtente | null }) 
         Salva
       </button>
       {errore ? <p role="alert" className="text-sm text-ink-2">{ERRORE_TESTO}</p> : null}
+      <Salvato visibile={salvato} />
     </div>
   );
 }

@@ -2,13 +2,13 @@ import Link from 'next/link';
 import { Check, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
-import { loadPercorsoData } from '@/lib/loadPercorsoData';
+import { loadPercorsoLeggero } from '@/lib/loadPercorsoData';
 import { PASSI_TESTI } from '@/lib/percorso/passiTesti';
 import { CoverHeader } from '../../CoverHeader';
 
 export default async function PrimiPassiPage() {
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, (id) => loadPercorsoData(supabase, new Date(), id));
+  const { dati } = await conUtente(supabase, (id) => loadPercorsoLeggero(supabase, new Date(), id));
   const { passi, fatti, totale } = dati.primiPassi;
   return (
     <>

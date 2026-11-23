@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const loadPercorsoData = vi.fn();
+const loadPercorsoLeggero = vi.fn();
 const avvisoGiaDato = vi.fn();
 const rispostaAvviso = vi.fn(async () => {});
 const segnaProposta = vi.fn(async () => {});
@@ -25,7 +25,7 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 vi.mock('@/lib/utenteOLogin', () => ({ utenteOLogin: () => utenteOLogin() }));
-vi.mock('@/lib/loadPercorsoData', () => ({ loadPercorsoData: (...a: unknown[]) => loadPercorsoData(...a) }));
+vi.mock('@/lib/loadPercorsoData', () => ({ loadPercorsoLeggero: (...a: unknown[]) => loadPercorsoLeggero(...a) }));
 vi.mock('@/lib/data/goals', () => ({
   getOpenGoals: (...a: unknown[]) => getOpenGoals(...a),
   getGoalPersonale: (...a: unknown[]) => getGoalPersonale(...a),
@@ -75,7 +75,7 @@ function dati(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   avvisoGiaDato.mockResolvedValue(false);
-  loadPercorsoData.mockResolvedValue(dati());
+  loadPercorsoLeggero.mockResolvedValue(dati());
 });
 
 describe('valutaDopoSalvataggio', () => {
@@ -97,7 +97,7 @@ describe('valutaDopoSalvataggio', () => {
   });
 
   it('senza fondo l avviso segna la lezione imprevisti', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ goals: [] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ goals: [] }));
     await valutaDopoSalvataggio(ID);
     expect(segnaProposta).toHaveBeenCalledWith(expect.anything(), 'imprevisti', '2026-11-19');
   });
@@ -108,14 +108,14 @@ describe('valutaDopoSalvataggio', () => {
   });
 
   it('senza fondo imprevisti la lezione è imprevisti', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ goals: [] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ goals: [] }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r).toMatchObject({ tipo: 'avviso', lezione: 'imprevisti' });
     expect((r as { avviso: { fondoImprevisti: unknown } }).avviso.fondoImprevisti).toBeNull();
   });
 
   it('spesa già collegata a un obiettivo: l avviso non offre il fondo', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ goalId: 'altro' })] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ transazioni: [spesa({ goalId: 'altro' })] }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r).toMatchObject({ tipo: 'avviso' });
     expect((r as { avviso: { fondoImprevisti: unknown } }).avviso.fondoImprevisti).toBeNull();
@@ -123,14 +123,14 @@ describe('valutaDopoSalvataggio', () => {
 
   it('spesa casa: null', async () => {
     // Le righe di casa non stanno fra le transazioni personali.
-    loadPercorsoData.mockResolvedValue(dati({ transazioni: [] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ transazioni: [] }));
     expect(await valutaDopoSalvataggio(ID)).toBeNull();
     expect(rispostaAvviso).not.toHaveBeenCalled();
     expect(segnaProposta).not.toHaveBeenCalled();
   });
 
   it('spesa con data futura: null', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ data: '2026-11-25' })] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ transazioni: [spesa({ data: '2026-11-25' })] }));
     expect(await valutaDopoSalvataggio(ID)).toBeNull();
     expect(rispostaAvviso).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe('valutaDopoSalvataggio', () => {
   it('avviso già dato: niente avviso, eventuale lezione', async () => {
     avvisoGiaDato.mockResolvedValue(true);
     // 200 € senza fondo collegato: la regola propone imprevisti.
-    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ importo: 200 })], disponibileReale: 60 }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ transazioni: [spesa({ importo: 200 })], disponibileReale: 60 }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r).toEqual({ tipo: 'lezione', lezione: 'imprevisti' });
     expect(rispostaAvviso).not.toHaveBeenCalled();
@@ -146,7 +146,7 @@ describe('valutaDopoSalvataggio', () => {
   });
 
   it('errore di lettura: null', async () => {
-    loadPercorsoData.mockRejectedValue(new Error('rete'));
+    loadPercorsoLeggero.mockRejectedValue(new Error('rete'));
     expect(await valutaDopoSalvataggio(ID)).toBeNull();
   });
 
@@ -156,28 +156,28 @@ describe('valutaDopoSalvataggio', () => {
   });
 
   it('spesa in contanti: nessun avviso', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ transazioni: [spesa({ accountId: null })] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ transazioni: [spesa({ accountId: null })] }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r === null || r.tipo === 'lezione').toBe(true);
     expect(rispostaAvviso).not.toHaveBeenCalled();
   });
 
   it('conto fuori dal disponibile: nessun avviso', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ conti: [conto({ contaInDisponibile: false })] }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ conti: [conto({ contaInDisponibile: false })] }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r === null || r.tipo === 'lezione').toBe(true);
     expect(rispostaAvviso).not.toHaveBeenCalled();
   });
 
   it('disponibile ancora sopra zero: nessun avviso', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ disponibileReale: 10 }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ disponibileReale: 10 }));
     const r = await valutaDopoSalvataggio(ID);
     expect(r === null || r.tipo === 'lezione').toBe(true);
   });
 
   it('un id non valido: null, nessuna lettura', async () => {
     expect(await valutaDopoSalvataggio('; drop')).toBeNull();
-    expect(loadPercorsoData).not.toHaveBeenCalled();
+    expect(loadPercorsoLeggero).not.toHaveBeenCalled();
   });
 });
 
@@ -189,7 +189,7 @@ const fondoVero = (over = {}) => ({
 });
 function fondoCon(accantonato: number, over = {}) {
   getOpenGoals.mockResolvedValue([fondoVero(over)]);
-  loadPercorsoData.mockResolvedValue(dati({ goals: [{ ...fondoVero(over), accantonato }] }));
+  loadPercorsoLeggero.mockResolvedValue(dati({ goals: [{ ...fondoVero(over), accantonato }] }));
 }
 const rigaCon = (over = {}) =>
   riga.mockResolvedValue({

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { conUtente } from '@/lib/utenteOLogin';
-import { loadPercorsoData } from '@/lib/loadPercorsoData';
+import { loadPercorsoLeggero } from '@/lib/loadPercorsoData';
 import { lezione } from '@/lib/percorso/lezioni';
 import { PASSI_ID, PASSI_TESTI } from '@/lib/percorso/passiTesti';
 import { faseSettimana, riepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
@@ -21,7 +21,7 @@ export default async function PassoPage({ params }: { params: Promise<{ passo: s
   if (!PASSI_ID.includes(passo as PassoId)) notFound();
   const id = passo as PassoId;
   const supabase = await createClient();
-  const { dati } = await conUtente(supabase, (u) => loadPercorsoData(supabase, new Date(), u));
+  const { dati } = await conUtente(supabase, (u) => loadPercorsoLeggero(supabase, new Date(), u));
   const testo = PASSI_TESTI[id];
   const fase = faseSettimana(dati.percorso?.settimanaDal ?? null, dati.oggi);
 

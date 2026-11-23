@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { addMonths, format } from 'date-fns';
 import { SPESE_CERTE_PERSONALI } from '@/lib/percorso/speseCerte';
 import { euroInFrase } from '@/lib/format';
 import { accantonatoAllaPrimaScadenza, fineDelMese, meseValido } from '@/lib/calculations/percorso/primiPassiFondi';
 import { creaFondiSpeseCerte, nessunaSpesaCerta, proponiLezione } from './actions';
 import { CAMPO, ERRORE_TESTO, ETICHETTA, PRIMARIO, SECONDARIO } from './stili';
+import { Salvato, useSalvato } from './Salvato';
 
 interface Riga {
   scelta: boolean;
@@ -17,7 +17,7 @@ interface Riga {
 }
 
 export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCreate?: string[] }) {
-  const router = useRouter();
+  const { salvato, mostra } = useSalvato();
   const [inCorso, avvia] = useTransition();
   const [errore, setErrore] = useState(false);
   const [righe, setRighe] = useState<Record<string, Riga>>(() =>
@@ -61,7 +61,7 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
           }))
         );
         setCreate(fatte);
-        router.refresh();
+        mostra();
       } catch {
         setErrore(true);
       }
@@ -73,7 +73,7 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
     avvia(async () => {
       try {
         await nessunaSpesaCerta();
-        router.refresh();
+        mostra();
       } catch {
         setErrore(true);
       }
@@ -84,6 +84,7 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
     return (
       <div className="mt-5 flex flex-col gap-3">
         <p className="text-[15px]">{`Fatto: ${create.length === 1 ? 'un fondo creato' : `${create.length} fondi creati`}.`}</p>
+        <Salvato visibile={salvato} />
         {create.includes('assicurazione-auto') ? (
           <Link
             href="/impara/assicurazioni"
@@ -163,6 +164,7 @@ export function PassoSpeseCerte({ oggi, giaCreate = [] }: { oggi: string; giaCre
         Non ne ho
       </button>
       {errore ? <p role="alert" className="text-sm text-ink-2">{ERRORE_TESTO}</p> : null}
+      <Salvato visibile={salvato} />
     </div>
   );
 }

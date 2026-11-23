@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { utenteOLogin } from '@/lib/utenteOLogin';
-import { loadPercorsoData } from '@/lib/loadPercorsoData';
+import { loadPercorsoLeggero } from '@/lib/loadPercorsoData';
 import { closeGoal, createGoal, getGoalPersonale, getOpenGoals, reopenGoal, updateGoalPiano } from '@/lib/data/goals';
 import { avvisoGiaDato, collegaAObiettivo, rispostaAvviso, segnaProposta } from '@/lib/data/percorso';
 import { valutaAvvisoFondi, type AvvisoFondi } from '@/lib/calculations/percorso/avviso';
@@ -26,7 +26,7 @@ export async function valutaDopoSalvataggio(transactionId: string): Promise<Dopo
   try {
     const supabase = await createClient();
     const user = await utenteOLogin(supabase);
-    const d = await loadPercorsoData(supabase, new Date(), user.id);
+    const d = await loadPercorsoLeggero(supabase, new Date(), user.id);
     // Le transazioni lette sono quelle personali: una riga di casa non si trova qui.
     const t = d.transazioni.find((x) => x.id === transactionId);
     if (!t || t.data > d.oggi) return null;
@@ -153,7 +153,7 @@ async function usaFondoImprevisti(
   fondo: BudgetGoal,
   spesa: number
 ): Promise<RispostaAvviso> {
-  const d = await loadPercorsoData(supabase, new Date(), userId);
+  const d = await loadPercorsoLeggero(supabase, new Date(), userId);
   const letto = d.goals.find((g) => g.id === fondo.id && g.stato === 'aperto');
   if (!letto) throw new Error('Obiettivo non valido');
   const accantonato = letto.accantonato;

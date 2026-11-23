@@ -24,10 +24,11 @@ async function sessione() {
   return supabase;
 }
 
+// Una volta sola: la pagina aperta si aggiorna nella stessa risposta dell'azione, quindi i componenti non
+// chiamano router.refresh(). 'layout' copre i passi (/impara/primi-passi/[passo]); la Home mostra i primi passi.
 function aggiorna(): void {
+  revalidatePath('/impara/primi-passi', 'layout');
   revalidatePath('/');
-  revalidatePath('/impara');
-  revalidatePath('/impara/primi-passi');
 }
 
 const importoValido = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0 && n < 1e9;

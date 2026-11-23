@@ -5,7 +5,8 @@ const getOpenGoals = vi.fn(async () => [] as unknown[]);
 const salvaPercorso = vi.fn(async () => {});
 const leggiPercorso = vi.fn(async () => ({ utente: null as unknown, lezioni: {} }));
 const segnaProposta = vi.fn(async () => {});
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+const revalidatePath = vi.fn();
+vi.mock('next/cache', () => ({ revalidatePath: (...a: unknown[]) => revalidatePath(...a) }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }));
 vi.mock('@/lib/utenteOLogin', () => ({ utenteOLogin: async () => ({ id: 'u1' }) }));
 vi.mock('@/lib/data/goals', () => ({
@@ -96,6 +97,12 @@ describe('azioni primi passi', () => {
     ]);
     expect(fatte).toEqual(['bollo']);
     expect(createGoal).toHaveBeenCalledTimes(1);
+  });
+
+  it('dopo Salva rivalida una volta sola: i passi (layout) e la Home', async () => {
+    revalidatePath.mockClear();
+    await ripartiSettimana();
+    expect(revalidatePath.mock.calls).toEqual([['/impara/primi-passi', 'layout'], ['/']]);
   });
 
   it('imprevisti rifiuta un tempo oltre 600 mesi', async () => {

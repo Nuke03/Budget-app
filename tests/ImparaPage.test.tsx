@@ -18,8 +18,8 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'u1' } }, error: null }), getSession: async () => ({ data: { session: null } }) },
   }),
 }));
-const loadPercorsoData = vi.fn();
-vi.mock('@/lib/loadPercorsoData', () => ({ loadPercorsoData: (...a: unknown[]) => loadPercorsoData(...a) }));
+const loadPercorsoLeggero = vi.fn();
+vi.mock('@/lib/loadPercorsoData', () => ({ loadPercorsoLeggero: (...a: unknown[]) => loadPercorsoLeggero(...a) }));
 vi.mock('@/app/impara/SchedaLezione', () => ({
   SchedaLezione: ({ lezione, numeri }: { lezione: { titolo: string }; numeri: string | null }) => (
     <div>
@@ -49,13 +49,13 @@ function dati(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  loadPercorsoData.mockReset();
+  loadPercorsoLeggero.mockReset();
   notFound.mockClear();
 });
 
 describe('pagina Impara', () => {
   it('l indice mostra 15 lezioni in ordine e segna le lette', async () => {
-    loadPercorsoData.mockResolvedValue(
+    loadPercorsoLeggero.mockResolvedValue(
       dati({ lezioni: { piano: { vistaIl: '2026-11-01', rimandataAl: null, azioneIl: null, propostaIl: null } } })
     );
     render(await ImparaPage());
@@ -67,7 +67,7 @@ describe('pagina Impara', () => {
   });
 
   it('l indice non mostra percentuali', async () => {
-    loadPercorsoData.mockResolvedValue(dati());
+    loadPercorsoLeggero.mockResolvedValue(dati());
     const { container } = render(await ImparaPage());
     expect(container.textContent).not.toContain('%');
     assertNessunaParolaVietata(container);
@@ -75,18 +75,18 @@ describe('pagina Impara', () => {
 
   it('Primi passi si vede finché non sono finiti, anche se nascosti dalla Home; la Lista d attesa sempre', async () => {
     // Tutti fatti: la porta non serve più.
-    loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 6, totale: 6, prossimo: null, visibile: false } }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 6, totale: 6, prossimo: null, visibile: false } }));
     const { unmount } = render(await ImparaPage());
     expect(screen.queryByRole('link', { name: /Primi passi/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Lista d.attesa/ })).toHaveAttribute('href', '/impara/attesa');
     unmount();
     // Non finiti e visibili nella Home.
-    loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: true } }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: true } }));
     const b = render(await ImparaPage());
     expect(screen.getByRole('link', { name: /Primi passi/ })).toHaveAttribute('href', '/impara/primi-passi');
     b.unmount();
     // Non finiti ma nascosti: restano raggiungibili da qui.
-    loadPercorsoData.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: false } }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ primiPassi: { passi: [], fatti: 1, totale: 6, prossimo: 'entrate', visibile: false } }));
     render(await ImparaPage());
     expect(screen.getByRole('link', { name: /Primi passi/ })).toHaveAttribute('href', '/impara/primi-passi');
   });
@@ -94,13 +94,13 @@ describe('pagina Impara', () => {
 
 describe('pagina lezione', () => {
   it('passa alla scheda la lezione e i numeri', async () => {
-    loadPercorsoData.mockResolvedValue(dati({ disponibileReale: 100 }));
+    loadPercorsoLeggero.mockResolvedValue(dati({ disponibileReale: 100 }));
     render(await LezionePage({ params: Promise.resolve({ argomento: 'piano' }) }));
     expect(screen.getByText(/scheda:Un piano per ogni euro\|Adesso il tuo libero/)).toBeInTheDocument();
   });
 
   it('lettura dei dati fallita: la lezione si apre lo stesso, senza numeri', async () => {
-    loadPercorsoData.mockRejectedValue(new Error('rete'));
+    loadPercorsoLeggero.mockRejectedValue(new Error('rete'));
     render(await LezionePage({ params: Promise.resolve({ argomento: 'piano' }) }));
     expect(screen.getByText('scheda:Un piano per ogni euro|null')).toBeInTheDocument();
   });

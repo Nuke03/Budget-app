@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { euroInFrase } from '@/lib/format';
 import { piuGiorni } from '@/lib/data/percorso';
 import { GIORNI_SETTIMANA, PICCOLA_SPESA } from '@/lib/calculations/percorso/soglie';
 import type { FaseSettimana, RiepilogoSettimana } from '@/lib/calculations/percorso/primiPassiFondi';
 import { avviaSettimana, chiudiSettimana, ripartiSettimana } from './actions';
 import { ERRORE_TESTO, PRIMARIO } from './stili';
+import { Salvato, useSalvato } from './Salvato';
 
 const giornoEMese = (iso: string): string =>
   new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(
@@ -23,7 +23,7 @@ export function PassoSettimana({
   dal: string | null;
   riepilogo: RiepilogoSettimana | null;
 }) {
-  const router = useRouter();
+  const { salvato, mostra } = useSalvato();
   const [inCorso, avvia] = useTransition();
   const [errore, setErrore] = useState(false);
 
@@ -32,7 +32,7 @@ export function PassoSettimana({
     avvia(async () => {
       try {
         await azione();
-        router.refresh();
+        mostra();
       } catch {
         setErrore(true);
       }
@@ -94,6 +94,7 @@ export function PassoSettimana({
     <div className="mt-5 flex flex-col gap-3">
       {corpo}
       {errore ? <p role="alert" className="text-sm text-ink-2">{ERRORE_TESTO}</p> : null}
+      <Salvato visibile={salvato} />
     </div>
   );
 }

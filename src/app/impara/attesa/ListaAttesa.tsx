@@ -53,7 +53,6 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
     if (ok) {
       setNome('');
       setCifra('');
-      router.refresh();
     }
   }
 
@@ -64,7 +63,7 @@ export function ListaAttesa({ voci, oggi }: { voci: VoceAttesa[]; oggi: string }
     if (stato === 'voluto') {
       const params = new URLSearchParams({ nuovo: '1', nome: v.nome, importo: String(v.importo) });
       router.push(`/goals?${params.toString()}`);
-    } else router.refresh();
+    }
   }
 
   return (
