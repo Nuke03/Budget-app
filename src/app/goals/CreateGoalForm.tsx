@@ -24,7 +24,7 @@ const FREQUENZA_PRESETS = [
 const FREQUENZA_VALIDE: number[] = FREQUENZA_PRESETS.map((p) => p.mesi);
 
 const fieldClass =
-  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand';
 
 export function CreateGoalForm({
   categories,

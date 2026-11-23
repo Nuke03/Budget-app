@@ -167,7 +167,7 @@ export default function CategoriesPage() {
             onChange={(e) => setNome(e.target.value)}
             placeholder="Nome categoria"
             aria-label="Nome categoria"
-            className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
+            className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand"
           />
 
           {editingCategory && editingCategory.tipo === 'expense' ? (

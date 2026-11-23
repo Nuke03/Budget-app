@@ -30,7 +30,7 @@ const DEFAULTS: PivaSettingsFormValues = {
 };
 
 const fieldClass =
-  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand';
 
 export function PivaSettingsForm({
   categories,

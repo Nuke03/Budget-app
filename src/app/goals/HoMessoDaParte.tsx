@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { formatEuro } from '@/lib/format';
 
 const fieldClass =
-  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand';
 
 // "Ho messo da parte": un tocco per confermare che i soldi della quota del mese sono davvero spostati.
 // Importo e data sono già scritti (la quota e oggi) e si possono cambiare; la data non può essere nel futuro.

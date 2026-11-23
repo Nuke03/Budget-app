@@ -70,7 +70,7 @@ export function ContiVista({
             onChange={(e) => onNome(e.target.value)}
             placeholder="Es. Conto corrente"
             aria-label="Nome del nuovo conto"
-            className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
+            className="min-h-12 rounded-[var(--radius-md)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand"
           />
           <label className="flex min-h-11 items-center gap-2.5 text-[15px] font-medium">
             <input

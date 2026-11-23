@@ -9,7 +9,7 @@ import type { SituazioneRientroConto } from '@/lib/calculations/rientri';
 import type { Account } from '@/lib/types';
 
 const fieldClass =
-  'min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand';
+  'min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand';
 
 export function AccountRow({
   account,

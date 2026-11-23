@@ -66,7 +66,7 @@ export function SuggestAmountPanel({
           placeholder="Es. ENEL, Telepass..."
           value={nomeTassa}
           onChange={(e) => setNomeTassa(e.target.value)}
-          className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
+          className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand"
         />
       </div>
 
@@ -78,7 +78,7 @@ export function SuggestAmountPanel({
             type="number"
             value={limite}
             onChange={(e) => setLimite(e.target.value)}
-            className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
+            className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand"
           />
         </label>
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-[13px] font-medium text-ink-2">
@@ -88,7 +88,7 @@ export function SuggestAmountPanel({
             type="number"
             value={margine}
             onChange={(e) => setMargine(e.target.value)}
-            className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-[15px] text-foreground focus-visible:border-brand"
+            className="min-h-11 rounded-[var(--radius-sm)] border border-rule bg-page px-3 text-base text-foreground focus-visible:border-brand"
           />
         </label>
       </div>

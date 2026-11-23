@@ -113,7 +113,7 @@ export function CalendarioCasa({ feedIniziale, origin }: { feedIniziale: Calenda
             aria-label="Link del calendario"
             value={link}
             onFocus={(e) => e.currentTarget.select()}
-            className="min-h-11 w-full rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-[13px]"
+            className="min-h-11 w-full rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-base"
           />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={copia} className={CLASSE_PRIMARIO}>

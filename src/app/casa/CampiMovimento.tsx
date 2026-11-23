@@ -12,7 +12,7 @@ export const CLASSE_NEUTRO =
 export const CLASSE_LINK = 'inline-flex min-h-11 items-center text-[15px] font-semibold text-brand-dark';
 
 export const CLASSE_CAMPO =
-  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-[15px] text-foreground outline-none focus-visible:border-brand';
+  'min-h-12 rounded-[var(--radius-md)] border border-rule bg-surface px-3 py-2 text-base text-foreground outline-none focus-visible:border-brand';
 
 export function Campo({ etichetta, children }: { etichetta: string; children: ReactNode }) {
   return (

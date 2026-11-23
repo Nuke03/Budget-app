@@ -749,7 +749,7 @@ export function AddTransactionForm({
                   value={nuovoGoalNome}
                   onChange={(e) => setNuovoGoalNome(e.target.value)}
                   placeholder="Es. Assicurazione auto"
-                  className="rounded-[var(--radius-sm)] border border-black/5 bg-surface px-3 py-2 text-sm outline-none"
+                  className="rounded-[var(--radius-sm)] border border-black/5 bg-surface px-3 py-2 text-base outline-none"
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs font-medium text-muted">
@@ -761,7 +761,7 @@ export function AddTransactionForm({
                   value={nuovoGoalImporto}
                   onChange={(e) => setNuovoGoalImporto(e.target.value)}
                   placeholder="0"
-                  className="rounded-[var(--radius-sm)] border border-black/5 bg-surface px-3 py-2 text-sm outline-none"
+                  className="rounded-[var(--radius-sm)] border border-black/5 bg-surface px-3 py-2 text-base outline-none"
                 />
               </label>
               <button
