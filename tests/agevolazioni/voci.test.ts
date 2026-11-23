@@ -31,7 +31,12 @@ describe('VOCI', () => {
   it('ogni soglia ha anno; link solo ufficiali o interni', () => {
     for (const v of VOCI) {
       if (v.soglia) expect(v.soglia.anno).toBeGreaterThan(2000);
-      if (v.link) expect(v.link.href).toMatch(/^(\/|https:\/\/(www\.)?(inps\.it|arera\.it|agenziaentrate\.gov\.it))/);
+      if (v.link && !v.link.href.startsWith('/')) {
+        const u = new URL(v.link.href);
+        expect(u.protocol).toBe('https:');
+        const ok = ['inps.it', 'arera.it', 'agenziaentrate.gov.it'].some((d) => u.hostname === d || u.hostname.endsWith('.' + d));
+        expect(ok).toBe(true);
+      }
     }
     expect(VOCI.find((v) => v.id === 'scadenze-piva')!.link!.href).toBe('/piva');
     expect(VOCI.find((v) => v.id === 'dedicata-a-te')!.validaFinoAl).toBe('2027-12-31');

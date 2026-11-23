@@ -65,6 +65,28 @@ describe('vociDaMostrare', () => {
   });
 });
 
+describe('casi limite', () => {
+  it('soglie incluse: 9796 e 15000', () => {
+    const f = (isee: number) => vociDaMostrare({ ...vuota, isee, dsuData: '2026-03-12' }, [], '2026-11-23').daControllare.map((m) => m.voce.id);
+    expect(f(9796).slice(0, 2)).toEqual(['bonus-sociale', 'dedicata-a-te']);
+    expect(f(9797)[0]).not.toBe('bonus-sociale');
+    expect(f(9797)[0]).toBe('dedicata-a-te');
+    expect(f(15000)[0]).toBe('dedicata-a-te');
+    expect(f(15001)[0]).not.toBe('dedicata-a-te');
+  });
+  it('ISEE con DSU senza data vale', () => {
+    expect(iseeValido({ ...vuota, isee: 5000, dsuData: null }, '2027-01-10')).toBe(5000);
+  });
+  it('comune con $& non si interpreta', () => {
+    const r = vociDaMostrare({ ...vuota, comune: 'A$&B' }, [], '2026-11-23');
+    expect(r.daControllare.find((m) => m.voce.id === 'tari-comune')!.cercare).toBe('modulo agevolazioni TARI A$&B');
+  });
+  it('R1: non mi riguarda sulla voce ISEE spegne il promemoria anche con ISEE', () => {
+    const s = { ...vuota, isee: 7200, dsuData: '2025-03-12' };
+    expect(promemoriaAgevolazioni(s, [{ voceId: 'isee-dsu', stato: 'non-mi-riguarda', il: '2026-05-01' }], true, '2027-01-10')).toBeNull();
+  });
+});
+
 describe('promemoriaAgevolazioni', () => {
   it('DSU scaduta a gennaio', () => {
     const s = { ...vuota, isee: 7200, dsuData: '2025-03-12' };

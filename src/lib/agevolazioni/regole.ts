@@ -1,13 +1,12 @@
 // Regole pure: cosa mostrare, in che ordine, con quale frase; e il promemoria per la Home.
+import { formatNumero } from '@/lib/format';
 import { VOCI } from './voci';
 import type { Situazione, StatoVoce, VoceId, VoceMostrata } from './tipi';
 
 const anno = (d: string): number => Number(d.slice(0, 4));
 const mese = (d: string): number => Number(d.slice(5, 7));
 
-function euro(n: number): string {
-  return `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
-}
+const euro = (n: number): string => `${formatNumero(n)} €`;
 
 /** ISEE usabile: null se manca o se la DSU è di un anno precedente (scade il 31 dicembre). */
 export function iseeValido(s: Situazione, oggi: string): number | null {
@@ -62,7 +61,7 @@ export function vociDaMostrare(
       voce.cercare === null
         ? null
         : comune
-          ? voce.cercare.replace('{comune}', comune)
+          ? voce.cercare.replace('{comune}', () => comune)
           : voce.cercare.replace(' {comune}', '').replace('{comune}', '').trim();
 
     const m: VoceMostrata = {

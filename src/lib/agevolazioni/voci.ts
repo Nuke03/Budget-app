@@ -136,11 +136,11 @@ export const VOCI: Voce[] = [
     id: 'dottorato',
     titolo: 'Borsa di dottorato: tasse e contributi',
     perche:
-      "La borsa di dottorato ha regole sue su contributi e imposte, e conta in modo particolare nell'ISEE.",
+      "Le regole su contributi, tasse e ISEE per le borse di dottorato possono essere particolari: chiedi all'ufficio dottorato o a un CAF.",
     come: 'informativa',
     cosaFare: [
-      "I contributi vanno alla gestione separata INPS: di solito l'ateneo versa la sua parte.",
-      "Per le imposte e per sapere se serve il 730, chiedi all'ufficio dottorato o a un CAF.",
+      "Chiedi all'ufficio dottorato come funzionano i contributi INPS per la tua borsa.",
+      'Per le imposte e per sapere se serve il 730, chiedi a un CAF.',
     ],
     cercare: 'borsa dottorato INPS gestione separata',
     link: null,
