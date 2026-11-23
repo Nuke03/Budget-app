@@ -16,16 +16,18 @@ interface StatoRow {
   il: string;
 }
 
-// Senza riga: null. La P.IVA non si salva qui: c'e se la guida e partita.
-export async function getSituazione(supabase: SupabaseClient): Promise<Situazione | null> {
+// Senza riga: situazione vuota. La P.IVA non si salva qui: c'e se la guida e partita.
+export async function getSituazione(supabase: SupabaseClient): Promise<Situazione> {
   const { data, error } = await supabase
     .from('agevolazioni_situazione')
     .select('isee, dsu_data, comune, in_affitto, studente')
     .maybeSingle();
   if (error) throw error;
-  if (!data) return null;
-  const row = data as SituazioneRow;
   const settings = await getPivaSettings(supabase);
+  if (!data) {
+    return { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null, piva: !!settings?.guidataDal };
+  }
+  const row = data as SituazioneRow;
   return {
     isee: row.isee === null ? null : Number(row.isee),
     dsuData: row.dsu_data,

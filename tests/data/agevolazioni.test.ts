@@ -43,9 +43,12 @@ describe('getSituazione', () => {
       isee: 12345.6, dsuData: '2026-02-10', comune: 'Roma', inAffitto: true, studente: false, piva: true,
     });
   });
-  it('senza riga: null', async () => {
-    const { client } = fake({});
-    expect(await getSituazione(client)).toBeNull();
+  it('senza riga: situazione vuota, con piva dalla guida', async () => {
+    const vuota = { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null };
+    const a = fake({});
+    expect(await getSituazione(a.client)).toEqual({ ...vuota, piva: false });
+    const b = fake({ piva_settings: { data: { guidata_dal: '2026-01-05' }, error: null } });
+    expect(await getSituazione(b.client)).toEqual({ ...vuota, piva: true });
   });
   it('isee null resta null, senza P.IVA guidata piva e false', async () => {
     const { client } = fake({
