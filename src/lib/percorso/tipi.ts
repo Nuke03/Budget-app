@@ -2,7 +2,7 @@
 export type ArgomentoId =
   | 'dove-vanno' | 'piano' | 'spese-certe' | 'imprevisti' | 'prima-da-parte'
   | 'impulso' | 'bisogni-desideri' | 'reddito-irregolare' | 'debiti-rate' | 'truffe'
-  | 'coppia' | 'assicurazioni' | 'inflazione' | 'risparmio-investimento' | 'pensione';
+  | 'coppia' | 'assicurazioni' | 'inflazione' | 'risparmio-investimento' | 'pensione' | 'aiuti';
 export type Fase = 'adesso' | 'appena-entrano' | 'dopo';
 export type PassoId = 'conti' | 'entrate' | 'piva' | 'settimana' | 'spese-certe' | 'imprevisti' | 'obiettivo';
 

@@ -54,13 +54,13 @@ beforeEach(() => {
 });
 
 describe('pagina Impara', () => {
-  it('l indice mostra 15 lezioni in ordine e segna le lette', async () => {
+  it('l indice mostra 16 lezioni in ordine e segna le lette', async () => {
     loadPercorsoLeggero.mockResolvedValue(
       dati({ lezioni: { piano: { vistaIl: '2026-11-01', rimandataAl: null, azioneIl: null, propostaIl: null } } })
     );
     render(await ImparaPage());
     const voci = screen.getAllByRole('listitem').filter((li) => li.closest('ol'));
-    expect(voci).toHaveLength(15);
+    expect(voci).toHaveLength(16);
     LEZIONI.forEach((l, i) => expect(voci[i]).toHaveTextContent(l.titolo));
     expect(screen.getAllByText('letta')).toHaveLength(1);
     expect(voci[1]).toHaveTextContent('letta');

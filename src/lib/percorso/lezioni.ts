@@ -172,6 +172,19 @@ export const LEZIONI: Lezione[] = [
     prova: null,
     link: [{ etichetta: 'INPS', url: 'https://www.inps.it' }],
   },
+  {
+    id: 'aiuti', numero: 16, fase: 'dopo',
+    titolo: 'Gli aiuti che si chiedono',
+    inBreve:
+      "Alcuni aiuti non arrivano da soli: vanno chiesti, di solito con l'ISEE, il documento che misura la situazione economica del nucleo familiare. Il bonus sociale per luce, gas e acqua, per esempio, si ottiene presentando la DSU, senza un'altra domanda. Altri hanno moduli e scadenze del comune. Basta controllarli una volta l'anno, con calma, perché potrebbero riguardarti.",
+    esempio:
+      'Nel 2026 il bonus sociale ARERA è previsto per un ISEE fino a 9.796 €. Sopra quella soglia quel bonus non c\'è, ma altri aiuti hanno regole diverse: per questo la pagina li elenca uno per uno.',
+    prova: { etichetta: 'Guarda quali aiuti potrebbero riguardarti', href: '/agevolazioni' },
+    link: [
+      { etichetta: 'INPS: tipologie di ISEE', url: 'https://www.inps.it/it/it/dettaglio-approfondimento.schede-informative.49936.tipologie-di-isee.html' },
+      { etichetta: 'ARERA: bonus sociali 2026', url: 'https://www.arera.it/comunicati-stampa/dettaglio/bonus-sociali-arera-alza-a-9796-euro-la-soglia-isee-per-laccesso-alle-agevolazioni-per-acqua-luce-gas-e-rifiuti' },
+    ],
+  },
 ];
 
 export function lezione(id: ArgomentoId): Lezione {

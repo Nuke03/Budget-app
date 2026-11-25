@@ -7,11 +7,11 @@ import { PAROLE_VIETATE } from '../helpers/paroleVietate';
 const ORDINE = [
   'dove-vanno', 'piano', 'spese-certe', 'imprevisti', 'prima-da-parte',
   'impulso', 'bisogni-desideri', 'reddito-irregolare', 'debiti-rate', 'truffe',
-  'coppia', 'assicurazioni', 'inflazione', 'risparmio-investimento', 'pensione',
+  'coppia', 'assicurazioni', 'inflazione', 'risparmio-investimento', 'pensione', 'aiuti',
 ];
 const HOST_UFFICIALI = [
   'bancaditalia.it', 'economiapertutti.bancaditalia.it', 'consob.it', 'ivass.it',
-  'inps.it', 'comitatoeducazionefinanziaria.gov.it', 'arbitrobancariofinanziario.it',
+  'inps.it', 'arera.it', 'comitatoeducazionefinanziaria.gov.it', 'arbitrobancariofinanziario.it',
 ];
 
 const PRODOTTI = /\b(azioni|azionari[oa]?|obbligazion\w*|etf)\b/i;
@@ -20,11 +20,11 @@ const testo = (l: (typeof LEZIONI)[number]) =>
   [l.titolo, l.inBreve, l.esempio, l.prova?.etichetta ?? ''].join(' ');
 
 describe('lezioni', () => {
-  it('ci sono 15 lezioni con numero 1..15 e id unici', () => {
-    expect(LEZIONI).toHaveLength(15);
-    expect(LEZIONI.map((l) => l.numero)).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
+  it('ci sono 16 lezioni con numero 1..16 e id unici', () => {
+    expect(LEZIONI).toHaveLength(16);
+    expect(LEZIONI.map((l) => l.numero)).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
     expect(LEZIONI.map((l) => l.id)).toEqual(ORDINE);
-    expect(new Set(LEZIONI.map((l) => l.id)).size).toBe(15);
+    expect(new Set(LEZIONI.map((l) => l.id)).size).toBe(16);
     expect(lezione('truffe').numero).toBe(10);
   });
 
@@ -91,6 +91,13 @@ describe('lezioni', () => {
     expect(lezione('imprevisti').inBreve).toMatch(/necessari/);
     expect(lezione('imprevisti').inBreve).toMatch(/altro modo/);
     expect(lezione('dove-vanno').inBreve).toMatch(/colpa/);
+  });
+
+  it('la lezione 16 parla di ISEE e DSU e rimanda a Agevolazioni', () => {
+    expect(lezione('aiuti').numero).toBe(16);
+    expect(lezione('aiuti').inBreve).toMatch(/ISEE/);
+    expect(lezione('aiuti').inBreve).toMatch(/DSU/);
+    expect(lezione('aiuti').prova?.href).toBe('/agevolazioni');
   });
 
   it('le prove puntano ai percorsi attesi', () => {
