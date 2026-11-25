@@ -23,7 +23,7 @@ export interface RigaLibretto {
 export interface Prossimo {
   testo: string;
   href: string;
-  tipo: 'in_pari' | 'casa' | 'piva' | 'attesa' | 'sposta' | 'obiettivo';
+  tipo: 'in_pari' | 'casa' | 'piva' | 'agevolazione' | 'attesa' | 'sposta' | 'obiettivo';
 }
 
 const arrotonda = (n: number): number => Math.round(n * 100) / 100;
@@ -143,13 +143,15 @@ export function promemoriaVersamento(
   return null;
 }
 
-// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi il resto della P.IVA, poi la lista d'attesa,
+// In pari, poi le scadenze P.IVA urgenti, poi la casa, poi le agevolazioni, poi il resto della P.IVA, poi la lista d'attesa,
 // per ultima la conferma del versamento di un obiettivo.
 export interface InputProssimaCosa {
   inPari: { dal: string; al: string } | null;
   // L'id serve al browser per togliere i promemoria rimandati sul telefono (localStorage).
   promemoriaCasa: { id?: string; testo: string; href?: string }[];
   promemoriaPiva?: PromemoriaPiva[];
+  // Il promemoria di Agevolazioni e scadenze: passa dopo la P.IVA urgente e la Casa, prima del resto.
+  agevolazione?: { testo: string; href: string } | null;
   // La voce della lista d'attesa da rivedere: passa per ultima.
   attesa?: { testo: string; href: string } | null;
   // Il rientro verso un conto risparmio con qualcosa da spostare (il più vecchio): passa prima del versamento.
@@ -171,6 +173,7 @@ export function prossimaCosa(input: InputProssimaCosa): Prossimo | null {
   if (urgente) return { testo: urgente.testo, href: urgente.href, tipo: 'piva' };
   const primo = input.promemoriaCasa[0];
   if (primo) return { testo: primo.testo, href: primo.href ?? '/casa', tipo: 'casa' };
+  if (input.agevolazione) return { ...input.agevolazione, tipo: 'agevolazione' };
   const resto = piva[0];
   if (resto) return { testo: resto.testo, href: resto.href, tipo: 'piva' };
   if (input.attesa) return { ...input.attesa, tipo: 'attesa' };

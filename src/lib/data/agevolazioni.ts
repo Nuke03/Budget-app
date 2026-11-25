@@ -17,15 +17,16 @@ interface StatoRow {
 }
 
 // Senza riga: situazione vuota. La P.IVA non si salva qui: c'e se la guida e partita.
-export async function getSituazione(supabase: SupabaseClient): Promise<Situazione> {
+// `pivaGuidata`: se chi chiama l'ha già letta (la Home) non si rilegge.
+export async function getSituazione(supabase: SupabaseClient, pivaGuidata?: boolean): Promise<Situazione> {
   const { data, error } = await supabase
     .from('agevolazioni_situazione')
     .select('isee, dsu_data, comune, in_affitto, studente')
     .maybeSingle();
   if (error) throw error;
-  const settings = await getPivaSettings(supabase);
+  const piva = pivaGuidata ?? !!(await getPivaSettings(supabase))?.guidataDal;
   if (!data) {
-    return { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null, piva: !!settings?.guidataDal };
+    return { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null, piva };
   }
   const row = data as SituazioneRow;
   return {
@@ -34,7 +35,7 @@ export async function getSituazione(supabase: SupabaseClient): Promise<Situazion
     comune: row.comune,
     inAffitto: row.in_affitto,
     studente: row.studente,
-    piva: !!settings?.guidataDal,
+    piva,
   };
 }
 
@@ -42,6 +43,13 @@ export async function getStatiVoci(supabase: SupabaseClient): Promise<StatoVoce[
   const { data, error } = await supabase.from('agevolazioni_stati').select('voce_id, stato, il');
   if (error) throw error;
   return ((data ?? []) as StatoRow[]).map((r) => ({ voceId: r.voce_id, stato: r.stato, il: r.il }));
+}
+
+// Ha già aperto la sezione? Serve al promemoria della Home (gennaio: rifare la DSU).
+export async function haApertoSezione(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase.from('agevolazioni_situazione').select('sezione_aperta_il').maybeSingle();
+  if (error) throw error;
+  return (data as { sezione_aperta_il: string | null } | null)?.sezione_aperta_il != null;
 }
 
 // Le scritture non validano: lo fanno le azioni. RLS e user_id di default (auth.uid()) fanno il resto.

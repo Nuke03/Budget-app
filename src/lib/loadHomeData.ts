@@ -50,6 +50,8 @@ import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/pa
 import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
 import type { ArgomentoId, PercorsoUtente, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
+import { getSituazione, getStatiVoci, haApertoSezione } from '@/lib/data/agevolazioni';
+import { promemoriaAgevolazioni } from '@/lib/agevolazioni/regole';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { assicuraScadenze, getAccantonamenti, getFatture, getQuoteScartate, getScadenze } from '@/lib/data/piva';
 import { scadenzeDaCreare, type DatiScadenzaVaso } from '@/lib/calculations/pivaScadenze';
@@ -471,7 +473,7 @@ export async function loadHomeBase(
   // I rientri non devono rompere la home: se non si leggono, i numeri sono quelli senza rientri.
   // Se solo gli spostamenti non si leggono, i rientri verso i conti si ignorano (quelli verso i cassetti restano).
   const rientriLetti = leggiRientriESpostamenti(supabase);
-  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni, rientriGrezzi] = await Promise.all([
+  const [contiLetti, categories, goals, speso, conferme, ultimaEntrata, casa, transazioni, scelteLette, ultimaMia, pivaLetta, percorso, listaAttesa, pivaImpostazioni, rientriGrezzi, agevolazione] = await Promise.all([
     getAccounts(supabase),
     categorieConPartenza(supabase),
     obiettivi,
@@ -506,6 +508,11 @@ export async function loadHomeBase(
     leggiListaAttesa(supabase).catch(() => [] as VoceAttesa[]),
     pivaSettings,
     rientriLetti,
+    // Anche le agevolazioni non devono rompere la home: se non si leggono, niente promemoria.
+    Promise.all([pivaSettings.then((p) => getSituazione(supabase, !!p?.guidataDal)), getStatiVoci(supabase), haApertoSezione(supabase)])
+      .then(([s, stati, aperta]) => promemoriaAgevolazioni(s, stati, aperta, oggi))
+      .then((p) => (p ? { testo: p.testo, href: p.href } : null))
+      .catch(() => null),
   ]);
   const { rimandati, ...scelte } = scelteLette;
   const {
@@ -606,6 +613,7 @@ export async function loadHomeBase(
           oggi
         )
       : [],
+    agevolazione,
     attesa: voceDaRivedere(listaAttesa, oggi),
     sposta: spostaPiuVecchio(rientriConti, accounts),
     versamento: promemoriaVersamento(goalsConSpeso, today),

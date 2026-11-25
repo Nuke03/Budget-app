@@ -144,3 +144,22 @@ describe('prossimaCosa con Sposta', () => {
     expect(prossimaCosa({ inPari: null, promemoriaCasa: [], sposta, attesa, versamento })?.tipo).toBe('attesa');
   });
 });
+
+describe('prossimaCosa con le agevolazioni', () => {
+  const agevolazione = { testo: "L'ISEE è scaduto il 31 dicembre: rifai la DSU.", href: '/agevolazioni#isee-dsu' };
+  it('viene dopo P.IVA urgente e Casa, prima di P.IVA non urgente, attesa, sposta e versamento', () => {
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], agevolazione })).toEqual({ ...agevolazione, tipo: 'agevolazione' });
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [{ testo: 'Versa la quota' }], agevolazione })?.tipo).toBe('casa');
+    const urgente = [{ testo: 'F24', href: '/piva', urgente: true }];
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], promemoriaPiva: urgente, agevolazione })?.tipo).toBe('piva');
+    const calma = [{ testo: 'Sposta', href: '/piva', urgente: false }];
+    const altri = {
+      promemoriaPiva: calma,
+      attesa: { testo: 'Ci ripensi?', href: '/impara/attesa' },
+      sposta: { testo: 'Sposta 1 €', href: '/?sposta=r1' },
+      versamento: { testo: 'Hai messo da parte?', href: '/goals' },
+    };
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], agevolazione, ...altri })?.tipo).toBe('agevolazione');
+    expect(prossimaCosa({ inPari: null, promemoriaCasa: [], agevolazione: null, ...altri })?.tipo).toBe('piva');
+  });
+});
