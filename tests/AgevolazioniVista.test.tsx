@@ -116,6 +116,19 @@ describe('AgevolazioniVista', () => {
     expect(within(screen.getByRole('dialog')).getByLabelText('Comune')).toHaveValue('Roma');
   });
 
+  it('un #voce fra le chiuse apre il gruppo e la riga', () => {
+    window.location.hash = '#isee-dsu';
+    render(
+      <AgevolazioniVista
+        situazione={vuota}
+        stati={[{ voceId: 'isee-dsu', stato: 'fatto', il: '2026-11-01' }]}
+        oggi="2026-11-24"
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Rimetti fra da controllare' })).toBeInTheDocument();
+    window.location.hash = '';
+  });
+
   it('le righe portano le etichette Automatico e Su domanda', () => {
     render(<AgevolazioniVista situazione={vuota} stati={[]} oggi="2026-11-24" />);
     expect(screen.getAllByText('Automatico').length).toBeGreaterThan(0);

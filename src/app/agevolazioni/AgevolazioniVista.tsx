@@ -150,7 +150,10 @@ export function AgevolazioniVista({
   // Il promemoria della Home porta qui con #voce: la riga si apre da sola.
   useEffect(() => {
     const id = window.location.hash.slice(1);
-    if (id) setAperta(id as VoceId);
+    if (!id) return;
+    setAperta(id as VoceId);
+    if (vociDaMostrare(situazione, stati, oggi).chiuse.some((m) => m.voce.id === id)) setChiuseAperte(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function segna(voceId: VoceId, stato: StatoVoce['stato'] | null) {
