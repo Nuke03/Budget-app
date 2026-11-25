@@ -8,6 +8,7 @@ interface SituazioneRow {
   comune: string | null;
   in_affitto: boolean | null;
   studente: boolean | null;
+  sezione_aperta_il?: string | null;
 }
 
 interface StatoRow {
@@ -16,40 +17,47 @@ interface StatoRow {
   il: string;
 }
 
-// Senza riga: situazione vuota. La P.IVA non si salva qui: c'e se la guida e partita.
-// `pivaGuidata`: se chi chiama l'ha già letta (la Home) non si rilegge.
-export async function getSituazione(supabase: SupabaseClient, pivaGuidata?: boolean): Promise<Situazione> {
-  const { data, error } = await supabase
-    .from('agevolazioni_situazione')
-    .select('isee, dsu_data, comune, in_affitto, studente')
-    .maybeSingle();
+const VUOTA_RIGA = { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null };
+
+// Situazione e "ha aperto la sezione" con una lettura sola (la stessa riga).
+// `pivaGuidata`: se chi chiama la conosce già (o non gli serve: la Home) non si rilegge; altrimenti la lettura parte
+// insieme alla situazione, non dopo.
+export async function getSituazioneConApertura(
+  supabase: SupabaseClient,
+  pivaGuidata?: boolean
+): Promise<{ situazione: Situazione; aperta: boolean }> {
+  const [{ data, error }, piva] = await Promise.all([
+    supabase
+      .from('agevolazioni_situazione')
+      .select('isee, dsu_data, comune, in_affitto, studente, sezione_aperta_il')
+      .maybeSingle(),
+    pivaGuidata !== undefined ? Promise.resolve(pivaGuidata) : getPivaSettings(supabase).then((p) => !!p?.guidataDal),
+  ]);
   if (error) throw error;
-  const piva = pivaGuidata ?? !!(await getPivaSettings(supabase))?.guidataDal;
-  if (!data) {
-    return { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null, piva };
-  }
+  if (!data) return { situazione: { ...VUOTA_RIGA, piva }, aperta: false };
   const row = data as SituazioneRow;
   return {
-    isee: row.isee === null ? null : Number(row.isee),
-    dsuData: row.dsu_data,
-    comune: row.comune,
-    inAffitto: row.in_affitto,
-    studente: row.studente,
-    piva,
+    situazione: {
+      isee: row.isee === null ? null : Number(row.isee),
+      dsuData: row.dsu_data,
+      comune: row.comune,
+      inAffitto: row.in_affitto,
+      studente: row.studente,
+      piva,
+    },
+    aperta: row.sezione_aperta_il != null,
   };
+}
+
+// Senza riga: situazione vuota. La P.IVA non si salva qui: c'e se la guida e partita.
+export async function getSituazione(supabase: SupabaseClient, pivaGuidata?: boolean): Promise<Situazione> {
+  return (await getSituazioneConApertura(supabase, pivaGuidata)).situazione;
 }
 
 export async function getStatiVoci(supabase: SupabaseClient): Promise<StatoVoce[]> {
   const { data, error } = await supabase.from('agevolazioni_stati').select('voce_id, stato, il');
   if (error) throw error;
   return ((data ?? []) as StatoRow[]).map((r) => ({ voceId: r.voce_id, stato: r.stato, il: r.il }));
-}
-
-// Ha già aperto la sezione? Serve al promemoria della Home (gennaio: rifare la DSU).
-export async function haApertoSezione(supabase: SupabaseClient): Promise<boolean> {
-  const { data, error } = await supabase.from('agevolazioni_situazione').select('sezione_aperta_il').maybeSingle();
-  if (error) throw error;
-  return (data as { sezione_aperta_il: string | null } | null)?.sezione_aperta_il != null;
 }
 
 // Le scritture non validano: lo fanno le azioni. RLS e user_id di default (auth.uid()) fanno il resto.

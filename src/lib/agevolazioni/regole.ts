@@ -78,12 +78,19 @@ export function vociDaMostrare(
   return { daControllare: [...sotto, ...altre], chiuse };
 }
 
+// I mesi in cui promemoriaAgevolazioni può scattare: gennaio (la DSU) e il mese del bando di ogni voce a bando
+// (febbraio se non indicato). Negli altri mesi la Home non deve leggere nulla.
+export function mesiPromemoriaAgevolazioni(): number[] {
+  const bandi = ['tari-comune', 'contributo-affitto'].map((id) => VOCI.find((v) => v.id === id)!.meseBando ?? 2);
+  return [...new Set([1, ...bandi])];
+}
+
 export function promemoriaAgevolazioni(
   s: Situazione | null,
   stati: StatoVoce[],
   haApertoSezione: boolean,
   oggi: string,
-): { testo: string; href: string; voceId: VoceId } | null {
+): { id: string; testo: string; href: string; voceId: VoceId } | null {
   const m = mese(oggi);
   const giorno = Number(oggi.slice(8, 10));
   const chiusa = (id: VoceId) => statoValido(id, stati, oggi) !== null;
@@ -94,6 +101,7 @@ export function promemoriaAgevolazioni(
     const indicato = s !== null && (s.isee !== null || s.dsuData !== null);
     if (!dsuQuestAnno && (indicato || haApertoSezione)) {
       return {
+        id: `agevolazione-isee-dsu-${anno(oggi)}`,
         testo: "L'ISEE è scaduto il 31 dicembre: rifai la DSU.",
         href: '/agevolazioni#isee-dsu',
         voceId: 'isee-dsu',
@@ -111,6 +119,7 @@ export function promemoriaAgevolazioni(
     if (!b.attivo || chiusa(b.id)) continue;
     if ((voce.meseBando ?? 2) !== m) continue;
     return {
+      id: `agevolazione-${b.id}-${anno(oggi)}`,
       testo: `Controlla se il comune ha aperto il bando: ${voce.titolo}.`,
       href: `/agevolazioni#${b.id}`,
       voceId: b.id,

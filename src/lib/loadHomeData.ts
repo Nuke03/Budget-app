@@ -50,8 +50,8 @@ import { statoPrimiPassi, type PrimiPassi } from '@/lib/calculations/percorso/pa
 import { lezioneDelGiorno } from '@/lib/calculations/percorso/regole';
 import type { ArgomentoId, PercorsoUtente, StatiLezioni, VoceAttesa } from '@/lib/percorso/tipi';
 import { getMyHousehold } from '@/lib/data/households';
-import { getSituazione, getStatiVoci, haApertoSezione } from '@/lib/data/agevolazioni';
-import { promemoriaAgevolazioni } from '@/lib/agevolazioni/regole';
+import { getSituazioneConApertura, getStatiVoci } from '@/lib/data/agevolazioni';
+import { mesiPromemoriaAgevolazioni, promemoriaAgevolazioni } from '@/lib/agevolazioni/regole';
 import { getPivaSettings } from '@/lib/data/pivaSettings';
 import { assicuraScadenze, getAccantonamenti, getFatture, getQuoteScartate, getScadenze } from '@/lib/data/piva';
 import { scadenzeDaCreare, type DatiScadenzaVaso } from '@/lib/calculations/pivaScadenze';
@@ -508,11 +508,15 @@ export async function loadHomeBase(
     leggiListaAttesa(supabase).catch(() => [] as VoceAttesa[]),
     pivaSettings,
     rientriLetti,
-    // Anche le agevolazioni non devono rompere la home: se non si leggono, niente promemoria.
-    Promise.all([pivaSettings.then((p) => getSituazione(supabase, !!p?.guidataDal)), getStatiVoci(supabase), haApertoSezione(supabase)])
-      .then(([s, stati, aperta]) => promemoriaAgevolazioni(s, stati, aperta, oggi))
-      .then((p) => (p ? { testo: p.testo, href: p.href } : null))
-      .catch(() => null),
+    // Anche le agevolazioni non devono rompere la home: se non si leggono, niente promemoria. Il promemoria può
+    // scattare solo in alcuni mesi (gennaio, il mese dei bandi): negli altri non si legge niente. Una lettura per
+    // tabella; la P.IVA non serve a questa regola.
+    mesiPromemoriaAgevolazioni().includes(Number(oggi.slice(5, 7)))
+      ? Promise.all([getSituazioneConApertura(supabase, false), getStatiVoci(supabase)])
+          .then(([{ situazione, aperta }, stati]) => promemoriaAgevolazioni(situazione, stati, aperta, oggi))
+          .then((p) => (p ? { id: p.id, testo: p.testo, href: p.href } : null))
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
   const { rimandati, ...scelte } = scelteLette;
   const {
@@ -613,7 +617,7 @@ export async function loadHomeBase(
           oggi
         )
       : [],
-    agevolazione,
+    agevolazione: agevolazione && !((rimandati[agevolazione.id] ?? '') > oggi) ? agevolazione : null,
     attesa: voceDaRivedere(listaAttesa, oggi),
     sposta: spostaPiuVecchio(rientriConti, accounts),
     versamento: promemoriaVersamento(goalsConSpeso, today),

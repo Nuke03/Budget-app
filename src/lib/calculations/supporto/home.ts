@@ -23,6 +23,8 @@ export interface RigaLibretto {
 export interface Prossimo {
   testo: string;
   href: string;
+  // Per i promemoria che si possono rimandare ("Più tardi").
+  id?: string;
   tipo: 'in_pari' | 'casa' | 'piva' | 'agevolazione' | 'attesa' | 'sposta' | 'obiettivo';
 }
 
@@ -151,7 +153,7 @@ export interface InputProssimaCosa {
   promemoriaCasa: { id?: string; testo: string; href?: string }[];
   promemoriaPiva?: PromemoriaPiva[];
   // Il promemoria di Agevolazioni e scadenze: passa dopo la P.IVA urgente e la Casa, prima del resto.
-  agevolazione?: { testo: string; href: string } | null;
+  agevolazione?: { id?: string; testo: string; href: string } | null;
   // La voce della lista d'attesa da rivedere: passa per ultima.
   attesa?: { testo: string; href: string } | null;
   // Il rientro verso un conto risparmio con qualcosa da spostare (il più vecchio): passa prima del versamento.

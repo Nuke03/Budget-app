@@ -924,6 +924,21 @@ describe('HomeDashboard e il puntino della Casa', () => {
       expect(screen.queryByText(/sopra il previsto/)).not.toBeInTheDocument();
     });
 
+    it('il promemoria delle agevolazioni ha "Più tardi": lo nasconde e passa il successivo', () => {
+      const agev = { id: 'agevolazione-isee-dsu-2026', testo: "L'ISEE è scaduto il 31 dicembre: rifai la DSU.", href: '/agevolazioni#isee-dsu' };
+      monta({ ...dati([]), agevolazione: agev });
+      expect(screen.getByText(/ISEE è scaduto/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Più tardi' }));
+      expect(screen.queryByText(/ISEE è scaduto/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Ci ripensi?/)).toBeInTheDocument();
+    });
+
+    it('un promemoria agevolazioni già rimandato non compare', () => {
+      window.localStorage.setItem('promemoria-fino:agevolazione-isee-dsu-2026', '2099-01-01');
+      monta({ ...dati([]), agevolazione: { id: 'agevolazione-isee-dsu-2026', testo: 'Rifai la DSU.', href: '/agevolazioni' } });
+      expect(screen.queryByText(/Rifai la DSU/)).not.toBeInTheDocument();
+    });
+
     it('non rimandato: resta il promemoria della casa e il puntino si accende', () => {
       monta(dati([casa('credito:u1', 'In attesa del rimborso: 45 €.')]));
       expect(screen.getByText(/In attesa del rimborso/)).toBeInTheDocument();

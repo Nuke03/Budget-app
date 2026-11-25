@@ -5,6 +5,7 @@ import { SceltePill } from '../casa/SceltePill';
 import { Campo, CLASSE_CAMPO, CLASSE_PRIMARIO } from '../casa/CampiMovimento';
 import { salvaSituazione } from './actions';
 import type { Situazione } from '@/lib/agevolazioni/tipi';
+import { parseImporto } from '@/lib/calculations/casa/parseImporto';
 
 type Dati = Omit<Situazione, 'piva'>;
 
@@ -38,11 +39,11 @@ export function SituazioneFoglio({
   async function salva() {
     if (inCorso) return;
     let valoreIsee: number | null = null;
-    const testo = isee.trim().replace(/\s/g, '').replace(',', '.');
+    const testo = isee.trim().replace(/\s/g, '');
     if (testo !== '') {
-      valoreIsee = Number(testo);
-      if (!Number.isFinite(valoreIsee) || valoreIsee < 0) {
-        setErrore("L'ISEE va scritto come un numero, per esempio 8500.");
+      valoreIsee = parseImporto(testo);
+      if (valoreIsee === null) {
+        setErrore("L'ISEE va scritto come un numero, per esempio 8.500 o 8500,50.");
         return;
       }
     }

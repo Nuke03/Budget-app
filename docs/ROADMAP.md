@@ -8,6 +8,7 @@ legge questo file più i documenti citati.
 
 - La migrazione 0015 (`supabase/migrations/0015_agevolazioni.sql`) risulta applicata tra il 21 e il 25 novembre 2026. Se non è già stato fatto, eseguire a mano il test `supabase/tests/agevolazioni_0015.sql` (finisce con rollback).
 - La migrazione 0016 (`supabase/migrations/0016_icone_categorie.sql`, icone delle categorie) va lanciata a mano nel SQL editor di Supabase.
+- Possibile seguito di Agevolazioni e scadenze: la lezione "Gli aiuti che si chiedono" mostra sempre "Per esempio"; collegarla ai numeri di chi legge (ISEE valido, voci da controllare) aggiungerebbe letture a Impara, appena alleggerita.
 - Routine annuale di Agevolazioni e scadenze (15 gennaio, controllo delle soglie e dei link): da creare solo con il sì di Fabio, con la skill `schedule`.
 - La migrazione 0014 (`supabase/migrations/0014_difese.sql`) è stata lanciata su Supabase il 21 novembre 2026. Se non è già stato fatto, eseguire a mano il test `supabase/tests/difese_0014.sql` (finisce con rollback).
 

@@ -176,9 +176,9 @@ export const LEZIONI: Lezione[] = [
     id: 'aiuti', numero: 16, fase: 'dopo',
     titolo: 'Gli aiuti che si chiedono',
     inBreve:
-      "Alcuni aiuti non arrivano da soli: vanno chiesti, di solito con l'ISEE, il documento che misura la situazione economica del nucleo familiare. Il bonus sociale per luce, gas e acqua, per esempio, si ottiene presentando la DSU, senza un'altra domanda. Altri hanno moduli e scadenze del comune. Basta controllarli una volta l'anno, con calma, perché potrebbero riguardarti.",
+      "Alcuni aiuti arrivano da soli, se l'ISEE rientra nella soglia: il bonus sociale per luce, gas e acqua, per esempio, parte con la DSU. Altri invece vanno chiesti, con moduli e scadenze del comune. Controllarli una volta l'anno, con calma, aiuta a non perderli.",
     esempio:
-      'Nel 2026 il bonus sociale ARERA è previsto per un ISEE fino a 9.796 €. Sopra quella soglia quel bonus non c\'è, ma altri aiuti hanno regole diverse: per questo la pagina li elenca uno per uno.',
+      'Nel 2026 il bonus sociale ARERA è previsto per un ISEE fino a 9.796 € (20.000 € con almeno quattro figli a carico). Uno sconto da chiedere è invece, per esempio, quello sulla TARI del comune: ha le sue regole e le sue scadenze. Altri aiuti hanno soglie diverse: per questo la pagina li elenca uno per uno.',
     prova: { etichetta: 'Guarda quali aiuti potrebbero riguardarti', href: '/agevolazioni' },
     link: [
       { etichetta: 'INPS: tipologie di ISEE', url: 'https://www.inps.it/it/it/dettaglio-approfondimento.schede-informative.49936.tipologie-di-isee.html' },

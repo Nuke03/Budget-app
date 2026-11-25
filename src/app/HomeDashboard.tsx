@@ -111,13 +111,15 @@ export function HomeDashboard({
   // Il server toglie i "Più tardi" del database; il browser toglie anche quelli che il telefono ha solo in
   // localStorage (stessa memoria della Casa) e ricalcola il prossimo passo.
   const promemoriaCasa = prossimoDati?.promemoriaCasa ?? [];
-  const { rimandati } = usePromemoriaRimandati(
-    promemoriaCasa.flatMap((p) => (p.id ? [p.id] : [])),
+  const agevolazioneId = prossimoDati?.agevolazione?.id;
+  const { rimandati, rimanda: rimandaPromemoria } = usePromemoriaRimandati(
+    [...promemoriaCasa.flatMap((p) => (p.id ? [p.id] : [])), ...(agevolazioneId ? [agevolazioneId] : [])],
     oggi ?? oggiRomaISO()
   );
   const casaVisibile = promemoriaCasa.filter((p) => !(p.id && rimandati.has(p.id)));
+  const agevolazioneVisibile = agevolazioneId && rimandati.has(agevolazioneId) ? null : (prossimoDati?.agevolazione ?? null);
   const prossimo = prossimoDati
-    ? prossimaCosa({ ...prossimoDati, promemoriaCasa: casaVisibile })
+    ? prossimaCosa({ ...prossimoDati, promemoriaCasa: casaVisibile, agevolazione: agevolazioneVisibile })
     : prossimoServer;
   // La barra segna la Casa se c'è un promemoria della casa non rimandato, anche se il prossimo passo è altro.
   useSegnalaCasaSeCe(prossimoDati ? casaVisibile.length > 0 : prossimoServer?.tipo === 'casa');
@@ -298,12 +300,20 @@ export function HomeDashboard({
         </p>
 
         {prossimo ? (
-          <Link
-            href={prossimo.href}
-            className="block min-h-11 rounded-[var(--radius-md)] border border-rule bg-surface-muted p-4 text-[15px]"
-          >
-            <b className="font-semibold text-brand-dark">Prossimo:</b> {prossimo.testo}
-          </Link>
+          <div className="rounded-[var(--radius-md)] border border-rule bg-surface-muted">
+            <Link href={prossimo.href} className="block min-h-11 p-4 text-[15px]">
+              <b className="font-semibold text-brand-dark">Prossimo:</b> {prossimo.testo}
+            </Link>
+            {prossimo.tipo === 'agevolazione' && prossimo.id ? (
+              <button
+                type="button"
+                onClick={() => rimandaPromemoria(prossimo.id as string)}
+                className="mx-2 mb-1 inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand-dark"
+              >
+                Più tardi
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         {primiPassi?.visibile ? (

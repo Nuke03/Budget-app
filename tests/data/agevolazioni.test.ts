@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   getSituazione,
+  getSituazioneConApertura,
   getStatiVoci,
   salvaSituazioneDati,
   segnaVoceDati,
@@ -125,5 +126,23 @@ describe('scritture', () => {
     await expect(segnaVoceDati(client, 'trasporto', 'fatto', '2026-11-23')).rejects.toThrow('boom');
     await expect(segnaVoceDati(client, 'trasporto', null, '2026-11-23')).rejects.toThrow('boom');
     await expect(segnaSezioneApertaDati(client, '2026-11-23')).rejects.toThrow('boom');
+  });
+});
+
+describe('getSituazioneConApertura', () => {
+  it('una sola lettura della situazione: porta anche se la sezione è stata aperta', async () => {
+    const { client, calls } = fake({
+      agevolazioni_situazione: { data: { ...riga, sezione_aperta_il: '2026-11-01' }, error: null },
+    });
+    const r = await getSituazioneConApertura(client, false);
+    expect(r.aperta).toBe(true);
+    expect(r.situazione.piva).toBe(false);
+    expect(calls.filter((c) => c.table === 'agevolazioni_situazione' && c.method === 'select')).toHaveLength(1);
+    expect(calls.some((c) => c.table === 'piva_settings')).toBe(false);
+  });
+  it('senza riga o con sezione mai aperta: aperta è false', async () => {
+    expect((await getSituazioneConApertura(fake({}).client, false)).aperta).toBe(false);
+    const { client } = fake({ agevolazioni_situazione: { data: { ...riga, sezione_aperta_il: null }, error: null } });
+    expect((await getSituazioneConApertura(client, false)).aperta).toBe(false);
   });
 });

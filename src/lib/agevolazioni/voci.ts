@@ -32,10 +32,10 @@ export const VOCI: Voce[] = [
     id: 'bonus-sociale',
     titolo: 'Bonus sociale luce, gas, acqua e rifiuti',
     perche:
-      'Uno sconto sulle bollette per le famiglie con ISEE basso. Nel 2026 la soglia è 9.796 €. Per i rifiuti lo sconto è del 25% sulla TARI.',
+      'Uno sconto sulle bollette per le famiglie con ISEE basso. Nel 2026 la soglia è 9.796 € (20.000 € per le famiglie con almeno quattro figli a carico). Per i rifiuti lo sconto è del 25% sulla TARI.',
     come: 'automatica',
     cosaFare: [
-      'Non serve fare domanda: basta avere una DSU valida presentata.',
+      "Se l'ISEE rientra nella soglia, di solito non serve fare domanda: basta una DSU valida presentata.",
       "Lo sconto arriva in bolletta. Quello sui rifiuti di solito arriva l'anno dopo, in base all'ISEE dell'anno prima.",
       "Per i dubbi sul nucleo o sull'intestatario della bolletta, un CAF.",
     ],

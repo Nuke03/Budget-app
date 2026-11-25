@@ -49,6 +49,18 @@ describe('SituazioneFoglio', () => {
     expect(salvaSituazione).toHaveBeenCalledWith(vuota);
   });
 
+  it.each([
+    ['8.500', 8500],
+    ['8.500,00', 8500],
+    ['8500,5', 8500.5],
+  ])('ISEE scritto all\'italiana "%s" vale %s', async (scritto, atteso) => {
+    render(<SituazioneFoglio iniziale={vuota} oggi="2026-11-24" onSalvato={() => {}} />);
+    fireEvent.change(screen.getByLabelText('ISEE (facoltativo)'), { target: { value: scritto } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
+    await waitFor(() => expect(salvaSituazione).toHaveBeenCalled());
+    expect(salvaSituazione).toHaveBeenCalledWith({ ...vuota, isee: atteso });
+  });
+
   it('ISEE non numerico: messaggio e nessun salvataggio', async () => {
     render(<SituazioneFoglio iniziale={vuota} oggi="2026-11-24" onSalvato={() => {}} />);
     fireEvent.change(screen.getByLabelText('ISEE (facoltativo)'), { target: { value: 'abc' } });

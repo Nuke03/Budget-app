@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { iseeValido, vociDaMostrare, promemoriaAgevolazioni } from '@/lib/agevolazioni/regole';
+import { iseeValido, vociDaMostrare, promemoriaAgevolazioni, mesiPromemoriaAgevolazioni } from '@/lib/agevolazioni/regole';
 import type { Situazione, StatoVoce } from '@/lib/agevolazioni/tipi';
 
 const vuota: Situazione = { isee: null, dsuData: null, comune: null, inAffitto: null, studente: null, piva: false };
@@ -87,11 +87,18 @@ describe('casi limite', () => {
   });
 });
 
+describe('mesiPromemoriaAgevolazioni', () => {
+  it('gennaio e febbraio, finché i bandi non hanno un mese proprio', () => {
+    expect(mesiPromemoriaAgevolazioni().sort()).toEqual([1, 2]);
+  });
+});
+
 describe('promemoriaAgevolazioni', () => {
   it('DSU scaduta a gennaio', () => {
     const s = { ...vuota, isee: 7200, dsuData: '2025-03-12' };
     const p = promemoriaAgevolazioni(s, [], false, '2027-01-10');
     expect(p).toEqual({
+      id: 'agevolazione-isee-dsu-2027',
       testo: "L'ISEE è scaduto il 31 dicembre: rifai la DSU.",
       href: '/agevolazioni#isee-dsu',
       voceId: 'isee-dsu',
