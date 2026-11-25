@@ -1,7 +1,7 @@
 // I fumetti (le bolle di aiuto alla prima visita) si mostrano una volta sola per utente.
 // Alzando la versione di un fumetto, torna a mostrarsi solo quello.
 // Se localStorage non funziona (modalità privata), i visti restano in memoria per la sessione.
-export type FumettoId = 'giro' | 'storico' | 'casa' | 'casa-semplice' | 'cassetti' | 'conti' | 'attesa' | 'impara' | 'piva';
+export type FumettoId = 'giro' | 'storico' | 'casa' | 'casa-semplice' | 'cassetti' | 'conti' | 'attesa' | 'impara' | 'piva' | 'agevolazioni';
 
 export const VERSIONI_FUMETTI: Record<FumettoId, number> = {
   giro: 1,
@@ -13,6 +13,7 @@ export const VERSIONI_FUMETTI: Record<FumettoId, number> = {
   attesa: 1,
   impara: 1,
   piva: 1,
+  agevolazioni: 1,
 };
 
 // Visti ricordati in memoria, usati solo se localStorage non è disponibile.

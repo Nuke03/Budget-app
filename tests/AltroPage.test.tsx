@@ -30,10 +30,11 @@ describe('pagina Altro', () => {
     expect(screen.getByRole('button', { name: 'Ricomincia da zero' })).toBeInTheDocument();
   });
 
-  it('ha sette link con gli href previsti', async () => {
+  it('ha otto link con gli href previsti', async () => {
     render(await AltroPage());
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(7);
+    expect(links).toHaveLength(8);
+    expect(screen.getByRole('link', { name: /Agevolazioni e scadenze/ })).toHaveAttribute('href', '/agevolazioni');
     expect(screen.getByRole('link', { name: /Impara/ })).toHaveAttribute('href', '/impara');
     expect(screen.getByRole('link', { name: /Lista d'attesa/ })).toHaveAttribute('href', '/impara/attesa');
     expect(screen.getByRole('link', { name: /Cassetti/ })).toHaveAttribute('href', '/goals');
@@ -43,11 +44,12 @@ describe('pagina Altro', () => {
     expect(screen.getByRole('link', { name: /Notifiche/ })).toHaveAttribute('href', '/altro#notifiche');
   });
 
-  it('ha la voce Impara prima di Cassetti', async () => {
+  it('ha Agevolazioni e scadenze subito dopo Impara', async () => {
     render(await AltroPage());
     const nomi = screen.getAllByRole('link').map((l) => l.textContent);
     expect(nomi[0]).toBe('Impara');
-    expect(nomi[1]).toBe('Cassetti');
+    expect(nomi[1]).toBe('Agevolazioni e scadenze');
+    expect(nomi[2]).toBe('Cassetti');
   });
 
   it('Riattiva gli avvisi rimette le conferme', async () => {
